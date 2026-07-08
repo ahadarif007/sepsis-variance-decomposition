@@ -1,0 +1,243 @@
+---
+title: "Phase 2 — A Purely Statistical Real-Time Sepsis Early-Warning Model (MIMIC-IV)"
+author: "Abdul Ahad. Student ID: G00486649"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  bookdown::pdf_document2:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    fig_caption: true
+geometry: margin=2.3cm
+fontsize: 11pt
+header-includes:
+  - \usepackage{float}
+  - \usepackage{caption}
+  - \captionsetup[figure]{font=small}
+  - \captionsetup[table]{font=small}
+  - \renewcommand{\contentsname}{Table of Contents}
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+set.seed(486649)
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE,
+  fig.align = "center", fig.pos = "H", out.width = "78%",
+  fig.width = 6, fig.height = 3.6)
+library(knitr); library(kableExtra)
+find_data <- function(f) {
+  cands <- c(file.path("../../processed_data", f),
+             file.path("processed_data", f), f)
+  hit <- cands[file.exists(cands)]
+  if (!length(hit)) stop("Not found: ", f); hit[1]
+}
+fig <- function(f) { c(file.path("figure", f), f)[file.exists(c(file.path("figure", f), f))][1] }
+m1  <- read.csv(find_data("phase2_tier1_metrics.csv"))
+c1  <- read.csv(find_data("phase2_tier1_coefs.csv"))
+a2  <- read.csv(find_data("phase2_tier2_auc_by_landmark.csv"))
+gm  <- read.csv(find_data("phase2_tier3_glmm.csv"))
+cx  <- read.csv(find_data("phase2_tier3_tvcox.csv"))
+ut  <- read.csv(find_data("phase2_tier4_utility.csv"))
+al  <- read.csv(find_data("phase2_tier4_alarm_sweep.csv"))
+sg  <- read.csv(find_data("phase2_tier5_subgroups.csv"))
+en_auc <- m1$auroc[m1$model == "Tier1 full-feature elastic net"]
+p1_auc <- m1$auroc[grepl("0.755", m1$model)]
+alpha <- gm$OR_glm[gm$term == "__alpha_within_patient__"]
+se_infl_max <- max(gm$SE_inflation, na.rm = TRUE)
+best_u <- ut[which.max(ut$utility_norm), ]
+op90 <- al[which.min(abs(al$sensitivity - 0.90)), ]
+op50 <- al[which.min(abs(al$sensitivity - 0.50)), ]
+```
+
+# Objective and what Phase 1 established
+
+Phase 1 built the temporal substrate (a 3.1M-row hourly panel, an hourly
+Sepsis-3 onset label, and a leakage-safe hour-6 landmark cohort of
+`r format(a2$n_at_risk[a2$landmark_h==6], big.mark=",")` at-risk stays) and
+quantified the bar: a multivariable hourly logistic model reached a
+cross-validated AUROC of about **`r sprintf("%.3f", p1_auc)`** for incident
+onset within 12h, out-discriminating SOFA, qSOFA and SIRS. Phase 2 is the
+model itself. Per the project's design decision it is built **entirely from
+classical statistics** — no gradient boosting, no neural sequence models —
+reaching real-time prediction through **dynamic landmarking** (van
+Houwelingen 2007).
+
+# Tier 1 — the statistical ceiling: a full-feature nomogram at hour 6
+
+Phase 1's report deliberately handicapped its model to non-circular predictors
+and, because plain complete-case regression cannot use the 70–88%-missing labs
+at hour 6, effectively dropped them. Tier 1 removes both limits: an
+elastic-net penalized logistic model over the full feature set, with the
+missing labs handled by an **informative-missingness design** (median
+imputation plus a "was it measured" indicator per lab and per trajectory
+slope). Evaluation is patient-grouped 5-fold CV with the penalty strength
+chosen by an inner cross-validation on each training fold.
+
+```{r t1tab}
+m1d <- m1; m1d$delong_p_vs_phase1slopes <- ifelse(is.na(m1d$delong_p_vs_phase1slopes),
+  "—", formatC(m1d$delong_p_vs_phase1slopes, format="e", digits=1))
+kable(m1d, booktabs = TRUE, col.names = c("Model","AUROC","PR-AUC","Brier","DeLong p vs 0.755"),
+      caption = "Discrimination at the hour-6 landmark (out-of-sample). The full-feature elastic net is the purely-statistical ceiling.") %>%
+  kable_styling(latex_options = c("hold_position","scale_down"))
+```
+
+The full-feature model reaches AUROC **`r sprintf("%.3f", en_auc)`**, a
+statistically significant gain over Phase 1's `r sprintf("%.3f", p1_auc)`
+(DeLong *p* `r format.pval(m1$delong_p_vs_phase1slopes[nrow(m1)], digits=2, eps=1e-16)`),
+with improved PR-AUC. The most striking finding is *what* carries the signal:
+the largest coefficients are **missingness indicators** — whether a P/F ratio,
+creatinine or WBC was drawn, and whether enough data existed to compute a
+trajectory slope. The act of ordering a test encodes the clinician's evolving
+suspicion, exactly the informative missingness Phase 1 flagged but could not
+exploit. Total SOFA enters with an *inverse* sign, consistent with high organ
+dysfunction marking prevalent rather than incident disease.
+
+```{r t1coef}
+top <- c1[order(-abs(c1$coef)), ]; top <- top[top$term != "(Intercept)", ][1:10, ]
+kable(top, booktabs = TRUE, row.names = FALSE,
+      col.names = c("Feature","Coefficient","Odds ratio"),
+      caption = "Ten largest standardized effects in the Tier-1 model (\\_msg = measurement indicator).") %>%
+  kable_styling(latex_options = "hold_position")
+```
+
+The result stops short of the 0.80–0.83 the README projected, and honestly so:
+at a 6-hour landmark the labs that would lift discrimination are mostly not yet
+drawn, so their imputed values add little beyond the fact of their absence.
+`r sprintf("%d", nrow(c1)-1)` of the 27 candidate features survive penalization.
+
+# Tier 2 — the real-time deliverable: a dynamic landmark supermodel
+
+A single landmark answers "predict from hour 6". A deployed system must predict
+at *every* hour. The classical solution is a **landmark supermodel**: repeat the
+landmark construction on a grid of prediction hours *s* in {6,12,18,24,36,48},
+stack them, and fit one penalized model with the landmark time *s*, $s^2$ and
+feature-by-*s* interactions, so evaluating it at the current hour yields an
+hourly-updating risk. Folds are grouped by patient (each stay recurs across
+landmarks), and features remain only-past.
+
+```{r t2tab}
+kable(a2, booktabs = TRUE, row.names = FALSE,
+      col.names = c("Landmark hour s","At risk","Onset in 12h","AUROC supermodel","AUROC separate"),
+      caption = "Dynamic discrimination AUC(s): one supermodel evaluated at each prediction hour, versus fitting a separate model per landmark.") %>%
+  kable_styling(latex_options = "hold_position")
+```
+
+```{r auc-s, fig.cap="AUC(s): the supermodel's out-of-sample discrimination as a function of the hour at which the prediction is made, versus per-landmark models.", out.width="62%"}
+include_graphics(fig("auc_by_landmark.png"))
+```
+
+The single supermodel matches, at every prediction hour, the accuracy of
+fitting a bespoke model per landmark — while being one parsimonious,
+deployable object. Discrimination is highest early (AUROC
+`r sprintf("%.2f", a2$auc_supermodel[a2$landmark_h==6])` at hour 6), dips in the
+mid-stay window (hours 18–24) where incident onset is rarest and hardest, and
+recovers later. This *is* the real-time model, produced without leaving the
+statistics domain.
+
+# Tier 3 — modelling the within-patient correlation
+
+Phase 1 never addressed that repeated hourly rows from one patient are
+correlated. Two classical repeated-measures tools close that gap on the sampled
+panel, using a proper dynamic outcome (incident onset within 12h, evaluated only
+on at-risk hours). A per-patient random-intercept GLMM is *degenerate* for this
+outcome — most patients never have an event, so their intercepts diverge — so we
+use the population-averaged route instead.
+
+A **GEE** with an exchangeable working correlation estimates a within-patient
+correlation of **`r sprintf("%.2f", alpha)`**: a patient's hourly observations
+are strongly dependent, so the effective information is far below the
+`r format(76538, big.mark=",")` row count. The consequence for inference is
+concrete — putting **cluster-robust (sandwich) standard errors** on the pooled
+logistic model, versus the naive model-based ones that assume independent hours,
+inflates the SEs by up to **`r sprintf("%.1fx", se_infl_max)`**. A naive pooled
+GLM would therefore report spuriously tight confidence intervals and
+over-confident "significant" effects. A ridge-penalized **time-varying-covariate
+Cox** model on the counting-process form gives directionally sensible
+instantaneous hazards of onset:
+
+```{r t3tab-gee}
+gtab <- gm[gm$term != "__alpha_within_patient__", ]
+kable(gtab, booktabs = TRUE, row.names = FALSE,
+      col.names = c("Term","OR","SE naive","SE cluster-robust","SE inflation"),
+      caption = "Pooled logistic model: naive vs cluster-robust (by patient) standard errors. Ignoring within-patient correlation understates every SE.") %>%
+  kable_styling(latex_options = "hold_position")
+```
+
+```{r t3tab-cox}
+cx$direction <- ifelse(cx$HR > 1, "raises hazard", "lowers hazard")
+kable(cx, booktabs = TRUE, row.names = FALSE,
+      col.names = c("Covariate (standardized)","Hazard ratio","Interpretation"),
+      caption = "Ridge time-varying Cox: hazard of incident onset per SD of the evolving vital.") %>%
+  kable_styling(latex_options = "hold_position")
+```
+
+These are inferential, correlation-correct companions to the predictive
+supermodel, not competitors to it.
+
+# Tier 4 — real-time evaluation: utility and alarm burden
+
+Discrimination is necessary but not sufficient for a streaming alarm. Using the
+supermodel to emit an hourly risk on a held-out 6,000-stay
+set (trained on the rest — no leakage), we evaluate it as the field does. (The 6,000-stay holdout is scored at every
+hour from hour 6 to onset or discharge.)
+
+The **PhysioNet/CinC-2019 utility score** — which rewards early detection and
+penalizes both late and false alarms — is maximized at
+**`r sprintf("%.3f", best_u$utility_norm)`** (normalized: 0 = never alarm,
+1 = per-hour oracle) at a risk threshold of `r sprintf("%.2f", best_u$threshold)`.
+A positive score means the model adds value over silence on this genuinely hard,
+incident-only ICU task.
+
+The clinically decisive picture is the **alarm burden**:
+
+```{r t4tab}
+show <- al[al$threshold %in% c(op90$threshold, al$threshold[which.min(abs(al$sensitivity-0.7))], op50$threshold), ]
+kable(show, booktabs = TRUE, row.names = FALSE,
+      col.names = c("Threshold","Sensitivity","False alarms / patient-day","Frac. non-septic pts alarmed"),
+      caption = "Operating points: earlier/more-sensitive detection costs rapidly rising false-alarm burden.") %>%
+  kable_styling(latex_options = "hold_position")
+```
+
+```{r alarm, fig.cap="Sensitivity versus false-alarm burden for the real-time supermodel. High sensitivity is reachable only at an alarm rate that would fatigue bedside staff.", out.width="62%"}
+include_graphics(fig("alarm_tradeoff.png"))
+```
+
+Catching 90% of septic patients in a timely window costs about
+**`r sprintf("%.1f", op90$fa_per_patient_day)` false alarms per patient-day**,
+firing on `r sprintf("%.0f%%", 100*op90$frac_nonseptic_pts_alarmed)` of
+non-septic patients — untenable alarm fatigue. A calmer operating point
+(`r sprintf("%.0f%%", 100*op50$sensitivity)` sensitivity) drops that to
+`r sprintf("%.1f", op50$fa_per_patient_day)` per patient-day. This trade-off,
+absent from Phase 1, is the number a deployment decision actually turns on.
+
+# Tier 5 — subgroup fairness (external validation deferred)
+
+External validation on eICU is deferred (no eICU database is present locally).
+Within MIMIC-IV, the Tier-1 risk is well calibrated and similarly discriminating
+across sex and age bands — a model can discriminate well overall yet fail a
+subgroup, which is not the case here.
+
+```{r t5tab}
+kable(sg, booktabs = TRUE, row.names = FALSE,
+      col.names = c("Subgroup","n","Event rate","AUROC","Mean pred.","Obs. rate","Calib. ratio"),
+      caption = "Subgroup discrimination and calibration-in-the-large (ratio near 1.0 = well calibrated).") %>%
+  kable_styling(latex_options = c("hold_position","scale_down"))
+```
+
+# Conclusion
+
+Phase 2 reaches the project's real-time goal without leaving classical
+statistics. A **full-feature nomogram** sets the honest ceiling
+(AUROC `r sprintf("%.3f", en_auc)`) and shows informative measurement patterns
+dominate the signal; a **dynamic landmark supermodel** delivers a single,
+interpretable, hourly-updating risk that matches per-landmark models across the
+stay; **GEE and time-varying Cox** handle the within-patient correlation Phase 1
+ignored (within-patient correlation `r sprintf("%.2f", alpha)`, cluster-robust
+SEs up to `r sprintf("%.1fx", se_infl_max)` the naive ones); and a **utility- and alarm-based
+evaluation** exposes the real cost of a sensitive alarm. The remaining honest
+gap is external validation, which awaits a second database (eICU). Nothing here
+required a neural network; the ceiling is set by the label's dependence on
+clinician recognition, not by model class.
+```

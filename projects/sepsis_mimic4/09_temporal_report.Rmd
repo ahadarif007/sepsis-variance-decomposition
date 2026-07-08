@@ -1,0 +1,511 @@
+---
+title: "Longitudinal Analysis of Sepsis-3 Onset in the ICU: Toward Real-Time Prediction (MIMIC-IV)"
+author: "Abdul Ahad. Student ID: G00486649"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  bookdown::pdf_document2:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    fig_caption: true
+geometry: margin=2.3cm
+fontsize: 11pt
+header-includes:
+  - \usepackage{float}
+  - \usepackage{caption}
+  - \captionsetup[figure]{font=small}
+  - \captionsetup[table]{font=small}
+  - \renewcommand{\contentsname}{Table of Contents}
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+set.seed(486649)
+knitr::opts_chunk$set(
+  echo = FALSE, message = FALSE, warning = FALSE,
+  fig.align = "center", fig.pos = "H",
+  out.width = "80%", fig.width = 6, fig.height = 3.6)
+
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+library(survival)     # KM, Cox, time-varying Cox
+library(cmprsk)       # Fine-Gray competing risks
+library(timeROC)      # time-dependent ROC / AUC(t)
+library(depmixS4)     # within-patient hidden Markov model
+library(pROC)         # ROC / AUC / DeLong
+library(patchwork)
+
+theme_set(theme_minimal(base_size = 10) +
+  theme(plot.title = element_text(face = "bold", size = 11)))
+PAL <- c("No sepsis" = "#5B9BD5", "Sepsis-3" = "#C0504D")
+```
+
+```{r load}
+find_data <- function(f) {
+  cands <- c(file.path("../../processed_data", f),
+             file.path("processed_data", f), f)
+  hit <- cands[file.exists(cands)]
+  if (!length(hit)) stop("Not found: ", f,
+                         " — run 07_hourly_panel.py then 08_onset_label.py.")
+  hit[1]
+}
+onset  <- read.csv(find_data("onset_summary.csv"))
+lm6    <- read.csv(find_data("landmark_h6.csv"))
+traj   <- read.csv(find_data("traj_means.csv"))
+samp   <- read.csv(find_data("panel_sample_long.csv"))
+
+LM_H <- 6L; HORIZON <- 12L
+n_stay   <- nrow(onset)
+n_sep    <- sum(onset$event == 1)
+prev     <- mean(onset$event == 1)
+prevalent<- sum(onset$event == 1 & onset$onset_hour == 0)
+incident6<- sum(onset$event == 1 & onset$onset_hour >= LM_H)
+med_onset<- median(onset$onset_hour[onset$event == 1])
+n_lm     <- nrow(lm6)
+n_lm_ev  <- sum(lm6$event)
+n_lm_h   <- sum(lm6$onset_within_h)
+
+# light imputation for modelling frames
+lm6$gcs[is.na(lm6$gcs)] <- 15
+for (c in c("hr_slope6","resp_rate_slope6","map_slope6","spo2_slope6"))
+  lm6[[c]][is.na(lm6[[c]])] <- 0
+for (c in c("hr","resp_rate","map","spo2","temp_c","sofa_total","qsofa","sirs"))
+  lm6[[c]][is.na(lm6[[c]])] <- median(lm6[[c]], na.rm = TRUE)
+```
+
+# Introduction {#intro}
+
+A companion cross-sectional report analysed each ICU stay as a **single
+row** of first-24h summaries and asked *"was this stay septic?"* That
+framing cannot serve the project's actual objective — a **real-time
+early-warning system** that, at each hour and using only the data
+observed so far, estimates the risk that a patient will develop sepsis.
+This report rebuilds the problem on its proper, **longitudinal** footing.
+
+From the raw tables a pipeline (scripts `01`–`08`) resamples every stay
+onto an **hourly grid** — a panel of
+**`r format(3095002, big.mark=',')`** stay-hours across
+**`r format(n_stay, big.mark=',')`** stays (mean 47 h/stay). SOFA is
+scored every hour, and the hour of **sepsis onset** is located as the
+first hour, inside the suspected-infection window, at which SOFA reaches
+the organ-dysfunction threshold. This gives what the static matrix never
+had: a **time axis** and an **onset time**.
+
+Two facts shape everything that follows:
+
+1.  **`r sprintf('%.1f%%', 100*prev)`** of stays meet Sepsis-3 within the
+    72-hour horizon, but of these **`r sprintf('%.0f%%', 100*prevalent/n_sep)`**
+    are already septic at ICU admission (onset hour 0) — *prevalent*, not
+    predictable. The median onset is hour **`r med_onset`**.
+2.  The clinically useful question is therefore about **incident** sepsis:
+    among patients *not yet* septic, who will become so? We answer it with
+    a **landmark design** at hour **`r LM_H`** — conditioning on the first
+    six hours and predicting onset thereafter — which is exactly how a
+    deployed model would be used.
+
+The methods are the longitudinal counterparts of the cross-sectional
+report: **Kaplan–Meier** and **Cox** (including a **time-varying** Cox)
+for time-to-onset, **Fine–Gray competing risks** (death competes with
+onset), **autocorrelation and trajectory** analysis, a **within-patient
+hidden Markov model** (the HMM applied to real sequences, not stay
+order), and **time-dependent discrimination** benchmarked against the
+streaming clinical scores a new model must beat.
+
+# The Hourly Panel and Onset Labelling {#panel}
+
+```{r onset-hist, fig.cap = "Distribution of sepsis-onset hour among septic stays. A large spike at hour 0 marks sepsis already present at admission (prevalent); the right tail is incident sepsis developing in the ICU — the target of early prediction.", fig.width=6, fig.height=2.8}
+onset %>% filter(event == 1, onset_hour <= 48) %>%
+  ggplot(aes(onset_hour)) +
+  geom_histogram(binwidth = 1, fill = "#C0504D", colour = "white", linewidth = 0.1) +
+  geom_vline(xintercept = LM_H, linetype = "dashed", colour = "grey30") +
+  annotate("text", x = LM_H + 1.5, y = Inf, label = "landmark (6h)",
+           vjust = 1.5, hjust = 0, size = 3, colour = "grey30") +
+  labs(x = "Onset hour (from ICU admission)", y = "Septic stays")
+```
+
+Figure \@ref(fig:onset-hist) shows the split between prevalent and
+incident sepsis. Conditioning at the hour-`r LM_H` landmark leaves
+**`r format(n_lm, big.mark=',')`** stays still at risk, of whom
+**`r format(n_lm_ev, big.mark=',')`**
+(`r sprintf('%.1f%%', 100*n_lm_ev/n_lm)`) later develop sepsis and
+**`r format(n_lm_h, big.mark=',')`** (`r sprintf('%.1f%%', 100*n_lm_h/n_lm)`)
+within the next `r HORIZON` hours. This is a realistically **imbalanced**
+early-prediction problem, unlike the near-balanced stay-level label.
+
+# Time-to-Onset: Kaplan–Meier {#km}
+
+Time-to-event methods treat onset as an event that may or may not have
+happened by the end of observation (censoring), which a simple
+classifier ignores. The survivor function $S(t)$ is the probability of
+remaining sepsis-free to hour $t$; $1-S(t)$ is the cumulative incidence.
+
+```{r km, fig.cap = "Cumulative incidence of sepsis from the hour-6 landmark, stratified by SIRS at the landmark. Patients meeting >=2 SIRS criteria reach sepsis substantially faster.", fig.width=6, fig.height=3.2}
+lm6$sirs2 <- factor(ifelse(lm6$sirs >= 2, "SIRS >= 2", "SIRS < 2"))
+fit_km <- survfit(Surv(t_event, event) ~ sirs2, data = lm6)
+km_df <- broom::tidy(fit_km) %>%
+  mutate(cuminc = 1 - estimate,
+         grp = gsub("sirs2=", "", strata))
+ggplot(km_df, aes(time, cuminc, colour = grp)) +
+  geom_step(linewidth = 0.7) +
+  scale_colour_manual(values = c("SIRS < 2" = "#5B9BD5", "SIRS >= 2" = "#C0504D")) +
+  coord_cartesian(xlim = c(0, 60)) +
+  labs(x = "Hours since landmark", y = "Cumulative incidence of sepsis",
+       colour = NULL) +
+  theme(legend.position = "top")
+
+ci24 <- km_df %>% group_by(grp) %>%
+  filter(time <= 24) %>% slice_tail(n = 1)
+```
+
+Figure \@ref(fig:km) shows the cumulative incidence separating early by
+SIRS status: by 24 h after the landmark it reaches roughly
+**`r sprintf('%.1f%%', 100*ci24$cuminc[ci24$grp=='SIRS >= 2'])`** in the
+SIRS $\geq 2$ group versus
+**`r sprintf('%.1f%%', 100*ci24$cuminc[ci24$grp=='SIRS < 2'])`** otherwise.
+A log-rank test confirms the difference.
+
+```{r logrank}
+lr <- survdiff(Surv(t_event, event) ~ sirs2, data = lm6)
+lr_p <- 1 - pchisq(lr$chisq, length(lr$n) - 1)
+```
+
+The log-rank statistic is **`r sprintf('%.0f', lr$chisq)`**
+(*p* `r format.pval(lr_p, digits = 2, eps = 1e-16)`).
+
+# Cox Regression and the Failure of Proportional Hazards {#cox}
+
+A Cox model estimates how baseline (hour-`r LM_H`) covariates scale the
+hazard of onset. Hazard ratios (HR) above 1 accelerate onset.
+
+```{r cox-baseline}
+cx <- coxph(Surv(t_event, event) ~ age + hr + resp_rate + map + sofa_total + sirs,
+            data = lm6)
+ct <- broom::tidy(cx, exponentiate = TRUE, conf.int = TRUE) %>%
+  transmute(Term = term, HR = sprintf("%.3f", estimate),
+            `95% CI` = sprintf("[%.3f, %.3f]", conf.low, conf.high),
+            p = format.pval(p.value, digits = 2, eps = 1e-16))
+kable(ct, booktabs = TRUE,
+      caption = "Cox model for time to incident sepsis (hour-6 landmark).") %>%
+  kable_styling(latex_options = "HOLD_position")
+zph <- cox.zph(cx)
+zph_p <- zph$table["GLOBAL", "p"]
+```
+
+Table \@ref(tab:cox-baseline) shows **SIRS** and the **vital signs**
+carry the hazard, while a higher **single-timepoint SOFA** is associated
+with a *lower* hazard of *incident* sepsis (HR
+`r sprintf('%.2f', exp(coef(cx))['sofa_total'])`): patients with organ
+dysfunction but no evolving infection at hour 6 tend not to cross the
+Sepsis-3 threshold later. Crucially, the global test of the
+**proportional-hazards assumption fails** ($p$
+`r format.pval(zph_p, digits = 2, eps = 1e-16)`) — the covariate effects
+**change over time**, which a baseline Cox cannot express and which
+motivates a time-varying model.
+
+## Time-varying Cox {#tvcox}
+
+Using the hourly panel as a counting process, covariates are allowed to
+**update every hour** (start–stop intervals), so the model uses each
+patient's *current* physiology rather than a fixed baseline.
+
+```{r tvcox}
+# Build (tstart, tstop] intervals from the sampled long panel, from the
+# landmark onward, censoring/eventing at the onset hour.
+tv <- samp %>%
+  filter(hour >= LM_H) %>%
+  group_by(stay_id) %>%
+  arrange(hour, .by_group = TRUE) %>%
+  mutate(tstart = hour - LM_H, tstop = hour - LM_H + 1,
+         onset_hour = ifelse(is.na(onset_hour), Inf, onset_hour),
+         at_risk = hour < onset_hour,          # drop rows after onset
+         ev = as.integer(sepsis3 == "True" | sepsis3 == TRUE) *
+              as.integer(hour + 1 == onset_hour)) %>%
+  filter(at_risk) %>% ungroup()
+for (c in c("hr","map","lactate","sofa_total"))
+  tv[[c]][is.na(tv[[c]])] <- median(tv[[c]], na.rm = TRUE)
+cx_tv <- coxph(Surv(tstart, tstop, ev) ~ sofa_total + hr + map + lactate,
+               data = tv)
+tvt <- broom::tidy(cx_tv, exponentiate = TRUE, conf.int = TRUE) %>%
+  transmute(Term = term, HR = sprintf("%.3f", estimate),
+            `95% CI` = sprintf("[%.3f, %.3f]", conf.low, conf.high),
+            p = format.pval(p.value, digits = 2, eps = 1e-16))
+kable(tvt, booktabs = TRUE,
+      caption = "Time-varying Cox: hazard of onset from hour-updated physiology (sampled stays).") %>%
+  kable_styling(latex_options = "HOLD_position")
+n_tv_ev <- sum(tv$ev)
+```
+
+Table \@ref(tab:tvcox) updates every covariate hour by hour. The
+**current heart rate** is positively associated with imminent onset (HR
+`r sprintf('%.3f', exp(coef(cx_tv))['hr'])` per bpm), whereas the
+**single SOFA value stays inversely associated** (HR
+`r sprintf('%.2f', exp(coef(cx_tv))['sofa_total'])`): organ dysfunction
+without an evolving infection does not progress to Sepsis-3, whether read
+at admission or hour-by-hour. The lesson is twofold — allowing covariates
+to vary in time is what rescues the violated proportional-hazards
+assumption, and the predictive signal lives in **physiological dynamics
+(notably heart rate)** rather than in a severity snapshot, the same
+conclusion the discrimination analysis reaches. (With
+`r format(n_tv_ev, big.mark=',')` onset events in the sampled counting
+process, these hourly hazards are directional rather than precise.)
+
+# Competing Risks {#cr}
+
+Death and discharge **compete** with sepsis onset: a patient who dies
+sepsis-free can never be observed to develop sepsis, so treating those as
+ordinary censoring overstates incidence. A **Fine–Gray** model targets
+the cumulative incidence of onset in the presence of the competing event.
+
+```{r cuminc, fig.cap = "Cumulative incidence functions from the landmark, accounting for death without sepsis as a competing risk, by SIRS status.", fig.width=6, fig.height=3.2}
+set.seed(486649)
+idx <- sample(nrow(lm6), min(8000, nrow(lm6)))
+ci <- cuminc(ftime = lm6$t_event[idx], fstatus = lm6$status_cr[idx],
+             group = ifelse(lm6$sirs[idx] >= 2, "SIRS>=2", "SIRS<2"))
+ci_df <- map_dfr(names(ci)[!grepl("Tests", names(ci))], function(nm) {
+  x <- ci[[nm]]
+  tibble(time = x$time, est = x$est, series = nm)
+}) %>%
+  separate(series, into = c("grp", "cause"), sep = " ", extra = "merge") %>%
+  mutate(cause = ifelse(cause == 1, "Sepsis", "Death (no sepsis)"))
+ggplot(ci_df, aes(time, est, colour = grp, linetype = cause)) +
+  geom_step(linewidth = 0.6) +
+  coord_cartesian(xlim = c(0, 60)) +
+  scale_colour_manual(values = c("SIRS<2" = "#5B9BD5", "SIRS>=2" = "#C0504D")) +
+  labs(x = "Hours since landmark", y = "Cumulative incidence",
+       colour = NULL, linetype = NULL) +
+  theme(legend.position = "top")
+
+fg <- crr(ftime = lm6$t_event[idx], fstatus = lm6$status_cr[idx],
+          cov1 = as.matrix(lm6[idx, c("age", "sofa_total", "sirs")]),
+          failcode = 1, cencode = 0)
+```
+
+Figure \@ref(fig:cuminc) shows onset incidence (solid) rising faster in
+the SIRS $\geq 2$ group, while the competing risk of death without sepsis
+(dashed) is modest over the horizon. The Fine–Gray subdistribution hazard
+ratio for SIRS is **`r sprintf('%.2f', exp(fg$coef['sirs']))`**,
+confirming SIRS raises the *cumulative* likelihood of onset even after
+allowing for the competing event.
+
+# Temporal Structure: Trajectories and Autocorrelation {#temporal}
+
+The cross-sectional report's HMM disclaimer noted that stays "are not a
+true time series." Within a patient, however, the hourly measurements
+emphatically *are*.
+
+```{r acf, fig.cap = "Left: mean hourly heart rate and SOFA by sepsis status (aligned to admission) — septic patients run higher and diverge. Right: distribution of within-patient lag-1 autocorrelation of heart rate; values well above zero show strong hour-to-hour dependence.", fig.width=7, fig.height=3}
+p_traj <- traj %>%
+  mutate(grp = ifelse(sepsis3 == "True" | sepsis3 == TRUE, "Sepsis-3", "No sepsis")) %>%
+  ggplot(aes(hour, hr, colour = grp)) +
+  geom_line(linewidth = 0.7) +
+  scale_colour_manual(values = PAL) +
+  labs(x = "ICU hour", y = "Mean heart rate", colour = NULL) +
+  theme(legend.position = "top")
+
+acf1 <- samp %>% group_by(stay_id) %>%
+  summarise(a = {x <- hr[!is.na(hr)];
+                 if (length(x) >= 10) acf(x, lag.max = 1, plot = FALSE)$acf[2] else NA_real_},
+            .groups = "drop") %>% filter(!is.na(a))
+mean_acf <- mean(acf1$a)
+p_acf <- ggplot(acf1, aes(a)) +
+  geom_histogram(bins = 30, fill = "#C0504D", colour = "white", linewidth = 0.1) +
+  geom_vline(xintercept = mean_acf, linetype = "dashed") +
+  labs(x = "Within-patient lag-1 autocorrelation (HR)", y = "Stays")
+
+p_traj + p_acf
+```
+
+Figure \@ref(fig:acf) shows septic patients running at a higher mean
+heart rate throughout, and a mean within-patient lag-1 autocorrelation of
+heart rate of **`r sprintf('%.2f', mean_acf)`** — strong serial
+dependence. This dependence is the statistical foundation the static
+analysis discarded and that sequence models are built to exploit.
+
+# Within-Patient Hidden Markov Model {#hmm}
+
+Here the HMM is applied as intended: to each patient's **hourly heart-rate
+sequence**, with a latent state that persists and transitions over time. A
+three-state Gaussian HMM is fitted jointly across a sample of stays
+(`ntimes` = each stay's length).
+
+```{r hmm, results='hide'}
+set.seed(486649)
+seqs <- samp %>% group_by(stay_id) %>% filter(n() >= 12) %>% ungroup()
+use <- sample(unique(seqs$stay_id), min(350, n_distinct(seqs$stay_id)))
+hs <- seqs %>% filter(stay_id %in% use) %>% arrange(stay_id, hour)
+hs$hr[is.na(hs$hr)] <- median(hs$hr, na.rm = TRUE)
+ntimes <- hs %>% count(stay_id) %>% pull(n)
+mod <- depmix(hr ~ 1, data = as.data.frame(hs), nstates = 3,
+              family = gaussian(), ntimes = ntimes)
+fm <- fit(mod, verbose = FALSE, emcontrol = em.control(random.start = TRUE))
+pars <- getpars(fm)
+# emission means are the last 6 params (mean,sd)x3
+em <- matrix(tail(pars, 6), ncol = 2, byrow = TRUE)
+ord <- order(em[, 1]); em <- em[ord, ]
+tmat <- matrix(pars[4:12], 3, byrow = TRUE)[ord, ord]
+hs$state <- match(posterior(fm, type = "viterbi")$state, ord)
+sep_by_state <- hs %>% group_by(state) %>%
+  summarise(hr = mean(hr), sep = mean(label), .groups = "drop")
+```
+
+```{r hmm-tables}
+kable(tibble(State = c("1 (low)", "2 (mid)", "3 (high)"),
+             `HR mean` = round(em[, 1], 1),
+             `Self-persistence` = sprintf("%.2f", diag(tmat)),
+             `Septic-hour rate` = sprintf("%.1f%%", 100 * sep_by_state$sep)),
+      booktabs = TRUE,
+      caption = "Three-state HR HMM: emission means, diagonal (persistence) of the transition matrix, and the fraction of hours in each state that are labelled septic.") %>%
+  kable_styling(latex_options = "HOLD_position")
+```
+
+Table \@ref(tab:hmm-tables) shows the three states order into low, medium
+and high heart-rate regimes with **strong self-persistence** (diagonal
+transition probabilities around
+`r sprintf('%.2f', mean(diag(tmat)))`) — genuine temporal stickiness,
+unlike the artefactual diagonal the cross-sectional HMM produced on stay
+*order*. The high-HR state also carries the highest proportion of septic
+hours, so the latent state tracks physiological deterioration. This is the
+HMM doing real work: modelling how a patient moves between hidden
+physiologic regimes over time.
+
+# Time-Dependent Discrimination and Clinical Baselines {#discrimination}
+
+Finally we establish the **bar** a real-time model must clear: how well
+do the standard streaming scores predict incident sepsis, and does using
+the *trajectory* help?
+
+```{r baselines}
+# Single-score discrimination for onset within HORIZON hours.
+auc1 <- function(m) as.numeric(auc(roc(lm6$onset_within_h, lm6[[m]],
+                                        quiet = TRUE, direction = "<")))
+base_tab <- tibble(
+  Score = c("SOFA (hour 6)", "qSOFA (hour 6)", "SIRS (hour 6)"),
+  `AUC (within 12h)` = sprintf("%.3f", c(auc1("sofa_total"), auc1("qsofa"), auc1("sirs"))))
+
+# Multivariable models, 5-fold cross-validated.
+set.seed(486649)
+f <- sample(rep(1:5, length.out = nrow(lm6)))
+cvauc <- function(form) {
+  p <- numeric(nrow(lm6))
+  for (k in 1:5) { tr <- f != k
+    m <- glm(form, lm6[tr, ], family = binomial)
+    p[!tr] <- predict(m, lm6[!tr, ], type = "response") }
+  list(auc = as.numeric(auc(roc(lm6$onset_within_h, p, quiet = TRUE, direction = "<"))),
+       p = p)
+}
+st <- cvauc(onset_within_h ~ age + sofa_total + qsofa + sirs +
+              hr + resp_rate + map + spo2 + temp_c)
+tv <- cvauc(onset_within_h ~ age + sofa_total + qsofa + sirs +
+              hr + resp_rate + map + spo2 + temp_c +
+              hr_slope6 + resp_rate_slope6 + map_slope6 + spo2_slope6)
+delong_p <- roc.test(roc(lm6$onset_within_h, st$p, quiet = TRUE, direction = "<"),
+                     roc(lm6$onset_within_h, tv$p, quiet = TRUE, direction = "<"),
+                     method = "delong")$p.value
+```
+
+```{r baseline-table}
+kable(bind_rows(base_tab,
+  tibble(Score = c("Multivariable (static, 6h)",
+                   "Multivariable + 6h trajectory slopes"),
+         `AUC (within 12h)` = sprintf("%.3f", c(st$auc, tv$auc)))),
+  booktabs = TRUE,
+  caption = "Discrimination for incident sepsis within 12h of the landmark (cross-validated for the multivariable models).") %>%
+  kable_styling(latex_options = "HOLD_position") %>%
+  pack_rows("Single clinical scores", 1, 3) %>%
+  pack_rows("Multivariable", 4, 5)
+```
+
+```{r auct, fig.cap = "Time-dependent AUC for predicting sepsis onset over increasing horizons, using the cross-validated multivariable risk score.", fig.width=5, fig.height=3}
+tr <- timeROC(T = lm6$t_event, delta = lm6$event, marker = tv$p,
+              cause = 1, times = c(6, 12, 24, 36, 48), iid = FALSE)
+tibble(t = c(6, 12, 24, 36, 48), AUC = as.numeric(tr$AUC)) %>%
+  ggplot(aes(t, AUC)) +
+  geom_line(colour = "#C0504D") + geom_point(colour = "#C0504D") +
+  geom_hline(yintercept = 0.5, linetype = "dashed", colour = "grey60") +
+  coord_cartesian(ylim = c(0.5, 0.85)) +
+  labs(x = "Prediction horizon (hours after landmark)", y = "Time-dependent AUC")
+```
+
+Table \@ref(tab:baseline-table) is the report's punchline. **No single
+clinical score is useful** for incident sepsis — SOFA is even *inverse*
+(AUC `r base_tab[[2]][1]`), because organ dysfunction without evolving
+infection does not progress to Sepsis-3; SIRS is the best single score
+(AUC `r base_tab[[2]][3]`). But a **multivariable** combination of the
+same hourly measurements reaches AUC **`r sprintf('%.3f', st$auc)`**, and
+adding **six-hour trajectory slopes** raises it further to
+**`r sprintf('%.3f', tv$auc)`** (DeLong *p*
+`r format.pval(delong_p, digits = 2, eps = 1e-16)`). Figure
+\@ref(fig:auct) shows this discrimination holds across horizons. The
+temporal features add real, statistically significant signal — direct
+evidence that the trajectory carries information a snapshot does not.
+
+# Conclusion and Path to a Real-Time Model {#conclusion}
+
+Reframing the problem longitudinally changed both the methods and the
+findings.
+
+-   **Prevalent vs incident.** A third of Sepsis-3 is present at admission
+    and not predictable; the real task is the incident sepsis isolated by
+    the hour-`r LM_H` **landmark**
+    (`r sprintf('%.1f%%', 100*n_lm_ev/n_lm)` of at-risk stays).
+
+-   **The signal is in the dynamics, not the snapshot.** A baseline Cox
+    violated proportional hazards; a **time-varying Cox** located the
+    hazard in *current heart rate* rather than a SOFA severity score
+    (which stays inversely related to incident onset). **Autocorrelation**
+    (`r sprintf('%.2f', mean_acf)`) and a persistent-state **HMM**
+    confirmed genuine within-patient temporal structure that the
+    cross-sectional analysis had to discard.
+
+-   **A bar for the model.** Single streaming scores are weak or inverse;
+    a multivariable hourly model reaches AUC
+    **`r sprintf('%.3f', st$auc)`** and trajectory features push it to
+    **`r sprintf('%.3f', tv$auc)`**. Any real-time model should be judged
+    against these, with time-dependent AUC and competing-risk-aware,
+    leakage-safe, patient-grouped evaluation.
+
+**Toward Phase 2.** The labelled hourly panel, onset times, landmark
+design, competing-risk framing, and streaming baselines assembled here
+are the direct inputs to a sequence model (e.g. gradient boosting on
+windowed features as a strong baseline, then a recurrent/temporal
+network) trained to emit an hourly sepsis risk. The statistics in this
+report specify the target, the evaluation, and the minimum performance
+that model must exceed.
+
+**Limitations.** Onset depends on clinician behaviour (when cultures and
+antibiotics are ordered), so incident "onset" partly reflects *recognition*
+timing; the SOFA baseline is assumed zero; qSOFA uses MAP as a proxy for
+systolic pressure; and the time-varying Cox and HMM use a sampled subset
+for tractability. These are revisited as the modelling matures.
+
+# Acknowledgment {.unnumbered}
+
+This longitudinal analysis extends the cross-sectional study to the
+project's real objective — real-time prediction — using the **PAIR
+framework** for responsible AI use: the problem framing, survival and
+time-series methods, and their honest (including negative) interpretation
+were critically reviewed against primary sources.
+
+# References {.unnumbered}
+
+1.  Singer, M., et al. (2016). The Third International Consensus
+    Definitions for Sepsis and Septic Shock (Sepsis-3). *JAMA*, 315(8).
+2.  Seymour, C. W., et al. (2016). Assessment of Clinical Criteria for
+    Sepsis. *JAMA*, 315(8).
+3.  Reyna, M. A., et al. (2020). Early Prediction of Sepsis from Clinical
+    Data: the PhysioNet/CinC Challenge 2019. *Critical Care Medicine*,
+    48(2).
+4.  Cox, D. R. (1972). Regression Models and Life-Tables. *JRSS B*,
+    34(2).
+5.  Fine, J. P., & Gray, R. J. (1999). A Proportional Hazards Model for
+    the Subdistribution of a Competing Risk. *JASA*, 94(446).
+6.  Blanche, P., et al. (2013). Estimating and comparing time-dependent
+    areas under ROC curves. *Statistics in Medicine*, 32(30).
+7.  Rabiner, L. R. (1989). A tutorial on hidden Markov models. *Proc.
+    IEEE*, 77(2).
+8.  van Houwelingen, H. C. (2007). Dynamic prediction by landmarking.
+    *Scandinavian J. Statistics*, 34(1).
+```

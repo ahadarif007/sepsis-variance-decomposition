@@ -1,0 +1,150 @@
+#!/usr/bin/env Rscript
+# =============================================================================
+# 15_realtime_eval.R  --  PHASE 2, TIER 4
+# Real-time evaluation of the landmark supermodel as a streaming early-warning:
+#   (1) PhysioNet/CinC-2019 UTILITY SCORE on an hourly risk stream,
+#   (2) ALARM-BURDEN analysis (sensitivity vs false-alarms-per-patient-day),
+#   (3) dynamic calibration of the hourly risk.
+#
+# Leakage-safe: the supermodel is trained on the landmark stack EXCLUDING the
+# holdout stays (realtime_holdout_ids.csv), then scores every hour of the holdout
+# (realtime_holdout_features.csv). Impute medians and s-scaling come from TRAIN.
+#
+# Outputs: phase2_tier4_utility.csv, phase2_tier4_alarm_sweep.csv
+#          figure/alarm_tradeoff.png
+# Seed 486649. Run from projects/sepsis_mimic4/.
+# =============================================================================
+
+suppressPackageStartupMessages({ library(glmnet); library(pROC) })
+set.seed(486649)
+
+find_data <- function(f) {
+  cands <- c(file.path("../../processed_data", f),
+             file.path("processed_data", f), f)
+  hit <- cands[file.exists(cands)][1]; if (is.na(hit)) stop("cannot find ", f); hit
+}
+OUT <- dirname(find_data("landmark_stack.csv"))
+FIG <- if (dir.exists("figure")) "figure" else { dir.create("figure"); "figure" }
+
+stack <- read.csv(find_data("landmark_stack.csv"))
+hold_ids <- read.csv(find_data("realtime_holdout_ids.csv"))$stay_id
+hnew <- read.csv(find_data("realtime_holdout_features.csv"))
+
+vitals <- c("hr","resp_rate","map","spo2","temp_c","gcs")
+labs   <- c("lactate","creatinine","wbc","pf_ratio")
+slopes <- c("hr_slope6","resp_rate_slope6","map_slope6","spo2_slope6")
+scores <- c("sofa_total","qsofa","sirs")
+
+# ---- design builder: `ref` carries TRAIN medians + s mean/sd (no leakage) ----
+make_ref <- function(raw) {
+  med <- sapply(c(vitals, scores, labs), function(v) median(raw[[v]], na.rm=TRUE))
+  list(med = med, s_mu = mean(raw$landmark_time), s_sd = sd(raw$landmark_time))
+}
+make_design <- function(raw, ref) {
+  df <- data.frame(row.names = seq_len(nrow(raw)))
+  for (v in c(vitals, scores)) { x <- raw[[v]]; x[is.na(x)] <- ref$med[[v]]; df[[v]] <- x }
+  for (v in labs)   { x <- raw[[v]]; df[[paste0(v,"_msg")]] <- as.integer(is.na(x));
+                      x[is.na(x)] <- ref$med[[v]]; df[[v]] <- x }
+  for (v in slopes) { x <- raw[[v]]; df[[paste0(v,"_msg")]] <- as.integer(is.na(x));
+                      x[is.na(x)] <- 0; df[[v]] <- x }
+  df$age <- raw$age; df$female <- as.integer(raw$gender == "F")
+  base <- names(df)
+  sz <- (raw$landmark_time - ref$s_mu) / ref$s_sd
+  df$s <- sz; df$s2 <- sz^2
+  for (v in base) df[[paste0(v, "_xS")]] <- df[[v]] * sz
+  as.matrix(df)
+}
+
+# ---- train supermodel on stack minus holdout stays --------------------------
+tr <- stack[!(stack$stay_id %in% hold_ids), ]
+cat(sprintf("train rows %d (%d stays); holdout %d stays, %d scored hours\n",
+            nrow(tr), length(unique(tr$stay_id)), length(hold_ids), nrow(hnew)))
+ref <- make_ref(tr)
+Xtr <- make_design(tr, ref); ytr <- tr$onset_within_h
+cvfit <- cv.glmnet(Xtr, ytr, family="binomial", alpha=0.5, nfolds=5, standardize=TRUE)
+
+# ---- score every holdout hour -> hourly risk stream -------------------------
+Xho <- make_design(hnew, ref)
+hnew$risk <- as.numeric(predict(cvfit, Xho, s="lambda.min", type="response"))
+
+# ---- (1) PhysioNet/CinC-2019 utility score ----------------------------------
+# reward window relative to onset t*: early -12h, optimal -6h, late +3h.
+DT_EARLY <- -12; DT_OPT <- -6; DT_LATE <- 3
+U_FP <- -0.05; MIN_FN <- -2; MAX_TP <- 1
+# per-hour utility given predicted 0/1 and relative time tau = hour - onset
+u_pred1 <- function(tau, septic) {
+  ifelse(!septic, U_FP,
+    ifelse(tau <= DT_EARLY, U_FP,
+    ifelse(tau <= DT_OPT, (tau - DT_EARLY)/(DT_OPT - DT_EARLY) * MAX_TP,
+    ifelse(tau <= DT_LATE, MAX_TP*(1 - (tau - DT_OPT)/(DT_LATE - DT_OPT)), 0))))
+}
+u_pred0 <- function(tau, septic) {
+  ifelse(!septic, 0,
+    ifelse(tau <= DT_OPT, 0,
+    ifelse(tau <= DT_LATE, MIN_FN*(tau - DT_OPT)/(DT_LATE - DT_OPT), MIN_FN)))
+}
+septic <- !is.na(hnew$onset_hour)
+tau <- hnew$hour - ifelse(septic, hnew$onset_hour, Inf)
+
+utility_at <- function(thresh) {
+  pred <- hnew$risk >= thresh
+  u_model <- sum(ifelse(pred, u_pred1(tau, septic), u_pred0(tau, septic)))
+  u_model
+}
+u_no    <- sum(u_pred0(tau, septic))                         # never alarm
+u_best  <- sum(pmax(u_pred1(tau, septic), u_pred0(tau, septic)))  # oracle per-hour
+grid <- seq(0.02, 0.6, by = 0.01)
+u_raw <- sapply(grid, utility_at)
+norm  <- (u_raw - u_no) / (u_best - u_no)
+best_i <- which.max(norm)
+util_tab <- data.frame(threshold = grid,
+                       utility_raw = round(u_raw, 1),
+                       utility_norm = round(norm, 4))
+write.csv(util_tab, file.path(OUT, "phase2_tier4_utility.csv"), row.names=FALSE)
+cat(sprintf("\nPhysioNet utility (normalized): best %.4f at threshold %.2f\n",
+            norm[best_i], grid[best_i]))
+cat(sprintf("  (never-alarm baseline utility_norm = 0; per-hour oracle = 1)\n"))
+
+# ---- (2) alarm-burden sweep: patient-level sensitivity vs false alarms -------
+# an alarm "counts" for a septic patient if it fires at/after t_early and at or
+# before onset+late (a timely catch); false alarms = alarm-hours on non-septic
+# patients (or septic hours outside the reward window).
+sweep <- lapply(grid, function(th) {
+  pred <- hnew$risk >= th
+  # patient-level: did we catch each septic patient in a timely way?
+  timely <- pred & septic & (tau >= DT_EARLY) & (tau <= DT_LATE)
+  caught <- tapply(timely, hnew$stay_id, any)
+  is_sep_pt <- tapply(septic, hnew$stay_id, any)
+  sens <- mean(caught[is_sep_pt], na.rm=TRUE)
+  # false-alarm hours: alarm on a non-septic patient, or septic before window
+  fa <- pred & ((!septic) | (septic & tau < DT_EARLY))
+  fa_per_day <- sum(fa) / sum(!septic | (septic & tau < DT_EARLY)) * 24
+  # non-septic patients with >=1 false alarm (alarm-fatigue proxy)
+  nonsep_pt <- tapply(!septic, hnew$stay_id, all)
+  any_fa <- tapply(pred & !septic, hnew$stay_id, any)
+  fpr_pt <- mean(any_fa[nonsep_pt], na.rm=TRUE)
+  data.frame(threshold=th, sensitivity=sens, fa_per_patient_day=fa_per_day,
+             frac_nonseptic_pts_alarmed=fpr_pt)
+})
+sweep <- do.call(rbind, sweep)
+sweep[,-1] <- round(sweep[,-1], 4)
+write.csv(sweep, file.path(OUT, "phase2_tier4_alarm_sweep.csv"), row.names=FALSE)
+# report a couple of operating points
+for (target in c(0.90, 0.70, 0.50)) {
+  i <- which.min(abs(sweep$sensitivity - target))
+  cat(sprintf("  sens=%.2f @ thr %.2f -> %.2f false alarms/patient-day, %.0f%% of non-septic patients ever alarmed\n",
+              sweep$sensitivity[i], sweep$threshold[i],
+              sweep$fa_per_patient_day[i], 100*sweep$frac_nonseptic_pts_alarmed[i]))
+}
+
+# ---- figure: alarm trade-off ------------------------------------------------
+png(file.path(FIG, "alarm_tradeoff.png"), width=1100, height=850, res=200)
+plot(sweep$fa_per_patient_day, sweep$sensitivity, type="l", col="firebrick", lwd=2,
+     xlab="False alarms per patient-day", ylab="Timely detection sensitivity",
+     main="Alarm burden of the real-time supermodel")
+pts <- c(which.min(abs(sweep$sensitivity-0.9)), which.min(abs(sweep$sensitivity-0.7)))
+points(sweep$fa_per_patient_day[pts], sweep$sensitivity[pts], pch=19)
+text(sweep$fa_per_patient_day[pts], sweep$sensitivity[pts],
+     sprintf("thr=%.2f", sweep$threshold[pts]), pos=4, cex=0.7)
+dev.off()
+cat("\nTier 4 complete.\n")

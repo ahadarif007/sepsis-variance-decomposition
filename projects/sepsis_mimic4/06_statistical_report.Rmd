@@ -1,0 +1,1272 @@
+---
+title: "Statistical Analysis of Sepsis-3 in Critically Ill Patients (MIMIC-IV)"
+author: "Abdul Ahad. Student ID: G00486649"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  bookdown::pdf_document2:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    fig_caption: true
+geometry: margin=2.3cm
+fontsize: 11pt
+header-includes:
+  - \usepackage{float}
+  - \usepackage{caption}
+  - \captionsetup[figure]{font=small}
+  - \captionsetup[table]{font=small}
+  - \renewcommand{\contentsname}{Table of Contents}
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+# =============================================================================
+# REPRODUCIBILITY: seed = student ID (no G, no leading 0s)
+# =============================================================================
+set.seed(486649)
+
+knitr::opts_chunk$set(
+  echo = FALSE, message = FALSE, warning = FALSE,
+  fig.align = "center", fig.pos = "H",
+  out.width = "80%", fig.width = 6, fig.height = 3.6
+)
+
+library(tidyverse)    # data manipulation + ggplot2
+library(knitr)        # kable()
+library(kableExtra)   # table styling
+library(MASS)         # statistical methods
+library(mclust)       # Gaussian mixture models (Section 6)
+library(coda)         # MCMC diagnostics (Section 7 Part A)
+library(depmixS4)     # Hidden Markov Models (Section 7 Part B)
+library(effectsize)   # effect sizes (Section 3)
+library(broom)        # tidy model output (Section 5)
+library(patchwork)    # combine ggplots
+library(pROC)         # ROC / AUC CIs / DeLong test (Section 8)
+library(PRROC)        # precision-recall AUC (Section 8)
+library(mgcv)         # GAM / penalised splines (Section 8)
+library(car)          # variance inflation factors (Section 8)
+library(mice)         # multiple imputation (Section 8)
+
+theme_set(theme_minimal(base_size = 10) +
+  theme(plot.title = element_text(face = "bold", size = 11)))
+
+# Two-colour palette reused throughout: blue = no sepsis, red = Sepsis-3.
+PAL <- c("No sepsis" = "#5B9BD5", "Sepsis-3" = "#C0504D")
+```
+
+```{r load-data}
+# ---- locate the analysis matrix produced by 04_extract_measurements.py +
+#      05_sofa_sepsis3.py -------------------------------------------------------
+find_data <- function() {
+  cands <- c("../../processed_data/analysis_matrix.csv",
+             "processed_data/analysis_matrix.csv",
+             "analysis_matrix.csv")
+  hit <- cands[file.exists(cands)]
+  if (length(hit) == 0)
+    stop("analysis_matrix.csv not found. Run 04_extract_measurements.py then ",
+         "05_sofa_sepsis3.py first.")
+  hit[1]
+}
+
+to_bool <- function(x) {
+  if (is.logical(x)) return(x)
+  tolower(as.character(x)) %in% c("true", "t", "1", "yes")
+}
+
+raw <- read.csv(find_data(), stringsAsFactors = FALSE)
+
+# Binary outcome as an ordered factor (reference first).
+raw$sepsis <- factor(ifelse(to_bool(raw$sepsis3), "Sepsis-3", "No sepsis"),
+                     levels = c("No sepsis", "Sepsis-3"))
+
+# Non-circular predictors: physiology that is NOT part of the SOFA/Sepsis-3
+# definition (SOFA uses platelets, bilirubin, creatinine, MAP/pressors, GCS,
+# PaO2/FiO2 — none of the variables below), so the models are not tautological.
+feat_vars <- c("lactate_max", "wbc_max", "hr_max",
+               "resp_rate_max", "temp_max_c", "age")
+
+# Modelling subset: complete cases on the predictors + outcome.
+dat <- raw %>%
+  dplyr::select(all_of(feat_vars), sepsis, sepsis3, sofa_total,
+                hospital_expire_flag, septic_shock) %>%
+  filter(if_all(all_of(feat_vars), ~ !is.na(.)))
+
+n_total   <- nrow(raw)
+n_model   <- nrow(dat)
+n_sepsis  <- sum(dat$sepsis == "Sepsis-3")
+prev_full <- mean(to_bool(raw$sepsis3))
+prev_mod  <- mean(dat$sepsis == "Sepsis-3")
+```
+
+# Introduction {#intro}
+
+Sepsis is life-threatening organ dysfunction caused by a dysregulated
+host response to infection, and it remains one of the leading causes of
+death in intensive care units worldwide. The **Sepsis-3** consensus
+(Singer et al., 2016) defines sepsis operationally as a **suspected
+infection** accompanied by an acute rise of **two or more points** in
+the Sequential Organ Failure Assessment (**SOFA**) score.
+
+This report analyses **MIMIC-IV v3.1**, a large, de-identified database
+of patients admitted to the critical-care units of the Beth Israel
+Deaconess Medical Center. From the raw tables a reproducible pipeline
+(scripts `01`–`05`) builds an adult, first-ICU-stay cohort, detects
+suspected infection from antibiotic orders paired with cultures,
+computes the six SOFA organ scores from the first 24 hours of each stay,
+and applies the Sepsis-3 rule. The result is an analysis matrix of
+**`r format(n_total, big.mark=",")`** ICU stays, of which
+**`r sprintf("%.1f%%", 100*prev_full)`** meet the Sepsis-3 definition.
+
+The clinical question is whether **routinely measured physiology that is
+*not* part of the sepsis definition** — lactate, white-cell count, heart
+rate, respiratory rate, temperature, and age — can separate septic from
+non-septic stays, and what different statistical methods reveal about
+the same data. Choosing predictors outside the SOFA score avoids
+circularity: the models are asked to recover the label from independent
+signals, not from the very quantities used to construct it.
+
+All inferential and modelling sections use the
+**`r format(n_model, big.mark=",")`** stays with a complete set of these
+six measurements (`r sprintf("%.1f%%", 100*prev_mod)` Sepsis-3
+positive). Because lactate is ordered preferentially in sicker patients,
+this complete-case subset is enriched for severity relative to the full
+cohort; this is revisited as a limitation in the conclusion.
+
+The report follows a structured progression:
+
+1.  **Exploratory data analysis** (Section \@ref(eda)) describes the
+    cohort and feature distributions by sepsis status.
+2.  **Hypothesis testing** (Section \@ref(hypothesis)) quantifies which
+    features differ between groups, focusing on effect size.
+3.  **Maximum likelihood estimation** (Section \@ref(mle)) models the
+    typical lactate of a septic patient.
+4.  **Generalised linear models** (Section \@ref(glm)) determine which
+    features carry independent predictive power.
+5.  **Kernel density estimation and mixture modelling** (Section
+    \@ref(density)) attempt to recover the two groups without labels.
+6.  **Metropolis-Hastings sampling** (Section \@ref(partA)) re-expresses
+    the likelihood result in a Bayesian framework.
+7.  A **Hidden Markov Model** (Section \@ref(partB)) tests whether the
+    ordering of observations carries extra structure.
+8.  **Predictive validation** (Section \@ref(validation)) subjects the
+    model to out-of-sample cross-validation, calibration, precision–recall
+    and decision-curve analysis, a non-linearity check, and a formal
+    treatment of missing data.
+
+# Exploratory Data Analysis {#eda}
+
+The aim of this section is to understand the data before modelling. The
+focus is on lactate, white-cell count, and the vital signs, which are
+central to the recognition of sepsis at the bedside.
+
+```{r class-counts}
+tab_cls <- table(dat$sepsis)
+prop_cls <- prop.table(tab_cls)
+imbalance <- as.numeric(tab_cls["No sepsis"] / tab_cls["Sepsis-3"])
+```
+
+In the modelling subset there are
+**`r format(as.integer(tab_cls['No sepsis']), big.mark=',')`**
+non-septic and
+**`r format(as.integer(tab_cls['Sepsis-3']), big.mark=',')`** septic
+stays (`r sprintf('%.1f%%', 100*prop_cls['Sepsis-3'])` septic). The
+classes are imbalanced at roughly **`r sprintf('%.1f', imbalance)`:1**,
+milder than many clinical-outcome datasets and not severe enough to
+require resampling; the inferential focus on effect size further reduces
+its impact.
+
+```{r eda-summary}
+key_vars <- c("lactate_max", "wbc_max", "hr_max",
+              "resp_rate_max", "temp_max_c", "age")
+pretty <- c(lactate_max = "Lactate, max (mmol/L)",
+            wbc_max = "WBC, max (K/uL)",
+            hr_max = "Heart rate, max (bpm)",
+            resp_rate_max = "Resp. rate, max (/min)",
+            temp_max_c = "Temperature, max (C)",
+            age = "Age (years)")
+
+summary_tab <- dat %>%
+  dplyr::select(sepsis, all_of(key_vars)) %>%
+  pivot_longer(-sepsis, names_to = "Feature", values_to = "Value") %>%
+  group_by(Feature, sepsis) %>%
+  summarise(Mean = mean(Value), Median = median(Value),
+            SD = sd(Value), .groups = "drop") %>%
+  pivot_wider(names_from = sepsis, values_from = c(Mean, Median, SD)) %>%
+  mutate(Feature = pretty[Feature]) %>%
+  dplyr::select(Feature,
+                `Mean_No sepsis`, `Mean_Sepsis-3`,
+                `Median_No sepsis`, `Median_Sepsis-3`,
+                `SD_No sepsis`, `SD_Sepsis-3`)
+
+kable(summary_tab, digits = 2, booktabs = TRUE,
+      caption = "Summary statistics for the six features, by sepsis status.",
+      col.names = c("Feature", "Mean (no)", "Mean (sep)",
+                    "Med. (no)", "Med. (sep)", "SD (no)", "SD (sep)")) %>%
+  kable_styling(latex_options = c("scale_down", "HOLD_position"))
+```
+
+Table \@ref(tab:eda-summary) shows that septic stays tend to have higher
+lactate, higher white-cell counts, and faster heart and respiratory
+rates. These shifts match the bedside picture of sepsis, although the
+spread within each group is wide.
+
+```{r eda-boxplots, fig.cap = "Three features by sepsis status. Septic stays show higher lactate, faster breathing, and faster heart rates, with substantial overlap."}
+plot_vars <- c("lactate_max", "resp_rate_max", "hr_max")
+plab <- c(lactate_max = "Lactate, max", resp_rate_max = "Resp. rate, max",
+          hr_max = "Heart rate, max")
+
+dat %>%
+  dplyr::select(sepsis, all_of(plot_vars)) %>%
+  pivot_longer(-sepsis, names_to = "Feature", values_to = "Value") %>%
+  mutate(Feature = plab[Feature]) %>%
+  ggplot(aes(sepsis, Value, fill = sepsis)) +
+  geom_boxplot(alpha = 0.75, outlier.size = 0.4, outlier.alpha = 0.25) +
+  facet_wrap(~ Feature, scales = "free_y", nrow = 1) +
+  scale_fill_manual(values = PAL) +
+  labs(x = NULL, y = NULL) +
+  theme(legend.position = "none")
+```
+
+Figure \@ref(fig:eda-boxplots) confirms the direction of these
+differences but also the overlap: no single feature cleanly separates
+the groups, which motivates the multivariable model in Section
+\@ref(glm).
+
+```{r eda-density, fig.cap = "Distribution of maximum lactate by sepsis status (values capped at 15 mmol/L for display). Both groups are right-skewed; the septic distribution is shifted upward."}
+dat %>%
+  mutate(lac = pmin(lactate_max, 15)) %>%
+  ggplot(aes(lac, fill = sepsis)) +
+  geom_density(alpha = 0.55) +
+  scale_fill_manual(values = PAL) +
+  labs(x = "Maximum lactate (mmol/L)", y = "Density", fill = NULL) +
+  theme(legend.position = "top")
+```
+
+Figure \@ref(fig:eda-density) shows two overlapping, right-skewed
+distributions. The septic curve is shifted toward higher lactate, but
+the long right tail in both groups signals that a log transform will be
+useful for the distributional models in Sections
+\@ref(mle)–\@ref(partB).
+
+*Collectively, this section shows the data contain genuine, clinically
+coherent signal, but no single feature is sufficient for perfect
+separation.*
+
+# Hypothesis Testing {#hypothesis}
+
+This section compares septic and non-septic stays on three features
+using three different tests. With **`r format(n_model, big.mark=",")`**
+observations, even trivial differences yield very small p-values, so
+interpretation focuses on **effect size** — the magnitude of the
+difference — rather than significance alone.
+
+## Test 1: Maximum lactate (Welch t-test)
+
+A Welch t-test is used because the two groups have unequal variances.
+
+$H_0$: mean maximum lactate is equal in septic and non-septic stays\
+$H_1$: mean maximum lactate differs between the groups
+
+```{r t-test}
+t1 <- t.test(lactate_max ~ sepsis, data = dat)
+d1 <- effectsize::cohens_d(lactate_max ~ sepsis, data = dat)
+
+kable(tibble(
+  Statistic = c("t", "df", "p-value", "Mean (no sepsis)", "Mean (Sepsis-3)",
+                "Mean difference", "Cohen's d", "95% CI for d"),
+  Value = c(sprintf("%.2f", t1$statistic),
+            sprintf("%.0f", t1$parameter),
+            format.pval(t1$p.value, digits = 3, eps = 1e-16),
+            sprintf("%.2f", t1$estimate[1]),
+            sprintf("%.2f", t1$estimate[2]),
+            sprintf("%.2f", diff(rev(t1$estimate))),
+            sprintf("%.2f", d1$Cohens_d),
+            sprintf("[%.2f, %.2f]", d1$CI_low, d1$CI_high))
+), booktabs = TRUE,
+   caption = "Welch t-test: maximum lactate by sepsis status.") %>%
+  kable_styling(latex_options = "HOLD_position")
+```
+
+Table \@ref(tab:t-test) shows mean maximum lactate of
+**`r sprintf('%.2f', t1$estimate[1])`** mmol/L in non-septic stays
+versus **`r sprintf('%.2f', t1$estimate[2])`** mmol/L in septic stays, a
+difference of **`r sprintf('%.2f', diff(rev(t1$estimate)))`** mmol/L.
+The p-value is `r format.pval(t1$p.value, digits=3, eps=1e-16)`, so the
+difference is not attributable to chance. Cohen's *d* of
+**`r sprintf('%.2f', d1$Cohens_d)`** indicates a
+`r ifelse(abs(d1$Cohens_d)>=0.8,'large',ifelse(abs(d1$Cohens_d)>=0.5,'moderate','small-to-moderate'))`
+effect: lactate separates the groups, but not perfectly.
+
+## Test 2: Maximum white-cell count (Wilcoxon rank-sum)
+
+White-cell counts are heavily right-skewed, so a non-parametric Wilcoxon
+rank-sum test is used.
+
+$H_0$: the distribution of maximum WBC is the same in both groups\
+$H_1$: the distributions differ
+
+```{r wilcoxon}
+w1 <- wilcox.test(wbc_max ~ sepsis, data = dat)
+rb <- effectsize::rank_biserial(wbc_max ~ sepsis, data = dat)
+
+kable(tibble(
+  Statistic = c("W", "p-value", "Rank-biserial r", "95% CI"),
+  Value = c(format(w1$statistic, big.mark = ","),
+            format.pval(w1$p.value, digits = 3, eps = 1e-16),
+            sprintf("%.2f", rb$r_rank_biserial),
+            sprintf("[%.2f, %.2f]", rb$CI_low, rb$CI_high))
+), booktabs = TRUE,
+   caption = "Wilcoxon rank-sum: maximum WBC by sepsis status.") %>%
+  kable_styling(latex_options = "HOLD_position")
+```
+
+Table \@ref(tab:wilcoxon) shows a significant difference in white-cell
+counts. The rank-biserial correlation of
+**`r sprintf('%.2f', rb$r_rank_biserial)`** is
+`r ifelse(abs(rb$r_rank_biserial)>=0.5,'large',ifelse(abs(rb$r_rank_biserial)>=0.3,'moderate','small'))`
+in magnitude — weaker than lactate, consistent with white-cell count
+being a noisier marker that rises in many non-septic stresses as well.
+
+## Test 3: Tachypnoea and sepsis (Chi-squared)
+
+Respiratory rate is dichotomised at the **qSOFA** threshold of 22
+breaths/min (a recognised marker of clinical deterioration), and its
+association with sepsis is tested with a chi-squared test of
+independence.
+
+$H_0$: tachypnoea ($\geq 22$/min) and sepsis are independent\
+$H_1$: they are associated
+
+```{r chisq}
+dat$tachypnoea <- factor(ifelse(dat$resp_rate_max >= 22,
+                                "RR >= 22", "RR < 22"))
+tab <- table(dat$tachypnoea, dat$sepsis)
+c1 <- chisq.test(tab)
+v1 <- effectsize::cramers_v(tab)
+
+kable(tibble(
+  Statistic = c("Chi-squared", "df", "p-value", "Cramer's V", "95% CI"),
+  Value = c(sprintf("%.1f", c1$statistic),
+            c1$parameter,
+            format.pval(c1$p.value, digits = 3, eps = 1e-16),
+            sprintf("%.2f", v1$Cramers_v_adjusted),
+            sprintf("[%.2f, %.2f]", v1$CI_low, v1$CI_high))
+), booktabs = TRUE,
+   caption = "Chi-squared: tachypnoea (RR >= 22) by sepsis status.") %>%
+  kable_styling(latex_options = "HOLD_position")
+```
+
+Table \@ref(tab:chisq) shows a significant association between
+tachypnoea and sepsis, with Cramer's V of
+**`r sprintf('%.2f', v1$Cramers_v_adjusted)`**
+(`r ifelse(v1$Cramers_v_adjusted>=0.25,'a strong',ifelse(v1$Cramers_v_adjusted>=0.1,'a moderate','a weak'))`
+association). Dichotomising at a single threshold discards information;
+the GLM in Section \@ref(glm) uses the continuous respiratory rate and
+recovers a stronger signal.
+
+***Collectively,** all three features carry genuine signal. Lactate
+shows the largest effect; white-cell count and tachypnoea are weaker but
+real.*
+
+# Maximum Likelihood Estimation {#mle}
+
+This section estimates the typical lactate of a septic patient. Because
+lactate is strictly positive and right-skewed, it is modelled as
+**log-normal**: the log of maximum lactate is assumed Normal. Maximum
+likelihood then estimates the mean $\mu$ and standard deviation $\sigma$
+on the log scale, and the typical (median) lactate is recovered as
+$e^{\mu}$.
+
+```{r mle}
+x_s <- log(dat$lactate_max[dat$sepsis == "Sepsis-3"])
+x_s <- x_s[is.finite(x_s)]
+n_s <- length(x_s)
+
+neg_loglik <- function(par, x) {
+  mu <- par[1]; sigma <- par[2]
+  if (sigma <= 0) return(Inf)
+  -sum(dnorm(x, mean = mu, sd = sigma, log = TRUE))
+}
+
+fit <- optim(par = c(mean(x_s), sd(x_s)), fn = neg_loglik, x = x_s,
+             method = "L-BFGS-B", lower = c(-Inf, 1e-6), hessian = TRUE)
+
+mu_hat <- fit$par[1]; sigma_hat <- fit$par[2]
+se_mu <- sqrt(diag(solve(fit$hessian)))[1]
+median_lactate <- exp(mu_hat)
+
+kable(tibble(
+  Parameter = c("mu (mean log-lactate | sepsis)",
+                "sigma (SD log-lactate | sepsis)",
+                "n (septic)", "SE of mu",
+                "Median lactate exp(mu) (mmol/L)", "95% CI for median"),
+  Estimate = c(sprintf("%.3f", mu_hat),
+               sprintf("%.3f", sigma_hat),
+               format(n_s, big.mark = ","),
+               sprintf("%.4f", se_mu),
+               sprintf("%.2f", median_lactate),
+               sprintf("[%.2f, %.2f]",
+                       exp(mu_hat - 1.96 * se_mu),
+                       exp(mu_hat + 1.96 * se_mu)))
+), booktabs = TRUE,
+   caption = "MLE for the log-normal model of septic maximum lactate.") %>%
+  kable_styling(latex_options = "HOLD_position")
+```
+
+*The maximum-likelihood estimate from Table* \@ref(tab:mle) *shows:*
+
+1.  *The typical (median) maximum lactate for a septic stay is about*
+    **`r sprintf('%.2f', median_lactate)`** *mmol/L — above the 2 mmol/L
+    threshold used in the septic-shock definition.*
+2.  *The log-scale standard deviation of*
+    **`r sprintf('%.3f', sigma_hat)`** *reflects the wide spread of
+    lactate values.*
+3.  *The very small standard error shows the central value is estimated
+    precisely, a direct consequence of the large septic sample.*
+
+# Generalised Linear Models {#glm}
+
+Logistic regression is used to model the probability of sepsis from
+several features simultaneously, because the outcome is binary. Two
+models are compared:
+
+-   **Model 1** uses maximum lactate only.
+-   **Model 2** adds white-cell count, heart rate, respiratory rate,
+    temperature, and age.
+
+```{r correlation-check}
+cor_mat <- cor(dat[, c("hr_max", "resp_rate_max", "lactate_max")])
+```
+
+A correlation check among the continuous predictors shows the strongest
+pairwise correlation is
+**`r sprintf('%.2f', max(abs(cor_mat[lower.tri(cor_mat)])))`**, well
+below the 0.8 threshold that would signal redundancy, so all predictors
+are retained.
+
+```{r glm-models}
+dat$y <- as.integer(dat$sepsis == "Sepsis-3")
+m1 <- glm(y ~ lactate_max, data = dat, family = binomial)
+m2 <- glm(y ~ lactate_max + wbc_max + hr_max + resp_rate_max +
+            temp_max_c + age, data = dat, family = binomial)
+```
+
+## Logistic Regression Coefficients
+
+```{r glm-table}
+glm_tab <- bind_rows(
+  broom::tidy(m1) %>% mutate(Model = "M1: lactate only"),
+  broom::tidy(m2) %>% mutate(Model = "M2: 6 predictors")
+) %>%
+  dplyr::select(Model, term, estimate, std.error, p.value) %>%
+  mutate(across(c(estimate, std.error), ~ sprintf("%.3f", .)),
+         p.value = format.pval(p.value, digits = 2, eps = 1e-16))
+
+kable(glm_tab, booktabs = TRUE,
+      col.names = c("Model", "Term", "Estimate", "SE", "p-value"),
+      caption = "Logistic regression coefficients (log-odds scale).") %>%
+  kable_styling(latex_options = "HOLD_position")
+```
+
+Coefficients in Table \@ref(tab:glm-table) are on the log-odds scale.
+Converting to odds ratios aids interpretation.
+
+```{r odds-ratios}
+or2 <- exp(coef(m2))
+or_ci <- exp(confint.default(m2))
+or_tab <- tibble(
+  Term = names(or2),
+  `Odds ratio` = sprintf("%.3f", or2),
+  `95% CI` = sprintf("[%.3f, %.3f]", or_ci[, 1], or_ci[, 2])
+) %>% filter(Term != "(Intercept)")
+
+kable(or_tab, booktabs = TRUE,
+      caption = "Model 2 odds ratios (per one-unit increase).") %>%
+  kable_styling(latex_options = "HOLD_position")
+
+or_lac <- or2["lactate_max"]
+```
+
+The odds ratio for maximum lactate is **`r sprintf('%.2f', or_lac)`**,
+meaning each additional 1 mmol/L multiplies the odds of sepsis by about
+`r sprintf('%.2f', or_lac)`, holding the other variables constant. The
+vital signs and age each contribute smaller but independent effects,
+with odds ratios above 1 indicating that faster heart and respiratory
+rates, higher temperature, and older age are each associated with a
+higher probability of sepsis once the others are accounted for.
+
+## Model Comparison
+
+```{r aic-table}
+# In-sample AUC via the Mann-Whitney identity (exact, no sampling).
+prob2 <- predict(m2, type = "response")
+auc <- {
+  r <- rank(prob2)
+  n1 <- sum(dat$y == 1); n0 <- sum(dat$y == 0)
+  (sum(r[dat$y == 1]) - n1 * (n1 + 1) / 2) / (n1 * n0)
+}
+
+aic_tab <- tibble(
+  Model = c("M1: lactate only", "M2: six predictors"),
+  AIC = c(AIC(m1), AIC(m2)),
+  `Residual deviance` = c(m1$deviance, m2$deviance),
+  df = c(m1$df.residual, m2$df.residual)
+)
+
+kable(aic_tab, booktabs = TRUE, digits = 1,
+      caption = "Model comparison (lower AIC is better).") %>%
+  kable_styling(latex_options = "HOLD_position")
+```
+
+Table \@ref(tab:aic-table) shows the AIC falling from
+**`r sprintf('%.0f', AIC(m1))`** (lactate only) to
+**`r sprintf('%.0f', AIC(m2))`** (six predictors), a clear improvement:
+the additional features carry information about sepsis beyond lactate
+alone. The six-predictor model achieves an approximate AUC of
+**`r sprintf('%.2f', auc)`**, indicating
+`r ifelse(auc>=0.8,'good',ifelse(auc>=0.7,'fair','modest'))`
+discrimination from physiology that is external to the sepsis
+definition.
+
+*Sepsis is therefore best explained by a combination of features rather
+than any single measurement.*
+
+# Density Estimation and Mixture Models {#density}
+
+The sepsis labels are now ignored to ask whether maximum lactate alone
+splits the data into two natural groups.
+
+## Kernel Density Estimate {#kde-section}
+
+Silverman's rule-of-thumb bandwidth is
+$$h = 0.9 \times \min\!\left(s,\, \frac{IQR}{1.34}\right) \times n^{-1/5},$$
+where $s$ is the standard deviation, $IQR$ the interquartile range, and
+$n$ the sample size. Because lactate is right-skewed, the KDE is
+computed on the **log** scale, where the distribution is closer to
+symmetric.
+
+```{r bandwidth}
+loglac <- log(dat$lactate_max)
+loglac <- loglac[is.finite(loglac)]
+bw_sil <- bw.nrd0(loglac)
+```
+
+The computed bandwidth is **`r sprintf('%.3f', bw_sil)`** on the log
+scale.
+
+```{r kde, fig.cap = "Kernel density estimate of log maximum lactate (Gaussian kernel, Silverman bandwidth). A shoulder above the main peak hints at a second, higher-lactate population."}
+ggplot(tibble(loglac = loglac), aes(loglac)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 40,
+                 fill = "grey85", colour = "grey60") +
+  geom_density(bw = bw_sil, colour = "#C0504D", linewidth = 0.9) +
+  labs(x = "log(maximum lactate)", y = "Density",
+       subtitle = sprintf("Gaussian kernel, bandwidth = %.3f (Silverman)", bw_sil))
+```
+
+Figure \@ref(fig:kde) shows a dominant peak with a right shoulder,
+suggesting the data may be a blend of a larger normal-lactate population
+and a smaller high-lactate one rather than a single homogeneous group.
+
+## Two-component Gaussian mixture {#mixture-section}
+
+A two-component Gaussian mixture is fitted to log-lactate by the
+Expectation-Maximization algorithm, using no labels:
+$$f(x) = \pi_1 \mathcal{N}(\mu_1, \sigma_1^2) + (1-\pi_1)\mathcal{N}(\mu_2, \sigma_2^2).$$
+
+```{r mixture, fig.cap = "Two-component Gaussian mixture (dashed components, solid sum) fitted to log maximum lactate."}
+mix2 <- Mclust(loglac, G = 2, modelNames = "V", verbose = FALSE)
+
+pi1 <- mix2$parameters$pro[1]
+mu1 <- mix2$parameters$mean[1]; mu2 <- mix2$parameters$mean[2]
+s1  <- sqrt(mix2$parameters$variance$sigmasq[1])
+s2  <- sqrt(mix2$parameters$variance$sigmasq[2])
+
+xs <- seq(min(loglac), max(loglac), length.out = 400)
+mix_df <- tibble(
+  x = xs,
+  comp1 = pi1 * dnorm(xs, mu1, s1),
+  comp2 = (1 - pi1) * dnorm(xs, mu2, s2),
+  total = comp1 + comp2)
+
+ggplot(tibble(loglac = loglac), aes(loglac)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 40,
+                 fill = "grey88", colour = "grey60") +
+  geom_line(data = mix_df, aes(x, comp1), linetype = "dashed", colour = "#5B9BD5") +
+  geom_line(data = mix_df, aes(x, comp2), linetype = "dashed", colour = "#C0504D") +
+  geom_line(data = mix_df, aes(x, total), colour = "black", linewidth = 0.7) +
+  labs(x = "log(maximum lactate)", y = "Density")
+
+# Assign each stay to its most probable component; the higher-mean component is
+# the "septic" guess. Compare with the true label.
+hi <- which.max(c(mu1, mu2))
+mix_pred <- factor(ifelse(mix2$classification == hi,
+                          "Sepsis-3 (pred)", "No sepsis (pred)"),
+                   levels = c("No sepsis (pred)", "Sepsis-3 (pred)"))
+agree_tab <- table(Predicted = mix_pred, Actual = dat$sepsis[is.finite(log(dat$lactate_max))])
+agree_rate <- sum(diag(agree_tab)) / sum(agree_tab)
+mix_means <- exp(sort(c(mu1, mu2)))
+```
+
+The mixture places one component near
+**`r sprintf('%.2f', mix_means[1])`** mmol/L (back-transformed) and the
+other near **`r sprintf('%.2f', mix_means[2])`** mmol/L, with mixing
+weights `r sprintf('%.2f', sort(c(pi1, 1-pi1), decreasing=TRUE)[1])` and
+`r sprintf('%.2f', sort(c(pi1, 1-pi1), decreasing=TRUE)[2])`.
+
+```{r mixture-accuracy}
+mix_acc <- round(100 * agree_rate, 1)
+```
+
+Matching the unlabelled components to the true labels gives an
+unsupervised agreement of **`r mix_acc`%**. Unlike a marker such as
+tumour radius — which nearly separates its two classes — lactate alone
+only **partially** recovers sepsis status: the two populations overlap
+heavily, so a single biomarker is a weak unsupervised classifier. This
+is itself an informative negative result — it shows why the Sepsis-3
+definition combines infection with a multi-organ score rather than
+relying on any one number.
+
+# Bayesian Inference and MCMC {#bayesian}
+
+Maximum likelihood (Section \@ref(mle)) gave a single best estimate of
+the mean log-lactate. Bayesian inference instead returns a full
+posterior distribution, expressing uncertainty as a range of plausible
+values.
+
+## Part A: Bayesian inference via Metropolis-Hastings {#partA}
+
+### Model setup
+
+Log maximum lactate for septic stays is modelled as Normal with unknown
+mean $\mu$ and a known standard deviation fixed at the MLE $\hat\sigma$
+from Section \@ref(mle). A weak prior
+$\mu \sim \mathcal{N}(\log 2,\, 1^2)$ is centred at a lactate of 2
+mmol/L — the clinical threshold — but is wide enough to let the data
+dominate.
+
+### Likelihood and posterior
+
+The posterior combines the Normal likelihood with the Normal prior,
+$$p(\mu \mid x) \propto p(x \mid \mu)\, p(\mu),$$ which here is
+conjugate (and therefore Normal). The Metropolis-Hastings algorithm is
+nonetheless used to demonstrate a general sampling approach that does
+not rely on conjugacy.
+
+```{r mh-sampler}
+log_posterior <- function(mu, x, sigma, mu0, tau0) {
+  sum(dnorm(x, mean = mu, sd = sigma, log = TRUE)) +
+    dnorm(mu, mean = mu0, sd = tau0, log = TRUE)
+}
+
+mh_sampler <- function(x, sigma, mu0, tau0, n_iter, init, prop_sd) {
+  chain <- numeric(n_iter); chain[1] <- init; accept <- 0
+  cur_lp <- log_posterior(init, x, sigma, mu0, tau0)
+  for (t in 2:n_iter) {
+    prop <- rnorm(1, chain[t - 1], prop_sd)
+    prop_lp <- log_posterior(prop, x, sigma, mu0, tau0)
+    if (log(runif(1)) < prop_lp - cur_lp) {
+      chain[t] <- prop; cur_lp <- prop_lp; accept <- accept + 1
+    } else chain[t] <- chain[t - 1]
+  }
+  list(chain = chain, accept_rate = accept / (n_iter - 1))
+}
+```
+
+Two chains are run from deliberately poor, opposite starting points and
+the first 2,000 iterations discarded as burn-in.
+
+```{r mh-run}
+n_iter <- 20000; burn <- 2000
+prop_sd <- max(0.01, 3 * se_mu)            # scale proposal to the data
+run1 <- mh_sampler(x_s, sigma_hat, mu0 = log(2), tau0 = 1,
+                   n_iter = n_iter, init = mu_hat - 0.5, prop_sd = prop_sd)
+run2 <- mh_sampler(x_s, sigma_hat, mu0 = log(2), tau0 = 1,
+                   n_iter = n_iter, init = mu_hat + 0.5, prop_sd = prop_sd)
+post1 <- run1$chain[-(1:burn)]; post2 <- run2$chain[-(1:burn)]
+post <- post1
+post_mean <- mean(post); post_sd <- sd(post)
+post_ci <- quantile(post, c(0.025, 0.975))
+```
+
+### Convergence diagnostics
+
+```{r mh-diag, fig.cap = "Trace plots (left) of two chains overlap after burn-in; posterior density (right) with the MLE marked (dashed).", fig.width = 7, fig.height = 3}
+trace_df <- bind_rows(
+  tibble(iter = seq_along(post1), value = post1, chain = "Chain 1"),
+  tibble(iter = seq_along(post2), value = post2, chain = "Chain 2"))
+
+p_trace <- ggplot(trace_df, aes(iter, value, colour = chain)) +
+  geom_line(alpha = 0.6, linewidth = 0.25) +
+  scale_colour_manual(values = c("#5B9BD5", "#C0504D")) +
+  labs(x = "Iteration (post burn-in)", y = expression(mu), colour = NULL) +
+  theme(legend.position = "top")
+
+p_post <- ggplot(tibble(mu = post), aes(mu)) +
+  geom_density(fill = "#5B9BD5", alpha = 0.55) +
+  geom_vline(xintercept = mu_hat, linetype = "dashed") +
+  labs(x = expression(mu), y = "Posterior density")
+
+p_trace + p_post
+```
+
+```{r gelman}
+mcmc_list <- mcmc.list(mcmc(post1), mcmc(post2))
+rhat <- gelman.diag(mcmc_list, autoburnin = FALSE)$psrf[1, 1]
+ess <- effectiveSize(mcmc(post))
+```
+
+The chains overlap after burn-in (Figure \@ref(fig:mh-diag)). The
+Gelman-Rubin statistic is $\hat R =$ **`r sprintf('%.3f', rhat)`**
+(values below 1.05 indicate convergence) and the effective sample size
+is about **`r format(round(ess), big.mark=',')`**, so the posterior
+samples are reliable.
+
+### Posterior summary and comparison with MLE
+
+```{r mh-summary}
+kable(tibble(
+  Quantity = c("Mean log-lactate | sepsis", "SE / posterior SD",
+               "95% interval", "Implied median lactate (mmol/L)"),
+  MLE = c(sprintf("%.3f", mu_hat), sprintf("%.4f", se_mu),
+          sprintf("[%.3f, %.3f]", mu_hat - 1.96*se_mu, mu_hat + 1.96*se_mu),
+          sprintf("%.2f", exp(mu_hat))),
+  `Bayes (M-H)` = c(sprintf("%.3f", post_mean), sprintf("%.4f", post_sd),
+                    sprintf("[%.3f, %.3f]", post_ci[1], post_ci[2]),
+                    sprintf("%.2f", exp(post_mean)))
+), booktabs = TRUE,
+   caption = "MLE versus Bayesian posterior for mean log-lactate.") %>%
+  kable_styling(latex_options = "HOLD_position")
+```
+
+Table \@ref(tab:mh-summary) shows the Bayesian and maximum-likelihood
+estimates are almost identical. With a large septic sample and a weak
+prior, the data dominate; a much stronger prior centred at $\log 2$
+would be needed to pull the estimate appreciably toward 2 mmol/L.
+
+*The two frameworks agree, but the Bayesian result additionally provides
+a full posterior — more valuable when samples are small or strong prior
+knowledge exists.*
+
+## Part B: Hidden Markov Model {#partB}
+
+The mixture model treated stays as independent. A hidden Markov model
+allows consecutive stays to share a latent state via a transition
+matrix.
+
+**Note on ordering.** The stays are not a true time series; their order
+is the processing order. The question here is therefore deliberately
+narrow: *after splitting the data into two lactate states, does the
+ordering add any structure?* If not, the HMM should reproduce the mixture
+model — and this negative result is itself informative. The HMM's natural
+home is the *within-patient* hourly vital-sign sequence, where a latent
+state genuinely evolves toward organ dysfunction; that temporal use is the
+subject of the follow-on longitudinal analysis (see the Conclusion) and is
+outside the scope of this cross-sectional report.
+
+### Choosing the number of states
+
+```{r hmm-fit, results = 'hide'}
+# Fit on a capped, ordered sample for tractable EM run time.
+set.seed(486649)
+hmm_n <- min(8000, length(loglac))
+hmm_x <- data.frame(loglac = loglac[seq_len(hmm_n)])
+
+fit_hmm <- function(k) {
+  mod <- depmix(loglac ~ 1, data = hmm_x, nstates = k, family = gaussian())
+  fit(mod, verbose = FALSE, emcontrol = em.control(random.start = TRUE))
+}
+invisible(capture.output({
+  hmm1 <- fit_hmm(1); hmm2 <- fit_hmm(2); hmm3 <- fit_hmm(3)
+}))
+bic_vals <- c(BIC(hmm1), BIC(hmm2), BIC(hmm3))
+best_k <- c(1, 2, 3)[which.min(bic_vals)]
+```
+
+```{r hmm-bic-table}
+kable(tibble(
+  States = 1:3,
+  `Log-likelihood` = c(as.numeric(logLik(hmm1)), as.numeric(logLik(hmm2)),
+                       as.numeric(logLik(hmm3))),
+  BIC = bic_vals
+), booktabs = TRUE, digits = 1,
+   caption = "HMM model selection by BIC (lower is better).") %>%
+  kable_styling(latex_options = "HOLD_position")
+```
+
+Table \@ref(tab:hmm-bic-table) selects the **`r best_k`-state** model by
+BIC,
+`r ifelse(best_k==2, 'consistent with the two-population structure seen in Section 6', 'which is discussed below relative to the mixture result')`.
+
+### Emissions and transition matrix
+
+```{r hmm-params}
+pars <- getpars(hmm2)
+init_probs <- pars[1:2]
+trans_mat <- matrix(pars[3:6], nrow = 2, byrow = TRUE)
+mu_h1 <- pars[7]; sd_h1 <- pars[8]
+mu_h2 <- pars[9]; sd_h2 <- pars[10]
+if (mu_h1 > mu_h2) {
+  tmp <- c(mu_h1, sd_h1); mu_h1 <- mu_h2; sd_h1 <- sd_h2
+  mu_h2 <- tmp[1]; sd_h2 <- tmp[2]
+  trans_mat <- trans_mat[c(2, 1), c(2, 1)]
+}
+```
+
+```{r hmm-emissions-table}
+kable(tibble(
+  State = c("State 1 (lower)", "State 2 (higher)"),
+  `Emission mean (log)` = c(mu_h1, mu_h2),
+  `Median lactate (mmol/L)` = exp(c(mu_h1, mu_h2)),
+  `Mixture mean (Sec. 6)` = sort(c(mu1, mu2))
+), booktabs = TRUE, digits = 3,
+   caption = "HMM emissions versus the Section 6 mixture components.") %>%
+  kable_styling(latex_options = c("scale_down", "HOLD_position"))
+```
+
+```{r hmm-trans-table}
+trans_disp <- as_tibble(round(trans_mat, 3), .name_repair = "minimal")
+names(trans_disp) <- c("To State 1", "To State 2")
+trans_disp <- bind_cols(tibble(From = c("State 1", "State 2")), trans_disp)
+kable(trans_disp, booktabs = TRUE,
+      caption = "Estimated transition matrix.") %>%
+  kable_styling(latex_options = "HOLD_position")
+
+eig <- eigen(t(trans_mat))
+stat <- Re(eig$vectors[, which.min(abs(eig$values - 1))])
+stat <- stat / sum(stat)
+```
+
+Table \@ref(tab:hmm-emissions-table) shows the HMM emission means almost
+coincide with the mixture components from Section
+\@ref(mixture-section): both methods place the two lactate populations
+in the same locations. The transition matrix (Table
+\@ref(tab:hmm-trans-table)) has a stationary distribution of
+$(`r round(stat[1],2)`, `r round(stat[2],2)`)$. Any "stickiness" on the
+diagonal is the pattern EM tends to produce when fitting independent,
+overlapping data, not evidence of real sequential dependence.
+
+### Unsupervised classification accuracy
+
+```{r hmm-accuracy}
+v_state <- posterior(hmm2, type = "viterbi")$state
+hi_state <- if (mean(hmm_x$loglac[v_state == 1]) <
+                mean(hmm_x$loglac[v_state == 2])) 2 else 1
+hmm_pred <- ifelse(v_state == hi_state, "Sepsis-3", "No sepsis")
+actual <- dat$sepsis[is.finite(log(dat$lactate_max))][seq_len(hmm_n)]
+hmm_acc <- mean(hmm_pred == as.character(actual))
+```
+
+Decoding the most likely state for each stay and matching states to
+labels gives an unsupervised accuracy of
+**`r sprintf('%.1f', 100*hmm_acc)`%** — essentially the same as the
+mixture model (`r mix_acc`%). The HMM learns nothing beyond the mixture:
+the two-lactate-population structure is a property of the **patients**,
+not of the order in which they were recorded.
+
+# Predictive Validation, Calibration and Missingness {#validation}
+
+The GLM in Section \@ref(glm) reported an AUC computed **on the same data
+it was fitted to**, which is optimistically biased. A model intended —
+ultimately — to support *real-time* prediction must be judged on data it
+has not seen, must be **calibrated** (predicted risks must match observed
+frequencies), and must be honest about the **missing-data** mechanism that
+shaped the analysis sample. This section addresses all three.
+
+## Out-of-sample discrimination {#cv}
+
+Because the cohort keeps only each patient's first ICU stay, every patient
+contributes exactly one row, so an ordinary random split is already
+patient-disjoint (no leakage between train and test). Ten-fold
+cross-validation is used: each stay is scored by a model trained on the
+other nine folds.
+
+```{r cv-auc}
+dat$y <- as.integer(dat$sepsis == "Sepsis-3")
+form1 <- y ~ lactate_max
+form2 <- y ~ lactate_max + wbc_max + hr_max + resp_rate_max + temp_max_c + age
+
+set.seed(486649)
+K <- 10
+folds <- sample(rep(1:K, length.out = nrow(dat)))
+cv_p1 <- cv_p2 <- numeric(nrow(dat))
+for (k in 1:K) {
+  tr <- folds != k
+  cv_p1[!tr] <- predict(glm(form1, dat[tr, ], family = binomial),
+                        newdata = dat[!tr, ], type = "response")
+  cv_p2[!tr] <- predict(glm(form2, dat[tr, ], family = binomial),
+                        newdata = dat[!tr, ], type = "response")
+}
+
+roc1 <- pROC::roc(dat$y, cv_p1, quiet = TRUE, direction = "<")
+roc2 <- pROC::roc(dat$y, cv_p2, quiet = TRUE, direction = "<")
+auc1 <- as.numeric(pROC::auc(roc1)); auc2 <- as.numeric(pROC::auc(roc2))
+ci2  <- as.numeric(pROC::ci.auc(roc2))
+# In-sample AUC of M2 (Mann-Whitney identity) for the optimism comparison.
+prob2_is <- predict(m2, type = "response")
+auc2_is <- {
+  r <- rank(prob2_is); n1 <- sum(dat$y == 1); n0 <- sum(dat$y == 0)
+  (sum(r[dat$y == 1]) - n1 * (n1 + 1) / 2) / (n1 * n0)
+}
+delong <- pROC::roc.test(roc1, roc2, method = "delong")
+```
+
+```{r cv-auc-table}
+kable(tibble(
+  Model = c("M1: lactate only", "M2: six predictors"),
+  `In-sample AUC` = c(sprintf("%.3f", {
+      r <- rank(predict(m1, type="response")); n1 <- sum(dat$y==1); n0 <- sum(dat$y==0)
+      (sum(r[dat$y==1]) - n1*(n1+1)/2)/(n1*n0)}),
+    sprintf("%.3f", auc2_is)),
+  `10-fold CV AUC` = c(sprintf("%.3f", auc1), sprintf("%.3f", auc2)),
+  `95% CI (CV, M2)` = c("", sprintf("[%.3f, %.3f]", ci2[1], ci2[3]))
+), booktabs = TRUE,
+   caption = "In-sample versus cross-validated discrimination.") %>%
+  kable_styling(latex_options = "HOLD_position")
+```
+
+Table \@ref(tab:cv-auc-table) shows the cross-validated AUC of the
+six-predictor model is **`r sprintf('%.3f', auc2)`**
+(95% CI `r sprintf('%.3f–%.3f', ci2[1], ci2[3])`), essentially unchanged
+from the in-sample **`r sprintf('%.3f', auc2_is)`** — with
+`r format(nrow(dat), big.mark=',')` observations and only six predictors
+the model does not overfit. A DeLong test confirms the six-predictor model
+discriminates better than lactate alone
+(AUC `r sprintf('%.3f', auc2)` vs `r sprintf('%.3f', auc1)`,
+*p* `r format.pval(delong$p.value, digits=2, eps=1e-16)`).
+
+## Calibration and clinical usefulness {#calibration}
+
+Discrimination (ranking) is not the same as calibration (the numerical
+risk being correct). The cross-validated risks are grouped into deciles
+and the mean predicted risk compared with the observed sepsis rate.
+
+```{r calibration, fig.cap = "Calibration of the cross-validated six-predictor model (risk deciles). Points on the diagonal indicate predicted risks that match observed frequencies.", fig.width=4.4, fig.height=4}
+brier <- mean((cv_p2 - dat$y)^2)
+brier_ref <- mean((mean(dat$y) - dat$y)^2)   # null model (predict prevalence)
+# Calibration slope/intercept via logistic recalibration on the linear predictor.
+lp <- qlogis(pmin(pmax(cv_p2, 1e-6), 1 - 1e-6))
+recal <- glm(dat$y ~ lp, family = binomial)
+cal_slope <- coef(recal)[2]
+
+cal_tab <- tibble(p = cv_p2, y = dat$y) %>%
+  mutate(bin = ntile(p, 10)) %>%
+  group_by(bin) %>%
+  summarise(pred = mean(p), obs = mean(y), n = n(), .groups = "drop")
+
+ggplot(cal_tab, aes(pred, obs)) +
+  geom_abline(linetype = "dashed", colour = "grey55") +
+  geom_line(colour = "#C0504D") +
+  geom_point(colour = "#C0504D", size = 1.6) +
+  coord_equal(xlim = c(0, max(cal_tab$pred, cal_tab$obs)),
+              ylim = c(0, max(cal_tab$pred, cal_tab$obs))) +
+  labs(x = "Mean predicted risk", y = "Observed sepsis rate")
+```
+
+The **Brier score** is **`r sprintf('%.3f', brier)`** (lower is better),
+against **`r sprintf('%.3f', brier_ref)`** for a null model that always
+predicts the prevalence — a
+`r sprintf('%.0f%%', 100*(1 - brier/brier_ref))` reduction. The
+**calibration slope** is **`r sprintf('%.2f', cal_slope)`** (1.0 is
+perfect); Figure \@ref(fig:calibration) shows the decile points lie close
+to the diagonal, so the predicted probabilities are usable as risks, not
+merely as a ranking.
+
+Because sepsis is imbalanced and the costs of missing it are asymmetric,
+ROC-AUC is supplemented with the **precision–recall AUC** and a
+**decision-curve (net-benefit)** analysis.
+
+```{r pr-decision, fig.cap = "Left: precision–recall curve (dashed line = prevalence, the no-skill baseline). Right: decision curve — net benefit of the model against treat-all and treat-none across risk thresholds.", fig.width=7, fig.height=3.2}
+pr <- PRROC::pr.curve(scores.class0 = cv_p2[dat$y == 1],
+                      scores.class1 = cv_p2[dat$y == 0], curve = TRUE)
+prauc <- pr$auc.integral
+prev  <- mean(dat$y)
+
+pr_df <- as.data.frame(pr$curve)[, 1:2]; names(pr_df) <- c("recall", "precision")
+p_pr <- ggplot(pr_df, aes(recall, precision)) +
+  geom_line(colour = "#C0504D") +
+  geom_hline(yintercept = prev, linetype = "dashed", colour = "grey55") +
+  labs(x = "Recall", y = "Precision",
+       subtitle = sprintf("PR-AUC = %.3f (baseline %.3f)", prauc, prev))
+
+thr <- seq(0.02, 0.60, by = 0.02)
+nb_model <- sapply(thr, function(pt) {
+  pp <- cv_p2 >= pt
+  mean(pp & dat$y == 1) - mean(pp & dat$y == 0) * (pt / (1 - pt))
+})
+nb_all <- sapply(thr, function(pt) prev - (1 - prev) * (pt / (1 - pt)))
+dca <- bind_rows(
+  tibble(thr, nb = nb_model, strat = "Model"),
+  tibble(thr, nb = nb_all,   strat = "Treat all"),
+  tibble(thr, nb = 0,        strat = "Treat none"))
+p_dca <- ggplot(dca, aes(thr, nb, colour = strat)) +
+  geom_line() +
+  scale_colour_manual(values = c("Model" = "#C0504D", "Treat all" = "#5B9BD5",
+                                 "Treat none" = "grey55")) +
+  coord_cartesian(ylim = c(min(nb_model) - 0.01, max(nb_model) + 0.02)) +
+  labs(x = "Risk threshold", y = "Net benefit", colour = NULL) +
+  theme(legend.position = "top")
+
+p_pr + p_dca
+```
+
+The PR-AUC is **`r sprintf('%.3f', prauc)`** against a no-skill baseline of
+**`r sprintf('%.3f', prev)`** (the prevalence), and Figure
+\@ref(fig:pr-decision) shows the model yields positive net benefit above
+the treat-all and treat-none strategies across the clinically relevant
+range of thresholds — the discrimination translates into decision value.
+
+## Non-linearity of the lactate effect {#splines}
+
+The GLM assumed lactate acts **linearly on the log-odds** scale. This is
+tested by fitting a penalised thin-plate spline `s(lactate_max)` and
+comparing it with the linear term.
+
+```{r gam, fig.cap = "Penalised-spline estimate of the log-odds of sepsis as a function of maximum lactate (shaded 95\\% band). Curvature indicates a non-linear effect the linear GLM cannot capture.", fig.width=4.6, fig.height=3.2}
+g_lin <- glm(y ~ lactate_max, data = dat, family = binomial)
+g_gam <- mgcv::gam(y ~ s(lactate_max, k = 10), data = dat, family = binomial)
+edf   <- summary(g_gam)$edf
+d_aic <- AIC(g_lin) - AIC(g_gam)
+
+nd <- tibble(lactate_max = seq(min(dat$lactate_max), quantile(dat$lactate_max, 0.99),
+                               length.out = 200))
+pr_g <- predict(g_gam, nd, se.fit = TRUE)
+nd <- nd %>% mutate(fit = pr_g$fit, lo = fit - 1.96 * pr_g$se.fit,
+                    hi = fit + 1.96 * pr_g$se.fit)
+ggplot(nd, aes(lactate_max, fit)) +
+  geom_ribbon(aes(ymin = lo, ymax = hi), fill = "#C0504D", alpha = 0.2) +
+  geom_line(colour = "#C0504D") +
+  labs(x = "Maximum lactate (mmol/L)", y = "log-odds of Sepsis-3")
+```
+
+The spline uses **`r sprintf('%.1f', edf)`** effective degrees of freedom
+(1.0 would mean linear), and it lowers AIC by **`r sprintf('%.0f', d_aic)`**
+relative to the linear term, so the lactate effect is materially
+non-linear (Figure \@ref(fig:gam)): risk rises steeply at low lactate and
+then flattens. A production model should therefore spline-transform
+lactate rather than enter it linearly.
+
+## Multicollinearity {#vif}
+
+Section \@ref(glm) checked only three correlations. Variance-inflation
+factors are computed for all six predictors of Model 2.
+
+```{r vif}
+vif_tab <- tibble(Predictor = names(car::vif(m2)),
+                  VIF = as.numeric(car::vif(m2))) %>%
+  arrange(desc(VIF))
+kable(vif_tab, booktabs = TRUE, digits = 2,
+      caption = "Variance-inflation factors (VIF > 5 signals collinearity).") %>%
+  kable_styling(latex_options = "HOLD_position")
+```
+
+All VIFs in Table \@ref(tab:vif) are near 1 (maximum
+**`r sprintf('%.2f', max(vif_tab$VIF))`**), well below the usual cut-off of
+5, so the coefficients are not destabilised by collinearity.
+
+## The missing-data mechanism {#missingness}
+
+Every inferential section so far used only the
+`r format(n_model, big.mark=',')` stays with a **complete** set of the six
+features — chiefly limited by lactate, which is *ordered at the
+clinician's discretion*. Whether a lactate exists is therefore not random:
+it is itself a marker of concern. This is examined directly.
+
+```{r missingness}
+raw2 <- raw %>% mutate(lac_measured = !is.na(lactate_max),
+                       sep = to_bool(sepsis3))
+miss_rate <- mean(!raw2$lac_measured)
+sep_meas  <- mean(raw2$sep[raw2$lac_measured])
+sep_unmeas<- mean(raw2$sep[!raw2$lac_measured])
+mtab <- table(`Lactate measured` = ifelse(raw2$lac_measured, "Yes", "No"),
+              Sepsis = ifelse(raw2$sep, "Sepsis-3", "No sepsis"))
+mchi <- chisq.test(mtab)
+```
+
+Lactate is missing in **`r sprintf('%.1f%%', 100*miss_rate)`** of the full
+cohort. Sepsis-3 prevalence is **`r sprintf('%.1f%%', 100*sep_meas)`**
+among stays with a measured lactate versus
+**`r sprintf('%.1f%%', 100*sep_unmeas)`** among those without
+(chi-squared *p* `r format.pval(mchi$p.value, digits=2, eps=1e-16)`) —
+so *the act of measuring lactate is itself strongly informative*, and
+complete-case analysis enriches the sample for severity. Missingness here
+is plausibly **MAR given the recorded vitals** (sicker-looking patients get
+labs) but a **MNAR** component cannot be excluded.
+
+As a sensitivity analysis the six predictors are **multiply imputed**
+(MICE, predictive mean matching) on the full cohort and the logistic model
+re-fitted, pooling coefficients by Rubin's rules.
+
+```{r mice, cache=FALSE}
+mi_dat <- raw %>%
+  mutate(y = as.integer(to_bool(sepsis3))) %>%
+  dplyr::select(lactate_max, wbc_max, hr_max, resp_rate_max, temp_max_c, age, y)
+imp <- mice(mi_dat, m = 5, maxit = 5, method = "pmm",
+            printFlag = FALSE, seed = 486649)
+fit_mi <- with(imp, glm(y ~ lactate_max + wbc_max + hr_max + resp_rate_max +
+                          temp_max_c + age, family = binomial))
+pooled <- summary(pool(fit_mi), conf.int = TRUE)
+
+or_cc <- exp(coef(m2))
+comp <- pooled %>%
+  filter(term != "(Intercept)") %>%
+  transmute(Predictor = term,
+            `OR (complete-case)` = sprintf("%.3f", or_cc[term]),
+            `OR (imputed cohort)` = sprintf("%.3f", exp(estimate)),
+            `95% CI (imputed)` = sprintf("[%.3f, %.3f]",
+                                         exp(`2.5 %`), exp(`97.5 %`)))
+```
+
+```{r mice-table}
+kable(comp, booktabs = TRUE,
+      caption = "Odds ratios: complete-case versus multiply-imputed full cohort.") %>%
+  kable_styling(latex_options = c("scale_down", "HOLD_position"))
+```
+
+Table \@ref(tab:mice-table) shows the odds ratios keep the same direction
+and comparable magnitude after imputing the full cohort: the associations
+are not an artefact of the complete-case restriction, though the absolute
+sepsis prevalence differs between the samples. This missingness signal is
+itself a lesson for the real-time model — *whether and when a test is
+ordered* is a usable predictor, not just a nuisance.
+
+*Collectively, this section shows the six-predictor model generalises out
+of sample, is well calibrated and clinically useful, benefits from a
+non-linear lactate term, is free of collinearity, and is robust to the
+missing-data mechanism — while flagging that measurement itself carries
+information.*
+
+# Conclusion {#conclusion}
+
+This report asked whether routine physiology that is *not* part of the
+sepsis definition can identify Sepsis-3, and what different statistical
+methods reveal about the same data.
+
+-   **Hypothesis tests** (Section \@ref(hypothesis)) found genuine
+    differences between septic and non-septic stays, largest for lactate
+    (Cohen's *d* = `r sprintf('%.2f', d1$Cohens_d)`), and weaker but
+    real for white-cell count and tachypnoea.
+
+-   The **GLM** (Section \@ref(glm)) showed lactate is the single
+    strongest predictor, while vital signs and age add independent
+    information: AIC fell from `r sprintf('%.0f', AIC(m1))` to
+    `r sprintf('%.0f', AIC(m2))`, with an approximate AUC of
+    `r sprintf('%.2f', auc)`.
+
+-   The **mixture model** (Section \@ref(mixture-section)) and **hidden
+    Markov model** (Section \@ref(partB)) both recovered two lactate
+    populations without labels, agreeing almost exactly with each other
+    (`r mix_acc`% vs `r sprintf('%.1f', 100*hmm_acc)`%). Crucially,
+    lactate alone only partially recovers sepsis — a reminder that the
+    diagnosis is multi-dimensional.
+
+-   The **MLE** (Section \@ref(mle)) and **MCMC** (Section \@ref(partA))
+    agreed closely on the typical septic lactate ($\approx$
+    `r sprintf('%.2f', median_lactate)` mmol/L), with nearly identical
+    interval estimates.
+
+-   **Validation** (Section \@ref(validation)) confirmed the six-predictor
+    model holds up out of sample (10-fold CV AUC
+    `r sprintf('%.3f', auc2)`, DeLong *p*
+    `r format.pval(delong$p.value, digits=2, eps=1e-16)` versus lactate
+    alone), is well calibrated (Brier `r sprintf('%.3f', brier)`,
+    slope `r sprintf('%.2f', cal_slope)`), gains from a non-linear lactate
+    term, and keeps its associations under multiple imputation — while
+    showing that *whether* a lactate was ordered is itself predictive.
+
+*The methodological message echoes across tools: several independent
+methods converge on the same, clinically coherent picture. Unlike a
+near-separable marker such as tumour radius, no single physiological
+variable identifies sepsis on its own — which is precisely why Sepsis-3
+couples suspected infection with a multi-organ SOFA score. The geometry
+of one biomarker is not enough; it takes a combination of signals to
+recognise a dysregulated response to infection.*
+
+**Limitations and the path to real-time prediction.** The analysis subset
+is restricted to stays with a measured lactate, which enriches for
+severity (quantified and partly addressed by the multiple-imputation
+sensitivity analysis in Section \@ref(missingness)); sepsis was
+operationalised with a first-24h ("day-1") SOFA and a small set of
+documented simplifications (Section 05 header); and the ordering-based HMM
+is illustrative, since stays are not a true time series. Most importantly,
+this report is **cross-sectional**: it collapses each stay into one row of
+first-24h summaries and answers *"was this stay septic?"* rather than the
+project's ultimate question — *"will this patient become septic in the next
+few hours, given the data so far?"* That real-time question requires an
+**hourly patient panel**, a defined **sepsis-onset time** and prediction
+horizon, **survival / time-varying-hazard** modelling of time to onset, a
+**within-patient** (not ordering-based) HMM, and **time-dependent,
+leakage-safe** evaluation benchmarked against streaming clinical scores
+(qSOFA, SIRS, hourly SOFA, MEWS). Building that longitudinal foundation is
+the subject of the follow-on work, for which the associations, effect
+sizes, non-linearities, and missingness structure established here provide
+the modelling priors.
+
+# Acknowledgment {.unnumbered}
+
+During this project, I applied the **PAIR framework** to responsibly use
+generative AI alongside primary sources.
+
+-   **Problem:** Build a reproducible MIMIC-IV Sepsis-3 pipeline and a
+    layered statistical analysis (EDA, hypothesis testing, MLE, GLMs,
+    density and mixture modelling, Metropolis-Hastings sampling, and a
+    hidden Markov model) in R, supported by a coherent written report.
+
+-   **AI:** I used AI assistants to discuss implementation choices,
+    clarify statistical concepts, and refine the writing.
+
+-   **Interaction:** All AI-generated suggestions were critically
+    reviewed, checked against primary sources (Singer et al., 2016;
+    Seymour et al., 2016; Vincent et al., 1996; Silverman, 1986; Robert
+    & Casella, 2004; Gelman et al., 2013; Rabiner, 1989; Visser &
+    Speekenbrink, 2010), and adapted to the structure and seed-based
+    reproducibility of this work.
+
+-   **Reflection:** AI assistance accelerated drafting and improved
+    clarity, while the interpretation, code, model choices, and
+    conclusions remain my own.
+
+# References {.unnumbered}
+
+1.  Singer, M., Deutschman, C. S., Seymour, C. W., et al. (2016). The
+    Third International Consensus Definitions for Sepsis and Septic
+    Shock (Sepsis-3). *JAMA*, 315(8), 801–810.
+
+2.  Seymour, C. W., Liu, V. X., Iwashyna, T. J., et al. (2016).
+    Assessment of Clinical Criteria for Sepsis (Sepsis-3). *JAMA*,
+    315(8), 762–774.
+
+3.  Vincent, J. L., Moreno, R., Takala, J., et al. (1996). The SOFA
+    (Sepsis-related Organ Failure Assessment) score to describe organ
+    dysfunction/failure. *Intensive Care Medicine*, 22(7), 707–710.
+
+4.  Johnson, A. E. W., Bulgarelli, L., Shen, L., et al. (2023).
+    MIMIC-IV, a freely accessible electronic health record dataset.
+    *Scientific Data*, 10,
+
+    1.  
+
+5.  Cohen, J. (1988). *Statistical Power Analysis for the Behavioral
+    Sciences* (2nd ed.). Lawrence Erlbaum Associates.
+
+6.  Silverman, B. W. (1986). *Density Estimation for Statistics and Data
+    Analysis.* Chapman and Hall.
+
+7.  Dempster, A. P., Laird, N. M., & Rubin, D. B. (1977). Maximum
+    likelihood from incomplete data via the EM algorithm. *JRSS B*,
+    39(1), 1–38.
+
+8.  Gelman, A., Carlin, J. B., Stern, H. S., et al. (2013). *Bayesian
+    Data Analysis* (3rd ed.). CRC Press.
+
+9.  Robert, C., & Casella, G. (2004). *Monte Carlo Statistical Methods*
+    (2nd ed.). Springer.
+
+10. Rabiner, L. R. (1989). A tutorial on hidden Markov models and
+    selected applications in speech recognition. *Proceedings of the
+    IEEE*, 77(2), 257–286.
+
+11. Visser, I., & Speekenbrink, M. (2010). depmixS4: An R package for
+    hidden Markov models. *Journal of Statistical Software*, 36(7),
+    1–21. \`\`\`
