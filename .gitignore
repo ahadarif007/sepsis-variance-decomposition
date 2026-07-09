@@ -2,3 +2,8 @@
 data/
 processed_data/
 
+# Ignore JetBrains IDE config
+.idea/
+.claude/
+
+
