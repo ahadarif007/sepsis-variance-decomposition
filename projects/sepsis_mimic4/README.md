@@ -308,6 +308,46 @@ Rscript -e 'rmarkdown::render("22_external_validation.Rmd")'
 
 **Reproducibility.** Every random operation uses the fixed seed 486649.
 
+**Temporal resolution: why hourly, not per-second.** ICU data in MIMIC-IV is
+irregularly sampled, not a uniform per-second stream. Vitals (heart rate, blood
+pressure, SpO2, respiratory rate) are charted every 1–5 minutes by nurses or
+monitor snapshots. Temperature and GCS are recorded every 1–4 hours. Labs
+(lactate, creatinine, WBC) arrive every 4–12 hours, ordered on clinical
+suspicion. SOFA components are only meaningful at hourly granularity or coarser.
+Hourly aggregation (script 07) is the natural resolution that balances signal
+density against computational tractability and matches the PhysioNet/CinC 2019
+Challenge benchmark.
+
+**Prediction mechanism: expanding window with dynamic landmarking.** The
+supermodel (script 12) uses an *expanding window*, not a fixed-width sliding
+window. At each hour h (starting from h = 6), the model sees all available data
+from admission up to hour h and predicts onset within the next 12 hours:
+
+```
+Hour  6:  features from [0, 6]   →  P(onset in 6–18h)
+Hour  7:  features from [0, 7]   →  P(onset in 7–19h)
+Hour  8:  features from [0, 8]   →  P(onset in 8–20h)
+  ...
+Hour 48:  features from [0, 48]  →  P(onset in 48–60h)
+```
+
+Within this expanding window, slope features (e.g. heart-rate trend over the
+last 6 hours) act as a *local sliding window* that captures recent deterioration.
+The supermodel includes interaction terms between features and landmark time
+(s, s²) so that the coefficient surface adapts as the stay progresses. This
+means the model recalibrates its predictions at every hour — a patient whose
+vitals were stable at hour 6 but deteriorate at hour 12 will see a rising risk
+score without any manual threshold adjustment.
+
+**Why not per-second prediction?** Treatment decisions in the ICU (antibiotics,
+fluids, vasopressors) operate on 30-minute to multi-hour timescales. Per-second
+prediction would require continuous waveform data (e.g. MIMIC-III Waveform
+Database or live bedside monitors), a streaming model architecture (RNN or
+streaming transformer), and edge deployment — a fundamentally different system
+from the interpretable statistical early-warning tool built here. The hourly
+resolution is standard in the sepsis prediction literature and is the granularity
+at which clinical action can realistically occur.
+
 ---
 
 ## 6. Key Results
