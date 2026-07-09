@@ -2,13 +2,13 @@
 utils.py
 ========
 Reusable helpers shared across the pipeline. The important one is
-`read_filtered`, which streams a large gzipped MIMIC table in chunks and keeps
-only the rows you care about (e.g. a handful of itemids out of chartevents),
-so you never have to load a multi-GB file into memory at once.
+`stream_windowed_agg`, which streams a large gzipped MIMIC table in chunks and
+aggregates only the rows you care about (e.g. a handful of itemids out of
+chartevents) per stay window, so you never have to load a multi-GB file into
+memory at once.
 """
 from __future__ import annotations
 
-import gzip
 import sys
 import time
 from pathlib import Path
@@ -57,70 +57,15 @@ def read_table(
         dtype=dtype,
         nrows=nrows,
         parse_dates=parse_dates,
-        compression="gzip",
         low_memory=False,
     )
-
-
-def read_filtered(
-    path: Path,
-    filter_col: str,
-    keep_values: Iterable,
-    columns: Sequence[str] | None = None,
-    dtype: dict | None = None,
-    parse_dates: Sequence[str] | None = None,
-    chunksize: int = 2_000_000,
-    show_progress: bool = True,
-) -> pd.DataFrame:
-    """
-    Stream a large gzipped CSV in chunks, keeping only rows where
-    `filter_col` is in `keep_values`. Returns the concatenated result.
-
-    Example (pull only lactate + creatinine out of labevents):
-        df = read_filtered(
-            FILES["labevents"],
-            filter_col="itemid",
-            keep_values={50813, 50912},
-            columns=["subject_id","hadm_id","charttime","itemid","valuenum","valueuom"],
-            parse_dates=["charttime"],
-        )
-    """
-    keep = set(keep_values)
-    reader = pd.read_csv(
-        path,
-        usecols=columns,
-        dtype=dtype,
-        parse_dates=parse_dates,
-        compression="gzip",
-        chunksize=chunksize,
-        low_memory=False,
-    )
-
-    iterator = reader
-    if show_progress and _HAS_TQDM:
-        iterator = tqdm(reader, desc=f"scan {path.name}", unit="chunk")
-
-    kept: list[pd.DataFrame] = []
-    total_rows = 0
-    for chunk in iterator:
-        total_rows += len(chunk)
-        sub = chunk[chunk[filter_col].isin(keep)]
-        if not sub.empty:
-            kept.append(sub)
-
-    log(f"{path.name}: scanned {total_rows:,} rows, kept "
-        f"{sum(len(k) for k in kept):,}")
-    if kept:
-        return pd.concat(kept, ignore_index=True)
-    # Return an empty frame with the right columns if nothing matched.
-    return pd.DataFrame(columns=list(columns) if columns else None)
 
 
 def count_rows(path: Path, chunksize: int = 5_000_000) -> int:
     """Exact row count by streaming. Slow on the biggest tables; use sparingly."""
     n = 0
     for chunk in pd.read_csv(
-        path, usecols=[0], compression="gzip", chunksize=chunksize, low_memory=False
+        path, usecols=[0], chunksize=chunksize, low_memory=False
     ):
         n += len(chunk)
     return n
@@ -128,7 +73,7 @@ def count_rows(path: Path, chunksize: int = 5_000_000) -> int:
 
 def peek_header(path: Path) -> list[str]:
     """Read just the CSV header line from a gzipped file."""
-    with gzip.open(path, "rt") as fh:
+    with open(path, "r") as fh:
         return fh.readline().rstrip("\n").split(",")
 
 
@@ -175,11 +120,6 @@ def load(name: str, out_dir: Path,
 # --------------------------------------------------------------------------- #
 # Dictionary helpers
 # --------------------------------------------------------------------------- #
-def load_dict_items(path: Path) -> pd.DataFrame:
-    """Load d_items (icu) — itemid -> label/linksto/category/unit."""
-    return read_table(path)
-
-
 def search_labels(d: pd.DataFrame, terms: Iterable[str],
                   label_col: str = "label") -> pd.DataFrame:
     """Case-insensitive substring search over a dictionary's label column."""
@@ -248,7 +188,7 @@ def stream_windowed_agg(
     usecols = [key_col, time_col, "itemid", value_col]
     reader = pd.read_csv(
         path, usecols=usecols, parse_dates=[time_col],
-        compression="gzip", chunksize=chunksize, low_memory=False,
+        chunksize=chunksize, low_memory=False,
     )
     if show_progress and _HAS_TQDM:
         reader = tqdm(reader, desc=f"scan {path.name}", unit="chunk")

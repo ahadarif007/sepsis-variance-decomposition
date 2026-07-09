@@ -13,7 +13,7 @@ Pipeline
         - ICU LOS >= MIN_ICU_LOS_HOURS
         - first ICU stay per patient (optional)
   4. Attach mortality flags (in-hospital + ICU).
-  5. Save -> processed_data/cohort.parquet
+  5. Save -> processed_data/cohort.csv
 
 Output columns
 --------------
@@ -24,13 +24,12 @@ Output columns
 Usage
 -----
     python 02_extract_cohort.py
-    python 02_extract_cohort.py --csv      # also write a CSV copy
+    python 02_extract_cohort.py --parquet  # also write a typed parquet copy
 """
 from __future__ import annotations
 
 import argparse
 
-import numpy as np
 import pandas as pd
 
 import config as C

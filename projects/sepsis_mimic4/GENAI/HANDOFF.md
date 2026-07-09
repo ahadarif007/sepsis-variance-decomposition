@@ -4,16 +4,54 @@
 > project cold**, with full context on what was built, why, the current state,
 > and the exact next steps. Read this top to bottom before touching anything.
 
-Last updated: 2026-07-08. Author of work: Claude (Anthropic), working with the
+Last updated: 2026-07-09. Author of work: Claude (Anthropic), working with the
 user **Abdul Ahad** (email ahadarif.1998@gmail.com; PyCharm on macOS).
 
-> **CURRENT STATUS IN ONE LINE (2026-07-08):** the whole pipeline `01`→`17` is
-> built and run; both Phase-1 reports (`06`, `09`) and the Phase-2 report (`17`)
-> are rendered to PDF. The only outstanding work is **external validation on
-> eICU** (deferred — no eICU database is present locally). Read the two dated
-> update banners below first, then the section detail. Where a section body still
-> says "[NOT RUN]" it has been corrected inline; trust the banners + §3/§5 status
-> markers as of this date.
+> **2026-07-09 UPDATE — single-study framing; Tiers 6-7 added.** The user
+> asked to stop framing this as two research efforts ("Phase 1" / "Phase 2")
+> since it is **one research programme** — the whole pipeline `01`→`20` is
+> now described that way throughout code, reports, and README. Concretely:
+> - **Renamed** every `phase2_tier*.csv` artifact to `tier*.csv` (also fixed
+>   `tier3_glmm.csv` → `tier3_gee.csv`, since the script fits GEE, not a GLMM —
+>   a pre-existing naming/doc mismatch). Scripts `10,12,13,15,16` updated to
+>   match; all five re-run and verified to reproduce the original numbers.
+> - **Renamed** `17_phase2_report.Rmd` → `20_realtime_model_report.Rmd`
+>   (renumbered so the final report sits after the new Tiers 6-7 below).
+> - **Two new tiers**, closing gaps the literature review flagged against
+>   comparable MIMIC-IV statistical studies: **Tier 6** (`18_gbtm_trajectories.R`)
+>   fits group-based trajectory modelling (flexmix latent-class growth model,
+>   since `lcmm`/`traj` aren't installed) on first-24h SOFA trajectories,
+>   linking class membership to mortality (Cox) and incident Sepsis-3
+>   (logistic) — following Yang et al. 2022. **Tier 7**
+>   (`19_confounder_adjustment.R`) uses LASSO-selected confounders, then PSM /
+>   IPW / doubly-robust (augmented-IPW) estimation of the effect of early
+>   (≤3h) antibiotics on mortality — following Guo et al. 2025 and Zou et al.
+>   2022. New R packages: `flexmix, MatchIt, WeightIt, cobalt` (installed this
+>   session). Both ran cleanly end-to-end; see README §9 for headline numbers.
+> - **Dead code removed:** `utils.read_filtered` and `utils.load_dict_items`
+>   (both unused), unused `numpy` imports in `02`/`04`, and the stale
+>   `cohort.parquet` / `suspected_infection.parquet` leftovers (pre-CSV-switch
+>   artifacts; `02`/`03` docstrings corrected to say CSV, not parquet).
+> - **Two new files appeared in this folder mid-session**
+>   (`sepsis_mimic4_literature_review (2).md`, `sepsis_mimic4_project_plan.md`)
+>   — a more rigorous, dissertation-style companion review (18 studies) and
+>   project plan, not authored by this session. Cross-checked against the
+>   pipeline: its two live methodological asks — formally test the
+>   proportional-hazards assumption (Kasal et al. 2004) and respond if it
+>   fails — are **already satisfied**: `09_temporal_report.Rmd` runs
+>   `cox.zph`, finds the global test fails, and fits a time-varying Cox model
+>   in response (see `09_temporal_report.Rmd:193-206`). External validation on
+>   eICU remains the one open item in both documents and here.
+>
+> **CURRENT STATUS IN ONE LINE (2026-07-09):** the whole pipeline `01`→`20` is
+> built and run, covering Tiers 1-7. The only outstanding work is **external
+> validation on eICU** (deferred — no eICU database is present locally). Read
+> the dated update banners below (newest first), then the section detail.
+> Where a section body still says "[NOT RUN]" it has been corrected inline;
+> trust the banners + §3/§5 status markers as of this date. Some body text
+> below still says "Phase 1" / "Phase 2" as a historical record of how the
+> work was originally sequenced — the pipeline and its docs no longer use
+> that framing going forward.
 
 > **2026-07-08 UPDATE — PHASE 2 EXECUTED (purely statistical).** The real-time
 > model is now built with classical statistics only (no ML/DL), reaching

@@ -189,6 +189,7 @@ def _hourly_qsofa(row_rr, row_gcs, row_map) -> np.ndarray:
 
 
 def _hourly_sirs(hr, rr, temp, wbc) -> np.ndarray:
+    # SIRS: HR >90, resp rate >20, temp outside [36, 38]C, WBC outside [4, 12] K/uL.
     return ((hr > 90).astype(int) + (rr > 20).astype(int)
             + ((temp > 38) | (temp < 36)).astype(int)
             + ((wbc > 12) | (wbc < 4)).astype(int))

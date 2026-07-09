@@ -35,7 +35,6 @@ from __future__ import annotations
 
 import argparse
 
-import numpy as np
 import pandas as pd
 
 import config as C
@@ -110,7 +109,7 @@ def load_vasopressors(stays: pd.DataFrame) -> pd.DataFrame:
     cols = ["stay_id", "itemid", "starttime", "rate", "rateuom"]
     rows: list[pd.DataFrame] = []
     for chunk in pd.read_csv(C.FILES["inputevents"], usecols=cols,
-                             parse_dates=["starttime"], compression="gzip",
+                             parse_dates=["starttime"],
                              chunksize=1_000_000, low_memory=False):
         sub = chunk[chunk["itemid"].isin(keep_ids)]
         sub = sub[sub["stay_id"].isin(win.index)]
@@ -157,7 +156,7 @@ def load_urine(stays: pd.DataFrame) -> pd.Series:
     cols = ["stay_id", "itemid", "charttime", "value"]
     rows: list[pd.DataFrame] = []
     for chunk in pd.read_csv(C.FILES["outputevents"], usecols=cols,
-                             parse_dates=["charttime"], compression="gzip",
+                             parse_dates=["charttime"],
                              chunksize=1_000_000, low_memory=False):
         sub = chunk[chunk["itemid"].isin(keep_ids)]
         sub = sub[sub["stay_id"].isin(win.index)]

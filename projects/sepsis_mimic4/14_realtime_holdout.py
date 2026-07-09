@@ -1,6 +1,6 @@
 """
-14_realtime_holdout.py  --  PHASE 2, TIER 4 (data substrate)
-============================================================
+14_realtime_holdout.py  --  TIER 4 (data substrate)
+====================================================
 Builds an ALL-HOURS feature stream for a random holdout of stays, so the
 landmark supermodel can emit an hourly risk at every hour (not just the 6
 landmark points) -- the input the PhysioNet-2019 utility score and the
@@ -35,10 +35,12 @@ def ff(panel, v):
 
 
 def qsofa(rr, gcs, mp):
+    # quickSOFA: resp rate >=22, GCS <15, and MAP <70 as a proxy for SBP <=100.
     return (rr >= 22).astype(int) + (gcs < 15).astype(int) + (mp < 70).astype(int)
 
 
 def sirs(hr, rr, temp, wbc):
+    # SIRS: HR >90, resp rate >20, temp outside [36, 38]C, WBC outside [4, 12] K/uL.
     return ((hr > 90).astype(int) + (rr > 20).astype(int)
             + ((temp > 38) | (temp < 36)).astype(int)
             + ((wbc > 12) | (wbc < 4)).astype(int))

@@ -1,9 +1,9 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2026.1.28)  8 JUL 2026 23:43
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2026.1.28)  9 JUL 2026 02:11
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
-**17_phase2_report.tex
-(./17_phase2_report.tex
+**20_realtime_model_report.tex
+(./20_realtime_model_report.tex
 LaTeX2e <2024-11-01> patch level 2
 L3 programming layer <2025-01-18>
 (/usr/local/texlive/2025/texmf-dist/tex/latex/base/article.cls
@@ -538,8 +538,8 @@ File: t1lmr.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 File: l3backend-pdftex.def 2024-05-08 L3 backend support: PDF output (pdfTeX)
 \l__color_backend_stack_int=\count328
 \l__pdf_internal_box=\box76
-) (./17_phase2_report.aux)
-\openout1 = `17_phase2_report.aux'.
+) (./20_realtime_model_report.aux)
+\openout1 = `20_realtime_model_report.aux'.
 
 LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 102.
 LaTeX Font Info:    ... okay on input line 102.
@@ -683,14 +683,9 @@ LaTeX Font Info:    Trying to load font information for U+msb on input line 104
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 ) (/usr/local/texlive/2025/texmf-dist/tex/latex/microtype/mt-msb.cfg
 File: mt-msb.cfg 2005/06/01 v1.0 microtype config. file: AMS symbols (b) (RS)
-) (./17_phase2_report.toc)
+) (./20_realtime_model_report.toc)
 \tf@toc=\write3
-\openout3 = `17_phase2_report.toc'.
-
-LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <10.95> on input line 146.
-
-LaTeX Warning: `!h' float specifier changed to `!ht'.
+\openout3 = `20_realtime_model_report.toc'.
 
 
 
@@ -698,27 +693,28 @@ LaTeX Warning: `!h' float specifier changed to `!ht'.
 
 {/usr/local/texlive/2025/texmf-var/fonts/map/pdftex/updmap/pdftex.map}{/usr/loc
 al/texlive/2025/texmf-dist/fonts/enc/dvips/lm/lm-ec.enc}]
+LaTeX Font Info:    External font `lmex10' loaded for size
+(Font)              <10.95> on input line 151.
 
-LaTeX Warning: `!h' float specifier changed to `!ht'.
 
-<figure/auc_by_landmark.png, id=30, 1104.125pt x 853.1875pt>
+[2]
+<figure/auc_by_landmark.png, id=40, 1104.125pt x 853.1875pt>
 File: figure/auc_by_landmark.png Graphic file (type png)
 <use figure/auc_by_landmark.png>
-Package pdftex.def Info: figure/auc_by_landmark.png  used on input line 219.
+Package pdftex.def Info: figure/auc_by_landmark.png  used on input line 224.
 (pdftex.def)             Requested size: 299.71317pt x 231.60046pt.
 
 
-[2{/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/lm/lm-mathit.enc}{/usr/lo
-cal/texlive/2025/texmf-dist/fonts/enc/dvips/lm/lm-rm.enc}]
-
-[3 <./figure/auc_by_landmark.png>]
+[3{/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/lm/lm-mathit.enc}{/usr/lo
+cal/texlive/2025/texmf-dist/fonts/enc/dvips/lm/lm-rm.enc} <./figure/auc_by_land
+mark.png>]
 
 LaTeX Warning: `!h' float specifier changed to `!ht'.
 
-<figure/alarm_tradeoff.png, id=47, 1104.125pt x 853.1875pt>
+<figure/alarm_tradeoff.png, id=51, 1104.125pt x 853.1875pt>
 File: figure/alarm_tradeoff.png Graphic file (type png)
 <use figure/alarm_tradeoff.png>
-Package pdftex.def Info: figure/alarm_tradeoff.png  used on input line 328.
+Package pdftex.def Info: figure/alarm_tradeoff.png  used on input line 333.
 (pdftex.def)             Requested size: 299.71317pt x 231.60046pt.
 
 
@@ -726,24 +722,44 @@ Package pdftex.def Info: figure/alarm_tradeoff.png  used on input line 328.
 
 LaTeX Warning: `!h' float specifier changed to `!ht'.
 
+<figure/gbtm_trajectories.png, id=58, 1104.125pt x 853.1875pt>
+File: figure/gbtm_trajectories.png Graphic file (type png)
+<use figure/gbtm_trajectories.png>
+Package pdftex.def Info: figure/gbtm_trajectories.png  used on input line 391.
+(pdftex.def)             Requested size: 299.71317pt x 231.60046pt.
 
 
 [5 <./figure/alarm_tradeoff.png>]
 
-[6] (./17_phase2_report.aux)
+LaTeX Warning: `!h' float specifier changed to `!ht'.
+
+
+
+[6 <./figure/gbtm_trajectories.png>]
+<figure/tier7_balance_love_plot.png, id=74, 1204.5pt x 903.375pt>
+File: figure/tier7_balance_love_plot.png Graphic file (type png)
+<use figure/tier7_balance_love_plot.png>
+Package pdftex.def Info: figure/tier7_balance_love_plot.png  used on input line
+ 475.
+(pdftex.def)             Requested size: 338.38702pt x 253.78412pt.
+
+
+[7]
+
+[8 <./figure/tier7_balance_love_plot.png>] (./20_realtime_model_report.aux)
  ***********
 LaTeX2e <2024-11-01> patch level 2
 L3 programming layer <2025-01-18>
  ***********
  ) 
 Here is how much of TeX's memory you used:
- 16715 strings out of 473190
- 268372 string characters out of 5715800
- 718735 words of memory out of 5000000
- 39565 multiletter control sequences out of 15000+600000
- 606319 words of font info for 121 fonts, out of 8000000 for 9000
+ 16781 strings out of 473190
+ 269889 string characters out of 5715800
+ 720498 words of memory out of 5000000
+ 39596 multiletter control sequences out of 15000+600000
+ 607561 words of font info for 134 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 83i,10n,93p,1013b,472s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 83i,10n,93p,1021b,478s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/local/texlive/2025/texmf-dist/fonts/type1/public/lm/lmbx10.pfb></usr/lo
 cal/texlive/2025/texmf-dist/fonts/type1/public/lm/lmbx12.pfb></usr/local/texliv
 e/2025/texmf-dist/fonts/type1/public/lm/lmmi10.pfb></usr/local/texlive/2025/tex
@@ -751,10 +767,10 @@ mf-dist/fonts/type1/public/lm/lmr10.pfb></usr/local/texlive/2025/texmf-dist/fon
 ts/type1/public/lm/lmr12.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/pu
 blic/lm/lmr17.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/lm/lmr
 8.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/lm/lmri10.pfb>
-Output written on 17_phase2_report.pdf (6 pages, 308573 bytes).
+Output written on 20_realtime_model_report.pdf (8 pages, 462569 bytes).
 PDF statistics:
- 132 PDF objects out of 1000 (max. 8388607)
- 102 compressed objects within 2 object streams
- 24 named destinations out of 1000 (max. 500000)
- 24643 words of extra memory for PDF output out of 24883 (max. 10000000)
+ 163 PDF objects out of 1000 (max. 8388607)
+ 127 compressed objects within 2 object streams
+ 33 named destinations out of 1000 (max. 500000)
+ 24669 words of extra memory for PDF output out of 24883 (max. 10000000)
 

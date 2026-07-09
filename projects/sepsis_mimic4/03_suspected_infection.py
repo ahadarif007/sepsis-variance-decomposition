@@ -11,12 +11,12 @@ Sepsis-3 timing (Seymour et al. JAMA 2016):
   Arm 2 — culture first : abx started ≤ CULTURE_BEFORE_ABX_HOURS (24h) after culture
            → t_suspicion = t_culture
 
-For each ICU stay in cohort.parquet we find the EARLIEST qualifying pair
+For each ICU stay in cohort.csv we find the EARLIEST qualifying pair
 and record t_suspicion, the triggering antibiotic, and the culture type.
 
 Output
 ------
-processed_data/suspected_infection.parquet
+processed_data/suspected_infection.csv
   stay_id, subject_id, hadm_id, t_suspicion, t_abx, t_culture,
   abx_drug, spec_type_desc
 """
@@ -48,7 +48,6 @@ def load_antibiotics(cohort_hadm: set) -> pd.DataFrame:
         C.FILES["prescriptions"],
         usecols=cols,
         parse_dates=["starttime"],
-        compression="gzip",
         chunksize=500_000,
         low_memory=False,
     ):

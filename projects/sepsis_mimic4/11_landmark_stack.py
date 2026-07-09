@@ -1,8 +1,8 @@
 """
-11_landmark_stack.py  --  PHASE 2, TIER 2 (data substrate)
-==========================================================
+11_landmark_stack.py  --  TIER 2 (data substrate)
+==================================================
 Builds the STACKED multi-landmark dataset for a dynamic-prediction *supermodel*
-(van Houwelingen 2007, README ref 7). Phase 1 fit a single landmark at hour 6;
+(van Houwelingen 2007, README ref 7). Script 08 fit a single landmark at hour 6;
 a real-time system must emit a risk at EVERY hour. The landmark supermodel is
 the purely-statistical way to do that: repeat the hour-6 landmark construction
 at a grid of landmark times s, stack them into one long dataset with s as a
@@ -37,11 +37,14 @@ def ff(panel: pd.DataFrame, v: str) -> pd.Series:
 
 
 def qsofa(rr, gcs, mp):
+    # quickSOFA: resp rate >=22, GCS <15, and MAP <70 as a proxy for SBP <=100
+    # (chartevents has no routine SBP field at this granularity -- see README).
     return ((rr >= 22).astype(int) + (gcs < 15).astype(int)
             + (mp < 70).astype(int))
 
 
 def sirs(hr, rr, temp, wbc):
+    # SIRS: HR >90, resp rate >20, temp outside [36, 38]C, WBC outside [4, 12] K/uL.
     return ((hr > 90).astype(int) + (rr > 20).astype(int)
             + ((temp > 38) | (temp < 36)).astype(int)
             + ((wbc > 12) | (wbc < 4)).astype(int))

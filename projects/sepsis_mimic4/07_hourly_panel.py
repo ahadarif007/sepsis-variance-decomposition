@@ -117,7 +117,7 @@ def stream_hourly_agg(
 
     reader = pd.read_csv(
         path, usecols=[key_col, time_col, "itemid", value_col],
-        parse_dates=[time_col], compression="gzip",
+        parse_dates=[time_col],
         chunksize=chunksize, low_memory=False,
     )
     try:
@@ -199,7 +199,7 @@ def hourly_vaso(stays: pd.DataFrame) -> pd.DataFrame:
     rows: list[pd.DataFrame] = []
     for chunk in pd.read_csv(C.FILES["inputevents"], usecols=cols,
                              parse_dates=["starttime", "endtime"],
-                             compression="gzip", chunksize=1_000_000,
+                             chunksize=1_000_000,
                              low_memory=False):
         sub = chunk[chunk["itemid"].isin(keep)]
         sub = sub[sub["stay_id"].isin(win.index)]
@@ -262,7 +262,7 @@ def hourly_urine(stays: pd.DataFrame) -> pd.DataFrame:
     cols = ["stay_id", "itemid", "charttime", "value"]
     rows: list[pd.DataFrame] = []
     for chunk in pd.read_csv(C.FILES["outputevents"], usecols=cols,
-                             parse_dates=["charttime"], compression="gzip",
+                             parse_dates=["charttime"],
                              chunksize=1_000_000, low_memory=False):
         sub = chunk[chunk["itemid"].isin(keep)]
         sub = sub[sub["stay_id"].isin(win.index)]

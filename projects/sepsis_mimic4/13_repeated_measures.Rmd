@@ -1,27 +1,55 @@
-#!/usr/bin/env Rscript
-# =============================================================================
-# 13_repeated_measures.R  --  PHASE 2, TIER 3
-# Correct-for-correlation inferential models on the hourly panel.
-#
-# plan.md §3B.4 flags that Phase 1 never modelled the WITHIN-PATIENT correlation
-# of repeated hourly measurements. Here we do it two classical ways:
-#   (1) GLMM  -- logistic with a random intercept per patient (lme4::glmer),
-#       giving the between-patient variance, the ICC, and cluster-robust
-#       fixed-effect odds ratios; contrasted with a naive pooled GLM that
-#       (wrongly) treats the 100k+ hours as independent.
-#   (2) Penalized (ridge) time-varying-covariate Cox on a counting-process
-#       build of the same sampled stays -- the hazard of onset from physiology
-#       as it evolves, stabilised by an L2 penalty.
-#
-# Runs on the sampled long panel (2,500 stays) for tractability, matching how
-# Phase 1's report handled the time-varying models.
-# Output: phase2_tier3_glmm.csv, phase2_tier3_tvcox.csv
-# Seed 486649. Run from projects/sepsis_mimic4/.
-# =============================================================================
+---
+title: "Tier 3: Within-Patient Correlation (Repeated Measures)"
+subtitle: "GEE and Penalized Time-Varying Cox Models on the Hourly Panel"
+author: "Abdul Ahad. Student ID: G00486649"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  bookdown::pdf_document2:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    fig_caption: true
+geometry: margin=2.3cm
+fontsize: 11pt
+header-includes:
+  - \usepackage{float}
+  - \usepackage{caption}
+  - \captionsetup[figure]{font=small}
+  - \captionsetup[table]{font=small}
+  - \renewcommand{\contentsname}{Table of Contents}
+editor_options:
+  markdown:
+    wrap: 72
+---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE, fig.width=8, fig.height=5)
+```
+
+## Overview
+
+The longitudinal report (step 09) never modelled the within-patient correlation
+of repeated hourly measurements. This script addresses that gap in two classical
+ways: (1) GEE with an exchangeable working correlation, and (2) a penalized
+(ridge) time-varying-covariate Cox model on a counting-process formulation. Both
+operate on the sampled long panel (2,500 stays) for tractability.
+
+## Load Libraries and Set Seed
+
+We load the GEE, sandwich, and survival packages, then fix the random seed for
+reproducibility.
+
+```{r load-libraries, message=FALSE, warning=FALSE}
 suppressPackageStartupMessages({ library(geepack); library(sandwich); library(survival) })
 set.seed(486649)
+```
 
+## Locate and Read Data
+
+A helper function searches several candidate paths for each input file. We read
+the sampled long panel that was produced by the earlier longitudinal pipeline.
+
+```{r load-data}
 find_data <- function(f) {
   cands <- c(file.path("../../processed_data", f),
              file.path("processed_data", f), f)
@@ -31,7 +59,17 @@ find_data <- function(f) {
 OUT <- dirname(find_data("panel_sample_long.csv"))
 d0 <- read.csv(find_data("panel_sample_long.csv"))   # full copy (for the Cox)
 d <- d0
+```
 
+## Define the Dynamic Incident Outcome
+
+The stored per-hour `label` is nearly constant within a patient, so a random
+intercept would suffer complete separation. Instead we define a proper
+early-warning target on at-risk hours only: whether sepsis onset occurs within
+the next 12 hours. This outcome varies within septic patients and is the correct
+repeated-measures formulation.
+
+```{r define-outcome}
 # ---- DYNAMIC incident outcome on AT-RISK hours ------------------------------
 # The stored per-hour `label` is patient-near-constant (all-0 for non-septic;
 # 1 from onset-6h onward for septic) -> a random intercept would trivially
@@ -47,14 +85,32 @@ d$y <- as.integer(!is.na(d$onset_hour) &
                     (d$onset_hour - d$hour) > 0)
 cat(sprintf("Loaded sampled panel (at-risk hours): %d stay-hours, %d stays, incident-within-12h rate %.3f\n",
             nrow(d), length(unique(d$stay_id)), mean(d$y)))
+```
 
+## Standardize Predictors
+
+We median-impute missing values and z-score all predictors so that the resulting
+odds ratios are comparable across variables.
+
+```{r standardize-predictors}
 # ---- standardize predictors (median-impute; z-score for comparable ORs) -----
 zt <- function(x) { x[is.na(x)] <- median(x, na.rm=TRUE); as.numeric(scale(x)) }
 d$z_hr   <- zt(d$hr);   d$z_map  <- zt(d$map);   d$z_rr <- zt(d$resp_rate)
 d$z_temp <- zt(d$temp_c); d$z_lac <- zt(d$lactate); d$z_hour <- zt(d$hour)
 preds <- c("z_hr","z_map","z_rr","z_temp","z_lac","z_hour")
 form  <- as.formula(paste("y ~", paste(preds, collapse=" + ")))
+```
 
+## GEE vs Naive Pooled GLM
+
+A per-patient random-intercept GLMM is degenerate for this outcome because most
+patients never have an event. GEE is the correct classical alternative: it
+estimates population-averaged effects with an exchangeable within-patient
+working correlation and cluster-robust sandwich standard errors. We contrast it
+with a naive GLM that treats the ~76k hours as independent, which substantially
+understates the standard errors.
+
+```{r fit-gee}
 # ---- (1) population-averaged GEE vs naive pooled GLM ------------------------
 # A per-patient random-intercept GLMM is DEGENERATE for this outcome: most
 # patients never have an event, so their intercepts diverge (quasi-complete
@@ -91,8 +147,17 @@ print(comp, row.names=FALSE)
 write.csv(rbind(comp,
                 data.frame(term="__alpha_within_patient__", OR_glm=round(alpha,4),
                            SE_naive=NA, SE_cluster_robust=NA, SE_inflation=NA)),
-          file.path(OUT, "phase2_tier3_glmm.csv"), row.names=FALSE)
+          file.path(OUT, "tier3_gee.csv"), row.names=FALSE)
+```
 
+## Penalized Time-Varying-Covariate Cox Model
+
+We build a counting-process (start, stop] formulation of the hourly data and fit
+a ridge-penalized Cox model. This captures how time-varying physiology predicts
+the hazard of sepsis onset, with cluster-robust variance for within-patient
+correlation.
+
+```{r fit-tvcox}
 # ---- (2) penalized time-varying-covariate Cox (counting process) ------------
 # Build (start, stop, event] intervals per stay-hour; event at the onset hour.
 # Uses the FULL sampled panel d0 (not the pre-onset-only GLMM frame).
@@ -114,5 +179,6 @@ cox_tab <- data.frame(
   HR   = round(exp(coef(tv)), 3))
 cat("\nTime-varying Cox (ridge) hazard ratios for incident onset:\n")
 print(cox_tab, row.names=FALSE)
-write.csv(cox_tab, file.path(OUT, "phase2_tier3_tvcox.csv"), row.names=FALSE)
+write.csv(cox_tab, file.path(OUT, "tier3_tvcox.csv"), row.names=FALSE)
 cat("\nTier 3 complete.\n")
+```
