@@ -2,7 +2,7 @@
 02_extract_cohort.py
 ====================
 Builds the base ICU cohort from the small tables only (icustays, patients,
-admissions). Safe to run on any machine — it never touches chartevents/labevents.
+admissions). Safe to run on any machine; it never touches chartevents/labevents.
 
 Pipeline
 --------

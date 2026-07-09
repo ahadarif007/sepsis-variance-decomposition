@@ -6,10 +6,10 @@ Detects suspected infection per the Sepsis-3 definition:
   time window around that order.
 
 Sepsis-3 timing (Seymour et al. JAMA 2016):
-  Arm 1 — abx first : culture drawn ≤ ABX_BEFORE_CULTURE_HOURS (72h) after abx start
-           → t_suspicion = t_abx
-  Arm 2 — culture first : abx started ≤ CULTURE_BEFORE_ABX_HOURS (24h) after culture
-           → t_suspicion = t_culture
+  Arm 1 - abx first : culture drawn <= ABX_BEFORE_CULTURE_HOURS (72h) after abx start
+           -> t_suspicion = t_abx
+  Arm 2 - culture first : abx started <= CULTURE_BEFORE_ABX_HOURS (24h) after culture
+           -> t_suspicion = t_culture
 
 For each ICU stay in cohort.csv we find the EARLIEST qualifying pair
 and record t_suspicion, the triggering antibiotic, and the culture type.
@@ -79,7 +79,7 @@ def load_cultures(cohort_hadm: set) -> pd.DataFrame:
     )
     df = df[df["hadm_id"].isin(cohort_hadm)].copy()
 
-    # Drop surveillance / colonization screens (e.g. MRSA SCREEN) — these are
+    # Drop surveillance / colonization screens (e.g. MRSA SCREEN). These are
     # not diagnostic infection cultures and should not trigger suspected
     # infection under Sepsis-3. Controlled by config (default: exclude).
     if getattr(C, "EXCLUDE_SURVEILLANCE_CULTURES", False):
@@ -115,7 +115,7 @@ def find_suspicion(
     cultures: pd.DataFrame,
 ) -> pd.DataFrame:
     """
-    Cross-join antibiotics × cultures within each hadm_id, apply Sepsis-3
+    Cross-join antibiotics x cultures within each hadm_id, apply Sepsis-3
     time windows, and return the earliest qualifying t_suspicion per stay.
     """
     abx = abx.rename(columns={"starttime": "t_abx", "drug": "abx_drug"})
@@ -131,7 +131,7 @@ def find_suspicion(
             how="inner",
         )
     )
-    U.log(f"raw abx×culture pairs in cohort: {len(merged):,}")
+    U.log(f"raw abxxculture pairs in cohort: {len(merged):,}")
 
     if merged.empty:
         U.log("WARNING: no abx-culture pairs found in cohort")
@@ -193,11 +193,11 @@ def main() -> None:
     U.log("loading culture draws ...")
     cultures = load_cultures(cohort_hadm)
 
-    U.log("pairing antibiotics × cultures ...")
+    U.log("pairing antibiotics x cultures ...")
     result = find_suspicion(cohort, abx, cultures)
 
     if result.empty:
-        U.log("ERROR: no suspected infection records produced — check inputs")
+        U.log("ERROR: no suspected infection records produced - check inputs")
         return
 
     n_stays = cohort["stay_id"].nunique()

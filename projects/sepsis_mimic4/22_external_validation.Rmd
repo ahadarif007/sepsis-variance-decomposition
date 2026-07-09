@@ -1,0 +1,258 @@
+---
+title: "External Validation on eICU-CRD: Transporting the Hour-6 Sepsis Nomogram"
+author: "Abdul Ahad. Student ID: G00486649"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  bookdown::pdf_document2:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    fig_caption: true
+geometry: margin=2.3cm
+fontsize: 11pt
+header-includes:
+  - \usepackage{float}
+  - \usepackage{caption}
+  - \captionsetup[figure]{font=small}
+  - \captionsetup[table]{font=small}
+  - \renewcommand{\contentsname}{Table of Contents}
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE,
+                      fig.width=8, fig.height=5, fig.pos="H")
+```
+
+## Overview
+
+The Tier-1 elastic-net nomogram was **developed and frozen on MIMIC-IV v3.1**
+(single centre, Boston). Here it is applied **without any refitting** to the
+**eICU Collaborative Research Database v2.0** (200+ US ICUs) to measure how
+well it *transports* to a completely independent, multi-centre population. The
+eICU hour-6 landmark table (`landmark_h6_eicu.csv`) was built by
+`21_eicu_external_panel.py` using the identical cohort, panel, hourly-SOFA,
+onset, and feature definitions as the MIMIC pipeline (scripts `02/03/07/08`).
+
+We report three things a proper external validation must separate:
+
+1. **Frozen transport**: discrimination and calibration of the MIMIC model
+   applied as-is (the honest deployment scenario).
+2. **Recalibration**: how much a simple intercept + slope update recovers,
+   distinguishing *miscalibration* (fixable) from *loss of discrimination*
+   (not).
+3. **Internal eICU ceiling**: an elastic net refit on eICU itself, showing the
+   best discrimination the same features can achieve in this population.
+
+### The one cross-dataset caveat
+
+Sepsis-3 requires a culture drawn near an antibiotic. eICU captures
+microbiology for only ~1.5% of stays but antibiotics for ~83%, so requiring a
+culture would make the *label* (not the model) untransportable. We therefore
+trigger suspected infection on the first qualifying antibiotic order (refining
+timing with a culture when one exists). This is a property of eICU's data
+capture and is the primary caveat on the numbers below.
+
+## Load Libraries and Data
+
+```{r load}
+suppressPackageStartupMessages({
+  library(glmnet); library(pROC); library(PRROC)
+})
+set.seed(486649)
+
+find_data <- function(f) {
+  cands <- c(file.path("../../processed_data", f),
+             file.path("processed_data", f), f)
+  hit <- cands[file.exists(cands)][1]
+  if (is.na(hit)) stop("cannot find ", f)
+  hit
+}
+OUT <- dirname(find_data("landmark_h6_eicu.csv"))
+FIG <- if (dir.exists("figure")) "figure" else { dir.create("figure"); "figure" }
+
+ext   <- read.csv(find_data("landmark_h6_eicu.csv"))
+coefs <- read.csv(find_data("tier1_coefs.csv"))          # frozen MIMIC model
+cat(sprintf("eICU landmark: %d at-risk stays, onset-within-12h rate %.3f (%d events)\n",
+            nrow(ext), mean(ext$onset_within_h), sum(ext$onset_within_h)))
+```
+
+## Rebuild the Frozen Design Matrix
+
+The feature design from script `10` is reconstructed exactly: vitals and
+severity scores are median-imputed; labs are median-imputed with a "was-measured"
+indicator (`_msg`); 6-hour slopes are zero-imputed with a `_msg` indicator; plus
+age and sex. Imputation uses **eICU** central values, as appropriate when
+deploying a frozen model on a new population.
+
+```{r design}
+build_design <- function(d) {
+  vitals <- c("hr","resp_rate","map","spo2","temp_c","gcs")
+  scores <- c("sofa_total","qsofa","sirs")
+  labs   <- c("lactate","creatinine","wbc","pf_ratio")
+  slopes <- c("hr_slope6","resp_rate_slope6","map_slope6","spo2_slope6")
+  df <- data.frame(row.names = seq_len(nrow(d)))
+  for (v in c(vitals, scores)) {
+    x <- d[[v]]; x[is.na(x)] <- median(x, na.rm = TRUE); df[[v]] <- x }
+  for (v in labs) {
+    x <- d[[v]]; df[[paste0(v, "_msg")]] <- as.integer(is.na(x))
+    x[is.na(x)] <- median(x, na.rm = TRUE); df[[v]] <- x }
+  for (v in slopes) {
+    x <- d[[v]]; df[[paste0(v, "_msg")]] <- as.integer(is.na(x))
+    x[is.na(x)] <- 0; df[[v]] <- x }
+  df$age    <- d$age
+  df$female <- as.integer(d$gender == "F")
+  df
+}
+X  <- build_design(ext)
+y  <- ext$onset_within_h
+cat(sprintf("Design matrix: %d rows x %d features\n", nrow(X), ncol(X)))
+```
+
+## Score the Frozen MIMIC Model (No Refitting)
+
+The linear predictor is assembled by name from the frozen coefficients to
+prevent silent misalignment of term ordering.
+
+```{r frozen-score}
+b0 <- coefs$coef[coefs$term == "(Intercept)"]
+terms <- setdiff(coefs$term, "(Intercept)")
+stopifnot(all(terms %in% names(X)))                  # alignment guard
+lp <- b0 + as.matrix(X[, terms]) %*% coefs$coef[match(terms, coefs$term)]
+lp <- as.numeric(lp)
+risk_frozen <- plogis(lp)
+```
+
+## Discrimination, Calibration, and Recalibration
+
+AUROC measures discrimination (rank ordering, invariant to calibration).
+Calibration-in-the-large compares mean predicted risk to the observed event
+rate. The **calibration slope** (from `glm(y ~ lp)`) is the gold-standard
+transportability summary: slope 1 = perfect, <1 = frozen risks too extreme
+(typical under dataset shift), and the intercept captures baseline-rate drift.
+
+```{r metrics}
+roc_frozen <- roc(y, risk_frozen, quiet = TRUE, direction = "<")
+auc_ci     <- ci.auc(roc_frozen)                    # DeLong 95% CI
+prauc      <- pr.curve(scores.class0 = risk_frozen[y == 1],
+                       scores.class1 = risk_frozen[y == 0])$auc.integral
+brier      <- mean((risk_frozen - y)^2)
+
+recal <- glm(y ~ lp, family = binomial)
+cal_intercept <- coef(recal)[1]
+cal_slope     <- coef(recal)[2]
+risk_recal    <- predict(recal, type = "response")
+brier_recal   <- mean((risk_recal - y)^2)
+
+cil_pred <- mean(risk_frozen); cil_obs <- mean(y)
+
+summary_tbl <- data.frame(
+  metric = c("N (at-risk stays)", "Events (onset within 12h)", "Event rate",
+             "AUROC (frozen)", "AUROC 95% CI",
+             "PR-AUC (frozen)", "Brier (frozen)",
+             "Mean predicted risk", "Observed rate",
+             "Calibration slope", "Calibration intercept",
+             "Brier (after recalibration)"),
+  value = c(
+    nrow(ext), sum(y), sprintf("%.3f", cil_obs),
+    sprintf("%.3f", as.numeric(auc(roc_frozen))),
+    sprintf("[%.3f, %.3f]", auc_ci[1], auc_ci[3]),
+    sprintf("%.3f", prauc), sprintf("%.4f", brier),
+    sprintf("%.3f", cil_pred), sprintf("%.3f", cil_obs),
+    sprintf("%.3f", cal_slope), sprintf("%.3f", cal_intercept),
+    sprintf("%.4f", brier_recal)))
+knitr::kable(summary_tbl, caption = "Frozen-model external validation on eICU.")
+```
+
+## Internal eICU Ceiling (Elastic Net Refit)
+
+Refitting the same elastic-net design on eICU with 5-fold out-of-sample
+prediction separates loss of discrimination from miscalibration. If the refit
+AUROC is close to the frozen AUROC, discrimination transports and any gap
+to MIMIC's 0.775 reflects population difficulty, not model failure.
+
+```{r internal-ceiling}
+Xm <- as.matrix(X)
+folds <- sample(rep(1:5, length.out = nrow(Xm)))
+oos <- numeric(nrow(Xm))
+for (k in 1:5) {
+  tr <- folds != k
+  cvfit <- cv.glmnet(Xm[tr, ], y[tr], family = "binomial",
+                     alpha = 0.5, nfolds = 5, standardize = TRUE)
+  oos[!tr] <- as.numeric(predict(cvfit, Xm[!tr, ],
+                                 s = "lambda.min", type = "response"))
+}
+roc_int <- roc(y, oos, quiet = TRUE, direction = "<")
+delong_frozen_vs_int <- roc.test(roc_int, roc_frozen, method = "delong")$p.value
+cat(sprintf("Internal eICU refit AUROC: %.3f  |  frozen-transport AUROC: %.3f\n",
+            as.numeric(auc(roc_int)), as.numeric(auc(roc_frozen))))
+cat(sprintf("DeLong p (internal vs frozen): %.3g\n", delong_frozen_vs_int))
+```
+
+## Save Results
+
+```{r save}
+res <- data.frame(
+  auroc_frozen   = as.numeric(auc(roc_frozen)),
+  auroc_lo       = auc_ci[1], auroc_hi = auc_ci[3],
+  prauc_frozen   = prauc,
+  brier_frozen   = brier,
+  brier_recal    = brier_recal,
+  cal_slope      = cal_slope,
+  cal_intercept  = cal_intercept,
+  mean_pred      = cil_pred,
+  obs_rate       = cil_obs,
+  auroc_internal = as.numeric(auc(roc_int)),
+  delong_p_internal_vs_frozen = delong_frozen_vs_int,
+  n_stays        = nrow(ext),
+  n_events       = sum(y))
+res[] <- lapply(res, function(x) if (is.numeric(x)) round(x, 4) else x)
+write.csv(res, file.path(OUT, "external_validation_eicu.csv"), row.names = FALSE)
+knitr::kable(t(res), caption = "eICU external-validation summary (saved to CSV).")
+```
+
+## Calibration Curve
+
+Decile-binned observed vs predicted risk, for the frozen model and after
+intercept/slope recalibration.
+
+```{r calibration, fig.width=6, fig.height=6}
+png(file.path(FIG, "calibration_eicu.png"), width = 1100, height = 1000, res = 200)
+decile_cal <- function(p) {
+  bins <- cut(p, quantile(p, seq(0, 1, 0.1)), include.lowest = TRUE)
+  aggregate(cbind(pred = p, obs = y), list(bin = bins), mean)
+}
+cf <- decile_cal(risk_frozen); cr <- decile_cal(risk_recal)
+rng <- range(0, cf$pred, cf$obs, cr$pred, cr$obs)
+plot(cf$pred, cf$obs, pch = 19, col = "firebrick", xlim = rng, ylim = rng,
+     xlab = "Predicted risk", ylab = "Observed onset rate",
+     main = "eICU calibration (deciles)")
+lines(cf$pred, cf$obs, col = "firebrick")
+points(cr$pred, cr$obs, pch = 17, col = "steelblue")
+lines(cr$pred, cr$obs, col = "steelblue")
+abline(0, 1, lty = 2, col = "grey50")
+legend("topleft", c("Frozen MIMIC model", "After recalibration", "Ideal"),
+       pch = c(19, 17, NA), lty = c(1, 1, 2),
+       col = c("firebrick", "steelblue", "grey50"), bty = "n", cex = 0.8)
+dev.off()
+```
+
+```{r show-fig, echo=FALSE, out.width="70%", fig.align="center", fig.cap="eICU calibration: frozen MIMIC model versus intercept/slope recalibration."}
+knitr::include_graphics(file.path(FIG, "calibration_eicu.png"))
+```
+
+## Interpretation
+
+The frozen MIMIC nomogram's **discrimination transports** to eICU if the
+frozen-transport AUROC sits near the internal-refit ceiling and the DeLong test
+finds no meaningful gap. **Calibration** is read from the slope and intercept:
+a slope below 1 means the MIMIC-trained risks are too extreme for eICU (the
+usual consequence of case-mix and measurement-practice shift across 200+
+hospitals) and is corrected by the one-line recalibration whose improved Brier
+is reported above. The persisting cross-dataset caveat is the antibiotic-based
+suspicion trigger; the discrimination result is nonetheless a genuine, fully
+out-of-sample test of the model on an independent multi-centre population,
+closing the project's one remaining open item.
+```

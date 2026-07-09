@@ -7,6 +7,34 @@
 Last updated: 2026-07-09. Author of work: Claude (Anthropic), working with the
 user **Abdul Ahad** (email ahadarif.1998@gmail.com; PyCharm on macOS).
 
+> **2026-07-09 UPDATE — eICU EXTERNAL VALIDATION COMPLETE (the last open item).**
+> eICU-CRD v2.0 is now present locally at
+> `data/eicu-collaborative-research-database-2.0/`. Two new scripts close the
+> only outstanding gap:
+> - **`21_eicu_external_panel.py`** rebuilds the hour-6 landmark table on eICU
+>   using the *identical* cohort/panel/SOFA/onset/feature definitions as the
+>   MIMIC pipeline (`02/03/07/08`), emitting `processed_data/landmark_h6_eicu.csv`
+>   (136,864-stay cohort → 113,597 at-risk @ h6; 4,782 incident onsets, 4.2%).
+>   eICU times are integer *minute offsets* from unit admission (hour =
+>   floor(off/60)); vitals from `vitalPeriodic`(+`vitalAperiodic` MAP), temp +
+>   GCS from `nurseCharting`, labs from `lab`, vasopressors from `infusionDrug`.
+> - **`22_external_validation.Rmd`** applies the **frozen** Tier-1 coefficients
+>   (`tier1_coefs.csv`) with NO refitting → `external_validation_eicu.csv` +
+>   `figure/calibration_eicu.png`. Result: **frozen-transport AUROC 0.686**
+>   (95% CI 0.678–0.694) vs MIMIC 0.775; **internal eICU refit ceiling 0.712**
+>   (so most of the drop is population/label difficulty, ~0.026 is transport
+>   loss). Calibration slope 0.54 (over-predicts ~3×, base-rate shift);
+>   one-line intercept/slope recalibration cuts Brier 0.052→0.040.
+> - **THE ONE ADAPTATION (documented in the script docstring + README §5/limits):**
+>   suspected infection is triggered on antibiotics alone (culture refines
+>   timing when present) because eICU captures microbiology for only ~1.5% of
+>   stays (2,272) vs antibiotics for ~83% — a culture requirement would make the
+>   *label*, not the model, untransportable. No new R/Python packages needed.
+>   Run script renamed `run_01_to_20.zsh` → `run_01_to_22.zsh` (range 01..22).
+>
+> **CURRENT STATUS (2026-07-09, post-eICU):** pipeline `01`→`22` built and run;
+> external validation done. No open methodological items remain.
+
 > **2026-07-09 UPDATE — single-study framing; Tiers 6-7 added.** The user
 > asked to stop framing this as two research efforts ("Phase 1" / "Phase 2")
 > since it is **one research programme** — the whole pipeline `01`→`20` is
@@ -330,14 +358,17 @@ The four original open items are all **RESOLVED**: MRSA-SCREEN swabs are now
 excluded by default (§3/§5); `04` and `05` have been run; `06` (and `09`, `17`)
 are rendered on real data. The remaining work is:
 
-1. **External validation on eICU — DEFERRED (blocking a clinical claim).** No
-   eICU database is present under `data/`. The Phase-2 Tier-5 script
-   (`16_subgroup_fairness.R`) delivers within-MIMIC subgroup calibration as a
-   stand-in, but true external validation needs a second database. To do it:
-   obtain eICU, build the same cohort/onset/landmark features, then apply the
-   Tier-1 nomogram and the Tier-2 supermodel (both purely statistical, so
-   transportable) and report AUROC + calibration on eICU. **Ask the user to
-   point at an eICU path before starting.**
+1. **External validation on eICU — DONE (2026-07-09).** eICU-CRD v2.0 is now
+   under `data/eicu-collaborative-research-database-2.0/`. Scripts `21`/`22`
+   rebuild the h6 landmark on eICU (identical 02/03/07/08 definitions) and apply
+   the frozen Tier-1 nomogram with no refitting: **AUROC 0.686** (CI 0.678–0.694)
+   vs MIMIC 0.775, internal eICU ceiling 0.712, calibration slope 0.54 corrected
+   by one-line recalibration (Brier 0.052→0.040). See the top-of-file banner and
+   README §6. The one adaptation — antibiotic-only suspicion trigger, because
+   eICU micro capture is ~1.5% of stays — is documented in the `21` docstring
+   and README §5/limitations. Nothing further is blocking a clinical claim on
+   this axis; a natural extension is to also transport the Tier-2 supermodel
+   across all landmark hours (not just h6).
 
 2. **Tier-1 landed at 0.775, below the 0.80–0.83 README projection** — honestly
    so: at a 6h landmark the labs that would lift discrimination are mostly not

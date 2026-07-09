@@ -1,20 +1,18 @@
 """
-14_realtime_holdout.py  --  TIER 4 (data substrate)
-====================================================
-Builds an ALL-HOURS feature stream for a random holdout of stays, so the
-landmark supermodel can emit an hourly risk at every hour (not just the 6
-landmark points) -- the input the PhysioNet-2019 utility score and the
-alarm-burden analysis need.
+14_realtime_holdout.py - Tier 4 (data substrate)
+=================================================
+Builds an all-hours feature stream for a random holdout of stays, enabling
+the landmark supermodel to emit hourly risk at every hour (not just the 6
+landmark grid points). This is the input the PhysioNet-2019 utility score
+and alarm-burden analysis require.
 
-Features are IDENTICAL to 11_landmark_stack.py (only 'landmark_time' becomes the
-current hour). For each holdout stay we emit every hour h in [6, last_pred_hour],
-where last_pred_hour = onset_hour (septic) or censor_hour (non-septic): we score
-from hour 6 (need 6h of history for slopes) until onset or discharge.
+Features match 11_landmark_stack.py exactly (landmark_time = current hour).
+For each holdout stay, every hour h in [6, last_pred_hour] is emitted,
+where last_pred_hour is onset_hour (septic) or censor_hour (non-septic).
 
 Output: processed_data/realtime_holdout_features.csv
-        (+ processed_data/realtime_holdout_ids.csv : the stay_ids held out, so
-         15_realtime_eval.R trains the supermodel on everyone else -> no leakage)
-Run from projects/sepsis_mimic4/ with framework python3.
+        processed_data/realtime_holdout_ids.csv (holdout stay_ids, so
+        15_realtime_eval.R trains on the complement to avoid leakage)
 """
 from __future__ import annotations
 

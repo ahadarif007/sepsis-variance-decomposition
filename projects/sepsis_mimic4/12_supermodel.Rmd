@@ -31,16 +31,12 @@ This script fits a dynamic-prediction landmark supermodel (van Houwelingen 2007)
 
 ## Load Libraries
 
-We load the required packages for elastic-net regression and ROC analysis.
-
 ```{r load-libraries, message=FALSE, warning=FALSE}
 suppressPackageStartupMessages({ library(glmnet); library(pROC) })
 set.seed(486649)
 ```
 
 ## Locate Data and Set Output Directories
-
-This helper function searches candidate paths for data files, and then sets the output and figure directories.
 
 ```{r locate-data}
 find_data <- function(f) {
@@ -55,8 +51,6 @@ FIG <- if (dir.exists("figure")) "figure" else { dir.create("figure"); "figure" 
 
 ## Load Landmark Stack
 
-We read in the stacked landmark dataset and print a summary of its dimensions and available landmark times.
-
 ```{r load-data}
 st <- read.csv(find_data("landmark_stack.csv"))
 cat(sprintf("Loaded stack: %d rows, %d stays, landmarks {%s}\n",
@@ -66,10 +60,9 @@ cat(sprintf("Loaded stack: %d rows, %d stays, landmarks {%s}\n",
 
 ## Feature Design
 
-Features follow the same informative-missingness scheme as Tier 1: vitals and scores get simple median imputation, labs and slopes receive median/zero imputation plus a binary "measured" indicator. Age and sex are also included.
+Vitals and scores receive median imputation, consistent with the Tier 1 scheme. Labs and slopes are median/zero-imputed and paired with binary "measured" indicators to preserve the informative-missingness signal.
 
 ```{r feature-design}
-# Feature design (same informative-missingness scheme as Tier 1)
 vitals <- c("hr","resp_rate","map","spo2","temp_c","gcs")
 labs   <- c("lactate","creatinine","wbc","pf_ratio")
 slopes <- c("hr_slope6","resp_rate_slope6","map_slope6","spo2_slope6")
@@ -87,16 +80,14 @@ base_feats <- names(df)
 
 ## Landmark Time and Interactions
 
-We add the standardized landmark time *s*, its quadratic term, and interactions of each base feature with *s*. Standardizing *s* ensures that the elastic-net penalty treats the interaction terms on a comparable scale to the main effects.
+The model includes standardized landmark time *s*, its quadratic term, and all base-feature-by-*s* interactions. Standardizing *s* places the interaction terms on a comparable scale to the main effects under the elastic-net penalty.
 
 ```{r landmark-interactions}
-# landmark time and its interactions: s, s^2, and feature x s (standardized s so
-# penalization treats the interactions on a comparable scale)
 s   <- st$landmark_time
 s_z <- as.numeric(scale(s))
 df$s   <- s_z
 df$s2  <- s_z^2
-for (v in base_feats) df[[paste0(v, "_xS")]] <- df[[v]] * s_z   # smooth s-modulation
+for (v in base_feats) df[[paste0(v, "_xS")]] <- df[[v]] * s_z
 X <- as.matrix(df)
 y <- st$onset_within_h
 cat(sprintf("Supermodel design: %d features (incl. s, s^2, %d s-interactions)\n",
@@ -105,10 +96,9 @@ cat(sprintf("Supermodel design: %d features (incl. s, s^2, %d s-interactions)\n"
 
 ## Patient-Grouped 5-Fold CV
 
-Cross-validation folds are assigned at the stay (patient) level rather than the row level, because each stay recurs across multiple landmarks. This prevents information leakage.
+Each stay recurs across multiple landmarks, so folds are assigned at the patient level to prevent information leakage.
 
 ```{r patient-grouped-cv}
-# Patient-grouped 5-fold CV (split on stay_id, NOT rows)
 ids   <- unique(st$stay_id)
 idf   <- setNames(sample(rep(1:5, length.out = length(ids))), ids)
 fold  <- idf[as.character(st$stay_id)]
@@ -124,11 +114,10 @@ for (k in 1:5) {
 
 ## Separate Per-Landmark Comparator
 
-As a comparator, we fit a separate penalized model at each landmark time independently (no pooling across landmarks, no *s* terms). This lets us assess whether the supermodel's pooling-plus-*s* approach improves discrimination.
+A separate penalized model fit independently at each landmark (no pooling, no *s* terms) serves as a comparator to quantify the discrimination gain from the supermodel's pooled structure.
 
 ```{r separate-per-landmark}
-# Comparator: a SEPARATE penalized model per landmark (no pooling)
-Xb <- as.matrix(df[, base_feats])        # base features only, no s terms
+Xb <- as.matrix(df[, base_feats])
 oos_sep <- numeric(nrow(X))
 for (sl in sort(unique(s))) {
   idx <- which(s == sl)
@@ -146,10 +135,9 @@ for (sl in sort(unique(s))) {
 
 ## AUC by Landmark
 
-We compute the out-of-sample AUROC at each prediction hour for both the supermodel and the separate per-landmark models. Results are saved to `tier2_auc_by_landmark.csv` and `tier2_supermodel_oos.csv`.
+Out-of-sample AUROC at each prediction hour for both models, saved to `tier2_auc_by_landmark.csv` and `tier2_supermodel_oos.csv`.
 
 ```{r auc-by-landmark}
-# AUC(s): discrimination at each prediction hour
 auc_at <- function(p, sl) {
   i <- s == sl
   as.numeric(auc(roc(y[i], p[i], quiet=TRUE, direction="<")))
@@ -173,8 +161,6 @@ write.csv(data.frame(stay_id=st$stay_id, landmark_time=st$landmark_time,
 ```
 
 ## AUC by Landmark Figure
-
-This figure plots AUC as a function of prediction hour, comparing the supermodel against the separate per-landmark models. The plot is saved to `figure/auc_by_landmark.png`.
 
 ```{r auc-figure, fig.width=7, fig.height=5}
 png(file.path(FIG, "auc_by_landmark.png"), width=1100, height=850, res=200)

@@ -1,32 +1,27 @@
 """
 08_onset_label.py
 =================
-Turns the hourly panel (script 07) into a **time-resolved sepsis label** — the
-piece the static pipeline never had. It computes SOFA every hour, locates the
-hour sepsis begins, and emits a per-hour prediction target aligned for
-*early* warning, plus a stay-level time-to-onset summary for survival analysis.
+Computes hourly SOFA from the panel (script 07), locates Sepsis-3 onset,
+and emits a per-hour prediction target plus a stay-level survival summary.
 
-Onset definition (Sepsis-3, operationalised as in Seymour et al. 2016 /
-PhysioNet 2019)
-  * SOFA is scored each hour from the forward-filled panel values; a component
-    with no data yet scores 0 (assumed-normal baseline, per Sepsis-3).
-  * Suspected infection contributes t_suspicion (script 03), expressed as an
-    hour relative to ICU intime.
-  * t_sepsis = the FIRST hour at which hourly SOFA >= SOFA_INCREASE_THRESHOLD
-    that falls inside the suspicion window [susp_hour - 48h, susp_hour + 24h].
-    A stay with such an hour (within the 72h panel horizon) is a sepsis case.
+Onset definition (Sepsis-3, per Seymour et al. 2016 / PhysioNet 2019)
+  * SOFA is scored each hour from forward-filled panel values; missing
+    components score 0 (assumed-normal baseline, per Sepsis-3).
+  * Suspected infection time t_suspicion comes from script 03, expressed
+    as hours relative to ICU intime.
+  * t_sepsis = first hour with SOFA >= SOFA_INCREASE_THRESHOLD inside
+    [t_suspicion - 48h, t_suspicion + 24h].
 
 Per-hour target (early warning)
-  For a septic stay with onset hour t*, label_t = 1 for t >= t* - PRED_EARLY_H
-  (so the model is rewarded for flagging sepsis up to PRED_EARLY_H hours early)
-  and 0 before that. Non-septic stays are label_t = 0 throughout. We also keep
-  time_to_onset = t* - t for time-to-event work.
+  For a septic stay with onset hour t*, label = 1 for t >= t* - PRED_EARLY_H
+  (rewarding detection up to PRED_EARLY_H hours early) and 0 before.
+  Non-septic stays are 0 throughout.
 
 Outputs
 -------
-processed_data/hourly_labeled.parquet   panel + SOFA(+components) + label + time_to_onset
-processed_data/onset_summary.csv        one row per stay: onset/censor hour, event,
-                                        competing death/discharge — for survival analysis
+processed_data/hourly_labeled.parquet   panel + SOFA + label + time_to_onset
+processed_data/onset_summary.csv        one row per stay: onset/censor hour,
+                                        event, competing death/discharge
 """
 from __future__ import annotations
 
@@ -47,7 +42,7 @@ SAMPLE_STAYS = 2500              # stays exported (long) for ACF / HMM / time-va
 
 
 # --------------------------------------------------------------------------- #
-# Hourly SOFA (vectorised over panel rows, using forward-filled values)
+# Hourly SOFA (vectorised, using forward-filled values)
 # --------------------------------------------------------------------------- #
 def _col(panel: pd.DataFrame, base: str) -> pd.Series:
     """Prefer the forward-filled column; fall back to raw if absent."""
@@ -179,11 +174,10 @@ def main() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# R-friendly derived exports (small CSVs the longitudinal report reads, so the
-# report needs no parquet reader). All computed off the labelled panel.
+# Derived exports (small CSVs consumed by the R reports)
 # --------------------------------------------------------------------------- #
 def _hourly_qsofa(row_rr, row_gcs, row_map) -> np.ndarray:
-    # qSOFA (MAP<70 used as a proxy for SBP<=100, since the panel carries MAP).
+    # qSOFA: MAP < 70 proxies SBP <= 100 (panel carries MAP, not SBP).
     return ((row_rr >= 22).astype(int) + (row_gcs < 15).astype(int)
             + (row_map < 70).astype(int))
 

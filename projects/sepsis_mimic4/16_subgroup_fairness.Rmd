@@ -27,19 +27,15 @@ knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE, fig.width=8, fig.
 
 ## Overview
 
-This report assesses subgroup discrimination and calibration of the Tier-1 nomogram's out-of-sample risk, stratified by sex and age band. External validation on eICU is deferred because no eICU database is present locally; the analysis below delivers the within-MIMIC fairness check that a clinical model needs before deployment. For each subgroup we compute the sample size, event rate, AUROC, and calibration-in-the-large (mean predicted risk versus observed rate).
+Subgroup discrimination and calibration of the Tier-1 nomogram's out-of-sample risk are assessed here, stratified by sex and age band. For each subgroup the sample size, event rate, AUROC, and calibration-in-the-large (mean predicted risk versus observed rate) are reported. External validation on eICU is deferred (no local database available).
 
 ## Load Libraries
-
-We load the pROC package for computing AUROC within each subgroup.
 
 ```{r load-libraries, message=FALSE, warning=FALSE}
 suppressPackageStartupMessages({ library(pROC) })
 ```
 
 ## Locate and Read Data
-
-The helper function searches several candidate paths for the required CSV files. We read the out-of-sample predictions and the landmark dataset (for age and gender), then merge them and create an age-band variable.
 
 ```{r load-data}
 find_data <- function(f) {
@@ -58,15 +54,12 @@ d$age_band <- cut(d$age, c(-Inf,50,65,80,Inf),
 
 ## Define Subgroup Metrics Function
 
-This function computes, for a given subset of the data, the AUROC, mean predicted risk, observed event rate, and their ratio (calibration-in-the-large). A ratio of 1.0 means the average prediction matches the true event rate; values above 1 indicate over-prediction, and values below 1 indicate under-prediction.
+For each subgroup, AUROC, mean predicted risk, observed event rate, and their ratio (calibration-in-the-large) are computed. A calibration ratio of 1.0 indicates that the average prediction matches the true event rate; values above 1 indicate over-prediction, values below 1 under-prediction.
 
 ```{r define-metrics}
 grp_metrics <- function(sub, label) {
   y <- sub$onset_within_h; p <- sub$risk_en
   au <- tryCatch(as.numeric(auc(roc(y, p, quiet=TRUE, direction="<"))), error=function(e) NA)
-  # calib_ratio: mean predicted risk / observed event rate (calibration-in-the-
-  # large) -- 1.0 means the subgroup's average risk matches its true event rate;
-  # >1 over-predicts, <1 under-predicts, independent of discrimination (AUROC).
   data.frame(subgroup=label, n=nrow(sub), event_rate=round(mean(y),4),
              auroc=round(au,4), mean_pred=round(mean(p),4),
              obs_rate=round(mean(y),4),
@@ -76,7 +69,7 @@ grp_metrics <- function(sub, label) {
 
 ## Compute Subgroup Metrics and Write Results
 
-We compute fairness metrics for the full cohort, then separately for each sex and each age band. The results are printed and saved to `tier5_subgroups.csv`.
+Fairness metrics are computed for the full cohort and for each sex and age-band subgroup, then saved to `tier5_subgroups.csv`.
 
 ```{r compute-metrics}
 rows <- list(grp_metrics(d, "ALL"))

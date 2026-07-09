@@ -1,0 +1,94 @@
+\chapter{Research Methodology}
+\label{ch:methodology}
+
+\section{Research Methodology}
+The study is a retrospective, observational modelling study on de-identified
+critical-care data, conducted as quantitative empirical research. The research
+question (Section~\ref{sec:rq}) is operationalised as a prediction task with
+pre-registered baselines (SIRS, qSOFA, SOFA) and an explicit null hypothesis for
+the proportional-hazards assumption. A deliberate design choice constrains all
+modelling to classical statistics; this preserves interpretability, supports
+formal assumption testing, and establishes a transparent, transportable baseline
+against which machine-learning approaches can later be compared on identical
+data splits.
+
+The methodology follows the standard prognostic-model development cycle: cohort
+definition, outcome labelling, feature construction, model fitting, internal
+validation, and external validation. Two principles govern every stage. The
+first is \emph{leakage safety}: at any prediction time only information that
+would genuinely be available to a clinician at that hour is used, implemented
+through forward-filled values and time-since-last-measurement counters. The
+second is \emph{honest evaluation}: discrimination is measured out-of-sample
+using patient-grouped cross-validation, and the frozen model is transported to a
+second, independent database.
+
+\section{Software Development Methodology}
+The pipeline was developed incrementally as a sequence of numbered, single-purpose
+stages (Chapter~\ref{ch:design}), each writing an inspectable intermediate
+artefact that the next stage consumes. This staged design supports
+reproducibility and debuggability: any stage can be re-run in isolation, and a
+single configuration module is the sole source of truth for file paths, clinical
+item identifiers, and thresholds. Data extraction and panel construction are
+implemented in Python (pandas); statistical modelling and reporting are
+implemented in R, with each analysis tier emitting a self-contained report. All
+stochastic steps use a fixed random seed, and the multi-gigabyte source tables
+are processed by streaming in bounded-memory chunks rather than being loaded
+whole.
+
+\section{Data}
+The development data is MIMIC-IV v3.1 \cite{johnson2023mimiciv}, a large
+single-centre critical-care database. External validation uses the eICU
+Collaborative Research Database v2.0 \cite{pollard2018eicu}, a multi-centre
+collection spanning more than 200 United States ICUs. Both are de-identified and
+were accessed under the required credentialing.
+
+\section{Cohort and Outcome Labelling}
+An adult ICU cohort was constructed (age $\ge 18$ years, first ICU stay only,
+length of stay $\ge 4$\,h), yielding 65{,}241 stays. Suspected infection follows
+Seymour \emph{et al.} \cite{seymour2016criteria}: a qualifying antibiotic order
+paired with a body-fluid culture within the Sepsis-3 time windows, with
+surveillance swabs (for example, MRSA screens) excluded to avoid inflating the
+suspicion rate. Sepsis-3 is defined as suspected infection together with an
+acute rise in the Sequential Organ Failure Assessment (SOFA) score of at least
+two points; the cohort prevalence is 37.1\%, with septic shock at 9.2\%, and
+in-hospital mortality of 18.7\% in the septic group versus 6.1\% in the
+non-septic group, consistent with a valid label.
+
+\section{Hourly Panel and Onset Definition}
+Every stay was resampled to a regular hourly grid (approximately 3.1 million
+stay-hours). For each variable, three quantities are retained per hour: the raw
+value, a forward-filled value (what the clinician currently knows), and a
+time-since-last-measured counter that encodes irregular sampling as an explicit
+signal. Hourly SOFA is scored from the forward-filled values, the exact onset
+hour is located as the first hour meeting the Sepsis-3 rise inside the suspicion
+window, and a per-hour ``onset within 12\,h'' label is derived for early-warning
+evaluation. An hour-six landmark yields 48{,}829 at-risk stays (those that
+reached hour six without already being septic), which is the target population
+for early prediction.
+
+\section{Models}
+The baselines are the rule-based scores SIRS, qSOFA, and NEWS computed directly
+from vitals. The statistical models comprise: (i) a static Cox model with
+Schoenfeld testing and a time-varying reformulation on failure; (ii) an
+elastic-net penalised logistic \emph{nomogram} at the hour-six landmark using an
+informative-missingness design (each laboratory value is median-imputed and
+accompanied by a binary ``was measured'' indicator); (iii) a \emph{landmark
+supermodel} stacked across landmarks at 6, 12, 18, 24, 36, and 48\,h so that one
+model emits hourly-updating risk; (iv) generalised estimating equations (GEE)
+with cluster-robust standard errors for within-patient correlation; (v)
+group-based trajectory modelling of first-24\,h SOFA trajectories linked to
+onset and mortality; and (vi) confounder-adjusted causal estimates (propensity-score
+matching, inverse-probability weighting, augmented IPW, and doubly robust
+estimation) for early antibiotics.
+
+\section{Evaluation and External Validation}
+Discrimination uses the area under the receiver operating characteristic curve
+(AUROC) with DeLong confidence intervals; calibration uses the Brier score,
+calibration-in-the-large, and the calibration slope; clinical utility uses the
+PhysioNet/CinC 2019 utility score \cite{reyna2020physionet} and an alarm-burden
+curve (false alarms per patient-day at fixed sensitivity). For external
+validation, the hour-six landmark table is rebuilt on eICU using the identical
+cohort, panel, SOFA, onset, and feature definitions; the frozen MIMIC
+coefficients are then applied without refitting, and the frozen-transport
+performance is compared against an eICU-native refit that establishes the best
+discrimination the same features can achieve in that population.

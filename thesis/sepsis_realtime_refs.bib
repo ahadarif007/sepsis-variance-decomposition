@@ -1,0 +1,186 @@
+% ---------------------------------------------------------------------------
+% Bibliography for: Interpretable Statistical Modeling for Real-Time Sepsis-3
+% Onset Prediction in MIMIC-IV (IEEE paper)
+% Compile with: pdflatex -> bibtex -> pdflatex -> pdflatex
+% Style: \bibliographystyle{IEEEtran}
+% ---------------------------------------------------------------------------
+
+% --- Definitions & datasets ------------------------------------------------
+@article{singer2016sepsis3,
+  title   = {The Third International Consensus Definitions for Sepsis and Septic Shock (Sepsis-3)},
+  author  = {Singer, Mervyn and Deutschman, Clifford S. and Seymour, Christopher W. and Shankar-Hari, Manu and Annane, Djillali and Bauer, Michael and Bellomo, Rinaldo and others},
+  journal = {JAMA},
+  volume  = {315},
+  number  = {8},
+  pages   = {801--810},
+  year    = {2016},
+  doi     = {10.1001/jama.2016.0287}
+}
+
+@article{seymour2016criteria,
+  title   = {Assessment of Clinical Criteria for Sepsis: For the Third International Consensus Definitions for Sepsis and Septic Shock (Sepsis-3)},
+  author  = {Seymour, Christopher W. and Liu, Vincent X. and Iwashyna, Theodore J. and Brunkhorst, Frank M. and Rea, Thomas D. and Scherag, Andr{\'e} and others},
+  journal = {JAMA},
+  volume  = {315},
+  number  = {8},
+  pages   = {762--774},
+  year    = {2016},
+  doi     = {10.1001/jama.2016.0288}
+}
+
+@article{johnson2023mimiciv,
+  title   = {{MIMIC-IV}, a freely accessible electronic health record dataset},
+  author  = {Johnson, Alistair E. W. and Bulgarelli, Lucas and Shen, Lu and Gayles, Alvin and Shammout, Ayad and Horng, Steven and Pollard, Tom J. and others},
+  journal = {Scientific Data},
+  volume  = {10},
+  number  = {1},
+  pages   = {1},
+  year    = {2023},
+  doi     = {10.1038/s41597-022-01899-x}
+}
+
+@article{pollard2018eicu,
+  title   = {The {eICU} Collaborative Research Database, a freely available multi-center database for critical care research},
+  author  = {Pollard, Tom J. and Johnson, Alistair E. W. and Raffa, Jesse D. and Celi, Leo A. and Mark, Roger G. and Badawi, Omar},
+  journal = {Scientific Data},
+  volume  = {5},
+  number  = {1},
+  pages   = {180178},
+  year    = {2018},
+  doi     = {10.1038/sdata.2018.178}
+}
+
+% --- Statistical onset-prediction lineage ----------------------------------
+@article{henry2015trewscore,
+  title   = {A targeted real-time early warning score ({TREWScore}) for septic shock},
+  author  = {Henry, Katharine E. and Hager, David N. and Pronovost, Peter J. and Saria, Suchi},
+  journal = {Science Translational Medicine},
+  volume  = {7},
+  number  = {299},
+  pages   = {299ra122},
+  year    = {2015},
+  doi     = {10.1126/scitranslmed.aab3719}
+}
+
+@article{kasal2004cox,
+  title   = {Comparison of {Cox} and {Gray's} survival models in severe sepsis},
+  author  = {Kasal, Jan and Jovanovic, Zorana and Clermont, Gilles and Weissfeld, Lisa A. and Kaplan, Vladimir and Watson, R. Scott and Angus, Derek C.},
+  journal = {Critical Care Medicine},
+  volume  = {32},
+  number  = {3},
+  pages   = {700--707},
+  year    = {2004},
+  doi     = {10.1097/01.CCM.0000114819.37569.4B}
+}
+
+@article{liaw2019mortality,
+  title   = {Mortality Risk Profiles for Sepsis: A Novel Longitudinal and Multivariable Approach},
+  author  = {Liaw, Patricia C. and Fox-Robichaud, Alison E. and Liaw, Kao-Lee and McDonald, Ellen and Dwivedi, Dhruva J. and Zamir, Nasim M. and others},
+  journal = {Critical Care Explorations},
+  volume  = {1},
+  number  = {8},
+  pages   = {e0032},
+  year    = {2019},
+  doi     = {10.1097/CCE.0000000000000032}
+}
+
+% --- Benchmarks, reviews, validation ---------------------------------------
+@article{reyna2020physionet,
+  title   = {Early Prediction of Sepsis From Clinical Data: The {PhysioNet/Computing} in Cardiology Challenge 2019},
+  author  = {Reyna, Matthew A. and Josef, Christopher S. and Jeter, Russell and Shashikumar, Supreeth P. and Westover, M. Brandon and Nemati, Shamim and Clifford, Gari D. and Sharma, Ashish},
+  journal = {Critical Care Medicine},
+  volume  = {48},
+  number  = {2},
+  pages   = {210--217},
+  year    = {2020},
+  doi     = {10.1097/CCM.0000000000004145}
+}
+
+@article{fleuren2020ml,
+  title   = {Machine learning for the prediction of sepsis: a systematic review and meta-analysis of diagnostic test accuracy},
+  author  = {Fleuren, Lucas M. and Klausch, Thomas L. T. and Zwager, Charlotte L. and Schoonmade, Linda J. and Guo, Tingjie and Roggeveen, Luca F. and others},
+  journal = {Intensive Care Medicine},
+  volume  = {46},
+  number  = {3},
+  pages   = {383--400},
+  year    = {2020},
+  doi     = {10.1007/s00134-019-05872-y}
+}
+
+@article{wang2025srpm,
+  title   = {A methodological systematic review of validation and performance of sepsis real-time prediction models},
+  author  = {Wang, Zichen and Wang, Wen and Sun, Che and Li, Jili and Xie, Shuangyi and Xu, Jiayue and Zou, Kang and Jin, Yinghui and others},
+  journal = {npj Digital Medicine},
+  volume  = {8},
+  number  = {1},
+  pages   = {243},
+  year    = {2025},
+  doi     = {10.1038/s41746-025-01587-1}
+}
+
+@article{yang2022gbtm,
+  title   = {Analysis of the correlation between the longitudinal trajectory of {SOFA} scores and prognosis in patients with sepsis at 72 hour after admission based on group trajectory modeling},
+  author  = {Yang, Rui and Han, Didi and Zhang, Luming and Huang, Tao and Xu, Fengshuo and Zheng, Shuai and others},
+  journal = {Journal of Intensive Medicine},
+  volume  = {2},
+  number  = {1},
+  pages   = {39--49},
+  year    = {2022},
+  doi     = {10.1016/j.jointm.2021.11.001}
+}
+
+@article{yuan2023nomogram,
+  title   = {A nomogram for predicting hospital mortality of critical ill patients with sepsis and cancer: a retrospective cohort study based on {MIMIC-IV} and {eICU-CRD}},
+  author  = {Yuan, Zhen-nan and Xue, Yu-juan and Wang, Hai-jun and Qu, Shi-ning and Huang, Chu-lin and Wang, Hao and others},
+  journal = {BMJ Open},
+  volume  = {13},
+  number  = {9},
+  pages   = {e072112},
+  year    = {2023},
+  doi     = {10.1136/bmjopen-2023-072112}
+}
+
+% --- Methods: landmarking & informative missingness ------------------------
+@article{vanhouwelingen2007landmark,
+  title   = {Dynamic Prediction by Landmarking in Event History Analysis},
+  author  = {van Houwelingen, Hans C.},
+  journal = {Scandinavian Journal of Statistics},
+  volume  = {34},
+  number  = {1},
+  pages   = {70--85},
+  year    = {2007},
+  doi     = {10.1111/j.1467-9469.2006.00529.x}
+}
+
+@article{fries2023dynamiclm,
+  title   = {Software Application Profile: {dynamicLM}---a tool for performing dynamic risk prediction using a landmark supermodel for survival data under competing risks},
+  author  = {Fries, Anya H. and Choi, Eunji and Wu, Julie T. and Lee, Justin H. and Ding, Victoria Y. and Huang, Robert J. and Liang, Su-Ying and Wakelee, Heather A. and Wilkens, Lynne R. and Cheng, Iona and Han, Summer S.},
+  journal = {International Journal of Epidemiology},
+  volume  = {52},
+  number  = {6},
+  pages   = {1984--1989},
+  year    = {2023},
+  doi     = {10.1093/ije/dyad122}
+}
+
+@article{groenwold2020missingness,
+  title   = {Informative missingness in electronic health record systems: the curse of knowing},
+  author  = {Groenwold, Rolf H. H.},
+  journal = {Diagnostic and Prognostic Research},
+  volume  = {4},
+  number  = {1},
+  pages   = {8},
+  year    = {2020},
+  doi     = {10.1186/s41512-020-00077-0}
+}
+
+@article{singh2021missingness,
+  title   = {On Missingness Features in Machine Learning Models for Critical Care: Observational Study},
+  author  = {Singh, Janmajay and Sato, Masahiro and Ohkuma, Tomoko},
+  journal = {JMIR Medical Informatics},
+  volume  = {9},
+  number  = {12},
+  pages   = {e25022},
+  year    = {2021},
+  doi     = {10.2196/25022}
+}

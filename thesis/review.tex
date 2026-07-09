@@ -1,0 +1,65 @@
+\chapter{Literature Review}
+\label{ch:review}
+
+This chapter reviews the statistical and machine-learning literature on sepsis
+prediction, tightly coupled to the context and objectives of
+Chapter~\ref{ch:introduction}, and formalises the three research gaps that the
+thesis addresses.
+
+\section{Statistical Onset Prediction}
+TREWScore \cite{henry2015trewscore} fitted a Cox model to routinely collected
+MIMIC-II vitals and laboratory values to anticipate septic shock, reaching an
+AUROC of 0.83 with a median 28-hour lead time; it remains the foundational
+statistical benchmark for real-time sepsis prediction. Liaw \emph{et al.}
+\cite{liaw2019mortality} proposed a longitudinal, time-varying Cox extension
+that tracks evolving mortality risk from repeatedly measured indicators. Kasal
+\emph{et al.} \cite{kasal2004cox} compared a standard Cox model against a
+flexible survival model in severe sepsis and found that hazards are frequently
+\emph{non-proportional}, a methodological caution largely ignored by later
+MIMIC-IV work. Critically, neither TREWScore nor its successors were fitted on
+MIMIC-IV, leaving a purely statistical onset model on the current database
+absent (gap \textbf{G1}).
+
+\section{Prognostic Modelling on MIMIC-IV}
+A recurring MIMIC-IV pattern couples LASSO variable selection with multivariable
+logistic regression, presented as a nomogram, to predict mortality \emph{after}
+diagnosis; several such studies include external validation on eICU-CRD
+\cite{yuan2023nomogram}. Trajectory approaches such as group-based trajectory
+modelling (GBTM) of SOFA scores \cite{yang2022gbtm} model the evolving course
+but again target mortality, not onset. This sub-literature is methodologically
+mature and often externally validated, but it is prognostic rather than
+predictive of onset, the wrong half of the clinical problem for early warning.
+
+\section{Benchmarks, Validation, and Reviews}
+The PhysioNet/CinC 2019 Challenge \cite{reyna2020physionet} established a shared
+early-prediction benchmark and a clinical-utility metric that rewards early, but
+not premature, alarms. Fleuren \emph{et al.} \cite{fleuren2020ml} reviewed
+machine-learning sepsis prediction and reported large between-study
+heterogeneity in design and reported performance. Wang
+\emph{et al.} \cite{wang2025srpm} reviewed 91 sepsis real-time prediction models
+and found that the median AUROC falls from 0.886 internally to 0.783 under full
+external validation, evidence that the internal-to-external gap, rather than
+raw internal discrimination, is the field's central weakness (gap \textbf{G3}).
+No reviewed MIMIC-IV Cox study reports testing the proportional-hazards
+assumption before interpreting hazard ratios (gap \textbf{G2}).
+
+\section{Landmarking and Informative Missingness}
+Dynamic prediction by landmarking \cite{vanhouwelingen2007landmark} and its
+supermodel formulation \cite{fries2023dynamiclm} pool multiple prediction
+windows to emit continuously updated risk from a single interpretable model,
+providing a statistical route to real-time prediction without recurrent
+networks. Separately, informative missingness (the fact that \emph{whether} a
+test is ordered encodes clinician suspicion) is well documented in electronic
+health record modelling \cite{groenwold2020missingness,singh2021missingness}.
+Both threads are central to the design of this thesis and, to the author's
+knowledge, have not previously been combined for statistical Sepsis-3 onset
+prediction on MIMIC-IV.
+
+\section{Summary of Gaps}
+Synthesising the above, the three gaps that structure this thesis are:
+\textbf{G1}, the absence of a purely statistical real-time onset model on
+MIMIC-IV; \textbf{G2}, the routine omission of proportional-hazards testing in
+the MIMIC-IV Cox literature; and \textbf{G3}, the validation asymmetry whereby
+external validation is common for prognostic nomograms but largely absent for
+onset prediction. The contributions listed in Section~\ref{sec:contrib} address
+each gap directly.

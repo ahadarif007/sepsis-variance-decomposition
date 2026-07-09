@@ -1,8 +1,8 @@
 # Time-Varying Statistical Modeling for Real-Time Sepsis Onset Prediction
 
 A reproducible, purely statistical pipeline for **real-time sepsis onset
-prediction** on **MIMIC-IV v3.1**, with external validation planned on
-**eICU-CRD**. No machine learning or deep learning. Every model is
+prediction** on **MIMIC-IV v3.1**, **externally validated on eICU-CRD**
+(200+ US ICUs). No machine learning or deep learning. Every model is
 interpretable and benchmarked against established clinical scores.
 
 > **Research question:** Can a time-varying Cox / landmark statistical model,
@@ -16,7 +16,7 @@ interpretable and benchmarked against established clinical scores.
 | Item | Detail |
 |---|---|
 | **Primary dataset** | MIMIC-IV v3.1 (`data/mimic-iv-3.1/{hosp,icu}/*.csv`) |
-| **External validation** | eICU-CRD (download in progress) |
+| **External validation** | eICU-CRD v2.0 (`data/eicu-collaborative-research-database-2.0/`), 136,864 stays across 200+ ICUs |
 | **Cohort** | Adults >= 18, first ICU stay only, LOS >= 4h, yields **65,241 stays** |
 | **Heavy tables** | `chartevents` ~3.3 GB, `labevents` ~2.4 GB (streamed in chunks, never loaded whole) |
 
@@ -81,9 +81,14 @@ interpretable and benchmarked against established clinical scores.
                     |
                     v
        20  final combined report (PDF)
+                    |
+                    v
+       21  eICU external panel  ->  landmark_h6_eicu.csv
+       22  external validation (frozen transport + recalibration + eICU ceiling)
 ```
 
-Script 17 is reserved for external validation on eICU-CRD (pending data download).
+Scripts 21-22 externally validate the frozen Tier-1 nomogram on eICU-CRD v2.0
+(see §9, "External validation").
 
 ---
 
@@ -229,13 +234,11 @@ Rscript -e 'rmarkdown::render("15_realtime_eval.Rmd")'
 ```
 
 **16. Subgroup fairness (Tier 5)** (R Markdown, produces PDF)
-Checks whether the model is equally well-calibrated and discriminating across sex and age subgroups. External validation on eICU-CRD will go here once the data is available.
+Checks whether the model is equally well-calibrated and discriminating across sex and age subgroups.
 
 ```bash
 Rscript -e 'rmarkdown::render("16_subgroup_fairness.Rmd")'
 ```
-
-> Script 17 is reserved for eICU external validation (pending data download).
 
 **18. GBTM trajectories (Tier 6)** (R Markdown, produces PDF)
 Group-Based Trajectory Modelling: discovers latent classes of SOFA-score trajectories over the first 24 hours (e.g. "stable-low", "moderate-rising", "steep-worsening"), then links each class to mortality (Cox) and incident sepsis (logistic regression).
@@ -256,6 +259,26 @@ Narrates Tiers 1 through 7 into a single PDF report with all tables and figures.
 
 ```bash
 Rscript -e 'rmarkdown::render("20_realtime_model_report.Rmd")'
+```
+
+**21. eICU external panel** (Python)
+Rebuilds the hour-6 landmark table on eICU-CRD v2.0 using the identical cohort,
+hourly-panel, SOFA, onset, and feature definitions as the MIMIC pipeline
+(`02/03/07/08`). Emits `landmark_h6_eicu.csv`. Heavy: streams `vitalPeriodic`
+(1.7 GB), `nurseCharting` (1.6 GB), and `lab` (0.5 GB) in chunks.
+
+```bash
+python 21_eicu_external_panel.py
+```
+
+**22. External validation** (R Markdown, produces PDF)
+Applies the **frozen** Tier-1 nomogram (`tier1_coefs.csv`) to eICU without
+refitting, reporting: frozen-transport AUROC + DeLong CI, calibration
+slope/intercept, one-line recalibration, and an internal eICU elastic-net
+ceiling that separates loss of discrimination from miscalibration.
+
+```bash
+Rscript -e 'rmarkdown::render("22_external_validation.Rmd")'
 ```
 
 ---
@@ -315,6 +338,27 @@ same task, consistent with the pattern seen in the nomogram literature.
 | 6. GBTM | 3 latent trajectory classes; steepest-worsening has ~5x mortality HR |
 | 7. Causal | Early antibiotics (<= 3h) associated with lower mortality across all four estimators |
 
+### External validation on eICU-CRD (frozen Tier-1 nomogram, no refitting)
+
+Applied as-is to 113,597 at-risk eICU stays across 200+ US ICUs (4,782 incident
+onsets within 12h of the hour-6 landmark):
+
+| Metric | eICU | MIMIC (development) |
+|---|---|---|
+| AUROC (frozen transport) | **0.686** (95% CI 0.678–0.694) | 0.775 |
+| AUROC (internal eICU refit ceiling) | 0.712 | — |
+| Calibration slope | 0.537 | 1.0 |
+| Mean predicted vs observed risk | 0.121 vs 0.042 | — |
+| Brier (frozen → recalibrated) | 0.052 → 0.040 | 0.059 |
+
+Discrimination transports with modest degradation — the frozen model (0.686)
+sits close to what an eICU-native refit could achieve at all (0.712), so most of
+the drop from MIMIC's 0.775 reflects a harder, more heterogeneous multi-centre
+population and the antibiotic-only suspicion label, not model failure. The model
+is **miscalibrated** on eICU (over-predicts ~3×, slope 0.54, from the lower
+onset base rate), which a one-line intercept/slope recalibration corrects
+(Brier 0.052 → 0.040; see `figure/calibration_eicu.png`).
+
 ### Key finding
 
 The ceiling on the incident-onset prediction task is set by the label's
@@ -326,7 +370,10 @@ network was required.
 ### Limitations
 
 1. Sepsis onset label depends on clinician recognition timing, capping any model's performance.
-2. External validation on eICU-CRD is pending (database currently downloading).
+2. eICU external validation triggers suspected infection on antibiotics alone
+   (culture refines timing when present): eICU captures microbiology for only
+   ~1.5% of stays vs ~83% for antibiotics, so a culture requirement would make
+   the *label*, not the model, untransportable.
 3. Assumed-zero SOFA baseline slightly overcounts organ dysfunction.
 4. qSOFA uses mean arterial pressure as a proxy for systolic pressure.
 5. Time-varying Cox and HMM use sampled subsets for tractability.
@@ -361,6 +408,8 @@ RESEARCH/
     ├── 18_gbtm_trajectories.Rmd             Tier 6: GBTM trajectory classes
     ├── 19_confounder_adjustment.Rmd         Tier 7: PSM / IPW / doubly-robust
     ├── 20_realtime_model_report.Rmd (.pdf)  final combined report
+    ├── 21_eicu_external_panel.py            eICU hour-6 landmark rebuild
+    ├── 22_external_validation.Rmd (.pdf)    eICU external validation
     ├── figure/                              all generated plots
     └── GENAI/
         ├── HANDOFF.md                       cold-start context document

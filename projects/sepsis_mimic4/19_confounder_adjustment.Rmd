@@ -27,11 +27,9 @@ knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE, fig.width=8, fig.
 
 ## Overview
 
-This report performs a confounder-adjusted causal analysis of whether early antibiotic administration (within 3 hours of ICU admission, following the Surviving Sepsis Campaign hour-3 bundle threshold) lowers in-hospital mortality among Sepsis-3 patients. Confounding by indication is the core concern: sicker patients may be treated faster (or slower, if sepsis is not yet recognized), so a naive comparison of early- versus delayed-antibiotic mortality is biased. Four estimators are compared, from least to most robust to model misspecification: (1) crude unadjusted, (2) propensity-score matching, (3) inverse-probability weighting, and (4) augmented-IPW (doubly robust). The adjustment set is chosen by LASSO rather than by hand.
+This report estimates the confounder-adjusted effect of early antibiotic administration (within 3 hours of ICU admission, per the Surviving Sepsis Campaign hour-3 bundle threshold) on in-hospital mortality among Sepsis-3 patients. Sicker patients may receive antibiotics faster (or slower, if sepsis is not yet recognised), so a naive comparison of early- versus delayed-antibiotic mortality is biased by indication. Four estimators of increasing robustness are compared: (1) crude unadjusted, (2) propensity-score matching, (3) inverse-probability weighting, and (4) augmented-IPW (doubly robust). The adjustment set is chosen by LASSO rather than by hand.
 
 ## Load Libraries
-
-We load glmnet for LASSO covariate selection, MatchIt for propensity-score matching, WeightIt for inverse-probability weighting, cobalt for balance diagnostics, and sandwich for robust standard errors.
 
 ```{r load-libraries, message=FALSE, warning=FALSE}
 suppressPackageStartupMessages({
@@ -41,8 +39,6 @@ set.seed(486649)
 ```
 
 ## Locate and Read Data
-
-We read the analysis matrix (containing Sepsis-3 labels, SOFA components, demographics, and mortality) and the suspected-infection file (containing antibiotic administration times). Timestamps are parsed with an explicit format to avoid silent truncation when even one element is malformed.
 
 ```{r load-data}
 find_data <- function(f) {
@@ -56,11 +52,7 @@ FIG <- if (dir.exists("figure")) "figure" else { dir.create("figure"); "figure" 
 
 am <- read.csv(find_data("analysis_matrix.csv"))
 si <- read.csv(find_data("suspected_infection.csv"))
-# NB: as.POSIXct() on a full character VECTOR silently falls back to a
-# date-only format (dropping time-of-day for every row) if even one element
-# fails to match "%Y-%m-%d %H:%M:%S" -- an R analogue of the pandas Arrow
-# CSV round-trip gotcha documented in GENAI/HANDOFF.md. Force the format
-# explicitly so a single malformed timestamp can't truncate the whole column.
+# Explicit format prevents silent date-only fallback when any element is malformed.
 parse_dt <- function(x) as.POSIXct(x, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
 am$intime <- parse_dt(am$intime)
 si$t_abx  <- parse_dt(si$t_abx)
@@ -68,10 +60,7 @@ si$t_abx  <- parse_dt(si$t_abx)
 
 ## Build the Sepsis-3 Cohort with Antibiotic Timing
 
-We filter to Sepsis-3 patients, merge in the antibiotic time, and create the binary exposure variable indicating whether antibiotics were given within 3 hours of ICU admission.
-
 ```{r build-cohort}
-# ---- Cohort: Sepsis-3 patients with a recorded antibiotic time -------------
 d <- am[am$sepsis3 == "True" | am$sepsis3 == TRUE, ]
 d <- merge(d, si[, c("stay_id", "t_abx")], by = "stay_id")
 d$hours_to_abx <- as.numeric(difftime(d$t_abx, d$intime, units = "hours"))
@@ -83,11 +72,9 @@ cat(sprintf("Sepsis-3 cohort with antibiotic timing: %d stays (%.0f%% early <=3h
 
 ## Collapse High-Cardinality Covariates
 
-Admission type, care unit, and race are collapsed into a small number of clinically sensible groups so that propensity-score matching and weighting do not struggle with hundreds of near-empty dummy categories.
+Admission type, care unit, and race are collapsed into clinically sensible groups to avoid near-empty dummy categories in matching and weighting.
 
 ```{r collapse-covariates}
-# ---- Collapse high-cardinality covariates into a few clinically sensible ----
-# groups, so PSM/IPW aren't fighting hundreds of near-empty dummy categories.
 d$admission_grp <- with(d, ifelse(grepl("EMER|URGENT", admission_type), "EMERGENT",
                             ifelse(grepl("ELECTIVE|SURGICAL SAME DAY", admission_type), "ELECTIVE",
                                    "OBSERVATION")))
@@ -104,15 +91,9 @@ d$female <- as.integer(d$gender == "F")
 
 ## LASSO Covariate Selection
 
-Following Guo et al.'s design, we use LASSO penalized logistic regression on the outcome model (mortality) to select confounders from a set of candidate covariates. The exposure variable `early_abx` is forced in unpenalized so it cannot be removed by the penalty.
+Following Guo et al., LASSO penalised logistic regression on the outcome model selects confounders from a candidate set. The exposure `early_abx` is forced in unpenalised (`penalty.factor=0`).
 
 ```{r lasso-selection}
-# ---- LASSO covariate selection (Guo et al.'s design) ------------------------
-# Candidate confounders: demographics + case-mix + baseline organ dysfunction
-# (SOFA components). Select via LASSO on the OUTCOME model (mortality), not
-# by hand, keeping only covariates that survive penalization; `early_abx`
-# itself is forced in unpenalized (penalty.factor=0) since it's the exposure
-# of interest, not a candidate for removal.
 cand_form <- ~ early_abx + age + female + admission_grp + careunit_grp + race_grp +
   sofa_resp + sofa_coag + sofa_liver + sofa_cardio + sofa_cns + sofa_renal
 Xcand <- model.matrix(cand_form, data = d)[, -1]   # drop intercept
@@ -121,8 +102,7 @@ cv <- cv.glmnet(Xcand, d$mortality, family = "binomial", alpha = 1,
                 penalty.factor = pen, nfolds = 10)
 sel <- rownames(coef(cv, s = "lambda.min"))[which(coef(cv, s = "lambda.min")[, 1] != 0)]
 sel <- setdiff(sel, c("(Intercept)", "early_abx"))
-# Map selected DUMMY columns back to their parent covariate (need whole
-# factors, not individual levels, for matching/weighting formulas).
+# Map dummy columns back to parent covariates for matching/weighting formulas.
 parents <- c("age","female","admission_grp","careunit_grp","race_grp",
              "sofa_resp","sofa_coag","sofa_liver","sofa_cardio","sofa_cns","sofa_renal")
 kept <- parents[sapply(parents, function(p) any(grepl(paste0("^", p), sel)) || p %in% sel)]
@@ -134,10 +114,7 @@ adj_form <- as.formula(paste("early_abx ~", paste(kept, collapse = " + ")))
 
 ## Crude (Unadjusted) Estimate
 
-We compute the unadjusted odds ratio and risk difference as a baseline before applying any confounder adjustment.
-
 ```{r crude-estimate}
-# ---- (0) Crude (unadjusted) estimate ----------------------------------------
 crude_glm <- glm(mortality ~ early_abx, data = d, family = binomial)
 crude_or <- exp(coef(crude_glm)["early_abx"])
 crude_rd <- mean(d$mortality[d$early_abx == 1]) - mean(d$mortality[d$early_abx == 0])
@@ -145,13 +122,11 @@ crude_rd <- mean(d$mortality[d$early_abx == 1]) - mean(d$mortality[d$early_abx =
 
 ## Propensity-Score Matching
 
-We perform 1:1 nearest-neighbour propensity-score matching with a caliper of 0.2 standard deviations. The treatment effect on the matched sample (ATT) is estimated with cluster-robust standard errors grouped by matched pair.
+1:1 nearest-neighbour matching with a 0.2 SD caliper. The ATT is estimated with cluster-robust standard errors grouped by matched pair.
 
 ```{r psm}
-# ---- (1) Propensity-score matching (1:1 nearest-neighbour, caliper 0.2 SD) --
 m.out <- matchit(adj_form, data = d, method = "nearest", distance = "glm", caliper = 0.2)
 md <- match.data(m.out)
-# ATT on the matched sample: cluster-robust (by matched pair/subclass) SE.
 psm_glm <- glm(mortality ~ early_abx, data = md, weights = weights, family = binomial)
 psm_se <- sqrt(diag(vcovCL(psm_glm, cluster = md$subclass)))
 psm_or <- exp(coef(psm_glm)["early_abx"])
@@ -160,10 +135,7 @@ psm_ci <- exp(coef(psm_glm)["early_abx"] + c(-1.96, 1.96) * psm_se["early_abx"])
 
 ## Covariate Balance Diagnostics
 
-We assess how well matching balanced the covariates by computing standardized mean differences before and after matching. Results are saved as a CSV and visualized in a Love plot.
-
 ```{r balance-diagnostics, fig.width=8, fig.height=6}
-# ---- Covariate balance: unmatched vs matched (love plot + SMD table) -------
 bal <- bal.tab(m.out, un = TRUE, m.threshold = 0.1)
 bal_df <- as.data.frame(bal$Balance)
 bal_df$covariate <- rownames(bal_df)
@@ -178,10 +150,7 @@ dev.off()
 
 ## Inverse-Probability Weighting
 
-We estimate ATE weights from the propensity score and fit a weighted outcome model with heteroscedasticity-consistent standard errors.
-
 ```{r ipw}
-# ---- (2) Inverse-probability weighting (ATE weights) ------------------------
 w.out <- weightit(adj_form, data = d, method = "ps", estimand = "ATE")
 ipw_glm <- glm(mortality ~ early_abx, data = d, weights = w.out$weights, family = binomial)
 ipw_se <- sqrt(diag(vcovHC(ipw_glm, type = "HC0")))
@@ -191,12 +160,9 @@ ipw_ci <- exp(coef(ipw_glm)["early_abx"] + c(-1.96, 1.96) * ipw_se["early_abx"])
 
 ## Doubly Robust / Augmented-IPW Estimator
 
-The AIPW estimator is consistent for the ATE if either the propensity model or the outcome model is correctly specified (van der Laan and Robins, 2003). We fit separate outcome regressions under treatment and control, then combine them with the propensity weights. A nonparametric bootstrap (200 replicates) provides the confidence interval, refitting all three models in each replicate.
+The AIPW estimator is consistent for the ATE if either the propensity model or the outcome model is correctly specified (van der Laan and Robins, 2003). Separate outcome regressions under treatment and control are combined with propensity weights. A nonparametric bootstrap (200 replicates) provides the confidence interval, refitting all three models in each replicate.
 
 ```{r aipw}
-# ---- (3) Doubly robust / augmented-IPW estimator ---------------------------
-# Consistent for the ATE if EITHER the propensity model OR the two outcome
-# regressions (mu1, mu0) are correctly specified (van der Laan & Robins 2003).
 ps <- w.out$ps
 outcome_form <- as.formula(paste("mortality ~", paste(kept, collapse = " + ")))
 mu1_fit <- glm(outcome_form, data = d[d$early_abx == 1, ], family = binomial)
@@ -210,8 +176,6 @@ aipw_est <- function(dd, ps_, mu1_, mu0_) {
 }
 aipw_rd <- aipw_est(d, ps, mu1, mu0)
 
-# Nonparametric bootstrap CI for the AIPW risk difference (refits propensity +
-# both outcome models each replicate, so the CI reflects all three model fits).
 cat("bootstrapping AIPW CI (200 reps) ...\n")
 B <- 200
 boot_rd <- numeric(B)
@@ -235,10 +199,7 @@ aipw_ci <- quantile(boot_rd, c(0.025, 0.975), na.rm = TRUE)
 
 ## Summary of Effect Estimates
 
-We compile all four estimators (crude, PSM, IPW, and AIPW) into a single summary table with point estimates and confidence intervals where available, then save the results.
-
 ```{r summary-table}
-# ---- Summary table -----------------------------------------------------------
 effects <- data.frame(
   method = c("Crude (unadjusted)", "PSM (1:1 nearest, ATT)",
              "IPW (ATE weights)", "AIPW / doubly robust (ATE)"),

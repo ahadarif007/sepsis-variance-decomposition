@@ -68,7 +68,7 @@ def inventory() -> None:
         print(inv.to_string(index=False))
     missing = inv[inv.status == "MISSING"]
     if not missing.empty:
-        print(f"\n!! {len(missing)} file(s) missing — check paths in config.py")
+        print(f"\n!! {len(missing)} file(s) missing - check paths in config.py")
 
 
 def schemas(sample_rows: int, count_small: bool, count_all: bool) -> None:
@@ -84,7 +84,7 @@ def schemas(sample_rows: int, count_small: bool, count_all: bool) -> None:
             print(f"  (could not read header: {e})")
             continue
 
-        # Sample a few rows (cheap for any file — nrows stops early).
+        # Sample a few rows (cheap for any file; nrows stops early).
         try:
             sample = U.read_table(path, nrows=sample_rows)
             with pd.option_context("display.max_columns", None,
@@ -254,7 +254,7 @@ def main() -> None:
 
     buf = io.StringIO()
     with redirect_stdout(buf):
-        print("MIMIC-IV v3.1 — SEPSIS DATA EXPLORATION REPORT")
+        print("MIMIC-IV v3.1 - SEPSIS DATA EXPLORATION REPORT")
         print(f"project root: {C.PROJECT_ROOT}")
         inventory()
         schemas(args.sample, args.count_small, args.count_all)

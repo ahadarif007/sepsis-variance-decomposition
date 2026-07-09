@@ -1,38 +1,33 @@
 """
 07_hourly_panel.py
 ==================
-THE temporal substrate for real-time sepsis prediction. Where script 04
-collapses each stay into ONE row of first-24h summaries, this script resamples
-every cohort stay onto a regular **hourly grid** and emits one row per
-(stay_id, hour) with the physiology observed in that hour — the base table that
-onset labelling (08) and the longitudinal report (09) and, ultimately, the
-real-time model are built on.
+Temporal substrate for real-time sepsis prediction. Resamples every cohort
+stay onto a regular hourly grid, emitting one row per (stay_id, hour) with
+the physiology observed in that hour. Scripts 08, 09, and the real-time
+model all build on this table.
 
 Design
 ------
-* Horizon: hours 0 .. min(LOS, MAX_PANEL_HOURS) measured from ICU `intime`
-  (hour 0 = the hour starting at intime). Stays are variable length; the panel
-  is right-censored at MAX_PANEL_HOURS (see config-like constant below).
-* For each variable and hour we aggregate all readings in that hour
-  (count-weighted mean, or hourly min for pressure-type "worst" variables),
-  leaving NaN where nothing was charted.
-* We then add, per stay and per core variable:
-    <var>       the hourly measured value (NaN where not measured)
+* Horizon: hours 0..min(LOS, MAX_PANEL_HOURS) from ICU intime.
+  The panel is right-censored at MAX_PANEL_HOURS.
+* Each variable is aggregated per hour (count-weighted mean, or hourly
+  min/max for "worst" variables), leaving NaN where nothing was charted.
+* Per stay and core variable we add:
+    <var>       hourly measured value (NaN if not measured)
     <var>_ff    last-observation-carried-forward within the stay
-    <var>_tsl   hours since that variable was last actually measured
-  This is exactly the shape a causal, only-past-information model consumes:
-  the _ff value is what you would "know" at that hour, and _tsl encodes
-  irregular sampling (itself a severity signal).
-* Big tables (chartevents 3.3 GB, labevents 2.4 GB) are never held whole:
-  a chunked streaming aggregator accumulates per-(stay,itemid,hour) partials.
+    <var>_tsl   hours since that variable was last measured
+  _ff is the causal "known" value at each hour; _tsl encodes irregular
+  sampling, which is itself a severity signal.
+* Big tables (chartevents, labevents) are streamed in chunks; a partial
+  aggregator keeps memory bounded.
 
-Unit handling mirrors 04: temperature F->C, FiO2 %->fraction, MAP/GCS/SpO2
-clipping, GCS = sum of three components.
+Unit handling mirrors script 04: temperature F->C, FiO2 %->fraction,
+MAP/GCS/SpO2 clipping, GCS = sum of three components.
 
 Output
 ------
-processed_data/hourly_panel.parquet   (one row per stay-hour; typed, compact)
-processed_data/hourly_panel_sample.csv (first ~40 stays, for eyeballing in the IDE)
+processed_data/hourly_panel.parquet    one row per stay-hour
+processed_data/hourly_panel_sample.csv first ~40 stays, for inspection
 """
 from __future__ import annotations
 
@@ -51,8 +46,7 @@ import utils as U
 MAX_PANEL_HOURS = 72          # right-censor each stay at 72h of ICU time
 LAB_LOOKBACK_H = 6.0          # labs from intime-6h count toward hour 0
 
-# Variable -> (itemids, hourly reduction). "mean" = count-weighted mean;
-# "min"/"max" = hourly worst value. Temperature/FiO2 are handled specially.
+# (itemids, hourly reduction): "mean" = count-weighted, "min"/"max" = worst value.
 CHART_VARS = {
     "hr":        ([220045], "mean"),
     "resp_rate": ([220210, 224690], "mean"),
@@ -78,14 +72,14 @@ VASO = {
     "dobutamine": 221653, "vasopressin": 222315, "phenylephrine": 221749,
 }
 
-# Core variables that get _ff / _tsl companions (the ones a model/SOFA needs).
+# Variables that receive _ff / _tsl companions (needed for SOFA and modelling).
 CORE_VARS = ["hr", "resp_rate", "spo2", "map", "temp_c", "fio2", "gcs",
              "pao2", "pf_ratio", "lactate", "creatinine", "bilirubin",
              "platelets", "wbc"]
 
 
 # --------------------------------------------------------------------------- #
-# Streaming hourly aggregator (self-contained; does not touch utils' tested fns)
+# Streaming hourly aggregator
 # --------------------------------------------------------------------------- #
 def stream_hourly_agg(
     path,
@@ -97,13 +91,11 @@ def stream_hourly_agg(
     max_hours: int = MAX_PANEL_HOURS,
     chunksize: int = 2_000_000,
 ) -> pd.DataFrame:
-    """
-    Stream a big gzipped event table and accumulate per-(stay_id, itemid, hour)
-    vmin/vmax/vsum/vcount, where hour = floor((time - intime) / 1h) and only
-    hours in [0, max_hours] are kept.
+    """Stream a gzipped event table, accumulating per-(stay_id, itemid, hour)
+    partial aggregates (vmin, vmax, vsum, vcount).
 
-    windows : DataFrame[key_col, stay_id, intime, win_end]  (datetimes).
-    Returns : long DataFrame[stay_id, itemid, hour, vmin, vmax, vsum, vcount].
+    windows : DataFrame with [key_col, stay_id, intime, win_end].
+    Returns : long DataFrame with [stay_id, itemid, hour, vmin, vmax, vsum, vcount].
     """
     want = set(int(i) for i in itemids)
     wcols: list[str] = []
@@ -191,8 +183,8 @@ def fold_variable(long: pd.DataFrame, itemids: Sequence[int], how: str) -> pd.Se
 # Vasopressors and urine, binned to the hourly grid
 # --------------------------------------------------------------------------- #
 def hourly_vaso(stays: pd.DataFrame) -> pd.DataFrame:
-    """Per (stay_id, hour): weight-based rates + presence flags, expanded over
-    each infusion's [starttime, endtime] span."""
+    """Per (stay_id, hour): weight-based rates and presence flags, expanded
+    across each infusion's [starttime, endtime] span."""
     win = stays.set_index("stay_id")[["intime", "win_end"]]
     keep = set(VASO.values())
     cols = ["stay_id", "itemid", "starttime", "endtime", "rate", "rateuom"]
@@ -298,11 +290,8 @@ def add_ff_tsl(panel: pd.DataFrame, var: str) -> None:
     """Add <var>_ff (LOCF within stay) and <var>_tsl (hours since measured)."""
     g = panel.groupby("stay_id", sort=False)
     panel[f"{var}_ff"] = g[var].ffill()
-    # hours since last actual measurement: 0 where measured, else grows by 1.
     measured = panel[var].notna()
-    # index of last measured hour, forward-filled
     hour_when_meas = panel["hour"].where(measured)
-    last_meas_hour = panel.groupby("stay_id", sort=False)
     panel[f"{var}_tsl"] = (panel["hour"]
                            - hour_when_meas.groupby(panel["stay_id"]).ffill())
 

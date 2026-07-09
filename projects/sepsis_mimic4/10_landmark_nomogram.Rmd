@@ -27,11 +27,9 @@ knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE, fig.width=8, fig.
 
 ## Overview
 
-This script builds the full-feature penalized-logistic nomogram at the hour-6 landmark. It establishes the purely statistical upper bound for predicting incident Sepsis-3 within 12 hours of the hour-6 landmark by incorporating heavily-missing labs via an informative-missingness design (median-impute plus "was it measured" indicators). Evaluation uses honest, leakage-safe nested cross-validation with DeLong testing against the earlier baseline model.
+This report builds a full-feature penalised-logistic nomogram at the hour-6 landmark, establishing the statistical upper bound for predicting incident Sepsis-3 within 12 hours. Heavily-missing labs are incorporated via an informative-missingness design (median-impute plus "was it measured" indicators). Evaluation uses nested cross-validation with DeLong testing against the earlier baseline model.
 
 ## Load Libraries
-
-We load the required packages for elastic-net regression, ROC analysis, precision-recall curves, and regression modelling/nomograms.
 
 ```{r load-libraries, message=FALSE, warning=FALSE}
 suppressPackageStartupMessages({
@@ -41,8 +39,6 @@ set.seed(486649)
 ```
 
 ## Locate Data and Set Output Directories
-
-This helper function searches candidate paths for data files, and then sets the output and figure directories.
 
 ```{r locate-data}
 find_data <- function(f) {
@@ -58,8 +54,6 @@ FIG <- if (dir.exists("figure")) "figure" else { dir.create("figure"); "figure" 
 
 ## Load Landmark Data
 
-We read in the hour-6 landmark dataset and print a summary of its size and onset rate.
-
 ```{r load-data}
 lm6 <- read.csv(find_data("landmark_h6.csv"))
 cat(sprintf("Loaded landmark_h6: %d stays, onset-within-12h rate %.3f\n",
@@ -68,29 +62,23 @@ cat(sprintf("Loaded landmark_h6: %d stays, onset-within-12h rate %.3f\n",
 
 ## Feature Design
 
-The feature matrix combines vitals (near-complete after forward-fill), severity scores (SOFA, qSOFA, SIRS), labs with informative-missingness indicators, and 6-hour trajectory slopes. Labs and slopes use median/zero imputation with a binary "measured" flag to preserve the informative nature of missingness.
+The feature matrix combines vitals (near-complete after forward-fill), severity scores (SOFA, qSOFA, SIRS), labs with informative-missingness indicators, and 6-hour trajectory slopes. Labs (70-88% missing at hour 6) and slopes (~30% missing) use median/zero imputation with a binary "measured" flag, preserving the informative nature of missingness: a drawn lactate itself marks a sicker or suspected patient.
 
 ```{r feature-design}
-# Vitals (near-complete after forward-fill at h6): use directly.
 vitals <- c("hr","resp_rate","map","spo2","temp_c","gcs")
-# Scores allowed now (nomogram is a full-feature model, not the non-circular one).
 scores <- c("sofa_total","qsofa","sirs")
-# Labs: 70-88% missing at h6 and the missingness is INFORMATIVE (a drawn lactate
-# marks a sicker/suspected patient). Median-impute + a "_msg" measured indicator.
 labs   <- c("lactate","creatinine","wbc","pf_ratio")
-# 6h trajectory slopes: ~30% missing (fewer than 2 measurements). Impute 0
-# (no trend) + a "_msg" indicator.
 slopes <- c("hr_slope6","resp_rate_slope6","map_slope6","spo2_slope6")
 
 df <- data.frame(row.names = seq_len(nrow(lm6)))
-for (v in c(vitals, scores)) {                       # simple median-impute
+for (v in c(vitals, scores)) {
   x <- lm6[[v]]; x[is.na(x)] <- median(x, na.rm = TRUE); df[[v]] <- x
 }
-for (v in labs) {                                    # impute + informative flag
+for (v in labs) {
   x <- lm6[[v]]; df[[paste0(v, "_msg")]] <- as.integer(is.na(x))
   x[is.na(x)] <- median(x, na.rm = TRUE); df[[v]] <- x
 }
-for (v in slopes) {                                  # impute 0 + flag
+for (v in slopes) {
   x <- lm6[[v]]; df[[paste0(v, "_msg")]] <- as.integer(is.na(x))
   x[is.na(x)] <- 0; df[[v]] <- x
 }
@@ -103,12 +91,12 @@ cat(sprintf("Design matrix: %d features\n", ncol(X)))
 
 ## Outer 5-Fold CV with Inner Lambda Selection
 
-We run a nested cross-validation loop. The outer loop splits stays into 5 folds, and the inner loop (inside `cv.glmnet`) selects the optimal regularization parameter lambda on each training fold. Out-of-sample predictions are collected for honest evaluation.
+Nested cross-validation provides honest evaluation: the outer loop splits stays into 5 folds and the inner loop (inside `cv.glmnet`) selects the optimal regularisation parameter on each training fold.
 
 ```{r outer-cv}
 folds <- sample(rep(1:5, length.out = nrow(X)))
-oos_en <- numeric(nrow(X))                           # elastic-net OOS risk
-ALPHA  <- 0.5                                         # elastic net (LASSO-ish)
+oos_en <- numeric(nrow(X))
+ALPHA  <- 0.5
 for (k in 1:5) {
   tr <- folds != k
   cvfit <- cv.glmnet(X[tr, ], y[tr], family = "binomial",
@@ -120,13 +108,9 @@ for (k in 1:5) {
 
 ## Reconstruct Baseline Models
 
-We re-fit the baseline GLMs from the earlier script (09) on the same outer folds so that a fair DeLong test comparison can be made. Both the static-only and trajectory-augmented baselines are reconstructed.
+The baseline GLMs from script 09 are re-fit on the same outer folds for a fair DeLong comparison, using the imputed matrix so all models share identical rows.
 
 ```{r baseline-models}
-# Reconstruct the earlier (script 09) baseline models on the SAME outer
-# folds (for DeLong). Fit on the imputed matrix `df` so all three models use
-# identical rows (the raw lm6 vitals carry a little missingness that would
-# leave NA predictions).
 gdat <- cbind(df, y = y)
 cvauc_glm <- function(form, data) {
   p <- numeric(nrow(data))
@@ -144,8 +128,6 @@ p_traj   <- cvauc_glm(y ~ age + sofa_total + qsofa + sirs +
 ```
 
 ## Compute Metrics
-
-We calculate AUROC, PR-AUC, and Brier score for each model, then run a DeLong test comparing the elastic-net model against the trajectory baseline. Results are saved to `tier1_metrics.csv`.
 
 ```{r metrics}
 auc_of <- function(p) as.numeric(auc(roc(y, p, quiet = TRUE, direction = "<")))
@@ -171,7 +153,7 @@ write.csv(metrics, file.path(OUT, "tier1_metrics.csv"), row.names = FALSE)
 
 ## Final Model Coefficients
 
-We fit the elastic-net model on all available data and extract the penalized coefficients and odds ratios. Only features with non-zero coefficients are retained and saved to `tier1_coefs.csv`.
+The elastic-net model is fit on all data to extract penalised coefficients and odds ratios. Only features with non-zero coefficients are retained.
 
 ```{r final-model-coefs}
 cvfull <- cv.glmnet(X, y, family = "binomial", alpha = ALPHA,
@@ -188,7 +170,7 @@ cat(sprintf("\nSelected features (non-zero at lambda.min): %d / %d\n",
 
 ## Export Out-of-Sample Predictions
 
-The per-stay out-of-sample risk estimates are exported to `tier1_oos_pred.csv`. These feed into the Tier 4 alarm/utility analysis downstream.
+Per-stay out-of-sample risk estimates feed into the Tier 4 alarm/utility analysis downstream.
 
 ```{r export-oos-predictions}
 write.csv(data.frame(stay_id = lm6$stay_id, onset_within_h = y,
@@ -197,8 +179,6 @@ write.csv(data.frame(stay_id = lm6$stay_id, onset_within_h = y,
 ```
 
 ## Calibration Curve
-
-We produce a decile-binned calibration plot comparing predicted risk against observed onset rate. This plot is saved to `figure/calibration_h6.png`.
 
 ```{r calibration-curve, fig.width=6, fig.height=6}
 png(file.path(FIG, "calibration_h6.png"), width = 1000, height = 1000, res = 200)
@@ -213,7 +193,7 @@ dev.off()
 
 ## Nomogram
 
-We refit an unpenalized logistic regression model (`lrm`) on the features selected by elastic net, then render a clinician-facing nomogram. The figure is saved to `figure/nomogram_h6.png`.
+An unpenalised logistic regression (`lrm`) is refit on the features selected by elastic net, producing a clinician-facing nomogram.
 
 ```{r nomogram, fig.width=10, fig.height=8}
 sel <- setdiff(coefs$term, "(Intercept)")

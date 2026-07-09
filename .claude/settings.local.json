@@ -21,7 +21,8 @@
       "Read(//Users/arif/.claude/projects/-Users-arif-Desktop-RESEARCH/memory/**)",
       "Bash(ls MEMORY.md)",
       "Bash(Rscript --version)",
-      "Bash(Rscript -e 'pkgs <- c\\(\"pROC\",\"PRROC\",\"yardstick\",\"mgcv\",\"car\",\"mice\",\"rms\",\"splines\",\"boot\"\\); for \\(p in pkgs\\) cat\\(sprintf\\(\"%-10s %s\\\\n\", p, ifelse\\(requireNamespace\\(p, quietly=TRUE\\),\"OK\",\"MISSING\"\\)\\)\\)')"
+      "Bash(Rscript -e 'pkgs <- c\\(\"pROC\",\"PRROC\",\"yardstick\",\"mgcv\",\"car\",\"mice\",\"rms\",\"splines\",\"boot\"\\); for \\(p in pkgs\\) cat\\(sprintf\\(\"%-10s %s\\\\n\", p, ifelse\\(requireNamespace\\(p, quietly=TRUE\\),\"OK\",\"MISSING\"\\)\\)\\)')",
+      "Bash(rm -f sepsis_realtime_ieee.aux sepsis_realtime_ieee.log sepsis_realtime_ieee.out sepsis_realtime_ieee.blg && ls -la sepsis_realtime_ieee.* sepsis_realtime_refs.bib)"
     ]
   }
 }

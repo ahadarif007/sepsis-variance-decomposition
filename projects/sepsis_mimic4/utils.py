@@ -104,7 +104,7 @@ def load(name: str, out_dir: Path,
     Load a previously saved intermediate (tries csv then parquet).
 
     CSV carries no dtypes, so pass `parse_dates` for any datetime columns you
-    need to do time arithmetic on — otherwise they load as strings and pandas
+    need to do time arithmetic on, otherwise they load as strings and pandas
     will refuse `string - Timedelta`. (Parquet is already typed, so the
     argument is only applied to the CSV path.)
     """

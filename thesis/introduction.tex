@@ -1,0 +1,109 @@
+\chapter{Introduction}
+\label{ch:introduction}
+
+\section{Context and Motivation}
+Sepsis, defined by the Sepsis-3 consensus as life-threatening organ dysfunction
+caused by a dysregulated host response to infection \cite{singer2016sepsis3},
+remains a major driver of mortality in the intensive care unit (ICU). Because
+timely treatment materially improves outcomes, predicting the \emph{onset} of
+sepsis ahead of clinical recognition is of direct clinical value. Two modelling
+traditions address this problem. The first, and by far the more actively
+published, is machine learning; the second, older and still foundational, is
+classical statistics, namely Cox proportional-hazards regression, logistic
+regression, and trajectory modelling. Statistical models retain a specific
+advantage for real-time clinical use: they yield directly interpretable hazard
+and odds ratios, they can be checked against formal assumptions, and they can be
+benchmarked transparently against established rule-based scores such as the
+Systemic Inflammatory Response Syndrome (SIRS) criteria, the quick Sequential
+Organ Failure Assessment (qSOFA), and the National Early Warning Score (NEWS).
+
+On the MIMIC-IV database \cite{johnson2023mimiciv}, however, the statistical
+literature has developed unevenly. As detailed in Chapter~\ref{ch:review}, most
+studies predict mortality \emph{after} sepsis is diagnosed rather than onset
+itself; the proportional-hazards assumption is rarely tested before a Cox model
+is fitted; and external validation is largely absent from the onset-prediction
+literature specifically. The single statistical real-time onset benchmark,
+TREWScore \cite{henry2015trewscore}, was fitted on the older MIMIC-II database
+in 2015 and has not been revisited on MIMIC-IV with purely statistical,
+interpretable tools.
+
+\section{Research Gap}
+\label{sec:gap}
+Three gaps motivate this work and are established in detail in
+Chapter~\ref{ch:review}:
+\begin{itemize}
+  \item \textbf{G1 (Onset versus prognosis).} MIMIC-IV statistical work
+  overwhelmingly predicts mortality after diagnosis. Genuine pre-onset,
+  real-time detection with purely statistical tools has not been revisited on
+  MIMIC-IV since TREWScore's 2015 MIMIC-II study.
+  \item \textbf{G2 (Untested proportional hazards).} Sepsis hazards are
+  frequently non-proportional \cite{kasal2004cox}, yet no reviewed MIMIC-IV Cox
+  study reports testing the assumption, weakening confidence in the reported
+  hazard ratios.
+  \item \textbf{G3 (Validation asymmetry).} External validation is common in the
+  prognostic nomogram literature but essentially absent from onset-prediction
+  and trajectory studies, precisely where systematic reviews show performance
+  degrades most \cite{wang2025srpm}.
+\end{itemize}
+
+\section{Research Question and Objectives}
+\label{sec:rq}
+These gaps motivate one primary research question and three sub-questions.
+
+\vspace{4pt}
+\noindent\textbf{RQ.} \emph{Can a purely statistical (Cox proportional-hazards /
+time-varying / landmark) model, using routinely available real-time vitals and
+labs in MIMIC-IV, predict impending Sepsis-3 onset ahead of clinical
+recognition, with performance comparable to or exceeding the rule-based scores
+SIRS, qSOFA, and NEWS?}
+
+\begin{itemize}
+  \item \textbf{SQ1.} Which routinely measured variables are the strongest
+  statistically significant predictors of onset, and does the
+  proportional-hazards assumption hold for the fitted Cox model?
+  \item \textbf{SQ2.} Does modelling trajectories through a time-varying or
+  landmark extension improve early detection over a static single-time-point
+  model?
+  \item \textbf{SQ3.} How does discriminative performance compare with SIRS,
+  qSOFA, and NEWS, and does it survive the transition from internal to external
+  (eICU-CRD) evaluation?
+\end{itemize}
+
+\section{Contributions}
+\label{sec:contrib}
+This thesis makes the following contributions, each mapped to the gap it
+closes.
+\begin{enumerate}
+  \item \textbf{C1: First interpretable statistical real-time Sepsis-3 onset
+  model on MIMIC-IV (closes G1).} Continuously updated hourly risk is reached
+  through a dynamic landmark supermodel
+  \cite{vanhouwelingen2007landmark,fries2023dynamiclm}, and incident sepsis is
+  explicitly separated from prevalent sepsis using an hour-six landmark.
+  \item \textbf{C2: Explicit proportional-hazards testing with a triggered
+  time-varying reformulation (closes G2).} The Schoenfeld residual test is
+  reported for the onset Cox model; because the global test fails, a
+  time-varying Cox model is fitted in direct response.
+  \item \textbf{C3: Reframing the task.} On the correct incident-onset
+  target, SOFA is inversely discriminative, qSOFA is near chance, and SIRS is
+  weak, while a multivariable landmark model reaches an area under the curve of
+  0.775, showing that severity scores detect established organ failure, not
+  impending onset.
+  \item \textbf{C4: Informative-missingness characterisation.} Binary
+  ``was this lab ordered'' indicators are stronger predictors than the imputed
+  values themselves \cite{groenwold2020missingness,singh2021missingness},
+  quantifying a label-recognition ceiling.
+  \item \textbf{C5: A reproducible, transportable pipeline that is externally
+  validated on eICU-CRD (closes G3).} Because the models are closed-form, their
+  coefficients transport directly to a second database; the frozen model is
+  applied without refitting to the eICU Collaborative Research Database
+  \cite{pollard2018eicu}.
+\end{enumerate}
+
+\section{Thesis Structure}
+Chapter~\ref{ch:methodology} sets out the research and software methodology.
+Chapter~\ref{ch:review} reviews the related statistical and machine-learning
+literature and formalises the gaps above. Chapter~\ref{ch:design} describes the
+system architecture and the design of each pipeline stage.
+Chapter~\ref{ch:evaluation} presents and critically discusses the internal and
+external results. Chapter~\ref{ch:conclusion} concludes and identifies avenues
+for further work.

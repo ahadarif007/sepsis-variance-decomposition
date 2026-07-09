@@ -27,11 +27,9 @@ knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE, fig.width=8, fig.
 
 ## Overview
 
-This report implements a genuine population-level GBTM, following the design of Yang et al. (2022, J Intensive Med). The literature review identified GBTM as a method used on MIMIC-IV sepsis cohorts but absent from this pipeline, which previously used a within-patient HMM to cluster states rather than trajectory shapes across patients. A latent-class growth model is fit on repeated 24-hour SOFA scores via flexmix, and class membership is then linked to mortality via Cox regression and to incident Sepsis-3 via logistic regression.
+This report implements a population-level GBTM following Yang et al. (2022, J Intensive Med). The earlier temporal report used a within-patient HMM that clusters states within one patient rather than trajectory shapes across patients. A latent-class growth model is fit on repeated 24-hour SOFA scores via flexmix, and class membership is then linked to mortality via Cox regression and to incident Sepsis-3 via logistic regression.
 
 ## Load Libraries
-
-We load flexmix for the latent-class growth model and survival for the Cox regression linking trajectory class to mortality.
 
 ```{r load-libraries, message=FALSE, warning=FALSE}
 suppressPackageStartupMessages({
@@ -41,8 +39,6 @@ set.seed(486649)
 ```
 
 ## Locate and Read Data
-
-The helper function searches candidate paths for the required CSV files. We read the sampled long panel (2,500 stays from script 13) and the cohort-level data with demographics and outcomes.
 
 ```{r load-data}
 find_data <- function(f) {
@@ -61,12 +57,9 @@ cohort <- read.csv(find_data("cohort.csv"))[, c("stay_id","age","gender",
 
 ## Build the First-24h SOFA Trajectory Sample
 
-We restrict the panel to the first 24 hours and keep only stays with at least 12 of the 25 possible hourly rows, ensuring a stable polynomial fit. This drops a small number of stays with sparse early data.
+The panel is restricted to the first 24 hours, keeping only stays with at least 12 of the 25 possible hourly rows for a stable polynomial fit.
 
 ```{r build-sample}
-# ---- Build the first-24h SOFA trajectory sample -----------------------------
-# Keep stays with enough repeated points (>=12 of the 25 possible hourly rows)
-# for a stable polynomial fit; this drops 62/2500 stays with sparse early data.
 d <- panel[panel$hour <= 24, c("stay_id","hour","sofa_total")]
 n_obs <- table(d$stay_id)
 keep_ids <- names(n_obs[n_obs >= 12])
@@ -78,19 +71,11 @@ cat(sprintf("GBTM sample: %d stays, %d stay-hours (first 24h, >=12 obs/stay)\n",
 
 ## Fit Latent-Class Growth Models
 
-We fit latent-class growth models for k = 2 through 4 classes and select the best model by BIC. The `| stay_id` syntax in the formula tells flexmix to assign all rows of one stay to the same latent class, which is exactly the GBTM formulation. Multiple random restarts are used at each k to avoid local optima.
+Latent-class growth models are fit for k = 2 through 4 classes, with the best selected by BIC. The `| stay_id` syntax in flexmix assigns all rows of one stay to the same latent class (the GBTM formulation). Multiple random restarts at each k guard against local optima.
 
 ```{r fit-gbtm}
-# ---- Fit latent-class growth models for k = 2..4, select by BIC -------------
-# `sofa_total ~ poly(hour, 2) | stay_id`: the `| stay_id` term is flexmix's
-# grouped-mixture syntax -- it assigns ALL rows of one stay_id to the SAME
-# latent class (a trajectory class), rather than mixing at the observation
-# level. This is exactly the latent-class growth model (GBTM) formulation.
-# stepFlexmix repeats each k with multiple random starts and keeps the best
-# converged one; `minprior` prunes components that shrink to near-empty
-# during EM (a handful of restarts otherwise degenerate to a zero-variance
-# component and abort with a non-finite log-likelihood -- stepFlexmix just
-# discards those restarts and keeps the ones that converge cleanly).
+# `minprior` prunes near-empty components during EM; stepFlexmix
+# discards restarts that degenerate and keeps clean convergences.
 cat("fitting latent-class growth models (k=2..4; this takes a minute) ...\n")
 sf <- stepFlexmix(sofa_total ~ poly(hour, 2) | stay_id, data = d, k = 2:4,
                    nrep = 3, control = list(iter.max = 200, minprior = 0.05),
@@ -103,10 +88,9 @@ cat(sprintf("Selected K = %d classes by BIC\n", K))
 
 ## Per-Stay Class Assignment
 
-Each stay is assigned to the trajectory class with the highest posterior probability. Classes are then reordered by mean SOFA severity so that class 1 always corresponds to the mildest trajectory, providing a stable and interpretable numbering across reruns.
+Each stay is assigned to the trajectory class with the highest posterior probability. Classes are reordered by mean SOFA severity so that class 1 always corresponds to the mildest trajectory.
 
 ```{r class-assignment}
-# ---- Per-stay class assignment (posterior mode) -----------------------------
 cls_per_row <- clusters(best)
 row_id <- d$stay_id
 cls_by_stay <- tapply(cls_per_row, row_id, function(x) x[1])   # constant within stay
@@ -117,9 +101,7 @@ assign_tab <- data.frame(stay_id = as.integer(names(cls_by_stay)),
                           class = as.integer(cls_by_stay),
                           posterior_prob = round(as.numeric(post_max), 4))
 
-# Order classes by mean SOFA severity (low -> high) so "class 1" = mildest,
-# a stable, interpretable ordering across reruns (flexmix's own numbering is
-# arbitrary / order-of-convergence).
+# Reorder by severity so class 1 = mildest (flexmix numbering is arbitrary).
 sev_order <- order(tapply(d$sofa_total, cls_by_stay[as.character(d$stay_id)], mean))
 remap <- setNames(seq_along(sev_order), sev_order)
 assign_tab$class <- remap[as.character(assign_tab$class)]
@@ -128,10 +110,7 @@ write.csv(assign_tab, file.path(OUT, "tier6_gbtm_assignments.csv"), row.names = 
 
 ## Mean Trajectory Per Class and Trajectory Plot
 
-We compute the mean SOFA score at each hour for each trajectory class, then plot the resulting curves. This figure is the primary visual output of the GBTM analysis.
-
 ```{r trajectory-plot, fig.width=8, fig.height=6}
-# ---- Mean trajectory per class (figure input) -------------------------------
 d$class <- remap[as.character(cls_by_stay[as.character(d$stay_id)])]
 means <- aggregate(sofa_total ~ hour + class, data = d, FUN = mean)
 means <- means[order(means$class, means$hour), ]
@@ -153,12 +132,9 @@ dev.off()
 
 ## Link Trajectory Class to Mortality via Cox Regression
 
-Following Yang et al. (2022), we fit a Cox proportional hazards model with trajectory class membership as the predictor and in-hospital mortality as the event. Time-to-event is hospital length of stay in hours.
+Following Yang et al. (2022), a Cox proportional hazards model links trajectory class membership to in-hospital mortality, with hospital length of stay (hours) as the time-to-event variable.
 
 ```{r cox-mortality}
-# ---- Link trajectory class to mortality via Cox regression -----------------
-# Following Yang et al. (2022): GBTM trajectory-group membership -> Cox model
-# for mortality. Time-to-event = hospital LOS (hours); event = in-hospital death.
 surv_d <- merge(assign_tab, cohort, by = "stay_id")
 surv_d$class <- factor(surv_d$class, levels = 1:K)
 surv_d$los_hours <- pmax(surv_d$los_hours, 0.5)   # avoid zero survival time
@@ -174,13 +150,9 @@ write.csv(cox_tab, file.path(OUT, "tier6_mortality_cox.csv"), row.names = FALSE)
 
 ## Link Trajectory Class to Incident Sepsis-3
 
-As a secondary analysis specific to this project, we test whether the SOFA trajectory shape over the first 24 hours is associated with ever meeting Sepsis-3 criteria, beyond the endpoint severity alone. This uses a logistic regression with trajectory class as the predictor.
+As a secondary analysis, logistic regression tests whether the SOFA trajectory shape over the first 24 hours associates with ever meeting Sepsis-3 criteria, beyond endpoint severity alone.
 
 ```{r onset-association}
-# ---- Secondary link: trajectory class vs incident Sepsis-3 -----------------
-# This project's own outcome of interest (not in Yang et al.): does the SOFA
-# trajectory SHAPE over the first 24h associate with ever meeting Sepsis-3,
-# beyond the trajectory's endpoint severity alone?
 onset_d <- panel[!duplicated(panel$stay_id), c("stay_id","sepsis3")]
 onset_d <- merge(assign_tab, onset_d, by = "stay_id")
 onset_d$class <- factor(onset_d$class, levels = 1:K)

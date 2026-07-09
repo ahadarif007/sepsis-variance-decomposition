@@ -2,7 +2,7 @@
 04_extract_measurements.py
 ==========================
 The one heavy stage. Streams the big ICU/hosp event tables and reduces them to
-ONE row per ICU stay of first-24h physiology — the inputs both for SOFA scoring
+ONE row per ICU stay of first-24h physiology, providing the inputs for SOFA scoring
 (script 05) and for the statistical report's feature matrix.
 
 Window
@@ -14,7 +14,7 @@ Per stay we look at the first 24h of the ICU admission:
 This "day-1" window is a deliberate, well-precedented operationalisation. From
 script 03 we saw suspicion of infection lands a median of +1.1h from ICU
 admission (IQR -1.5h..+3.1h), so the first 24h covers the Sepsis-3 suspicion
-window for the large majority of stays, while giving every stay — septic or not —
+window for the large majority of stays, while giving every stay, septic or not,
 an identical, non-circular feature window. chartevents is ICU-only, so no usable
 data exists before intime anyway.
 
@@ -228,7 +228,7 @@ def main() -> None:
     feat["resp_rate_max"] = combine_max(chart_long, CHART_ITEMIDS["resp_rate"])
     feat["spo2_min"] = combine_min(chart_long, CHART_ITEMIDS["spo2"]).clip(lower=0, upper=100)
 
-    # temperature: convert °F itemid to °C, then combine
+    # temperature: convert F itemid to C, then combine
     temp_c = combine_max(chart_long, CHART_ITEMIDS["temp_c"])
     temp_f = combine_max(chart_long, CHART_ITEMIDS["temp_f"])
     temp_f_as_c = (temp_f - 32.0) * 5.0 / 9.0

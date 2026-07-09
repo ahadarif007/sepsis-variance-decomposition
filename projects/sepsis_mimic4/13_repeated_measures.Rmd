@@ -36,18 +36,12 @@ operate on the sampled long panel (2,500 stays) for tractability.
 
 ## Load Libraries and Set Seed
 
-We load the GEE, sandwich, and survival packages, then fix the random seed for
-reproducibility.
-
 ```{r load-libraries, message=FALSE, warning=FALSE}
 suppressPackageStartupMessages({ library(geepack); library(sandwich); library(survival) })
 set.seed(486649)
 ```
 
 ## Locate and Read Data
-
-A helper function searches several candidate paths for each input file. We read
-the sampled long panel that was produced by the earlier longitudinal pipeline.
 
 ```{r load-data}
 find_data <- function(f) {
@@ -63,21 +57,9 @@ d <- d0
 
 ## Define the Dynamic Incident Outcome
 
-The stored per-hour `label` is nearly constant within a patient, so a random
-intercept would suffer complete separation. Instead we define a proper
-early-warning target on at-risk hours only: whether sepsis onset occurs within
-the next 12 hours. This outcome varies within septic patients and is the correct
-repeated-measures formulation.
+The stored per-hour `label` is nearly constant within a patient, so a random intercept would suffer complete separation. A proper early-warning target restricts to at-risk hours and defines the outcome as whether sepsis onset occurs within the next 12 hours. This outcome varies within septic patients, making it a well-posed repeated-measures formulation.
 
 ```{r define-outcome}
-# ---- DYNAMIC incident outcome on AT-RISK hours ------------------------------
-# The stored per-hour `label` is patient-near-constant (all-0 for non-septic;
-# 1 from onset-6h onward for septic) -> a random intercept would trivially
-# separate it (complete separation). Instead we model the proper early-warning
-# target on at-risk hours only: y = onset occurs within the next 12h.
-#   at-risk hour = non-septic (any hour) OR septic with hour < onset_hour
-# This varies WITHIN a septic patient (0 early, 1 as onset nears) and is the
-# correct repeated-measures outcome.
 HORIZON <- 12
 d <- d[is.na(d$onset_hour) | d$hour < d$onset_hour, ]
 d$y <- as.integer(!is.na(d$onset_hour) &
@@ -89,11 +71,9 @@ cat(sprintf("Loaded sampled panel (at-risk hours): %d stay-hours, %d stays, inci
 
 ## Standardize Predictors
 
-We median-impute missing values and z-score all predictors so that the resulting
-odds ratios are comparable across variables.
+Median imputation and z-scoring yield odds ratios on a comparable scale across predictors.
 
 ```{r standardize-predictors}
-# ---- standardize predictors (median-impute; z-score for comparable ORs) -----
 zt <- function(x) { x[is.na(x)] <- median(x, na.rm=TRUE); as.numeric(scale(x)) }
 d$z_hr   <- zt(d$hr);   d$z_map  <- zt(d$map);   d$z_rr <- zt(d$resp_rate)
 d$z_temp <- zt(d$temp_c); d$z_lac <- zt(d$lactate); d$z_hour <- zt(d$hour)
@@ -103,32 +83,14 @@ form  <- as.formula(paste("y ~", paste(preds, collapse=" + ")))
 
 ## GEE vs Naive Pooled GLM
 
-A per-patient random-intercept GLMM is degenerate for this outcome because most
-patients never have an event. GEE is the correct classical alternative: it
-estimates population-averaged effects with an exchangeable within-patient
-working correlation and cluster-robust sandwich standard errors. We contrast it
-with a naive GLM that treats the ~76k hours as independent, which substantially
-understates the standard errors.
+A per-patient random-intercept GLMM is degenerate here: most patients never experience an event, so the per-cluster intercepts diverge and the variance component explodes. GEE avoids this by estimating population-averaged effects with an exchangeable within-patient working correlation and cluster-robust sandwich standard errors. Contrasting with a naive pooled GLM that treats the approximately 76,000 stay-hours as independent quantifies how much ignoring within-patient correlation understates the standard errors.
 
 ```{r fit-gee}
-# ---- (1) population-averaged GEE vs naive pooled GLM ------------------------
-# A per-patient random-intercept GLMM is DEGENERATE for this outcome: most
-# patients never have an event, so their intercepts diverge (quasi-complete
-# separation) and the variance component explodes. GEE is the correct classical
-# alternative -- it models the population-averaged effect with an exchangeable
-# WITHIN-PATIENT working correlation and cluster-robust ("sandwich") SEs, with
-# no per-cluster parameters to blow up. Contrast with a naive GLM that treats
-# the 76k hours as independent and so reports far-too-small SEs.
 d <- d[order(d$stay_id, d$hour), ]
 g_pool <- glm(form, data=d, family=binomial)
 
-# (a) same GLM coefficients, but NAIVE (model-based) vs CLUSTER-ROBUST SEs.
-# This isolates the effect of within-patient clustering on inference, holding
-# the estimator fixed: treating 76k correlated hours as independent understates
-# the SEs; the sandwich SE clustered by patient is the honest one.
 se_naive  <- sqrt(diag(vcov(g_pool)))
 se_robust <- sqrt(diag(vcovCL(g_pool, cluster = d$stay_id, type = "HC0")))
-# (b) GEE gives the interpretable within-patient working correlation.
 cat("fitting GEE (exchangeable within-patient correlation) ...\n")
 g_gee <- geeglm(form, id=stay_id, data=d, family=binomial, corstr="exchangeable")
 alpha <- summary(g_gee)$corr[["Estimate"]]
@@ -152,24 +114,16 @@ write.csv(rbind(comp,
 
 ## Penalized Time-Varying-Covariate Cox Model
 
-We build a counting-process (start, stop] formulation of the hourly data and fit
-a ridge-penalized Cox model. This captures how time-varying physiology predicts
-the hazard of sepsis onset, with cluster-robust variance for within-patient
-correlation.
+A counting-process (start, stop] formulation of the hourly data supports a ridge-penalized Cox model that captures how time-varying physiology predicts the hazard of sepsis onset. Cluster-robust variance accounts for within-patient correlation. The full sampled panel (not the pre-onset-only GEE frame) is used here.
 
 ```{r fit-tvcox}
-# ---- (2) penalized time-varying-covariate Cox (counting process) ------------
-# Build (start, stop, event] intervals per stay-hour; event at the onset hour.
-# Uses the FULL sampled panel d0 (not the pre-onset-only GLMM frame).
 cat("\nbuilding counting-process time-varying Cox (ridge) ...\n")
 dc <- d0[order(d0$stay_id, d0$hour), ]
 dc$z_hr <- zt(dc$hr); dc$z_map <- zt(dc$map); dc$z_rr <- zt(dc$resp_rate)
 dc$z_temp <- zt(dc$temp_c); dc$z_lac <- zt(dc$lactate)
 dc$start <- dc$hour
 dc$stop  <- dc$hour + 1
-# event = 1 at the onset hour of a septic stay, else 0
 dc$ev <- as.integer(!is.na(dc$onset_hour) & dc$hour == dc$onset_hour)
-# keep intervals up to and including onset (drop post-onset hours)
 dc <- dc[is.na(dc$onset_hour) | dc$hour <= dc$onset_hour, ]
 tv <- coxph(Surv(start, stop, ev) ~
               ridge(z_hr, z_map, z_rr, z_temp, z_lac, theta=1) + cluster(stay_id),

@@ -1,23 +1,21 @@
 """
-11_landmark_stack.py  --  TIER 2 (data substrate)
-==================================================
-Builds the STACKED multi-landmark dataset for a dynamic-prediction *supermodel*
-(van Houwelingen 2007, README ref 7). Script 08 fit a single landmark at hour 6;
-a real-time system must emit a risk at EVERY hour. The landmark supermodel is
-the purely-statistical way to do that: repeat the hour-6 landmark construction
-at a grid of landmark times s, stack them into one long dataset with s as a
-covariate, and (in 12_supermodel.R) fit ONE penalized model with smooth
-s-interactions so plugging in the current hour gives an hourly-updating risk.
+11_landmark_stack.py - Tier 2 (data substrate)
+===============================================
+Builds the stacked multi-landmark dataset for a dynamic-prediction supermodel
+(van Houwelingen 2007). Script 08 fits a single landmark at hour 6; a real-time
+system must emit risk at every hour. The landmark supermodel repeats the hour-6
+construction at a grid of landmark times s, stacking them with s as a covariate.
+Script 12_supermodel.R then fits one penalized model with smooth s-interactions
+so that plugging in the current hour gives an hourly-updating risk.
 
 At each landmark hour s (LANDMARK_GRID):
-  * eligible stays = reached hour s AND not yet septic by s (at-risk),
-  * features   = forward-filled physiology at hour s, hourly SOFA, qSOFA, SIRS,
-                 and 6h trajectory slopes (value@s - value@(s-6)), + demographics,
-  * label      = incident onset within (s, s+HORIZON].
-This reproduces 08_onset_label.py's hour-6 rows exactly when s == 6.
+  * eligible stays = reached hour s and not yet septic by s (at-risk)
+  * features   = forward-filled physiology at s, SOFA, qSOFA, SIRS,
+                 6h trajectory slopes (value@s - value@(s-6)), demographics
+  * label      = incident onset within (s, s+HORIZON]
+Reproduces 08_onset_label.py's hour-6 rows exactly when s == 6.
 
 Output: processed_data/landmark_stack.csv  (one row per stay x landmark)
-Run from projects/sepsis_mimic4/ with the framework python3 (pandas).
 """
 from __future__ import annotations
 
@@ -37,8 +35,7 @@ def ff(panel: pd.DataFrame, v: str) -> pd.Series:
 
 
 def qsofa(rr, gcs, mp):
-    # quickSOFA: resp rate >=22, GCS <15, and MAP <70 as a proxy for SBP <=100
-    # (chartevents has no routine SBP field at this granularity -- see README).
+    # quickSOFA: resp rate >=22, GCS <15, MAP <70 as proxy for SBP <=100.
     return ((rr >= 22).astype(int) + (gcs < 15).astype(int)
             + (mp < 70).astype(int))
 

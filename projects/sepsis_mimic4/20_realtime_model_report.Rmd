@@ -59,36 +59,35 @@ ipw_row <- ce[ce$method == "IPW (ATE weights)", ]
 aipw_row <- ce[ce$method == "AIPW / doubly robust (ATE)", ]
 ```
 
-# Objective and what the earlier analysis established
+# Objective and prior results
 
 This report is the second half of one research programme: predicting sepsis
 onset *in real time* from MIMIC-IV ICU time series. The earlier stage
 (scripts 01-09) built the temporal substrate: a 3.1M-row hourly panel, an
 hourly Sepsis-3 onset label, and a leakage-safe hour-6 landmark cohort of
-`r format(a2$n_at_risk[a2$landmark_h==6], big.mark=",")` at-risk stays, and
-quantified the bar: a multivariable hourly logistic model reached a
-cross-validated AUROC of about **`r sprintf("%.3f", p1_auc)`** for incident
-onset within 12h, out-discriminating SOFA, qSOFA and SIRS. This report builds
-the real-time model itself and closes two gaps the literature review
-identified against comparable MIMIC-IV statistical studies: group-based
-trajectory modelling (GBTM) and propensity-based confounder adjustment. Per
-the project's design decision, all seven tiers below are built **entirely
-from classical statistics**, no gradient boosting, no neural sequence
-models, reaching real-time prediction through **dynamic landmarking** (van
-Houwelingen 2007).
+`r format(a2$n_at_risk[a2$landmark_h==6], big.mark=",")` at-risk stays. A
+multivariable hourly logistic model reached a cross-validated AUROC of
+**`r sprintf("%.3f", p1_auc)`** for incident onset within 12 h,
+out-discriminating SOFA, qSOFA and SIRS. This report builds the real-time
+model itself and closes two gaps identified in comparable MIMIC-IV studies:
+group-based trajectory modelling (GBTM) and propensity-based confounder
+adjustment. All seven tiers are built **entirely from classical statistics**
+(no gradient boosting, no neural sequence models), reaching real-time
+prediction through **dynamic landmarking** (van Houwelingen 2007).
 
-# Tier 1: the statistical ceiling (a full-feature nomogram at hour 6)
+# Tier 1: statistical ceiling (full-feature nomogram at hour 6)
 
-The earlier multivariable model deliberately handicapped itself to
-non-circular predictors and, because plain complete-case regression cannot
-use the 70-88%-missing labs at hour 6, effectively dropped them. Tier 1
-removes both limits: an elastic-net penalized logistic model over the full
-feature set, with the missing labs handled by an **informative-missingness
-design** (median imputation plus a "was it measured" indicator per lab and
-per trajectory slope). Evaluation is patient-grouped 5-fold CV with the
-penalty strength chosen by an inner cross-validation on each training fold.
+The earlier multivariable model used only non-circular predictors and, because
+plain complete-case regression cannot use the 70-88%-missing labs at hour 6,
+effectively dropped them. Tier 1 lifts both restrictions with an elastic-net
+penalised logistic model over the full feature set. The missing labs are handled
+by an **informative-missingness design** (median imputation plus a "was it
+measured" indicator per lab and per trajectory slope). Evaluation is
+patient-grouped 5-fold CV with the penalty strength chosen by inner
+cross-validation on each training fold.
 
 ```{r t1tab}
+m1d <- m1
 m1d$delong_p_vs_baseline_traj <- ifelse(is.na(m1d$delong_p_vs_baseline_traj),
    "-", formatC(m1d$delong_p_vs_baseline_traj, format="e", digits=1))
 kable(m1d, booktabs = TRUE, col.names = c("Model","AUROC","PR-AUC","Brier","DeLong p vs 0.755"),
@@ -115,20 +114,20 @@ kable(top, booktabs = TRUE, row.names = FALSE,
   kable_styling(latex_options = "hold_position")
 ```
 
-The result stops short of the 0.80-0.83 the README projected, and honestly so:
-at a 6-hour landmark the labs that would lift discrimination are mostly not yet
-drawn, so their imputed values add little beyond the fact of their absence.
+The result stops short of the 0.80-0.83 the README projected: at a 6-hour
+landmark the labs that would lift discrimination are mostly not yet drawn, so
+their imputed values add little beyond the fact of their absence.
 `r sprintf("%d", nrow(c1)-1)` of the 27 candidate features survive penalization.
 
-# Tier 2: the real-time deliverable (a dynamic landmark supermodel)
+# Tier 2: real-time deliverable (dynamic landmark supermodel)
 
-A single landmark answers "predict from hour 6". A deployed system must predict
-at *every* hour. The classical solution is a **landmark supermodel**: repeat the
-landmark construction on a grid of prediction hours *s* in {6,12,18,24,36,48},
-stack them, and fit one penalized model with the landmark time *s*, $s^2$ and
-feature-by-*s* interactions, so evaluating it at the current hour yields an
-hourly-updating risk. Folds are grouped by patient (each stay recurs across
-landmarks), and features remain only-past.
+A single landmark answers "predict from hour 6." A deployed system must predict
+at *every* hour. The classical solution is a **landmark supermodel**: the
+landmark construction is repeated on a grid of prediction hours *s* in
+{6,12,18,24,36,48}, stacked, and fit as one penalised model with landmark time
+*s*, $s^2$ and feature-by-*s* interactions, so evaluation at the current hour
+yields an hourly-updating risk. Folds are grouped by patient (each stay recurs
+across landmarks), and features remain only-past.
 
 ```{r t2tab}
 kable(a2, booktabs = TRUE, row.names = FALSE,
@@ -141,34 +140,33 @@ kable(a2, booktabs = TRUE, row.names = FALSE,
 include_graphics(fig("auc_by_landmark.png"))
 ```
 
-The single supermodel matches, at every prediction hour, the accuracy of
-fitting a bespoke model per landmark while being one parsimonious,
-deployable object. Discrimination is highest early (AUROC
+The single supermodel matches the accuracy of a bespoke model at every
+prediction hour while remaining one parsimonious, deployable object.
+Discrimination is highest early (AUROC
 `r sprintf("%.2f", a2$auc_supermodel[a2$landmark_h==6])` at hour 6), dips in the
 mid-stay window (hours 18-24) where incident onset is rarest and hardest, and
-recovers later. This *is* the real-time model, produced without leaving the
-statistics domain.
+recovers later. This *is* the real-time model, produced entirely within the
+classical statistics domain.
 
-# Tier 3: modelling the within-patient correlation
+# Tier 3: within-patient correlation
 
-The earlier analysis never addressed that repeated hourly rows from one
-patient are correlated. Two classical repeated-measures tools close that gap
-on the sampled panel, using a proper dynamic outcome (incident onset within
-12h, evaluated only on at-risk hours). A per-patient random-intercept GLMM is
-*degenerate* for this outcome: most patients never have an event, so their
-intercepts diverge. So we use the population-averaged route instead.
+The earlier analysis did not address the correlation among repeated hourly rows
+from one patient. Two classical repeated-measures tools close that gap on the
+sampled panel, using incident onset within 12 h (evaluated only on at-risk
+hours) as the dynamic outcome. A per-patient random-intercept GLMM is
+*degenerate* here: most patients never have an event, so their intercepts
+diverge. The population-averaged route is used instead.
 
-A **GEE** with an exchangeable working correlation estimates a within-patient
-correlation of **`r sprintf("%.2f", alpha)`**: a patient's hourly observations
-are strongly dependent, so the effective information is far below the
-`r format(76538, big.mark=",")` row count. The consequence for inference is
-concrete: putting **cluster-robust (sandwich) standard errors** on the pooled
-logistic model, versus the naive model-based ones that assume independent hours,
-inflates the SEs by up to **`r sprintf("%.1fx", se_infl_max)`**. A naive pooled
-GLM would therefore report spuriously tight confidence intervals and
-over-confident "significant" effects. A ridge-penalized **time-varying-covariate
-Cox** model on the counting-process form gives directionally sensible
-instantaneous hazards of onset:
+A **GEE** with exchangeable working correlation estimates within-patient
+correlation at **`r sprintf("%.2f", alpha)`**: hourly observations within a
+patient are strongly dependent, so the effective information is far below the
+`r format(76538, big.mark=",")` row count. **Cluster-robust (sandwich) standard
+errors** on the pooled logistic model inflate the SEs by up to
+**`r sprintf("%.1fx", se_infl_max)`** compared to naive model-based SEs that
+assume independent hours. Without this correction, a pooled GLM would report
+spuriously tight confidence intervals. A ridge-penalised
+**time-varying-covariate Cox** model on the counting-process form gives
+directionally consistent instantaneous hazards of onset:
 
 ```{r t3tab-gee}
 gtab <- gm[gm$term != "__alpha_within_patient__", ]
@@ -191,16 +189,15 @@ supermodel, not competitors to it.
 
 # Tier 4: real-time evaluation (utility and alarm burden)
 
-Discrimination is necessary but not sufficient for a streaming alarm. Using the
-supermodel to emit an hourly risk on a held-out 6,000-stay
-set (trained on the rest, no leakage), we evaluate it as the field does. (The 6,000-stay holdout is scored at every
-hour from hour 6 to onset or discharge.)
+Discrimination alone is insufficient for a streaming alarm. The supermodel emits
+an hourly risk on a held-out 6,000-stay set (trained on the remainder, no
+leakage), scored at every hour from hour 6 to onset or discharge.
 
-The **PhysioNet/CinC-2019 utility score**: which rewards early detection and
-penalizes both late and false alarms, is maximized at
-**`r sprintf("%.3f", best_u$utility_norm)`** (normalized: 0 = never alarm,
+The **PhysioNet/CinC-2019 utility score**, which rewards early detection and
+penalises both late and false alarms, is maximised at
+**`r sprintf("%.3f", best_u$utility_norm)`** (normalised: 0 = never alarm,
 1 = per-hour oracle) at a risk threshold of `r sprintf("%.2f", best_u$threshold)`.
-A positive score means the model adds value over silence on this genuinely hard,
+A positive score confirms the model adds value over silence on this
 incident-only ICU task.
 
 The clinically decisive picture is the **alarm burden**:
@@ -225,12 +222,11 @@ non-septic patients: untenable alarm fatigue. A calmer operating point
 `r sprintf("%.1f", op50$fa_per_patient_day)` per patient-day. This is the
 number a deployment decision actually turns on.
 
-# Tier 5: subgroup fairness (external validation deferred)
+# Tier 5: subgroup fairness
 
-External validation on eICU is deferred (no eICU database is present locally).
 Within MIMIC-IV, the Tier-1 risk is well calibrated and similarly discriminating
-across sex and age bands: a model can discriminate well overall yet fail a
-subgroup, which is not the case here.
+across sex and age bands. A model can discriminate well overall yet fail a
+subgroup; that is not the case here.
 
 ```{r t5tab}
 kable(sg, booktabs = TRUE, row.names = FALSE,
@@ -241,16 +237,14 @@ kable(sg, booktabs = TRUE, row.names = FALSE,
 
 # Tier 6: group-based trajectory modelling (GBTM)
 
-The literature review's comparable MIMIC-IV statistical studies (Yang et al.
-2022) use **group-based trajectory modelling** to summarise repeated SOFA
-scores into a small number of latent trajectory classes, then link class
-membership to mortality via Cox regression. The earlier temporal report used
-a within-patient HMM instead, which clusters *states within one patient*, not
-*trajectory shapes across patients*: a different technique. Tier 6 closes
-that gap: a latent-class growth model (flexmix's grouped-mixture-of-regressions
-formulation) is fit to first-24h SOFA trajectories on the sampled panel
-(2,438 stays with sufficient repeated observations), selecting the number of
-classes `r K6` by BIC.
+Comparable MIMIC-IV studies (Yang et al. 2022) use **group-based trajectory
+modelling** to summarise repeated SOFA scores into latent trajectory classes
+and link membership to mortality via Cox regression. The earlier temporal
+report used a within-patient HMM, which clusters *states within one patient*
+rather than *trajectory shapes across patients*. Tier 6 fits a latent-class
+growth model (flexmix grouped-mixture-of-regressions) to first-24h SOFA
+trajectories on the sampled panel (2,438 stays with sufficient repeated
+observations), selecting `r K6` classes by BIC.
 
 ```{r gbtm-fig, fig.cap="GBTM: latent SOFA-trajectory classes over the first 24 ICU hours.", out.width="62%"}
 include_graphics(fig("gbtm_trajectories.png"))
@@ -280,23 +274,20 @@ project's broader finding that dynamics carry signal a snapshot misses.
 
 # Tier 7: confounder-adjusted causal analysis
 
-Every prior tier reports an *association* (a risk score, a hazard ratio). The
-literature review's causal-adjustment studies (Guo et al. 2025; Zou et al.
-2022) go further, using **propensity score matching (PSM)**, **inverse
+Every prior tier reports an *association* (a risk score, a hazard ratio).
+Following the causal-adjustment designs of Guo et al. (2025) and Zou et al.
+(2022), Tier 7 applies **propensity score matching (PSM)**, **inverse
 probability weighting (IPW)**, and **doubly robust estimation** to estimate a
-confounder-adjusted treatment effect: a method family absent from this
-pipeline until now. Tier 7 asks: does administering antibiotics within 3h of
-ICU admission (the Surviving Sepsis Campaign's "hour-3 bundle" threshold)
-causally lower in-hospital mortality among Sepsis-3 patients, once baseline
-severity and case-mix confounding is adjusted for? Confounding by indication
-is the concern here: sicker patients may be treated faster, or slower if
-sepsis isn't yet recognised, so a naive comparison is biased in an unknown
-direction.
+confounder-adjusted treatment effect. The question: does administering
+antibiotics within 3 h of ICU admission (the Surviving Sepsis Campaign's
+"hour-3 bundle" threshold) lower in-hospital mortality among Sepsis-3 patients,
+after adjusting for baseline severity and case-mix? Sicker patients may be
+treated faster, or slower if sepsis is not yet recognised, so a naive comparison
+is biased in an unknown direction.
 
-Following Guo et al.'s design, the adjustment set is chosen by **LASSO**
-(not by hand) from age, sex, admission type, ICU type, race, and the six
-SOFA organ components; all 11 candidates survived penalization. Four
-estimators of increasing robustness are compared:
+The adjustment set is chosen by **LASSO** from age, sex, admission type, ICU
+type, race, and the six SOFA organ components; all 11 candidates survived
+penalisation. Four estimators of increasing robustness are compared:
 
 ```{r t7tab}
 kable(ce, booktabs = TRUE, row.names = FALSE,
@@ -329,19 +320,18 @@ confounders (e.g. severity-of-illness trends not captured by day-1 SOFA).
 
 # Conclusion
 
-This report reaches the project's real-time goal without leaving classical
-statistics. A **full-feature nomogram** sets the honest ceiling
-(AUROC `r sprintf("%.3f", en_auc)`) and shows informative measurement patterns
-dominate the signal; a **dynamic landmark supermodel** delivers a single,
-interpretable, hourly-updating risk that matches per-landmark models across the
-stay; **GEE and time-varying Cox** handle the within-patient correlation the
-earlier analysis ignored (within-patient correlation `r sprintf("%.2f", alpha)`,
-cluster-robust SEs up to `r sprintf("%.1fx", se_infl_max)` the naive ones); a
-**utility- and alarm-based evaluation** exposes the real cost of a sensitive
-alarm; **GBTM** shows the shape of a patient's SOFA trajectory, not just its
-level, predicts both mortality and incident sepsis; and a **PSM/IPW/doubly
-robust** causal analysis finds a consistent, confounder-adjusted mortality
-benefit for early antibiotics across four estimators. The remaining honest
-gap is external validation, which awaits a second database (eICU). Nothing
-here required a neural network; the discrimination ceiling is set by the
-label's dependence on clinician recognition, not by model class.
+This report reaches the project's real-time goal entirely within classical
+statistics. A **full-feature nomogram** sets the discrimination ceiling
+(AUROC `r sprintf("%.3f", en_auc)`), with informative measurement patterns
+dominating the signal. A **dynamic landmark supermodel** delivers one
+interpretable, hourly-updating risk that matches per-landmark models across
+the stay. **GEE and time-varying Cox** correct the within-patient correlation
+the earlier analysis ignored (within-patient correlation
+`r sprintf("%.2f", alpha)`, cluster-robust SEs up to
+`r sprintf("%.1fx", se_infl_max)` the naive ones). A **utility- and
+alarm-based evaluation** exposes the real cost of a sensitive alarm. **GBTM**
+shows that the shape of a patient's SOFA trajectory, not just its level,
+predicts both mortality and incident sepsis. A **PSM/IPW/doubly robust**
+causal analysis finds a consistent, confounder-adjusted mortality benefit for
+early antibiotics across four estimators. The discrimination ceiling is set by
+the label's dependence on clinician recognition, not by model class.

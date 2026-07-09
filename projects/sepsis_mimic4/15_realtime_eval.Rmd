@@ -36,19 +36,12 @@ the alarm trade-off.
 
 ## Load Libraries and Set Seed
 
-We load `glmnet` for the elastic-net supermodel and `pROC` for discrimination
-metrics, then fix the random seed.
-
 ```{r load-libraries, message=FALSE, warning=FALSE}
 suppressPackageStartupMessages({ library(glmnet); library(pROC) })
 set.seed(486649)
 ```
 
 ## Locate and Read Data
-
-A helper function searches several candidate paths for each input file. We load
-the landmark stack (training data), the holdout stay IDs, and the pre-computed
-hourly features for the holdout stays.
 
 ```{r load-data}
 find_data <- function(f) {
@@ -71,13 +64,9 @@ scores <- c("sofa_total","qsofa","sirs")
 
 ## Design Matrix Builder
 
-The `make_ref` function extracts training-set medians and scaling parameters so
-that no holdout information leaks into imputation or standardization. The
-`make_design` function then builds the full feature matrix, including
-missingness indicators, landmark-time interactions, and scaled terms.
+Training-set medians and scaling parameters are extracted once and applied to both training and holdout data, ensuring no holdout information leaks into imputation or standardization.
 
 ```{r design-builder}
-# ---- design builder: `ref` carries TRAIN medians + s mean/sd (no leakage) ----
 make_ref <- function(raw) {
   med <- sapply(c(vitals, scores, labs), function(v) median(raw[[v]], na.rm=TRUE))
   list(med = med, s_mu = mean(raw$landmark_time), s_sd = sd(raw$landmark_time))
@@ -100,12 +89,9 @@ make_design <- function(raw, ref) {
 
 ## Train the Supermodel
 
-We exclude the holdout stays from the landmark stack and fit a cross-validated
-elastic-net (alpha = 0.5) logistic regression. This is the same supermodel
-architecture used elsewhere in the pipeline.
+The holdout stays are excluded from the landmark stack, and a cross-validated elastic-net (alpha = 0.5) logistic regression is fit on the remaining data.
 
 ```{r train-supermodel}
-# ---- train supermodel on stack minus holdout stays --------------------------
 tr <- stack[!(stack$stay_id %in% hold_ids), ]
 cat(sprintf("train rows %d (%d stays); holdout %d stays, %d scored hours\n",
             nrow(tr), length(unique(tr$stay_id)), length(hold_ids), nrow(hnew)))
@@ -116,25 +102,18 @@ cvfit <- cv.glmnet(Xtr, ytr, family="binomial", alpha=0.5, nfolds=5, standardize
 
 ## Score Every Holdout Hour
 
-We apply the trained supermodel to every hour of the holdout stays, producing a
-continuous risk stream that subsequent sections evaluate.
+The trained supermodel scores every hour of the holdout stays, producing the continuous risk stream evaluated below.
 
 ```{r score-holdout}
-# ---- score every holdout hour -> hourly risk stream -------------------------
 Xho <- make_design(hnew, ref)
 hnew$risk <- as.numeric(predict(cvfit, Xho, s="lambda.min", type="response"))
 ```
 
 ## PhysioNet/CinC-2019 Utility Score
 
-We compute the normalized utility score across a grid of alarm thresholds. The
-reward window places optimal value at 6 hours before onset, with linearly
-decaying rewards earlier and later. The normalized score is 0 for a
-"never-alarm" policy and 1 for a per-hour oracle.
+The normalized utility score is computed across a grid of alarm thresholds. The reward window peaks at 6 hours before onset and decays linearly in both directions. A score of 0 corresponds to a never-alarm policy; 1 corresponds to a per-hour oracle.
 
 ```{r utility-score}
-# ---- (1) PhysioNet/CinC-2019 utility score ----------------------------------
-# reward window relative to onset t*: early -12h, optimal -6h, late +3h.
 DT_EARLY <- -12; DT_OPT <- -6; DT_LATE <- 3
 U_FP <- -0.05; MIN_FN <- -2; MAX_TP <- 1
 # per-hour utility given predicted 0/1 and relative time tau = hour - onset
@@ -157,8 +136,8 @@ utility_at <- function(thresh) {
   u_model <- sum(ifelse(pred, u_pred1(tau, septic), u_pred0(tau, septic)))
   u_model
 }
-u_no    <- sum(u_pred0(tau, septic))                         # never alarm
-u_best  <- sum(pmax(u_pred1(tau, septic), u_pred0(tau, septic)))  # oracle per-hour
+u_no    <- sum(u_pred0(tau, septic))
+u_best  <- sum(pmax(u_pred1(tau, septic), u_pred0(tau, septic)))
 grid <- seq(0.02, 0.6, by = 0.01)
 u_raw <- sapply(grid, utility_at)
 norm  <- (u_raw - u_no) / (u_best - u_no)
@@ -174,27 +153,17 @@ cat(sprintf("  (never-alarm baseline utility_norm = 0; per-hour oracle = 1)\n"))
 
 ## Alarm-Burden Sweep
 
-For each threshold we compute patient-level sensitivity (fraction of septic
-patients who receive a timely alarm) and the false-alarm rate per patient-day.
-This lets clinicians choose an operating point that balances early detection
-against alarm fatigue.
+For each threshold, patient-level sensitivity (fraction of septic patients who receive a timely alarm) and the false-alarm rate per patient-day are computed. Clinicians can then choose an operating point that balances early detection against alarm fatigue.
 
 ```{r alarm-sweep}
-# ---- (2) alarm-burden sweep: patient-level sensitivity vs false alarms -------
-# an alarm "counts" for a septic patient if it fires at/after t_early and at or
-# before onset+late (a timely catch); false alarms = alarm-hours on non-septic
-# patients (or septic hours outside the reward window).
 sweep <- lapply(grid, function(th) {
   pred <- hnew$risk >= th
-  # patient-level: did we catch each septic patient in a timely way?
   timely <- pred & septic & (tau >= DT_EARLY) & (tau <= DT_LATE)
   caught <- tapply(timely, hnew$stay_id, any)
   is_sep_pt <- tapply(septic, hnew$stay_id, any)
   sens <- mean(caught[is_sep_pt], na.rm=TRUE)
-  # false-alarm hours: alarm on a non-septic patient, or septic before window
   fa <- pred & ((!septic) | (septic & tau < DT_EARLY))
   fa_per_day <- sum(fa) / sum(!septic | (septic & tau < DT_EARLY)) * 24
-  # non-septic patients with >=1 false alarm (alarm-fatigue proxy)
   nonsep_pt <- tapply(!septic, hnew$stay_id, all)
   any_fa <- tapply(pred & !septic, hnew$stay_id, any)
   fpr_pt <- mean(any_fa[nonsep_pt], na.rm=TRUE)
@@ -204,7 +173,6 @@ sweep <- lapply(grid, function(th) {
 sweep <- do.call(rbind, sweep)
 sweep[,-1] <- round(sweep[,-1], 4)
 write.csv(sweep, file.path(OUT, "tier4_alarm_sweep.csv"), row.names=FALSE)
-# report a couple of operating points
 for (target in c(0.90, 0.70, 0.50)) {
   i <- which.min(abs(sweep$sensitivity - target))
   cat(sprintf("  sens=%.2f @ thr %.2f -> %.2f false alarms/patient-day, %.0f%% of non-septic patients ever alarmed\n",
@@ -215,11 +183,7 @@ for (target in c(0.90, 0.70, 0.50)) {
 
 ## Alarm Trade-Off Figure
 
-This plot visualizes the sensitivity-versus-false-alarm trade-off, highlighting
-operating points near 90% and 70% sensitivity.
-
 ```{r alarm-tradeoff-figure}
-# ---- figure: alarm trade-off ------------------------------------------------
 png(file.path(FIG, "alarm_tradeoff.png"), width=1100, height=850, res=200)
 plot(sweep$fa_per_patient_day, sweep$sensitivity, type="l", col="firebrick", lwd=2,
      xlab="False alarms per patient-day", ylab="Timely detection sensitivity",

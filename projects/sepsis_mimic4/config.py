@@ -226,7 +226,7 @@ LAB_ITEMIDS = {
     "crp":               [50889],
 }
 
-# inputevents vasopressors (icu/d_items) — units matter for SOFA cardio scoring
+# inputevents vasopressors (icu/d_items); units matter for SOFA cardio scoring
 VASOPRESSOR_ITEMIDS = {
     "norepinephrine":    [221906],
     "epinephrine":       [221289],
@@ -236,7 +236,7 @@ VASOPRESSOR_ITEMIDS = {
     "phenylephrine":     [221749],
 }
 
-# outputevents urine (icu/d_items) — confirm full list via explorer
+# outputevents urine (icu/d_items); confirm full list via explorer
 URINE_OUTPUT_ITEMIDS = [
     226559,  # Foley
     226560,  # Void

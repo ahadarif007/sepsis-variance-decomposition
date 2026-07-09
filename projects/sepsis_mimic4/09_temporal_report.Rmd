@@ -68,7 +68,6 @@ n_lm     <- nrow(lm6)
 n_lm_ev  <- sum(lm6$event)
 n_lm_h   <- sum(lm6$onset_within_h)
 
-# light imputation for modelling frames
 lm6$gcs[is.na(lm6$gcs)] <- 15
 for (c in c("hr_slope6","resp_rate_slope6","map_slope6","spo2_slope6"))
   lm6[[c]][is.na(lm6[[c]])] <- 0
@@ -80,12 +79,12 @@ for (c in c("hr","resp_rate","map","spo2","temp_c","sofa_total","qsofa","sirs"))
 
 A companion cross-sectional report analysed each ICU stay as a **single
 row** of first-24h summaries and asked *"was this stay septic?"* That
-framing cannot serve the project's actual objective: a **real-time
+framing cannot address the project's actual objective: a **real-time
 early-warning system** that, at each hour and using only the data
 observed so far, estimates the risk that a patient will develop sepsis.
-This report rebuilds the problem on its proper, **longitudinal** footing.
+This report rebuilds the problem on a **longitudinal** footing.
 
-From the raw tables a pipeline (scripts `01`–`08`) resamples every stay
+From the raw tables a pipeline (scripts `01` to `08`) resamples every stay
 onto an **hourly grid**: a panel of
 **`r format(3095002, big.mark=',')`** stay-hours across
 **`r format(n_stay, big.mark=',')`** stays (mean 47 h/stay). SOFA is
@@ -107,8 +106,8 @@ Two facts shape everything that follows:
     deployed model would be used.
 
 The methods are the longitudinal counterparts of the cross-sectional
-report: **Kaplan–Meier** and **Cox** (including a **time-varying** Cox)
-for time-to-onset, **Fine–Gray competing risks** (death competes with
+report: **Kaplan-Meier** and **Cox** (including a **time-varying** Cox)
+for time-to-onset, **Fine-Gray competing risks** (death competes with
 onset), **autocorrelation and trajectory** analysis, a **within-patient
 hidden Markov model** (the HMM applied to real sequences, not stay
 order), and **time-dependent discrimination** benchmarked against the
@@ -135,12 +134,13 @@ incident sepsis. Conditioning at the hour-`r LM_H` landmark leaves
 within the next `r HORIZON` hours. This is a realistically **imbalanced**
 early-prediction problem, unlike the near-balanced stay-level label.
 
-# Time-to-Onset: Kaplan–Meier {#km}
+# Time-to-Onset: Kaplan-Meier {#km}
 
 Time-to-event methods treat onset as an event that may or may not have
-happened by the end of observation (censoring), which a simple
-classifier ignores. The survivor function $S(t)$ is the probability of
-remaining sepsis-free to hour $t$; $1-S(t)$ is the cumulative incidence.
+occurred by the end of observation (censoring), which a simple
+classifier ignores. The survivor function $S(t)$ gives the probability
+of remaining sepsis-free to hour $t$; $1-S(t)$ is the cumulative
+incidence.
 
 ```{r km, fig.cap = "Cumulative incidence of sepsis from the hour-6 landmark, stratified by SIRS at the landmark. Patients meeting >=2 SIRS criteria reach sepsis substantially faster.", fig.width=6, fig.height=3.2}
 lm6$sirs2 <- factor(ifelse(lm6$sirs >= 2, "SIRS >= 2", "SIRS < 2"))
@@ -199,21 +199,19 @@ carry the hazard, while a higher **single-timepoint SOFA** is associated
 with a *lower* hazard of *incident* sepsis (HR
 `r sprintf('%.2f', exp(coef(cx))['sofa_total'])`): patients with organ
 dysfunction but no evolving infection at hour 6 tend not to cross the
-Sepsis-3 threshold later. Crucially, the global test of the
-**proportional-hazards assumption fails** ($p$
-`r format.pval(zph_p, digits = 2, eps = 1e-16)`): the covariate effects
-**change over time**, which a baseline Cox cannot express and which
-motivates a time-varying model.
+Sepsis-3 threshold later. The global test of the **proportional-hazards
+assumption fails** ($p$
+`r format.pval(zph_p, digits = 2, eps = 1e-16)`), indicating that the
+covariate effects **change over time**, a violation that a baseline Cox
+cannot express and that motivates a time-varying model.
 
 ## Time-varying Cox {#tvcox}
 
-Using the hourly panel as a counting process, covariates are allowed to
-**update every hour** (start–stop intervals), so the model uses each
+The hourly panel is cast as a counting process with start-stop intervals,
+allowing covariates to **update every hour** so the model uses each
 patient's *current* physiology rather than a fixed baseline.
 
 ```{r tvcox}
-# Build (tstart, tstop] intervals from the sampled long panel, from the
-# landmark onward, censoring/eventing at the onset hour.
 tv <- samp %>%
   filter(hour >= LM_H) %>%
   group_by(stay_id) %>%
@@ -244,20 +242,20 @@ Table \@ref(tab:tvcox) updates every covariate hour by hour. The
 **single SOFA value stays inversely associated** (HR
 `r sprintf('%.2f', exp(coef(cx_tv))['sofa_total'])`): organ dysfunction
 without an evolving infection does not progress to Sepsis-3, whether read
-at admission or hour-by-hour. The lesson is twofold: allowing covariates
-to vary in time is what rescues the violated proportional-hazards
-assumption, and the predictive signal lives in **physiological dynamics
-(notably heart rate)** rather than in a severity snapshot, the same
-conclusion the discrimination analysis reaches. (With
-`r format(n_tv_ev, big.mark=',')` onset events in the sampled counting
-process, these hourly hazards are directional rather than precise.)
+at admission or hour-by-hour. Allowing covariates to vary in time rescues
+the violated proportional-hazards assumption, and the predictive signal
+lives in **physiological dynamics (notably heart rate)** rather than in a
+severity snapshot, the same conclusion the discrimination analysis
+reaches. (With `r format(n_tv_ev, big.mark=',')` onset events in the
+sampled counting process, these hourly hazards are directional rather
+than precise.)
 
 # Competing Risks {#cr}
 
 Death and discharge **compete** with sepsis onset: a patient who dies
-sepsis-free can never be observed to develop sepsis, so treating those as
-ordinary censoring overstates incidence. A **Fine–Gray** model targets
-the cumulative incidence of onset in the presence of the competing event.
+sepsis-free can never develop sepsis, so treating those as ordinary
+censoring overstates incidence. The **Fine-Gray** model targets the
+cumulative incidence of onset in the presence of the competing event.
 
 ```{r cuminc, fig.cap = "Cumulative incidence functions from the landmark, accounting for death without sepsis as a competing risk, by SIRS status.", fig.width=6, fig.height=3.2}
 set.seed(486649)
@@ -285,7 +283,7 @@ fg <- crr(ftime = lm6$t_event[idx], fstatus = lm6$status_cr[idx],
 
 Figure \@ref(fig:cuminc) shows onset incidence (solid) rising faster in
 the SIRS $\geq 2$ group, while the competing risk of death without sepsis
-(dashed) is modest over the horizon. The Fine–Gray subdistribution hazard
+(dashed) is modest over the horizon. The Fine-Gray subdistribution hazard
 ratio for SIRS is **`r sprintf('%.2f', exp(fg$coef['sirs']))`**,
 confirming SIRS raises the *cumulative* likelihood of onset even after
 allowing for the competing event.
@@ -326,8 +324,8 @@ analysis discarded and that sequence models are built to exploit.
 
 # Within-Patient Hidden Markov Model {#hmm}
 
-Here the HMM is applied as intended: to each patient's **hourly heart-rate
-sequence**, with a latent state that persists and transitions over time. A
+The HMM is now applied to each patient's **hourly heart-rate sequence**,
+where a latent state genuinely persists and transitions over time. A
 three-state Gaussian HMM is fitted jointly across a sample of stays
 (`ntimes` = each stay's length).
 
@@ -342,7 +340,6 @@ mod <- depmix(hr ~ 1, data = as.data.frame(hs), nstates = 3,
               family = gaussian(), ntimes = ntimes)
 fm <- fit(mod, verbose = FALSE, emcontrol = em.control(random.start = TRUE))
 pars <- getpars(fm)
-# emission means are the last 6 params (mean,sd)x3
 em <- matrix(tail(pars, 6), ncol = 2, byrow = TRUE)
 ord <- order(em[, 1]); em <- em[ord, ]
 tmat <- matrix(pars[4:12], 3, byrow = TRUE)[ord, ord]
@@ -373,19 +370,17 @@ physiologic regimes over time.
 
 # Time-Dependent Discrimination and Clinical Baselines {#discrimination}
 
-Finally we establish the **bar** a real-time model must clear: how well
-do the standard streaming scores predict incident sepsis, and does using
-the *trajectory* help?
+This section establishes the **performance bar** a real-time model must
+clear: how well do the standard streaming scores predict incident
+sepsis, and does using the *trajectory* help?
 
 ```{r baselines}
-# Single-score discrimination for onset within HORIZON hours.
 auc1 <- function(m) as.numeric(auc(roc(lm6$onset_within_h, lm6[[m]],
                                         quiet = TRUE, direction = "<")))
 base_tab <- tibble(
   Score = c("SOFA (hour 6)", "qSOFA (hour 6)", "SIRS (hour 6)"),
   `AUC (within 12h)` = sprintf("%.3f", c(auc1("sofa_total"), auc1("qsofa"), auc1("sirs"))))
 
-# Multivariable models, 5-fold cross-validated.
 set.seed(486649)
 f <- sample(rep(1:5, length.out = nrow(lm6)))
 cvauc <- function(form) {
@@ -429,38 +424,39 @@ tibble(t = c(6, 12, 24, 36, 48), AUC = as.numeric(tr$AUC)) %>%
   labs(x = "Prediction horizon (hours after landmark)", y = "Time-dependent AUC")
 ```
 
-Table \@ref(tab:baseline-table) is the report's punchline. **No single
+Table \@ref(tab:baseline-table) is the central finding. **No single
 clinical score is useful** for incident sepsis: SOFA is even *inverse*
 (AUC `r base_tab[[2]][1]`), because organ dysfunction without evolving
 infection does not progress to Sepsis-3; SIRS is the best single score
-(AUC `r base_tab[[2]][3]`). But a **multivariable** combination of the
-same hourly measurements reaches AUC **`r sprintf('%.3f', st$auc)`**, and
+(AUC `r base_tab[[2]][3]`). A **multivariable** combination of the same
+hourly measurements reaches AUC **`r sprintf('%.3f', st$auc)`**, and
 adding **six-hour trajectory slopes** raises it further to
 **`r sprintf('%.3f', tv$auc)`** (DeLong *p*
 `r format.pval(delong_p, digits = 2, eps = 1e-16)`). Figure
 \@ref(fig:auct) shows this discrimination holds across horizons. The
-temporal features add real, statistically significant signal: direct
-evidence that the trajectory carries information a snapshot does not.
+temporal features add real, statistically significant signal, providing
+direct evidence that the trajectory carries information a snapshot does
+not.
 
 # Conclusion and Path to a Real-Time Model {#conclusion}
 
 Reframing the problem longitudinally changed both the methods and the
 findings.
 
--   **Prevalent vs incident.** A third of Sepsis-3 is present at admission
-    and not predictable; the real task is the incident sepsis isolated by
-    the hour-`r LM_H` **landmark**
+-   **Prevalent vs. incident.** A third of Sepsis-3 is present at
+    admission and not predictable; the real task is incident sepsis,
+    isolated by the hour-`r LM_H` **landmark**
     (`r sprintf('%.1f%%', 100*n_lm_ev/n_lm)` of at-risk stays).
 
 -   **The signal is in the dynamics, not the snapshot.** A baseline Cox
     violated proportional hazards; a **time-varying Cox** located the
     hazard in *current heart rate* rather than a SOFA severity score
-    (which stays inversely related to incident onset). **Autocorrelation**
-    (`r sprintf('%.2f', mean_acf)`) and a persistent-state **HMM**
-    confirmed genuine within-patient temporal structure that the
-    cross-sectional analysis had to discard.
+    (which remains inversely related to incident onset).
+    **Autocorrelation** (`r sprintf('%.2f', mean_acf)`) and a
+    persistent-state **HMM** confirmed genuine within-patient temporal
+    structure that the cross-sectional analysis had to discard.
 
--   **A bar for the model.** Single streaming scores are weak or inverse;
+-   **A performance bar.** Single streaming scores are weak or inverse;
     a multivariable hourly model reaches AUC
     **`r sprintf('%.3f', st$auc)`** and trajectory features push it to
     **`r sprintf('%.3f', tv$auc)`**. Any real-time model should be judged
@@ -470,9 +466,9 @@ findings.
 **Toward the real-time model.** The labelled hourly panel, onset times,
 landmark design, competing-risk framing, and streaming baselines
 assembled here are the direct inputs to the real-time statistical model
-built next (scripts 10-19): a dynamic **landmark supermodel**: fit
-entirely with penalized logistic regression, GEE, and time-varying Cox,
-no gradient boosting or neural sequence models, that emits an hourly
+built next (scripts 10-19): a dynamic **landmark supermodel** fit
+entirely with penalised logistic regression, GEE, and time-varying Cox
+(no gradient boosting or neural sequence models), emitting an hourly
 sepsis risk by stacking predictions across a grid of landmark times. The
 statistics in this report specify the target, the evaluation, and the
 minimum performance that model must exceed.

@@ -2,10 +2,10 @@
 05_sofa_sepsis3.py
 ==================
 Turns the first-24h measurements (script 04) into SOFA component scores, a total
-SOFA, and the Sepsis-3 label — then writes the analysis matrix the R report uses.
+SOFA, and the Sepsis-3 label, then writes the analysis matrix the R report uses.
 
 SOFA (Vincent et al. 1996; thresholds as in Singer et al., Sepsis-3, 2016).
-Each organ system scores 0–4; total is their sum (0–24).
+Each organ system scores 0-4; total is their sum (0-24).
 
   Respiration  PaO2/FiO2 (mmHg)   >=400:0  <400:1  <300:2  <200:3  <100:4
   Coagulation  platelets (K/uL)   >=150:0  <150:1  <100:2  <50:3   <20:4
@@ -16,7 +16,7 @@ Each organ system scores 0–4; total is their sum (0–24).
 
 Operational notes (intentional, documented simplifications)
   * Respiration ignores the strict "with respiratory support" requirement on
-    scores 3–4 (we don't reconstruct ventilation status here).
+    scores 3-4 (ventilation status is not reconstructed here).
   * Cardiovascular maps phenylephrine / vasopressin presence to a score of 3
     (they aren't in the original dopamine/epi/norepi dose table).
   * A component with no data scores 0 (assumed normal), per the Sepsis-3
@@ -30,7 +30,7 @@ Sepsis-3 label
 Output
 ------
 processed_data/analysis_matrix.csv   (one row per stay: demographics + first-24h
-features + SOFA components + labels) — this is the file the .Rmd report reads.
+features + SOFA components + labels). This is the file the .Rmd report reads.
 """
 from __future__ import annotations
 
@@ -121,7 +121,7 @@ def main() -> None:
     susp = U.load("suspected_infection", C.OUTPUT_DIR)
     susp_ids = set(susp["stay_id"].astype("int64"))
 
-    # bool columns come back from CSV as strings/objects — normalise.
+    # Bool columns come back from CSV as strings/objects, so normalise them.
     for c in ["norepi_epi_any", "dopamine_any", "dobutamine_any",
               "other_vaso_any", "vaso_any"]:
         if c in df.columns:
