@@ -1,0 +1,4 @@
+# Ignore data folders
+data/
+processed_data/
+
