@@ -83,7 +83,7 @@ interpretable and benchmarked against established clinical scores.
        20  final combined report (PDF)
                     |
                     v
-       21  eICU external panel  ->  landmark_h6_eicu.csv
+       21  eICU external panel  ->  landmark_h6_eicu.parquet
        22  external validation (frozen transport + recalibration + eICU ceiling)
 ```
 
@@ -108,7 +108,7 @@ Python 3.x with pandas, R 4.x, and a LaTeX engine (TinyTeX or MacTeX) are requir
 R packages: `rmarkdown, bookdown, tidyverse, knitr, kableExtra, MASS,
 mclust, coda, depmixS4, effectsize, broom, patchwork, pROC, PRROC, mgcv, car,
 mice, survival, cmprsk, timeROC, glmnet, rms, geepack, sandwich, flexmix,
-MatchIt, WeightIt, cobalt`.
+MatchIt, WeightIt, cobalt, arrow`.
 
 ---
 
@@ -264,7 +264,7 @@ Rscript -e 'rmarkdown::render("20_realtime_model_report.Rmd")'
 **21. eICU external panel** (Python)
 Rebuilds the hour-6 landmark table on eICU-CRD v2.0 using the identical cohort,
 hourly-panel, SOFA, onset, and feature definitions as the MIMIC pipeline
-(`02/03/07/08`). Emits `landmark_h6_eicu.csv`. Heavy: streams `vitalPeriodic`
+(`02/03/07/08`). Emits `landmark_h6_eicu.parquet`. Heavy: streams `vitalPeriodic`
 (1.7 GB), `nurseCharting` (1.6 GB), and `lab` (0.5 GB) in chunks.
 
 ```bash

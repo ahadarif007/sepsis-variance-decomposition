@@ -43,10 +43,10 @@ find_data <- function(f) {
              file.path("processed_data", f), f)
   hit <- cands[file.exists(cands)][1]; if (is.na(hit)) stop("cannot find ", f); hit
 }
-OUT <- dirname(find_data("tier1_oos_pred.csv"))
+OUT <- dirname(find_data("10_tier1_oos_pred.parquet"))
 
-pred <- read.csv(find_data("tier1_oos_pred.csv"))
-lm6  <- read.csv(find_data("landmark_h6.csv"))[, c("stay_id","age","gender")]
+pred <- as.data.frame(arrow::read_parquet(find_data("10_tier1_oos_pred.parquet")))
+lm6  <- as.data.frame(arrow::read_parquet(find_data("08_landmark_h6.parquet")))[, c("stay_id","age","gender")]
 d <- merge(pred, lm6, by="stay_id")
 d$age_band <- cut(d$age, c(-Inf,50,65,80,Inf),
                   labels=c("<50","50-64","65-79","80+"))
@@ -79,6 +79,6 @@ for (b in levels(d$age_band))
   rows[[length(rows)+1]] <- grp_metrics(d[d$age_band==b,], paste0("age=",b))
 tab <- do.call(rbind, rows)
 print(tab, row.names=FALSE)
-write.csv(tab, file.path(OUT, "tier5_subgroups.csv"), row.names=FALSE)
+write.csv(tab, file.path(OUT, "16_tier5_subgroups.csv"), row.names=FALSE)
 cat("\nTier 5 (fairness) complete. External eICU validation deferred (no data).\n")
 ```

@@ -49,12 +49,18 @@ OUTPUT_DIR = PROJECT_ROOT / "processed_data"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
+def _resolve(directory: Path, name: str) -> Path:
+    """Return directory/name.gz if it exists, else directory/name."""
+    gz = directory / (name + ".gz")
+    return gz if gz.exists() else directory / name
+
+
 def hosp(name: str) -> Path:
-    return HOSP_DIR / name
+    return _resolve(HOSP_DIR, name)
 
 
 def icu(name: str) -> Path:
-    return ICU_DIR / name
+    return _resolve(ICU_DIR, name)
 
 
 # Every table in the dataset, keyed by a short name used throughout the pipeline.

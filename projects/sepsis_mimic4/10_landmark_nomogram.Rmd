@@ -48,14 +48,14 @@ find_data <- function(f) {
   if (is.na(hit)) stop("cannot find ", f)
   hit
 }
-OUT <- dirname(find_data("landmark_h6.csv"))
+OUT <- dirname(find_data("08_landmark_h6.parquet"))
 FIG <- if (dir.exists("figure")) "figure" else { dir.create("figure"); "figure" }
 ```
 
 ## Load Landmark Data
 
 ```{r load-data}
-lm6 <- read.csv(find_data("landmark_h6.csv"))
+lm6 <- as.data.frame(arrow::read_parquet(find_data("08_landmark_h6.parquet")))
 cat(sprintf("Loaded landmark_h6: %d stays, onset-within-12h rate %.3f\n",
             nrow(lm6), mean(lm6$onset_within_h)))
 ```
@@ -148,7 +148,7 @@ metrics <- data.frame(
 metrics$delong_p_vs_baseline_traj <- c(NA, NA, dl_vs_traj)
 metrics[ ,-1] <- round(metrics[ ,-1], 4)
 print(metrics, row.names = FALSE)
-write.csv(metrics, file.path(OUT, "tier1_metrics.csv"), row.names = FALSE)
+write.csv(metrics, file.path(OUT, "10_tier1_metrics.csv"), row.names = FALSE)
 ```
 
 ## Final Model Coefficients
@@ -163,7 +163,7 @@ coefs <- data.frame(term = rownames(co), coef = as.numeric(co))
 coefs$odds_ratio <- exp(coefs$coef)
 coefs <- coefs[coefs$coef != 0, ]
 coefs[ ,c("coef","odds_ratio")] <- round(coefs[ ,c("coef","odds_ratio")], 4)
-write.csv(coefs, file.path(OUT, "tier1_coefs.csv"), row.names = FALSE)
+write.csv(coefs, file.path(OUT, "10_tier1_coefs.csv"), row.names = FALSE)
 cat(sprintf("\nSelected features (non-zero at lambda.min): %d / %d\n",
             nrow(coefs) - 1, ncol(X)))
 ```
@@ -173,15 +173,15 @@ cat(sprintf("\nSelected features (non-zero at lambda.min): %d / %d\n",
 Per-stay out-of-sample risk estimates feed into the Tier 4 alarm/utility analysis downstream.
 
 ```{r export-oos-predictions}
-write.csv(data.frame(stay_id = lm6$stay_id, onset_within_h = y,
+arrow::write_parquet(data.frame(stay_id = lm6$stay_id, onset_within_h = y,
                      risk_en = oos_en, risk_baseline_traj = p_traj),
-          file.path(OUT, "tier1_oos_pred.csv"), row.names = FALSE)
+          file.path(OUT, "10_tier1_oos_pred.parquet"))
 ```
 
 ## Calibration Curve
 
 ```{r calibration-curve, fig.width=6, fig.height=6}
-png(file.path(FIG, "calibration_h6.png"), width = 1000, height = 1000, res = 200)
+png(file.path(FIG, "10_calibration_h6.png"), width = 1000, height = 1000, res = 200)
 bins <- cut(oos_en, quantile(oos_en, seq(0, 1, 0.1)), include.lowest = TRUE)
 cal <- aggregate(cbind(pred = oos_en, obs = y), list(bin = bins), mean)
 plot(cal$pred, cal$obs, pch = 19, xlab = "Predicted risk",
@@ -202,7 +202,7 @@ dd <- datadist(nomo_df); options(datadist = "dd")
 frm <- as.formula(paste("y ~", paste(names(nomo_df)[names(nomo_df) != "y"],
                                      collapse = " + ")))
 fit_lrm <- lrm(frm, data = nomo_df, maxit = 1000)
-png(file.path(FIG, "nomogram_h6.png"), width = 1800, height = 1400, res = 180)
+png(file.path(FIG, "10_nomogram_h6.png"), width = 1800, height = 1400, res = 180)
 plot(nomogram(fit_lrm, fun = plogis, funlabel = "Risk of sepsis within 12h"),
      cex.axis = 0.6, cex.var = 0.7)
 dev.off()

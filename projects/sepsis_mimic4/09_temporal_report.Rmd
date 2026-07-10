@@ -52,10 +52,13 @@ find_data <- function(f) {
                          " - run 07_hourly_panel.py then 08_onset_label.py.")
   hit[1]
 }
-onset  <- read.csv(find_data("onset_summary.csv"))
-lm6    <- read.csv(find_data("landmark_h6.csv"))
-traj   <- read.csv(find_data("traj_means.csv"))
-samp   <- read.csv(find_data("panel_sample_long.csv"))
+OUT <- dirname(find_data("08_onset_summary.parquet"))
+FIG <- if (dir.exists("figure")) "figure" else { dir.create("figure"); "figure" }
+
+onset  <- as.data.frame(arrow::read_parquet(find_data("08_onset_summary.parquet")))
+lm6    <- as.data.frame(arrow::read_parquet(find_data("08_landmark_h6.parquet")))
+traj   <- read.csv(find_data("08_traj_means.csv"))
+samp   <- as.data.frame(arrow::read_parquet(find_data("08_panel_sample_long.parquet")))
 
 LM_H <- 6L; HORIZON <- 12L
 n_stay   <- nrow(onset)
@@ -422,6 +425,146 @@ tibble(t = c(6, 12, 24, 36, 48), AUC = as.numeric(tr$AUC)) %>%
   geom_hline(yintercept = 0.5, linetype = "dashed", colour = "grey60") +
   coord_cartesian(ylim = c(0.5, 0.85)) +
   labs(x = "Prediction horizon (hours after landmark)", y = "Time-dependent AUC")
+```
+
+```{r export-values, include=FALSE}
+# ── Export all key statistics and coefficients for thesis / downstream use ──
+
+# 1. Cohort descriptors
+cohort_desc <- data.frame(
+  metric = c("n_stay", "n_sepsis", "prevalence", "prevalent_at_admission",
+             "incident_after_h6", "median_onset_hour",
+             "n_landmark", "n_landmark_event", "n_landmark_within_horizon"),
+  value = c(n_stay, n_sep, prev, prevalent, incident6, med_onset,
+            n_lm, n_lm_ev, n_lm_h),
+  stringsAsFactors = FALSE
+)
+write.csv(cohort_desc, file.path(OUT, "09_cohort_descriptors.csv"), row.names = FALSE)
+
+# 2. KM and log-rank
+km_stats <- data.frame(
+  metric = c("ci24_sirs_ge2", "ci24_sirs_lt2", "logrank_chisq", "logrank_p"),
+  value = c(ci24$cuminc[ci24$grp == "SIRS >= 2"],
+            ci24$cuminc[ci24$grp == "SIRS < 2"],
+            lr$chisq, lr_p),
+  stringsAsFactors = FALSE
+)
+write.csv(km_stats, file.path(OUT, "09_km_logrank.csv"), row.names = FALSE)
+
+# 3. Cox baseline HRs
+cox_base <- broom::tidy(cx, exponentiate = TRUE, conf.int = TRUE)
+cox_base$ph_global_p <- zph_p
+write.csv(cox_base, file.path(OUT, "09_cox_baseline.csv"), row.names = FALSE)
+
+# 4. Time-varying Cox HRs
+cox_tv <- broom::tidy(cx_tv, exponentiate = TRUE, conf.int = TRUE)
+cox_tv$n_events <- n_tv_ev
+write.csv(cox_tv, file.path(OUT, "09_cox_timevarying.csv"), row.names = FALSE)
+
+# 5. Fine-Gray competing risks
+fg_tab <- data.frame(
+  term = names(fg$coef),
+  coef = fg$coef,
+  hr = exp(fg$coef),
+  se = sqrt(diag(fg$var)),
+  stringsAsFactors = FALSE
+)
+write.csv(fg_tab, file.path(OUT, "09_fine_gray.csv"), row.names = FALSE)
+
+# 6. HMM parameters
+hmm_params <- data.frame(
+  state = c("1_low", "2_mid", "3_high"),
+  emission_mean = em[, 1],
+  emission_sd = em[, 2],
+  self_persistence = diag(tmat),
+  septic_hour_rate = sep_by_state$sep,
+  stringsAsFactors = FALSE
+)
+write.csv(hmm_params, file.path(OUT, "09_hmm_params.csv"), row.names = FALSE)
+
+# 7. Autocorrelation
+acf_stats <- data.frame(
+  metric = c("mean_lag1_acf", "median_lag1_acf", "n_stays_computed"),
+  value = c(mean(acf1$a), median(acf1$a), nrow(acf1)),
+  stringsAsFactors = FALSE
+)
+write.csv(acf_stats, file.path(OUT, "09_autocorrelation.csv"), row.names = FALSE)
+
+# 8. Discrimination (AUCs + DeLong)
+disc_tab <- data.frame(
+  model = c("sofa_single", "qsofa_single", "sirs_single",
+            "multivariable_static", "multivariable_trajectory"),
+  auc = c(auc1("sofa_total"), auc1("qsofa"), auc1("sirs"), st$auc, tv$auc),
+  stringsAsFactors = FALSE
+)
+disc_tab$delong_p_static_vs_traj <- c(NA, NA, NA, NA, delong_p)
+write.csv(disc_tab, file.path(OUT, "09_discrimination.csv"), row.names = FALSE)
+
+# 9. Time-dependent AUC
+td_auc <- data.frame(
+  horizon_h = c(6, 12, 24, 36, 48),
+  auc = as.numeric(tr$AUC),
+  stringsAsFactors = FALSE
+)
+write.csv(td_auc, file.path(OUT, "09_timedep_auc.csv"), row.names = FALSE)
+```
+
+```{r export-figures, include=FALSE}
+# ── Export all figures as publication-quality PNGs ──
+
+# Fig 1: Onset histogram
+png(file.path(FIG, "09_onset_histogram.png"), width = 1200, height = 600, res = 200)
+print(
+  onset %>% filter(event == 1, onset_hour <= 48) %>%
+    ggplot(aes(onset_hour)) +
+    geom_histogram(binwidth=1, fill="#C0504D", colour="white", linewidth=0.1) +
+    geom_vline(xintercept=LM_H, linetype="dashed", colour="grey30") +
+    annotate("text", x=LM_H+1.5, y=Inf, label="landmark (6h)",
+             vjust=1.5, hjust=0, size=3, colour="grey30") +
+    labs(x = "Onset hour (from ICU admission)", y = "Septic stays")
+)
+dev.off()
+
+# Fig 2: KM cumulative incidence
+png(file.path(FIG, "09_km_cumulative_incidence.png"), width = 1200, height = 700, res = 200)
+print(
+  ggplot(km_df, aes(time, cuminc, colour = grp)) +
+    geom_step(linewidth=0.7) +
+    scale_colour_manual(values = c("SIRS < 2"="#5B9BD5","SIRS >= 2"="#C0504D")) +
+    coord_cartesian(xlim=c(0,60)) +
+    labs(x="Hours since landmark", y="Cumulative incidence of sepsis", colour=NULL) +
+    theme(legend.position="top")
+)
+dev.off()
+
+# Fig 3: Competing risks CIF
+png(file.path(FIG, "09_competing_risks_cif.png"), width = 1200, height = 700, res = 200)
+print(
+  ggplot(ci_df, aes(time, est, colour=grp, linetype=cause)) +
+    geom_step(linewidth=0.6) +
+    coord_cartesian(xlim=c(0,60)) +
+    scale_colour_manual(values=c("SIRS<2"="#5B9BD5","SIRS>=2"="#C0504D")) +
+    labs(x="Hours since landmark", y="Cumulative incidence", colour=NULL, linetype=NULL) +
+    theme(legend.position="top")
+)
+dev.off()
+
+# Fig 4: Trajectories + ACF
+png(file.path(FIG, "09_trajectories_acf.png"), width = 1400, height = 600, res = 200)
+print(p_traj + p_acf)
+dev.off()
+
+# Fig 5: Time-dependent AUC
+png(file.path(FIG, "09_timedep_auc.png"), width = 1000, height = 700, res = 200)
+print(
+  tibble(t = c(6,12,24,36,48), AUC = as.numeric(tr$AUC)) %>%
+    ggplot(aes(t, AUC)) +
+    geom_line(colour="#C0504D") + geom_point(colour="#C0504D") +
+    geom_hline(yintercept=0.5, linetype="dashed", colour="grey60") +
+    coord_cartesian(ylim=c(0.5, 0.85)) +
+    labs(x="Prediction horizon (hours after landmark)", y="Time-dependent AUC")
+)
+dev.off()
 ```
 
 Table \@ref(tab:baseline-table) is the central finding. **No single

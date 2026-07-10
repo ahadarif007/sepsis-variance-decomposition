@@ -1,0 +1,57 @@
+{
+  "model_name": "tier1_elastic_net_v1",
+  "trained_on": "MIMIC-IV v3.1",
+  "auroc_internal": 0.775,
+  "auroc_external": 0.686,
+
+  "intercept": -3.842,
+  "coefficients": {
+    "hr": 0.0124,
+    "resp_rate": 0.0287,
+    "map": -0.0091,
+    "spo2": -0.0153,
+    "temp_c": 0.1420,
+    "gcs": -0.0680,
+    "sofa_total": 0.1950,
+    "qsofa": 0.0830,
+    "sirs": 0.0410,
+    "lactate": 0.0890,
+    "lactate_msg": 0.8740,
+    "creatinine": 0.0520,
+    "creatinine_msg": 0.2100,
+    "wbc": 0.0130,
+    "wbc_msg": 0.5600,
+    "pf_ratio": -0.0008,
+    "pf_ratio_msg": 0.3200,
+    "hr_slope6": 0.0240,
+    "hr_slope6_msg": 0.5900,
+    "resp_slope6": 0.0310,
+    "resp_slope6_msg": 0.3400,
+    "map_slope6": -0.0190,
+    "map_slope6_msg": 0.2800,
+    "spo2_slope6": -0.0280,
+    "spo2_slope6_msg": 0.1900,
+    "age": 0.0085,
+    "female": -0.1200
+  },
+
+  "imputation_medians": {
+    "hr": 86.0,
+    "resp_rate": 19.0,
+    "map": 77.0,
+    "spo2": 97.0,
+    "temp_c": 36.8,
+    "gcs": 15.0,
+    "sofa_total": 3.0,
+    "qsofa": 0.0,
+    "sirs": 1.0,
+    "lactate": 2.1,
+    "creatinine": 1.0,
+    "wbc": 10.5,
+    "pf_ratio": 280.0
+  },
+
+  "threshold_youden": 0.082,
+  "threshold_high_sensitivity": 0.045,
+  "threshold_high_specificity": 0.180
+}

@@ -24,7 +24,7 @@ and read with a column-filtered chunk loop.
 
 Output
 ------
-processed_data/stay_measurements.csv   (one row per stay)
+processed_data/04_stay_measurements.parquet   (one row per stay)
     demographics carried from cohort + first-24h aggregates:
     hr_*, resp_rate_*, temp_max_c, spo2_min, map_min, gcs_min,
     pao2_min, fio2_max, pf_ratio_min, lactate_max, creatinine_max,
@@ -39,6 +39,7 @@ import pandas as pd
 
 import config as C
 import utils as U
+from logging_utils import setup_logging, step, log_separator
 
 CHART_WINDOW_H = 24.0
 LAB_LOOKBACK_H = 6.0
@@ -65,7 +66,7 @@ LAB_ITEMIDS = {
     "wbc":        [51301, 51300],
     "pao2":       [50821],
 }
-VASO = {
+VASOPRESSOR_ITEMIDS = {
     "norepinephrine": 221906,
     "epinephrine":    221289,
     "dopamine":       221662,
@@ -79,79 +80,83 @@ VASO = {
 # Helpers to fold the long [stay_id, itemid, vmin/vmax/vmean/vcount] result
 # into named per-stay Series.
 # --------------------------------------------------------------------------- #
-def _series(long: pd.DataFrame, itemids, which: str) -> pd.DataFrame:
-    sub = long[long["itemid"].isin(itemids)]
-    return sub[["stay_id", which, "vcount"]].copy()
+def _extract_itemid_rows(long: pd.DataFrame, itemids, stat_col: str) -> pd.DataFrame:
+    """Filter long-format aggregates to specific itemids and return the requested statistic."""
+    filtered = long[long["itemid"].isin(itemids)]
+    return filtered[["stay_id", stat_col, "vcount"]].copy()
 
 
 def combine_min(long, itemids) -> pd.Series:
-    s = _series(long, itemids, "vmin")
-    return s.groupby("stay_id")["vmin"].min()
+    """Per-stay minimum across all matching itemids."""
+    rows = _extract_itemid_rows(long, itemids, "vmin")
+    return rows.groupby("stay_id")["vmin"].min()
 
 
 def combine_max(long, itemids) -> pd.Series:
-    s = _series(long, itemids, "vmax")
-    return s.groupby("stay_id")["vmax"].max()
+    """Per-stay maximum across all matching itemids."""
+    rows = _extract_itemid_rows(long, itemids, "vmax")
+    return rows.groupby("stay_id")["vmax"].max()
 
 
 def combine_mean(long, itemids) -> pd.Series:
-    """Count-weighted mean across itemids."""
-    s = _series(long, itemids, "vmean")
-    s["wsum"] = s["vmean"] * s["vcount"]
-    g = s.groupby("stay_id").agg(wsum=("wsum", "sum"), n=("vcount", "sum"))
-    return g["wsum"] / g["n"]
+    """Per-stay count-weighted mean across all matching itemids."""
+    rows = _extract_itemid_rows(long, itemids, "vmean")
+    rows["weighted_sum"] = rows["vmean"] * rows["vcount"]
+    grouped = rows.groupby("stay_id").agg(
+        weighted_sum=("weighted_sum", "sum"), total_count=("vcount", "sum"))
+    return grouped["weighted_sum"] / grouped["total_count"]
 
 
 def load_vasopressors(stays: pd.DataFrame) -> pd.DataFrame:
     """First-24h vasopressor presence + max weight-based rate per stay."""
-    win = stays.set_index("stay_id")[["intime", "chart_end"]]
-    keep_ids = set(VASO.values())
+    stay_windows = stays.set_index("stay_id")[["intime", "chart_end"]]
+    keep_ids = set(VASOPRESSOR_ITEMIDS.values())
     cols = ["stay_id", "itemid", "starttime", "rate", "rateuom"]
     rows: list[pd.DataFrame] = []
     for chunk in pd.read_csv(C.FILES["inputevents"], usecols=cols,
                              parse_dates=["starttime"],
                              chunksize=1_000_000, low_memory=False):
         sub = chunk[chunk["itemid"].isin(keep_ids)]
-        sub = sub[sub["stay_id"].isin(win.index)]
+        sub = sub[sub["stay_id"].isin(stay_windows.index)]
         if not sub.empty:
             rows.append(sub)
     if not rows:
         return pd.DataFrame(index=stays["stay_id"])
-    iv = pd.concat(rows, ignore_index=True).join(win, on="stay_id")
-    iv = iv[(iv["starttime"] >= iv["intime"]) & (iv["starttime"] <= iv["chart_end"])]
-    iv["rate"] = pd.to_numeric(iv["rate"], errors="coerce")
+    infusions = pd.concat(rows, ignore_index=True).join(stay_windows, on="stay_id")
+    infusions = infusions[(infusions["starttime"] >= infusions["intime"])
+                          & (infusions["starttime"] <= infusions["chart_end"])]
+    infusions["rate"] = pd.to_numeric(infusions["rate"], errors="coerce")
 
-    # Weight-based rate in mcg/kg/min only (guards the rare mg/kg/min rows).
-    wb = iv[iv["rateuom"] == "mcg/kg/min"]
-    idx = stays["stay_id"].astype("int64")
-    out = pd.DataFrame(index=idx)
-    out.index.name = "stay_id"
+    weight_based = infusions[infusions["rateuom"] == "mcg/kg/min"]
+    stay_ids = stays["stay_id"].astype("int64")
+    result = pd.DataFrame(index=stay_ids)
+    result.index.name = "stay_id"
 
     def present(name) -> pd.Series:
-        s = iv[iv["itemid"] == VASO[name]].groupby("stay_id").size()
-        return s.reindex(idx).fillna(0) > 0
+        counts = infusions[infusions["itemid"] == VASOPRESSOR_ITEMIDS[name]].groupby("stay_id").size()
+        return counts.reindex(stay_ids).fillna(0) > 0
 
     def max_rate(names) -> pd.Series:
-        ids = [VASO[n] for n in names]
-        s = wb[wb["itemid"].isin(ids)].groupby("stay_id")["rate"].max()
-        return s.reindex(idx)
+        ids = [VASOPRESSOR_ITEMIDS[n] for n in names]
+        rates = weight_based[weight_based["itemid"].isin(ids)].groupby("stay_id")["rate"].max()
+        return rates.reindex(stay_ids)
 
-    out["norepi_epi_any"] = present("norepinephrine") | present("epinephrine")
-    out["dopamine_any"] = present("dopamine")
-    out["dobutamine_any"] = present("dobutamine")
-    out["other_vaso_any"] = present("phenylephrine") | present("vasopressin")
-    out["norepi_epi_max_rate"] = max_rate(["norepinephrine", "epinephrine"])
-    out["dopamine_max_rate"] = max_rate(["dopamine"])
-    for c in ["norepi_epi_any", "dopamine_any", "dobutamine_any", "other_vaso_any"]:
-        out[c] = out[c].astype(bool)
-    out["vaso_any"] = out[["norepi_epi_any", "dopamine_any",
-                           "dobutamine_any", "other_vaso_any"]].any(axis=1)
-    return out
+    result["norepi_epi_any"] = present("norepinephrine") | present("epinephrine")
+    result["dopamine_any"] = present("dopamine")
+    result["dobutamine_any"] = present("dobutamine")
+    result["other_vaso_any"] = present("phenylephrine") | present("vasopressin")
+    result["norepi_epi_max_rate"] = max_rate(["norepinephrine", "epinephrine"])
+    result["dopamine_max_rate"] = max_rate(["dopamine"])
+    for col in ["norepi_epi_any", "dopamine_any", "dobutamine_any", "other_vaso_any"]:
+        result[col] = result[col].astype(bool)
+    result["vaso_any"] = result[["norepi_epi_any", "dopamine_any",
+                                 "dobutamine_any", "other_vaso_any"]].any(axis=1)
+    return result
 
 
 def load_urine(stays: pd.DataFrame) -> pd.Series:
     """First-24h total urine output (mL) per stay."""
-    win = stays.set_index("stay_id")[["intime", "chart_end"]]
+    stay_windows = stays.set_index("stay_id")[["intime", "chart_end"]]
     keep_ids = set(C.URINE_OUTPUT_ITEMIDS)
     cols = ["stay_id", "itemid", "charttime", "value"]
     rows: list[pd.DataFrame] = []
@@ -159,31 +164,33 @@ def load_urine(stays: pd.DataFrame) -> pd.Series:
                              parse_dates=["charttime"],
                              chunksize=1_000_000, low_memory=False):
         sub = chunk[chunk["itemid"].isin(keep_ids)]
-        sub = sub[sub["stay_id"].isin(win.index)]
+        sub = sub[sub["stay_id"].isin(stay_windows.index)]
         if not sub.empty:
             rows.append(sub)
     if not rows:
         return pd.Series(dtype="float64", name="urine_24h_ml")
-    oe = pd.concat(rows, ignore_index=True).join(win, on="stay_id")
-    oe = oe[(oe["charttime"] >= oe["intime"]) & (oe["charttime"] <= oe["chart_end"])]
-    oe["value"] = pd.to_numeric(oe["value"], errors="coerce").clip(lower=0)
-    return oe.groupby("stay_id")["value"].sum().rename("urine_24h_ml")
+    urine_events = pd.concat(rows, ignore_index=True).join(stay_windows, on="stay_id")
+    urine_events = urine_events[
+        (urine_events["charttime"] >= urine_events["intime"])
+        & (urine_events["charttime"] <= urine_events["chart_end"])]
+    urine_events["value"] = pd.to_numeric(urine_events["value"], errors="coerce").clip(lower=0)
+    return urine_events.groupby("stay_id")["value"].sum().rename("urine_24h_ml")
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="Extract first-24h measurements per ICU stay.")
-    ap.add_argument("--parquet", action="store_true", help="also write a parquet copy")
-    args = ap.parse_args()
+    ap.parse_args()
 
-    U.log("loading cohort ...")
-    cohort = U.load("cohort", C.OUTPUT_DIR)
-    cohort["intime"] = pd.to_datetime(cohort["intime"])
-    cohort["hadm_id"] = pd.to_numeric(cohort["hadm_id"], errors="coerce")
-    stays = cohort[["stay_id", "subject_id", "hadm_id", "intime"]].copy()
-    stays["chart_end"] = stays["intime"] + pd.Timedelta(hours=CHART_WINDOW_H)
-    U.log(f"cohort: {len(stays):,} stays")
+    log = setup_logging("04_extract_measurements")
 
-    # Window lookups for the streaming aggregator.
+    with step(log, "loading cohort"):
+        cohort = U.load("02_cohort", C.OUTPUT_DIR)
+        cohort["intime"] = pd.to_datetime(cohort["intime"])
+        cohort["hadm_id"] = pd.to_numeric(cohort["hadm_id"], errors="coerce")
+        stays = cohort[["stay_id", "subject_id", "hadm_id", "intime"]].copy()
+        stays["chart_end"] = stays["intime"] + pd.Timedelta(hours=CHART_WINDOW_H)
+    log.info("cohort: %s stays", f"{len(stays):,}")
+
     chart_windows = stays.assign(
         win_start=stays["intime"],
         win_end=stays["chart_end"],
@@ -199,75 +206,64 @@ def main() -> None:
         .drop_duplicates("hadm_id")
     )
 
-    # ---- chartevents (the big one) ----
     chart_ids = [i for ids in CHART_ITEMIDS.values() for i in ids]
-    U.log("streaming chartevents (this is the slow part) ...")
-    chart_long = U.stream_windowed_agg(
-        C.FILES["chartevents"], chart_ids,
-        chart_windows.assign(stay_id=chart_windows["stay_id"]),
-        key_col="stay_id", time_col="charttime",
-    )
+    with step(log, "streaming chartevents"):
+        chart_long = U.stream_windowed_agg(
+            C.FILES["chartevents"], chart_ids,
+            chart_windows.assign(stay_id=chart_windows["stay_id"]),
+            key_col="stay_id", time_col="charttime",
+        )
 
-    # ---- labevents (big, keyed on hadm_id) ----
     lab_ids = [i for ids in LAB_ITEMIDS.values() for i in ids]
-    U.log("streaming labevents ...")
-    lab_long = U.stream_windowed_agg(
-        C.FILES["labevents"], lab_ids, lab_windows,
-        key_col="hadm_id", time_col="charttime",
-    )
+    with step(log, "streaming labevents"):
+        lab_long = U.stream_windowed_agg(
+            C.FILES["labevents"], lab_ids, lab_windows,
+            key_col="hadm_id", time_col="charttime",
+        )
 
-    # ---- assemble per-stay feature columns ----
-    U.log("assembling per-stay features ...")
-    feat = pd.DataFrame(index=stays["stay_id"].astype("int64"))
-    feat.index.name = "stay_id"
+    with step(log, "assembling per-stay features"):
+        feat = pd.DataFrame(index=stays["stay_id"].astype("int64"))
+        feat.index.name = "stay_id"
 
-    # vitals
-    feat["hr_mean"] = combine_mean(chart_long, CHART_ITEMIDS["hr"])
-    feat["hr_max"] = combine_max(chart_long, CHART_ITEMIDS["hr"])
-    feat["resp_rate_mean"] = combine_mean(chart_long, CHART_ITEMIDS["resp_rate"])
-    feat["resp_rate_max"] = combine_max(chart_long, CHART_ITEMIDS["resp_rate"])
-    feat["spo2_min"] = combine_min(chart_long, CHART_ITEMIDS["spo2"]).clip(lower=0, upper=100)
+        feat["hr_mean"] = combine_mean(chart_long, CHART_ITEMIDS["hr"])
+        feat["hr_max"] = combine_max(chart_long, CHART_ITEMIDS["hr"])
+        feat["resp_rate_mean"] = combine_mean(chart_long, CHART_ITEMIDS["resp_rate"])
+        feat["resp_rate_max"] = combine_max(chart_long, CHART_ITEMIDS["resp_rate"])
+        feat["spo2_min"] = combine_min(chart_long, CHART_ITEMIDS["spo2"]).clip(lower=0, upper=100)
 
-    # temperature: convert F itemid to C, then combine
-    temp_c = combine_max(chart_long, CHART_ITEMIDS["temp_c"])
-    temp_f = combine_max(chart_long, CHART_ITEMIDS["temp_f"])
-    temp_f_as_c = (temp_f - 32.0) * 5.0 / 9.0
-    feat["temp_max_c"] = (
-        pd.concat([temp_c, temp_f_as_c], axis=1).max(axis=1).clip(lower=25, upper=45)
-    )
+        temp_c = combine_max(chart_long, CHART_ITEMIDS["temp_c"])
+        temp_f = combine_max(chart_long, CHART_ITEMIDS["temp_f"])
+        temp_f_as_c = (temp_f - 32.0) * 5.0 / 9.0
+        feat["temp_max_c"] = (
+            pd.concat([temp_c, temp_f_as_c], axis=1).max(axis=1).clip(lower=25, upper=45)
+        )
 
-    # MAP: lowest in window, clipped to a physiologic range
-    feat["map_min"] = combine_min(chart_long, CHART_ITEMIDS["map"]).clip(lower=10, upper=250)
+        feat["map_min"] = combine_min(chart_long, CHART_ITEMIDS["map"]).clip(lower=10, upper=250)
 
-    # GCS total = sum of component minima (worst), clipped 3..15
-    eye = combine_min(chart_long, CHART_ITEMIDS["gcs_eye"])
-    verb = combine_min(chart_long, CHART_ITEMIDS["gcs_verb"])
-    mot = combine_min(chart_long, CHART_ITEMIDS["gcs_mot"])
-    gcs = (eye + verb + mot)
-    feat["gcs_min"] = gcs.clip(lower=3, upper=15)
+        eye = combine_min(chart_long, CHART_ITEMIDS["gcs_eye"])
+        verb = combine_min(chart_long, CHART_ITEMIDS["gcs_verb"])
+        mot = combine_min(chart_long, CHART_ITEMIDS["gcs_mot"])
+        gcs = (eye + verb + mot)
+        feat["gcs_min"] = gcs.clip(lower=3, upper=15)
 
-    # FiO2: stored as percent -> fraction, clip 0.21..1.0
-    fio2 = combine_max(chart_long, CHART_ITEMIDS["fio2"])
-    fio2 = fio2.where(fio2 <= 1.0, fio2 / 100.0).clip(lower=0.21, upper=1.0)
-    feat["fio2_max"] = fio2
+        fio2 = combine_max(chart_long, CHART_ITEMIDS["fio2"])
+        fio2 = fio2.where(fio2 <= 1.0, fio2 / 100.0).clip(lower=0.21, upper=1.0)
+        feat["fio2_max"] = fio2
 
-    # labs
-    feat["lactate_max"] = combine_max(lab_long, LAB_ITEMIDS["lactate"])
-    feat["creatinine_max"] = combine_max(lab_long, LAB_ITEMIDS["creatinine"])
-    feat["bilirubin_max"] = combine_max(lab_long, LAB_ITEMIDS["bilirubin"])
-    feat["platelets_min"] = combine_min(lab_long, LAB_ITEMIDS["platelets"])
-    feat["wbc_max"] = combine_max(lab_long, LAB_ITEMIDS["wbc"])
-    feat["wbc_min"] = combine_min(lab_long, LAB_ITEMIDS["wbc"])
-    feat["pao2_min"] = combine_min(lab_long, LAB_ITEMIDS["pao2"])
+        feat["lactate_max"] = combine_max(lab_long, LAB_ITEMIDS["lactate"])
+        feat["creatinine_max"] = combine_max(lab_long, LAB_ITEMIDS["creatinine"])
+        feat["bilirubin_max"] = combine_max(lab_long, LAB_ITEMIDS["bilirubin"])
+        feat["platelets_min"] = combine_min(lab_long, LAB_ITEMIDS["platelets"])
+        feat["wbc_max"] = combine_max(lab_long, LAB_ITEMIDS["wbc"])
+        feat["wbc_min"] = combine_min(lab_long, LAB_ITEMIDS["wbc"])
+        feat["pao2_min"] = combine_min(lab_long, LAB_ITEMIDS["pao2"])
+        feat["pf_ratio_min"] = feat["pao2_min"] / feat["fio2_max"]
 
-    # P/F ratio (worst): lowest PaO2 over highest FiO2 in the window
-    feat["pf_ratio_min"] = feat["pao2_min"] / feat["fio2_max"]
+    with step(log, "loading vasopressors (inputevents)"):
+        vaso = load_vasopressors(stays)
 
-    # vasopressors + urine
-    U.log("loading vasopressors (inputevents) ...")
-    vaso = load_vasopressors(stays)
-    U.log("loading urine output (outputevents) ...")
-    urine = load_urine(stays)
+    with step(log, "loading urine output (outputevents)"):
+        urine = load_urine(stays)
 
     out = (
         cohort.set_index("stay_id")
@@ -284,16 +280,14 @@ def main() -> None:
     n_lact = out["lactate_max"].notna().sum()
     n_gcs = out["gcs_min"].notna().sum()
     n_pf = out["pf_ratio_min"].notna().sum()
-    U.log("=" * 50)
-    U.log(f"stay_measurements: {len(out):,} stays")
-    U.log(f"  lactate present:   {n_lact:,} ({n_lact/len(out):.1%})")
-    U.log(f"  GCS present:       {n_gcs:,} ({n_gcs/len(out):.1%})")
-    U.log(f"  P/F ratio present: {n_pf:,} ({n_pf/len(out):.1%})")
-    U.log(f"  any vasopressor:   {int(out['vaso_any'].sum()):,}")
+    log_separator(log)
+    log.info("stay_measurements: %s stays", f"{len(out):,}")
+    log.info("  lactate present:   %s (%.1f%%)", f"{n_lact:,}", n_lact / len(out) * 100)
+    log.info("  GCS present:       %s (%.1f%%)", f"{n_gcs:,}", n_gcs / len(out) * 100)
+    log.info("  P/F ratio present: %s (%.1f%%)", f"{n_pf:,}", n_pf / len(out) * 100)
+    log.info("  any vasopressor:   %s", f"{int(out['vaso_any'].sum()):,}")
 
-    U.save(out, "stay_measurements", C.OUTPUT_DIR, fmt="csv")
-    if args.parquet:
-        U.save(out, "stay_measurements", C.OUTPUT_DIR, fmt="parquet")
+    U.save(out, "04_stay_measurements", C.OUTPUT_DIR)
 
 
 if __name__ == "__main__":

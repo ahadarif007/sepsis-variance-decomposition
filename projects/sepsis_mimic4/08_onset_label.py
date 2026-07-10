@@ -20,7 +20,7 @@ Per-hour target (early warning)
 Outputs
 -------
 processed_data/hourly_labeled.parquet   panel + SOFA + label + time_to_onset
-processed_data/onset_summary.csv        one row per stay: onset/censor hour,
+processed_data/08_onset_summary.parquet  one row per stay: onset/censor hour,
                                         event, competing death/discharge
 """
 from __future__ import annotations
@@ -32,6 +32,8 @@ import pandas as pd
 
 import config as C
 import utils as U
+from clinical_scores import ff, qsofa, sirs, score_sofa_hourly
+from logging_utils import setup_logging, step, log_separator
 
 PRED_EARLY_H = 6                 # reward detection up to 6h before onset
 SUSP_BEFORE_H = 48               # suspicion window: SOFA rise from 48h before ...
@@ -41,74 +43,28 @@ LANDMARK_HORIZON_H = 12          # predict incident onset within 12h of the land
 SAMPLE_STAYS = 2500              # stays exported (long) for ACF / HMM / time-varying Cox
 
 
-# --------------------------------------------------------------------------- #
-# Hourly SOFA (vectorised, using forward-filled values)
-# --------------------------------------------------------------------------- #
-def _col(panel: pd.DataFrame, base: str) -> pd.Series:
-    """Prefer the forward-filled column; fall back to raw if absent."""
-    return panel[f"{base}_ff"] if f"{base}_ff" in panel.columns else panel[base]
-
-
-def score_sofa(panel: pd.DataFrame) -> pd.DataFrame:
-    pf = _col(panel, "pf_ratio")
-    resp = np.select([pf < 100, pf < 200, pf < 300, pf < 400], [4, 3, 2, 1], 0)
-
-    plt = _col(panel, "platelets")
-    coag = np.select([plt < 20, plt < 50, plt < 100, plt < 150], [4, 3, 2, 1], 0)
-
-    bil = _col(panel, "bilirubin")
-    liver = np.select([bil >= 12, bil >= 6, bil >= 2, bil >= 1.2], [4, 3, 2, 1], 0)
-
-    mp = _col(panel, "map")
-    cardio = np.where(mp < 70, 1, 0)
-    cardio = np.maximum(cardio, np.where(panel["dobutamine_any"].fillna(False), 2, 0))
-    cardio = np.maximum(cardio, np.where(panel["other_vaso_any"].fillna(False), 3, 0))
-    dop = panel.get("dopamine_rate", pd.Series(np.nan, index=panel.index))
-    dop_any = panel["dopamine_any"].fillna(False).to_numpy()
-    dop_score = np.where(dop > 15, 4, np.where(dop > 5, 3, 2))
-    cardio = np.maximum(cardio, np.where(dop_any, dop_score, 0))
-    ne = panel.get("norepi_epi_rate", pd.Series(np.nan, index=panel.index))
-    ne_any = panel["norepi_epi_any"].fillna(False).to_numpy()
-    ne_score = np.where(ne > 0.1, 4, 3)
-    cardio = np.maximum(cardio, np.where(ne_any, ne_score, 0))
-
-    gcs = _col(panel, "gcs").fillna(15)
-    cns = np.select([gcs < 6, gcs < 10, gcs < 13, gcs < 15], [4, 3, 2, 1], 0)
-
-    cr = _col(panel, "creatinine")
-    renal = np.select([cr >= 5, cr >= 3.5, cr >= 2.0, cr >= 1.2], [4, 3, 2, 1], 0)
-    # urine over the trailing 24h (only once >=24h of record exists)
-    if "urine_ml" in panel.columns:
-        u24 = (panel.groupby("stay_id", sort=False)["urine_ml"]
-               .rolling(24, min_periods=24).sum()
-               .reset_index(level=0, drop=True))
-        renal = np.maximum(renal, np.select(
-            [u24 < 200, u24 < 500], [4, 3], 0))
-
-    out = pd.DataFrame({
-        "sofa_resp": resp, "sofa_coag": coag, "sofa_liver": liver,
-        "sofa_cardio": cardio, "sofa_cns": cns, "sofa_renal": renal},
-        index=panel.index).astype("int8")
-    out["sofa_total"] = out.sum(axis=1).astype("int8")
-    return out
+# Hourly SOFA scoring is now in clinical_scores.score_sofa_hourly.
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="Hourly SOFA + sepsis onset labels.")
     args = ap.parse_args()
 
-    U.log("loading hourly panel + suspected infection + cohort ...")
-    panel = pd.read_parquet(C.OUTPUT_DIR / "hourly_panel.parquet")
-    panel = panel.sort_values(["stay_id", "hour"]).reset_index(drop=True)
-    susp = U.load("suspected_infection", C.OUTPUT_DIR, parse_dates=["t_suspicion"])
-    cohort = U.load("cohort", C.OUTPUT_DIR,
-                    parse_dates=["intime", "outtime", "deathtime"])
+    log = setup_logging("08_onset_label")
 
-    U.log("scoring hourly SOFA ...")
-    sofa = score_sofa(panel)
-    panel = pd.concat([panel, sofa], axis=1)
+    with step(log, "loading hourly panel + suspected infection + cohort"):
+        panel = pd.read_parquet(C.OUTPUT_DIR / "07_hourly_panel.parquet")
+        panel = panel.sort_values(["stay_id", "hour"]).reset_index(drop=True)
+        susp = U.load("03_suspected_infection", C.OUTPUT_DIR, parse_dates=["t_suspicion"])
+        cohort = U.load("02_cohort", C.OUTPUT_DIR,
+                        parse_dates=["intime", "outtime", "deathtime"])
+    log.info("panel: %s stay-hours, %s stays",
+             f"{len(panel):,}", f"{panel['stay_id'].nunique():,}")
 
-    # suspicion hour relative to intime (>=0)
+    with step(log, "scoring hourly SOFA"):
+        sofa = score_sofa_hourly(panel, include_urine=True)
+        panel = pd.concat([panel, sofa], axis=1)
+
     intime = cohort.set_index("stay_id")["intime"]
     susp = susp.copy()
     susp["susp_hour"] = ((susp["t_suspicion"]
@@ -118,91 +74,77 @@ def main() -> None:
     panel["susp_hour"] = panel["stay_id"].map(susp_hour)
     has_susp = panel["stay_id"].map(susp_hour.notna()).fillna(False)
 
-    U.log("locating sepsis onset hour ...")
-    # candidate onset: SOFA>=thresh AND inside suspicion window
-    in_win = (panel["hour"] >= (panel["susp_hour"] - SUSP_BEFORE_H)) & \
-             (panel["hour"] <= (panel["susp_hour"] + SUSP_AFTER_H))
-    cand = (panel["sofa_total"] >= C.SOFA_INCREASE_THRESHOLD) & in_win & has_susp
-    onset = (panel.loc[cand].groupby("stay_id")["hour"].min()
-             .rename("onset_hour"))
-    panel["onset_hour"] = panel["stay_id"].map(onset)
-    panel["sepsis3"] = panel["stay_id"].map(onset.notna()).fillna(False)
+    with step(log, "locating sepsis onset hour"):
+        in_win = (panel["hour"] >= (panel["susp_hour"] - SUSP_BEFORE_H)) & \
+                 (panel["hour"] <= (panel["susp_hour"] + SUSP_AFTER_H))
+        cand = (panel["sofa_total"] >= C.SOFA_INCREASE_THRESHOLD) & in_win & has_susp
+        onset = (panel.loc[cand].groupby("stay_id")["hour"].min()
+                 .rename("onset_hour"))
+        panel["onset_hour"] = panel["stay_id"].map(onset)
+        panel["sepsis3"] = panel["stay_id"].map(onset.notna()).fillna(False)
 
-    # per-hour early-warning label + time to onset
-    panel["time_to_onset"] = panel["onset_hour"] - panel["hour"]
-    panel["label"] = ((panel["sepsis3"]) &
-                      (panel["hour"] >= panel["onset_hour"] - PRED_EARLY_H)
-                      ).astype("int8")
+        panel["time_to_onset"] = panel["onset_hour"] - panel["hour"]
+        panel["label"] = ((panel["sepsis3"]) &
+                          (panel["hour"] >= panel["onset_hour"] - PRED_EARLY_H)
+                          ).astype("int8")
 
-    # ---- stay-level onset summary for survival analysis ----
-    U.log("building stay-level onset summary ...")
-    last_hour = panel.groupby("stay_id")["hour"].max().rename("censor_hour")
-    summ = cohort[["stay_id", "subject_id", "age", "gender",
-                   "los_hours", "hospital_expire_flag"]].merge(
-        last_hour, on="stay_id", how="inner")
-    summ["onset_hour"] = summ["stay_id"].map(onset)
-    summ["event"] = summ["onset_hour"].notna().astype(int)   # 1 = sepsis onset
-    # time-to-event: onset hour if event, else censoring hour
-    summ["t_event"] = np.where(summ["event"] == 1,
-                               summ["onset_hour"], summ["censor_hour"])
-    # competing outcome: died within the horizon without sepsis onset
-    summ["death_no_sepsis"] = ((summ["event"] == 0) &
-                               (summ["hospital_expire_flag"] == 1)).astype(int)
-    # competing-risk status: 0 censored, 1 sepsis, 2 death-without-sepsis
-    summ["status_cr"] = np.where(summ["event"] == 1, 1,
-                                 np.where(summ["death_no_sepsis"] == 1, 2, 0))
+    with step(log, "building stay-level onset summary"):
+        last_hour = panel.groupby("stay_id")["hour"].max().rename("censor_hour")
+        summ = cohort[["stay_id", "subject_id", "age", "gender",
+                       "los_hours", "hospital_expire_flag"]].merge(
+            last_hour, on="stay_id", how="inner")
+        summ["onset_hour"] = summ["stay_id"].map(onset)
+        summ["event"] = summ["onset_hour"].notna().astype(int)
+        summ["t_event"] = np.where(summ["event"] == 1,
+                                   summ["onset_hour"], summ["censor_hour"])
+        summ["death_no_sepsis"] = ((summ["event"] == 0) &
+                                   (summ["hospital_expire_flag"] == 1)).astype(int)
+        summ["status_cr"] = np.where(summ["event"] == 1, 1,
+                                     np.where(summ["death_no_sepsis"] == 1, 2, 0))
 
-    # ---- report ----
     n_stay = panel["stay_id"].nunique()
     n_sep = int(onset.notna().sum())
-    U.log("=" * 56)
-    U.log(f"labelled panel: {len(panel):,} stay-hours, {n_stay:,} stays")
-    U.log(f"  suspected infection stays: {int(has_susp.groupby(panel['stay_id']).first().sum()):,}")
-    U.log(f"  sepsis-3 (onset found):    {n_sep:,} ({n_sep/n_stay:.1%})")
-    U.log(f"  positive stay-hours:       {int(panel['label'].sum()):,} "
-          f"({panel['label'].mean():.1%})")
+    log_separator(log)
+    log.info("labelled panel: %s stay-hours, %s stays",
+             f"{len(panel):,}", f"{n_stay:,}")
+    log.info("  suspected infection stays: %s",
+             f"{int(has_susp.groupby(panel['stay_id']).first().sum()):,}")
+    log.info("  sepsis-3 (onset found): %s (%.1f%%)",
+             f"{n_sep:,}", n_sep / n_stay * 100)
+    log.info("  positive stay-hours: %s (%.1f%%)",
+             f"{int(panel['label'].sum()):,}", panel['label'].mean() * 100)
     med_onset = summ.loc[summ.event == 1, "onset_hour"].median()
-    U.log(f"  median onset hour (septic): {med_onset:.0f}h")
-    U.log(f"  competing deaths (no sepsis): {int(summ['death_no_sepsis'].sum()):,}")
+    log.info("  median onset hour (septic): %.0fh", med_onset)
+    log.info("  competing deaths (no sepsis): %s",
+             f"{int(summ['death_no_sepsis'].sum()):,}")
 
-    out_pq = C.OUTPUT_DIR / "hourly_labeled.parquet"
+    out_pq = C.OUTPUT_DIR / "08_hourly_labeled.parquet"
     panel.to_parquet(out_pq, index=False)
-    U.log(f"wrote {out_pq.name} ({U.human_size(out_pq.stat().st_size)})")
-    U.save(summ, "onset_summary", C.OUTPUT_DIR, fmt="csv")
+    log.info("saved %s (%s)", out_pq.name, U.human_size(out_pq.stat().st_size))
+    U.save(summ, "08_onset_summary", C.OUTPUT_DIR)
 
-    export_for_report(panel, summ, cohort)
+    with step(log, "exporting R-friendly derived tables"):
+        export_for_report(panel, summ, cohort)
 
 
 # --------------------------------------------------------------------------- #
 # Derived exports (small CSVs consumed by the R reports)
 # --------------------------------------------------------------------------- #
-def _hourly_qsofa(row_rr, row_gcs, row_map) -> np.ndarray:
-    # qSOFA: MAP < 70 proxies SBP <= 100 (panel carries MAP, not SBP).
-    return ((row_rr >= 22).astype(int) + (row_gcs < 15).astype(int)
-            + (row_map < 70).astype(int))
-
-
-def _hourly_sirs(hr, rr, temp, wbc) -> np.ndarray:
-    # SIRS: HR >90, resp rate >20, temp outside [36, 38]C, WBC outside [4, 12] K/uL.
-    return ((hr > 90).astype(int) + (rr > 20).astype(int)
-            + ((temp > 38) | (temp < 36)).astype(int)
-            + ((wbc > 12) | (wbc < 4)).astype(int))
+# qSOFA and SIRS scoring moved to clinical_scores.qsofa / clinical_scores.sirs.
 
 
 def export_for_report(panel: pd.DataFrame, summ: pd.DataFrame,
                       cohort: pd.DataFrame) -> None:
-    U.log("exporting R-friendly derived tables for the report ...")
-
-    def ff(v):
-        return panel[f"{v}_ff"] if f"{v}_ff" in panel.columns else panel[v]
+    def _ff(v):
+        return ff(panel, v)
 
     # ---- 1) trajectory means: mean hourly physiology by sepsis group ----
-    traj = (panel.assign(hr=ff("hr"), map=ff("map"), resp_rate=ff("resp_rate"),
+    traj = (panel.assign(hr=_ff("hr"), map=_ff("map"), resp_rate=_ff("resp_rate"),
                          sofa=panel["sofa_total"])
             .groupby(["hour", "sepsis3"])[["hr", "map", "resp_rate", "sofa"]]
             .mean().reset_index())
     traj = traj[traj["hour"] <= 48]
-    U.save(traj, "traj_means", C.OUTPUT_DIR, fmt="csv")
+    U.save(traj, "08_traj_means", C.OUTPUT_DIR, fmt="csv")
 
     # ---- 2) landmark cohort at hour LANDMARK_H (early-prediction design) ----
     lm = panel[panel["hour"] == LANDMARK_H].copy()
@@ -215,52 +157,46 @@ def export_for_report(panel: pd.DataFrame, summ: pd.DataFrame,
     lmf = pd.DataFrame({"stay_id": lm["stay_id"].to_numpy()})
     for v in ["hr", "resp_rate", "map", "spo2", "temp_c", "gcs",
               "lactate", "creatinine", "wbc", "pf_ratio"]:
-        lmf[v] = ff(v)[lm.index].to_numpy()
+        lmf[v] = _ff(v)[lm.index].to_numpy()
     lmf["sofa_total"] = lm["sofa_total"].to_numpy()
-    # first-6h trajectory slopes (deterioration signal): value@6h - value@0h.
     h0 = panel[panel["hour"] == 0]
     for v in ["hr", "resp_rate", "map", "spo2"]:
-        v0 = pd.Series(ff(v)[h0.index].to_numpy(), index=h0["stay_id"].to_numpy())
+        v0 = pd.Series(_ff(v)[h0.index].to_numpy(), index=h0["stay_id"].to_numpy())
         lmf[f"{v}_slope6"] = lmf["stay_id"].map(v0).to_numpy()
         lmf[f"{v}_slope6"] = lmf[v].to_numpy() - lmf[f"{v}_slope6"]
-    lmf["qsofa"] = _hourly_qsofa(lmf["resp_rate"], lmf["gcs"], lmf["map"])
-    lmf["sirs"] = _hourly_sirs(lmf["hr"], lmf["resp_rate"],
-                               lmf["temp_c"], lmf["wbc"])
+    lmf["qsofa"] = qsofa(lmf["resp_rate"], lmf["gcs"], lmf["map"])
+    lmf["sirs"] = sirs(lmf["hr"], lmf["resp_rate"],
+                       lmf["temp_c"], lmf["wbc"])
     # static
     lmf = lmf.merge(cohort[["stay_id", "age", "gender", "hospital_expire_flag"]],
                     on="stay_id", how="left")
-    o = lmf["stay_id"].map(summ.set_index("stay_id")["onset_hour"])
-    cens = lmf["stay_id"].map(summ.set_index("stay_id")["censor_hour"])
-    lmf["event"] = o.notna().astype(int)                       # incident onset after LM
-    lmf["t_event"] = np.where(lmf["event"] == 1, o, cens) - LANDMARK_H
-    lmf["t_event"] = lmf["t_event"].clip(lower=0.5)            # Cox needs >0
-    lmf["onset_within_h"] = ((o > LANDMARK_H) &
-                             (o <= LANDMARK_H + LANDMARK_HORIZON_H)).astype(int)
+    onset_mapped = lmf["stay_id"].map(summ.set_index("stay_id")["onset_hour"])
+    censor_mapped = lmf["stay_id"].map(summ.set_index("stay_id")["censor_hour"])
+    lmf["event"] = onset_mapped.notna().astype(int)
+    lmf["t_event"] = np.where(lmf["event"] == 1, onset_mapped, censor_mapped) - LANDMARK_H
+    lmf["t_event"] = lmf["t_event"].clip(lower=0.5)
+    lmf["onset_within_h"] = ((onset_mapped > LANDMARK_H) &
+                             (onset_mapped <= LANDMARK_H + LANDMARK_HORIZON_H)).astype(int)
     died = lmf["hospital_expire_flag"].fillna(0).astype(int)
     lmf["status_cr"] = np.where(lmf["event"] == 1, 1,
                                 np.where(died == 1, 2, 0))
-    U.save(lmf, "landmark_h6", C.OUTPUT_DIR, fmt="csv")
-    U.log(f"  landmark cohort at hour {LANDMARK_H}: {len(lmf):,} at-risk stays, "
-          f"{int(lmf['event'].sum()):,} later onset "
-          f"({lmf['event'].mean():.1%}); within {LANDMARK_HORIZON_H}h: "
-          f"{int(lmf['onset_within_h'].sum()):,}")
+    U.save(lmf, "08_landmark_h6", C.OUTPUT_DIR)
 
-    # ---- 3) sampled long panel for ACF / HMM / time-varying Cox ----
     rng = np.random.default_rng(486649)
     ids = summ["stay_id"].to_numpy()
     samp = set(rng.choice(ids, size=min(SAMPLE_STAYS, len(ids)), replace=False))
     sp = panel[panel["stay_id"].isin(samp)].copy()
     cols = pd.DataFrame({
         "stay_id": sp["stay_id"].to_numpy(), "hour": sp["hour"].to_numpy(),
-        "hr": ff("hr")[sp.index].to_numpy(), "map": ff("map")[sp.index].to_numpy(),
-        "resp_rate": ff("resp_rate")[sp.index].to_numpy(),
-        "temp_c": ff("temp_c")[sp.index].to_numpy(),
-        "lactate": ff("lactate")[sp.index].to_numpy(),
+        "hr": _ff("hr")[sp.index].to_numpy(), "map": _ff("map")[sp.index].to_numpy(),
+        "resp_rate": _ff("resp_rate")[sp.index].to_numpy(),
+        "temp_c": _ff("temp_c")[sp.index].to_numpy(),
+        "lactate": _ff("lactate")[sp.index].to_numpy(),
         "sofa_total": sp["sofa_total"].to_numpy(),
         "onset_hour": sp["onset_hour"].to_numpy(),
         "sepsis3": sp["sepsis3"].to_numpy(),
         "label": sp["label"].to_numpy()})
-    U.save(cols, "panel_sample_long", C.OUTPUT_DIR, fmt="csv")
+    U.save(cols, "08_panel_sample_long", C.OUTPUT_DIR)
 
 
 if __name__ == "__main__":

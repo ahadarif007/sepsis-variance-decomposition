@@ -49,12 +49,12 @@ find_data <- function(f) {
              file.path("processed_data", f), f)
   hit <- cands[file.exists(cands)][1]; if (is.na(hit)) stop("cannot find ", f); hit
 }
-OUT <- dirname(find_data("landmark_stack.csv"))
+OUT <- dirname(find_data("11_landmark_stack.parquet"))
 FIG <- if (dir.exists("figure")) "figure" else { dir.create("figure"); "figure" }
 
-stack <- read.csv(find_data("landmark_stack.csv"))
-hold_ids <- read.csv(find_data("realtime_holdout_ids.csv"))$stay_id
-hnew <- read.csv(find_data("realtime_holdout_features.csv"))
+stack <- as.data.frame(arrow::read_parquet(find_data("11_landmark_stack.parquet")))
+hold_ids <- read.csv(find_data("14_realtime_holdout_ids.csv"))$stay_id
+hnew <- as.data.frame(arrow::read_parquet(find_data("14_realtime_holdout_features.parquet")))
 
 vitals <- c("hr","resp_rate","map","spo2","temp_c","gcs")
 labs   <- c("lactate","creatinine","wbc","pf_ratio")
@@ -145,7 +145,7 @@ best_i <- which.max(norm)
 util_tab <- data.frame(threshold = grid,
                        utility_raw = round(u_raw, 1),
                        utility_norm = round(norm, 4))
-write.csv(util_tab, file.path(OUT, "tier4_utility.csv"), row.names=FALSE)
+write.csv(util_tab, file.path(OUT, "15_tier4_utility.csv"), row.names=FALSE)
 cat(sprintf("\nPhysioNet utility (normalized): best %.4f at threshold %.2f\n",
             norm[best_i], grid[best_i]))
 cat(sprintf("  (never-alarm baseline utility_norm = 0; per-hour oracle = 1)\n"))
@@ -172,7 +172,7 @@ sweep <- lapply(grid, function(th) {
 })
 sweep <- do.call(rbind, sweep)
 sweep[,-1] <- round(sweep[,-1], 4)
-write.csv(sweep, file.path(OUT, "tier4_alarm_sweep.csv"), row.names=FALSE)
+write.csv(sweep, file.path(OUT, "15_tier4_alarm_sweep.csv"), row.names=FALSE)
 for (target in c(0.90, 0.70, 0.50)) {
   i <- which.min(abs(sweep$sensitivity - target))
   cat(sprintf("  sens=%.2f @ thr %.2f -> %.2f false alarms/patient-day, %.0f%% of non-septic patients ever alarmed\n",
@@ -184,7 +184,7 @@ for (target in c(0.90, 0.70, 0.50)) {
 ## Alarm Trade-Off Figure
 
 ```{r alarm-tradeoff-figure}
-png(file.path(FIG, "alarm_tradeoff.png"), width=1100, height=850, res=200)
+png(file.path(FIG, "15_alarm_tradeoff.png"), width=1100, height=850, res=200)
 plot(sweep$fa_per_patient_day, sweep$sensitivity, type="l", col="firebrick", lwd=2,
      xlab="False alarms per patient-day", ylab="Timely detection sensitivity",
      main="Alarm burden of the real-time supermodel")

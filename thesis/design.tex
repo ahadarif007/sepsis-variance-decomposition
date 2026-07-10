@@ -3,73 +3,210 @@
 
 This chapter describes how the pipeline is built: the architecture that turns
 raw critical-care tables into a continuously updated, externally validated
-sepsis-onset risk. The design links directly to the best practice established in
-Chapter~\ref{ch:review}: leakage-safe temporal features, landmarking for
+sepsis-onset risk. The design links directly to the best practices established
+in Chapter~\ref{ch:review}: leakage-safe temporal features, landmarking for
 real-time risk, informative-missingness encoding, and a transportable
 closed-form model.
 
 \section{Overall Architecture}
 The system is organised as a linear pipeline of numbered, single-purpose stages
-grouped into three layers (\textbf{extract}, \textbf{model}, and
-\textbf{evaluate}) as shown in Figure~\ref{image:sysArchitecture}. Each stage
+grouped into three layers---\textbf{Extract}, \textbf{Model}, and
+\textbf{Evaluate}---as shown in Figure~\ref{image:sysArchitecture}. Each stage
 reads the artefact written by the previous stage and writes its own, so any
-stage can be re-run in isolation. A single configuration module is the sole
-source of truth for file paths, clinical item identifiers, antibiotic name
-lists, and Sepsis-3 thresholds.
+stage can be re-run in isolation. A single configuration module
+(\texttt{config.py}) is the sole source of truth for file paths, clinical item
+identifiers, antibiotic name lists, and Sepsis-3 thresholds.
 
-\begin{figure}[h!]
+\begin{figure}[H]
     \centering
-    \includegraphics[width=0.98\textwidth]{images/architecture.png}
-    \caption{System architecture: the extract, model, and evaluate layers. The
+    \includegraphics[width=0.95\textwidth]{images/architecture.png}
+    \caption{System architecture: the Extract, Model, and Evaluate layers. The
     development data (MIMIC-IV) flows through cohort construction, hourly panel
-    assembly, and onset labelling into the statistical models; the frozen model
-    coefficients are then transported to eICU-CRD for external validation.}
+    assembly, and onset labelling into the seven statistical tiers; the frozen
+    model coefficients are then transported to eICU-CRD for external validation.}
     \label{image:sysArchitecture}
 \end{figure}
 
-Figure~\ref{image:sysArchitecture} (referenced with
-\textbf{\textbackslash{}ref\{image:sysArchitecture\}}) also records the key
-external-validation result so that the architecture and its headline outcome can
-be read together.
+\section{Extract Layer (Scripts 01--08)}
 
-\section{Extract Layer}
-The extract layer builds the analysis substrate. Cohort construction applies the
-inclusion criteria (adults, first ICU stay, minimum length of stay) using only
-the small administrative tables. Suspected-infection detection streams the
-prescription and microbiology tables to pair antibiotics with cultures inside
-the Sepsis-3 windows. The hourly-panel stage is the heaviest: it streams the
-multi-gigabyte chart and lab tables in bounded-memory chunks and resamples every
-stay onto an hourly grid, attaching for each core variable a forward-filled
-value and a time-since-last-measured counter. The onset-labelling stage scores
-hourly SOFA, locates the onset hour, and exports the hour-six landmark table
-that the models consume.
+The extract layer builds the temporal substrate that the models consume. It
+comprises five stages:
 
-\section{Model Layer}
-The model layer implements the statistical tiers. The nomogram (Tier~1) is an
-elastic-net penalised logistic regression at the hour-six landmark; its
-informative-missingness design pairs each median-imputed laboratory value with a
-binary ``was measured'' indicator. The supermodel (Tier~2) stacks the landmark
-design across six landmark hours so that a single interpretable model emits
-hourly-updating risk. Tier~3 addresses within-patient correlation using
-generalised estimating equations with cluster-robust standard errors and fits a
-time-varying Cox model after the proportional-hazards assumption is rejected.
-Tiers~6 and~7 add group-based trajectory modelling and confounder-adjusted
-causal estimates for early antibiotics. Every model is closed-form, so its
-coefficients can be serialised and transported to a second database.
+\paragraph{Stage 01: Exploratory data analysis.} The raw MIMIC-IV tables are
+profiled for completeness, and the six core physiological features (lactate,
+white blood cell count, heart rate, respiratory rate, temperature, and age) are
+examined by sepsis status. Figure~\ref{fig:eda_boxplots} shows the distribution
+of three features by sepsis status: septic stays exhibit higher lactate, faster
+heart rates, and elevated respiratory rates, but with substantial overlap that
+motivates multivariable modelling.
 
-\section{Evaluate Layer}
-The evaluate layer separates internal from external assessment. Internally
-(Tiers~4--5), the models are scored for discrimination against the rule-based
-baselines, for clinical utility and alarm burden, and for subgroup calibration
-across sex and age. Externally, the hour-six landmark table is rebuilt on
-eICU-CRD with the identical definitions, and the frozen MIMIC coefficients are
-applied without refitting; a one-parameter recalibration and an eICU-native
-refit are computed to separate miscalibration from any loss of discrimination.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{images/06_eda_boxplots.png}
+    \caption{Boxplots of heart rate, lactate, and respiratory rate by sepsis
+    status. All three features show genuine separation, but no single feature
+    cleanly discriminates the groups.}
+    \label{fig:eda_boxplots}
+\end{figure}
+
+Figure~\ref{fig:lactate_density} shows the lactate distribution by sepsis
+status, confirming a right-skewed, overlapping pattern that informs the
+choice of log-transformation for distributional models.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.65\textwidth]{images/06_lactate_density.png}
+    \caption{Kernel density estimate of maximum lactate by sepsis status. Both
+    groups are right-skewed; the septic distribution is shifted upward but
+    overlaps heavily with the non-septic distribution.}
+    \label{fig:lactate_density}
+\end{figure}
+
+\paragraph{Stage 02: Cohort extraction.} The adult, first-ICU-stay cohort
+of 65{,}241 stays is built from the administrative tables, applying the
+inclusion criteria of Section~\ref{sec:panel}.
+
+\paragraph{Stage 03: Suspected-infection detection.} The prescription and
+microbiology tables are streamed to pair antibiotics with cultures inside the
+Sepsis-3 time windows, yielding a binary suspected-infection flag per stay.
+
+\paragraph{Stage 04: Measurement extraction.} The multi-gigabyte chart and
+laboratory tables are processed in bounded-memory chunks, extracting the core
+vitals and lab values and mapping them to clinical item identifiers.
+
+\paragraph{Stage 05: SOFA computation and Sepsis-3 labelling.} The six
+SOFA organ subsystems are scored from the first 24 hours of data, and the
+Sepsis-3 rule is applied to produce the binary sepsis label. The resulting
+analysis matrix has 65{,}241 rows, of which 37.1\% meet Sepsis-3 criteria.
+
+\paragraph{Stages 07--08: Hourly panel and onset labelling.} Every stay is
+resampled onto a regular hourly grid (approximately 3.1 million stay-hours).
+Hourly SOFA is scored, and the exact onset hour is located.
+Figure~\ref{fig:onset_histogram} shows the distribution of onset hours,
+revealing a critical distinction: a large spike at hour 0 marks
+\emph{prevalent} sepsis (already present at admission), while the right tail
+represents \emph{incident} sepsis developing in the ICU---the target of
+early prediction.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\textwidth]{images/09_onset_histogram.png}
+    \caption{Distribution of sepsis-onset hour among septic stays. The spike
+    at hour 0 marks prevalent sepsis; the right tail is incident sepsis
+    developing in the ICU, which is the target for early prediction. The
+    dashed line marks the hour-six landmark.}
+    \label{fig:onset_histogram}
+\end{figure}
+
+\section{Model Layer (Scripts 09--19)}
+
+The model layer implements the seven statistical tiers. Because Tier~2 (the
+dynamic landmark supermodel) is the central methodological contribution of this
+thesis, it receives the most detailed treatment here.
+
+\subsection{Tier 1: Full-Feature Elastic-Net Nomogram}
+The Tier-1 nomogram is an elastic-net penalised logistic regression at the
+hour-six landmark, using all 27 candidate features: vitals (6), severity
+scores (3), labs (3), six-hour trajectory slopes (4), binary ``was measured''
+indicators (7), plus age and sex. Nested five-fold cross-validation (outer
+folds for honest evaluation, inner folds for $\lambda$ selection) yields
+out-of-sample predicted risks.
+
+The key design choice is the \textbf{informative-missingness encoding}: each
+laboratory value is median-imputed and accompanied by a binary indicator
+recording whether it was measured. At hour 6, labs are missing in 70--88\% of
+stays (clinicians order labs selectively in response to suspicion), so these
+indicators capture a genuine clinical signal rather than a nuisance pattern.
+
+Figure~\ref{fig:nomogram_h6} shows the clinical nomogram derived from the
+elastic-net-selected features, allowing point-based bedside risk estimation.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{images/10_nomogram_h6.png}
+    \caption{Nomogram for incident Sepsis-3 onset within 12 hours at the
+    hour-six landmark. Each predictor contributes points on the top scale;
+    the total is mapped to a predicted risk on the bottom scale. The
+    ``was-measured'' indicators (\_msg features) contribute substantial
+    points, reflecting the informative-missingness signal.}
+    \label{fig:nomogram_h6}
+\end{figure}
+
+\subsection{Tier 2: Dynamic Landmark Supermodel}
+\label{sec:supermodel_design}
+
+A single landmark answers ``predict from hour 6.'' A deployed system must
+predict at \emph{every} hour. The classical solution is a \textbf{landmark
+supermodel} \cite{vanhouwelingen2007landmark}: the landmark construction is
+repeated on a grid of prediction hours $s \in \{6, 12, 18, 24, 36, 48\}$, the
+resulting datasets are stacked vertically, and a single penalised model is
+fitted with $s$, $s^2$, and all 27 base-feature-by-$s$ interactions as
+additional covariates (56 candidate features in total). Patient-grouped folds
+prevent information leakage across landmarks.
+
+The supermodel design has three important properties:
+\begin{enumerate}
+  \item \textbf{Parsimony.} One model replaces six separate per-landmark models,
+  borrowing strength across prediction times while allowing the feature effects
+  to change smoothly with $s$ through the interaction terms.
+  \item \textbf{Deployability.} At any ICU hour, the model is evaluated by
+  setting $s$ to the current hour and plugging in the patient's current
+  features. The output is a continuously updated risk estimate.
+  \item \textbf{Interpretability.} The coefficients are directly readable as
+  log-odds ratios, and their dependence on $s$ can be inspected through the
+  interaction terms.
+\end{enumerate}
+
+\subsection{Tier 3: Within-Patient Correlation}
+
+The hourly panel contains repeated measurements from the same patient, and
+these observations are strongly correlated. A naive pooled logistic model
+treats the approximately 76{,}000 at-risk stay-hours as independent, which
+produces artificially narrow confidence intervals. Tier~3 addresses this in
+two ways:
+
+\begin{enumerate}
+  \item A \textbf{GEE} with an exchangeable working correlation structure
+  estimates population-averaged effects with cluster-robust sandwich standard
+  errors.
+  \item A \textbf{ridge-penalised time-varying Cox model} on the
+  counting-process formulation (start-stop intervals, one per hour) provides
+  inferentially valid hazard ratios with cluster-robust variance estimation.
+\end{enumerate}
+
+\subsection{Tiers 4--7: Evaluation and Complementary Analyses}
+
+\paragraph{Tier 4 (Real-time evaluation).} The supermodel is trained on
+44{,}389 stays and evaluated on a held-out set of 6{,}000 stays (152{,}910
+scored hours), computing the PhysioNet/CinC 2019 utility score and an
+alarm-burden sweep.
+
+\paragraph{Tier 5 (Subgroup fairness).} Discrimination and calibration-in-the-large are stratified by sex and four age bands ($<$50, 50--64, 65--79,
+80+) to assess equitable performance.
+
+\paragraph{Tier 6 (GBTM).} A latent-class growth model
+\cite{yang2022gbtm} is fitted to first-24h SOFA trajectories via
+\texttt{flexmix}, selecting the number of classes by BIC. Class membership is
+linked to both mortality (Cox regression) and incident Sepsis-3 (logistic
+regression).
+
+\paragraph{Tier 7 (Causal analysis).} The confounder-adjusted effect of
+early antibiotic administration ($\le 3$ hours) on mortality is estimated
+using crude, PSM, IPW, and augmented-IPW estimators, with the adjustment set
+chosen by LASSO.
+
+\section{Evaluate Layer (Scripts 20--22)}
+
+The evaluate layer consolidates results across all tiers into a single
+comprehensive report and performs external validation. The frozen MIMIC
+model's coefficients are serialised and applied to eICU-CRD by assembling
+the identical feature design matrix from eICU data and computing the
+linear predictor directly.
 
 \section{Implementation Notes}
 Extraction and panel assembly are implemented in Python with pandas; the
-statistical tiers and their reports are implemented in R. Intermediate artefacts
-default to CSV for inspectability, with the two largest hourly panels stored as
-columnar Parquet by necessity. All randomness uses a fixed seed, and the whole
-sequence is reproducible from a single driver script that executes the stages in
-order.
+statistical tiers and their reports are implemented in R. All intermediate
+artefacts are stored as Parquet (for large panel data) or CSV (for small
+result tables). All randomness uses a fixed seed (486649), and the entire
+pipeline is reproducible from a single driver script (\texttt{run\_pipeline.py})
+that executes the stages in order.

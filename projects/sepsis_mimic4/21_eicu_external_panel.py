@@ -30,17 +30,20 @@ eICU times are minute offsets from unit admission (hour = floor(offset / 60)).
 
 Output
 ------
-processed_data/landmark_h6_eicu.csv   same schema as landmark_h6.csv
+processed_data/landmark_h6_eicu.parquet   same schema as landmark_h6.csv
 """
 from __future__ import annotations
-
-import gzip
 
 import numpy as np
 import pandas as pd
 
 import config as C
 import utils as U
+from clinical_scores import (
+    build_hourly_grid, ff, normalize_vaso_bools, qsofa,
+    score_sofa_hourly, sirs,
+)
+from logging_utils import setup_logging, step, log_cohort_filter, log_separator
 
 EICU_DIR = C.PROJECT_ROOT / "data" / "eicu-collaborative-research-database-2.0"
 
@@ -80,23 +83,27 @@ VASO_KINDS = {                 # substring match on lower(drugname) -> group
 # --------------------------------------------------------------------------- #
 # 1. Cohort (mirrors 02_extract_cohort.py, eICU-native)
 # --------------------------------------------------------------------------- #
-def _parse_age(s: pd.Series) -> pd.Series:
-    a = s.astype("string").str.extract(r"(\d+)")[0]
-    a = pd.to_numeric(a, errors="coerce")
-    # eICU stores "> 89" for ages above 89; mapped to 90 for consistency.
-    a = a.where(~s.astype("string").str.contains(">", na=False), 90)
-    return a
+def _parse_age(age_series: pd.Series) -> pd.Series:
+    """Parse eICU age strings (e.g. '65', '> 89') to numeric. Ages > 89 mapped to 90."""
+    numeric_part = age_series.astype("string").str.extract(r"(\d+)")[0]
+    age = pd.to_numeric(numeric_part, errors="coerce")
+    age = age.where(~age_series.astype("string").str.contains(">", na=False), 90)
+    return age
 
 
 def build_cohort() -> pd.DataFrame:
-    U.log("loading eICU patient table ...")
-    pat = pd.read_csv(
-        EICU_DIR / "patient.csv.gz",
-        usecols=["patientunitstayid", "uniquepid", "patienthealthsystemstayid",
-                 "gender", "age", "unitvisitnumber", "unitdischargeoffset",
-                 "hospitaldischargestatus", "hospitaladmitoffset"],
-        low_memory=False,
-    )
+    import logging
+    log = logging.getLogger("21_eicu_external_panel")
+
+    with step(log, "loading eICU patient table"):
+        pat = pd.read_csv(
+            EICU_DIR / "patient.csv.gz",
+            usecols=["patientunitstayid", "uniquepid", "patienthealthsystemstayid",
+                     "gender", "age", "unitvisitnumber", "unitdischargeoffset",
+                     "hospitaldischargestatus", "hospitaladmitoffset"],
+            low_memory=False,
+        )
+    log.info("raw patient rows: %s", f"{len(pat):,}")
     pat["age"] = _parse_age(pat["age"])
     pat["los_hours"] = pd.to_numeric(pat["unitdischargeoffset"],
                                      errors="coerce") / 60.0
@@ -107,16 +114,14 @@ def build_cohort() -> pd.DataFrame:
 
     n0 = len(pat)
     pat = pat[pat["age"] >= C.MIN_AGE]
+    log_cohort_filter(log, f"age >= {C.MIN_AGE}", n0, len(pat))
     n1 = len(pat)
     pat = pat[pat["los_hours"] >= C.MIN_ICU_LOS_HOURS]
+    log_cohort_filter(log, f"LOS >= {C.MIN_ICU_LOS_HOURS}h", n1, len(pat))
     n2 = len(pat)
-    # First ICU stay per patient: smallest visit number, then earliest admit.
     pat = (pat.sort_values(["unitvisitnumber", "hospitaladmitoffset"])
              .groupby("uniquepid", as_index=False).first())
-    n3 = len(pat)
-    U.log(f"  adults >= {C.MIN_AGE}: {n0:,} -> {n1:,}")
-    U.log(f"  LOS >= {C.MIN_ICU_LOS_HOURS}h: {n1:,} -> {n2:,}")
-    U.log(f"  first ICU stay/patient: {n2:,} -> {n3:,}")
+    log_cohort_filter(log, "first ICU stay/patient", n2, len(pat))
     return pat[["patientunitstayid", "uniquepid", "gender", "age",
                 "los_hours", "hospital_expire_flag"]].rename(
         columns={"patientunitstayid": "stay_id"})
@@ -126,6 +131,7 @@ def build_cohort() -> pd.DataFrame:
 # 2. Streaming hourly aggregation of a big offset-keyed eICU table
 # --------------------------------------------------------------------------- #
 def _hour_of(offset_min: pd.Series) -> pd.Series:
+    """Convert eICU minute-offset to hour (floor)."""
     return np.floor(pd.to_numeric(offset_min, errors="coerce") / 60.0)
 
 
@@ -154,9 +160,9 @@ def stream_hourly(path, usecols, off_col, keep_ids, extract, chunksize=3_000_000
         long = long.dropna(subset=["value"])
         if long.empty:
             continue
-        g = long.groupby(["stay_id", "hour", "var"])["value"].agg(
+        grouped = long.groupby(["stay_id", "hour", "var"])["value"].agg(
             vmin="min", vmax="max", vsum="sum", vcount="count").reset_index()
-        partials.append(g)
+        partials.append(grouped)
         if len(partials) >= 30:
             partials = [_fold(partials)]
     U.log(f"  {path.name}: scanned {total:,} rows")
@@ -167,24 +173,26 @@ def stream_hourly(path, usecols, off_col, keep_ids, extract, chunksize=3_000_000
 
 
 def _fold(partials):
-    allp = pd.concat(partials, ignore_index=True)
-    return allp.groupby(["stay_id", "hour", "var"]).agg(
+    """Combine partial aggregates by re-aggregating across chunks."""
+    combined = pd.concat(partials, ignore_index=True)
+    return combined.groupby(["stay_id", "hour", "var"]).agg(
         vmin=("vmin", "min"), vmax=("vmax", "max"),
         vsum=("vsum", "sum"), vcount=("vcount", "sum")).reset_index()
 
 
 def reduce_var(long, var, how):
-    sub = long[long["var"] == var]
-    if sub.empty:
+    """Reduce long-format aggregates for one variable to per-(stay_id, hour) values."""
+    var_rows = long[long["var"] == var]
+    if var_rows.empty:
         return pd.Series(dtype="float64")
-    g = sub.groupby(["stay_id", "hour"])
+    grouped = var_rows.groupby(["stay_id", "hour"])
     if how == "mean":
-        gg = g.agg(vsum=("vsum", "sum"), vcount=("vcount", "sum"))
-        return (gg["vsum"] / gg["vcount"]).rename("value")
+        totals = grouped.agg(vsum=("vsum", "sum"), vcount=("vcount", "sum"))
+        return (totals["vsum"] / totals["vcount"]).rename("value")
     if how == "min":
-        return g["vmin"].min().rename("value")
+        return grouped["vmin"].min().rename("value")
     if how == "max":
-        return g["vmax"].max().rename("value")
+        return grouped["vmax"].max().rename("value")
     raise ValueError(how)
 
 
@@ -285,39 +293,39 @@ def get_vaso(keep_ids):
         chunk = chunk[chunk["patientunitstayid"].isin(keep_ids)]
         if chunk.empty:
             continue
-        name = chunk["drugname"].astype("string").str.lower()
-        kind = pd.Series(pd.NA, index=chunk.index, dtype="string")
-        for sub, grp in VASO_KINDS.items():
-            kind = kind.mask(name.str.contains(sub, na=False, regex=False), grp)
-        sub = chunk[kind.notna()].copy()
-        if sub.empty:
+        drug_name_lower = chunk["drugname"].astype("string").str.lower()
+        vaso_group = pd.Series(pd.NA, index=chunk.index, dtype="string")
+        for substring, group in VASO_KINDS.items():
+            vaso_group = vaso_group.mask(
+                drug_name_lower.str.contains(substring, na=False, regex=False), group)
+        matched = chunk[vaso_group.notna()].copy()
+        if matched.empty:
             continue
-        sub["kind"] = kind[kind.notna()]
-        sub["hour"] = _hour_of(sub["infusionoffset"])
-        sub = sub[(sub["hour"] >= 0) & (sub["hour"] <= MAX_H)]
-        sub["is_wb"] = name.loc[sub.index].str.contains("mcg/kg/min",
-                                                        na=False, regex=False)
-        sub["rate"] = pd.to_numeric(sub["drugrate"], errors="coerce")
-        rows.append(sub[["patientunitstayid", "hour", "kind", "is_wb", "rate"]])
+        matched["kind"] = vaso_group[vaso_group.notna()]
+        matched["hour"] = _hour_of(matched["infusionoffset"])
+        matched = matched[(matched["hour"] >= 0) & (matched["hour"] <= MAX_H)]
+        matched["is_weight_based"] = drug_name_lower.loc[matched.index].str.contains(
+            "mcg/kg/min", na=False, regex=False)
+        matched["rate"] = pd.to_numeric(matched["drugrate"], errors="coerce")
+        rows.append(matched[["patientunitstayid", "hour", "kind", "is_weight_based", "rate"]])
     if not rows:
         return pd.DataFrame(columns=["stay_id", "hour"])
-    iv = pd.concat(rows, ignore_index=True).rename(
+    infusions = pd.concat(rows, ignore_index=True).rename(
         columns={"patientunitstayid": "stay_id"})
-    out = pd.DataFrame(index=iv.groupby(["stay_id", "hour"]).size().index)
-    for g in ["norepi_epi", "dopamine", "dobutamine", "other_vaso"]:
-        present = (iv[iv["kind"] == g].groupby(["stay_id", "hour"]).size()
-                   .reindex(out.index).fillna(0) > 0)
-        out[f"{g}_any"] = present
-    # dose-dependent rates (only meaningful when charted in mcg/kg/min)
-    wb = iv[iv["is_wb"]]
-    out["norepi_epi_rate"] = (wb[wb["kind"] == "norepi_epi"]
-                              .groupby(["stay_id", "hour"])["rate"].max())
-    out["dopamine_rate"] = (wb[wb["kind"] == "dopamine"]
-                            .groupby(["stay_id", "hour"])["rate"].max())
-    for c in ["norepi_epi_any", "dopamine_any", "dobutamine_any",
-              "other_vaso_any"]:
-        out[c] = out[c].fillna(False).astype(bool)
-    return out.reset_index()
+    result = pd.DataFrame(index=infusions.groupby(["stay_id", "hour"]).size().index)
+    for group in ["norepi_epi", "dopamine", "dobutamine", "other_vaso"]:
+        present = (infusions[infusions["kind"] == group].groupby(["stay_id", "hour"]).size()
+                   .reindex(result.index).fillna(0) > 0)
+        result[f"{group}_any"] = present
+    weight_based = infusions[infusions["is_weight_based"]]
+    result["norepi_epi_rate"] = (weight_based[weight_based["kind"] == "norepi_epi"]
+                                 .groupby(["stay_id", "hour"])["rate"].max())
+    result["dopamine_rate"] = (weight_based[weight_based["kind"] == "dopamine"]
+                               .groupby(["stay_id", "hour"])["rate"].max())
+    for col in ["norepi_epi_any", "dopamine_any", "dobutamine_any",
+                "other_vaso_any"]:
+        result[col] = result[col].fillna(False).astype(bool)
+    return result.reset_index()
 
 
 # --------------------------------------------------------------------------- #
@@ -363,15 +371,16 @@ def suspected_infection(keep_ids):
     susp = first_abx.rename("t_abx_h").reset_index().rename(
         columns={"patientunitstayid": "stay_id"})
     if not micro.empty:
-        pair = susp.merge(micro.rename(columns={"patientunitstayid": "stay_id"}),
-                          on="stay_id", how="left")
-        d = pair["t_cx_h"] - pair["t_abx_h"]
-        arm1 = (d >= 0) & (d <= C.ABX_BEFORE_CULTURE_HOURS)     # cx after abx
-        arm2 = (d < 0) & (-d <= C.CULTURE_BEFORE_ABX_HOURS)     # cx before abx
-        pair["t_susp"] = np.where(arm2, pair["t_cx_h"], pair["t_abx_h"])
-        pair["ok"] = (arm1 | arm2).fillna(False)
-        # prefer a culture-confirmed suspicion time; else antibiotic time
-        confirmed = (pair[pair["ok"]].sort_values("t_susp")
+        paired = susp.merge(micro.rename(columns={"patientunitstayid": "stay_id"}),
+                            on="stay_id", how="left")
+        culture_abx_gap_h = paired["t_cx_h"] - paired["t_abx_h"]
+        # Arm 1: culture drawn after abx, within 72h
+        arm1 = (culture_abx_gap_h >= 0) & (culture_abx_gap_h <= C.ABX_BEFORE_CULTURE_HOURS)
+        # Arm 2: culture drawn before abx, within 24h
+        arm2 = (culture_abx_gap_h < 0) & (-culture_abx_gap_h <= C.CULTURE_BEFORE_ABX_HOURS)
+        paired["t_susp"] = np.where(arm2, paired["t_cx_h"], paired["t_abx_h"])
+        paired["qualifies"] = (arm1 | arm2).fillna(False)
+        confirmed = (paired[paired["qualifies"]].sort_values("t_susp")
                      .groupby("stay_id")["t_susp"].first())
         susp["susp_hour"] = susp["stay_id"].map(confirmed)
         susp["susp_hour"] = susp["susp_hour"].fillna(susp["t_abx_h"])
@@ -384,113 +393,71 @@ def suspected_infection(keep_ids):
 # 5. Panel assembly + forward-fill
 # --------------------------------------------------------------------------- #
 def build_grid(cohort):
-    h_stay = np.floor(np.minimum(cohort["los_hours"].to_numpy(),
-                                 float(MAX_H))).astype(int)
-    h_stay = np.clip(h_stay, 0, MAX_H)
-    reps = h_stay + 1
-    stay_rep = np.repeat(cohort["stay_id"].to_numpy(), reps)
-    hour_rep = np.concatenate([np.arange(0, n) for n in reps])
-    return pd.DataFrame({"stay_id": stay_rep.astype("int64"),
-                         "hour": hour_rep.astype("int64")})
+    return build_hourly_grid(cohort, MAX_H)
 
 
 def score_sofa(panel):
-    """Same logic as 08_onset_label.score_sofa (urine omitted: requires 24h of
-    record and never fires at the h6 landmark)."""
-    def ff(v):
-        return panel[f"{v}_ff"] if f"{v}_ff" in panel.columns else panel[v]
-
-    pf = ff("pf_ratio")
-    resp = np.select([pf < 100, pf < 200, pf < 300, pf < 400], [4, 3, 2, 1], 0)
-    plt = ff("platelets")
-    coag = np.select([plt < 20, plt < 50, plt < 100, plt < 150], [4, 3, 2, 1], 0)
-    bil = ff("bilirubin")
-    liver = np.select([bil >= 12, bil >= 6, bil >= 2, bil >= 1.2], [4, 3, 2, 1], 0)
-    mp = ff("map")
-    cardio = np.where(mp < 70, 1, 0)
-    cardio = np.maximum(cardio, np.where(panel["dobutamine_any"].fillna(False), 2, 0))
-    cardio = np.maximum(cardio, np.where(panel["other_vaso_any"].fillna(False), 3, 0))
-    dop = panel.get("dopamine_rate", pd.Series(np.nan, index=panel.index))
-    dop_any = panel["dopamine_any"].fillna(False).to_numpy()
-    dop_score = np.where(dop > 15, 4, np.where(dop > 5, 3, 2))
-    cardio = np.maximum(cardio, np.where(dop_any, dop_score, 0))
-    ne = panel.get("norepi_epi_rate", pd.Series(np.nan, index=panel.index))
-    ne_any = panel["norepi_epi_any"].fillna(False).to_numpy()
-    ne_score = np.where(ne > 0.1, 4, 3)
-    cardio = np.maximum(cardio, np.where(ne_any, ne_score, 0))
-    gcs = ff("gcs").fillna(15)
-    cns = np.select([gcs < 6, gcs < 10, gcs < 13, gcs < 15], [4, 3, 2, 1], 0)
-    cr = ff("creatinine")
-    renal = np.select([cr >= 5, cr >= 3.5, cr >= 2.0, cr >= 1.2], [4, 3, 2, 1], 0)
-    out = pd.DataFrame({"sofa_resp": resp, "sofa_coag": coag, "sofa_liver": liver,
-                        "sofa_cardio": cardio, "sofa_cns": cns,
-                        "sofa_renal": renal}, index=panel.index).astype("int8")
-    out["sofa_total"] = out.sum(axis=1).astype("int8")
-    return out
+    """Delegates to clinical_scores.score_sofa_hourly (urine omitted)."""
+    return score_sofa_hourly(panel, include_urine=False)
 
 
-def _hourly_qsofa(rr, gcs, mp):
-    return ((rr >= 22).astype(int) + (gcs < 15).astype(int)
-            + (mp < 70).astype(int))
-
-
-def _hourly_sirs(hr, rr, temp, wbc):
-    return ((hr > 90).astype(int) + (rr > 20).astype(int)
-            + ((temp > 38) | (temp < 36)).astype(int)
-            + ((wbc > 12) | (wbc < 4)).astype(int))
+_hourly_qsofa = qsofa
+_hourly_sirs = sirs
 
 
 def main():
+    log = setup_logging("21_eicu_external_panel")
+
     cohort = build_cohort()
     keep_ids = set(cohort["stay_id"].astype("int64"))
-    U.log(f"eICU cohort: {len(cohort):,} stays")
+    log.info("eICU cohort: %s stays", f"{len(cohort):,}")
 
-    # ---- long hourly measurements ----
-    meas = pd.concat([get_vitals(keep_ids), get_nursecharting(keep_ids),
-                      get_labs(keep_ids)], ignore_index=True)
+    with step(log, "streaming long hourly measurements"):
+        meas = pd.concat([get_vitals(keep_ids), get_nursecharting(keep_ids),
+                          get_labs(keep_ids)], ignore_index=True)
+    log.info("measurements: %s rows total", f"{len(meas):,}")
 
-    U.log("folding variables onto the hourly grid ...")
-    panel = build_grid(cohort).set_index(["stay_id", "hour"])
-    reductions = {"hr": "mean", "resp_rate": "mean", "spo2": "min",
-                  "map": "min", "temp_c": "mean", "gcs": "min",
-                  "lactate": "max", "creatinine": "max", "wbc": "max",
-                  "platelets": "min", "bilirubin": "max", "pao2": "min",
-                  "fio2": "max"}
-    for var, how in reductions.items():
-        panel[var] = reduce_var(meas, var, how)
-    panel = panel.reset_index()
+    with step(log, "folding variables onto hourly grid"):
+        panel = build_grid(cohort).set_index(["stay_id", "hour"])
+        reductions = {"hr": "mean", "resp_rate": "mean", "spo2": "min",
+                      "map": "min", "temp_c": "mean", "gcs": "min",
+                      "lactate": "max", "creatinine": "max", "wbc": "max",
+                      "platelets": "min", "bilirubin": "max", "pao2": "min",
+                      "fio2": "max"}
+        for var, how in reductions.items():
+            panel[var] = reduce_var(meas, var, how)
+        panel = panel.reset_index()
 
-    # ---- unit handling (mirror 07) ----
-    panel["temp_c"] = panel["temp_c"].clip(lower=25, upper=45)
-    panel["fio2"] = panel["fio2"].where(panel["fio2"] <= 1.0,
-                                        panel["fio2"] / 100.0).clip(0.21, 1.0)
-    panel["map"] = panel["map"].clip(lower=10, upper=250)
-    panel["spo2"] = panel["spo2"].clip(lower=0, upper=100)
-    panel["gcs"] = panel["gcs"].clip(lower=3, upper=15)
-    panel["pf_ratio"] = panel["pao2"] / panel["fio2"]
+    with step(log, "unit conversions"):
+        panel["temp_c"] = panel["temp_c"].clip(lower=25, upper=45)
+        panel["fio2"] = panel["fio2"].where(panel["fio2"] <= 1.0,
+                                            panel["fio2"] / 100.0).clip(0.21, 1.0)
+        panel["map"] = panel["map"].clip(lower=10, upper=250)
+        panel["spo2"] = panel["spo2"].clip(lower=0, upper=100)
+        panel["gcs"] = panel["gcs"].clip(lower=3, upper=15)
+        panel["pf_ratio"] = panel["pao2"] / panel["fio2"]
 
-    # ---- vasopressors ----
-    vaso = get_vaso(keep_ids)
+    with step(log, "streaming vasopressors (infusionDrug)"):
+        vaso = get_vaso(keep_ids)
     if not vaso.empty:
         panel = panel.merge(vaso, on=["stay_id", "hour"], how="left")
     for c in ["norepi_epi_any", "dopamine_any", "dobutamine_any",
               "other_vaso_any"]:
         panel[c] = panel[c].fillna(False).astype(bool) if c in panel else False
 
-    # ---- forward-fill within stay ----
-    U.log("forward-filling core variables ...")
-    panel = panel.sort_values(["stay_id", "hour"]).reset_index(drop=True)
-    g = panel.groupby("stay_id", sort=False)
-    for v in CORE_VARS:
-        if v in panel.columns:
-            panel[f"{v}_ff"] = g[v].ffill()
+    with step(log, "forward-filling core variables"):
+        panel = panel.sort_values(["stay_id", "hour"]).reset_index(drop=True)
+        g = panel.groupby("stay_id", sort=False)
+        for v in CORE_VARS:
+            if v in panel.columns:
+                panel[f"{v}_ff"] = g[v].ffill()
 
-    # ---- hourly SOFA + onset labelling ----
-    U.log("scoring hourly SOFA + locating onset ...")
-    sofa = score_sofa(panel)
-    panel = pd.concat([panel, sofa], axis=1)
+    with step(log, "scoring hourly SOFA + locating onset"):
+        sofa = score_sofa(panel)
+        panel = pd.concat([panel, sofa], axis=1)
 
-    susp_hour = suspected_infection(keep_ids)
+    with step(log, "detecting suspected infection"):
+        susp_hour = suspected_infection(keep_ids)
     panel["susp_hour"] = panel["stay_id"].map(susp_hour)
     has_susp = panel["stay_id"].map(susp_hour.notna()).fillna(False)
     in_win = (panel["hour"] >= (panel["susp_hour"] - SUSP_BEFORE_H)) & \
@@ -498,44 +465,43 @@ def main():
     cand = (panel["sofa_total"] >= SOFA_THRESH) & in_win & has_susp
     onset = panel.loc[cand].groupby("stay_id")["hour"].min().rename("onset_hour")
 
-    # ---- landmark table at h6 (mirror export_for_report in 08) ----
-    U.log("building the hour-6 landmark table ...")
-    def ff(v):
-        return panel[f"{v}_ff"] if f"{v}_ff" in panel.columns else panel[v]
+    with step(log, "building hour-6 landmark table"):
+        def _ff(v):
+            return ff(panel, v)
 
-    lm = panel[panel["hour"] == LANDMARK_H].copy()
-    onset_h_lm = lm["stay_id"].map(onset)
-    at_risk = onset_h_lm.isna() | (onset_h_lm > LANDMARK_H)
-    lm = lm[at_risk].copy()
+        lm = panel[panel["hour"] == LANDMARK_H].copy()
+        onset_h_lm = lm["stay_id"].map(onset)
+        at_risk = onset_h_lm.isna() | (onset_h_lm > LANDMARK_H)
+        lm = lm[at_risk].copy()
 
-    lmf = pd.DataFrame({"stay_id": lm["stay_id"].to_numpy()})
-    for v in ["hr", "resp_rate", "map", "spo2", "temp_c", "gcs",
-              "lactate", "creatinine", "wbc", "pf_ratio"]:
-        lmf[v] = ff(v)[lm.index].to_numpy()
-    lmf["sofa_total"] = lm["sofa_total"].to_numpy()
-    h0 = panel[panel["hour"] == 0]
-    for v in ["hr", "resp_rate", "map", "spo2"]:
-        v0 = pd.Series(ff(v)[h0.index].to_numpy(), index=h0["stay_id"].to_numpy())
-        base = lmf["stay_id"].map(v0).to_numpy()
-        lmf[f"{v}_slope6"] = lmf[v].to_numpy() - base
-    lmf["qsofa"] = _hourly_qsofa(lmf["resp_rate"], lmf["gcs"], lmf["map"])
-    lmf["sirs"] = _hourly_sirs(lmf["hr"], lmf["resp_rate"], lmf["temp_c"],
-                               lmf["wbc"])
-    lmf = lmf.merge(cohort[["stay_id", "age", "gender", "hospital_expire_flag"]],
-                    on="stay_id", how="left")
-    o = lmf["stay_id"].map(onset)
-    lmf["event"] = o.notna().astype(int)
-    lmf["onset_within_h"] = ((o > LANDMARK_H) &
-                             (o <= LANDMARK_H + HORIZON_H)).astype(int)
+        lmf = pd.DataFrame({"stay_id": lm["stay_id"].to_numpy()})
+        for v in ["hr", "resp_rate", "map", "spo2", "temp_c", "gcs",
+                  "lactate", "creatinine", "wbc", "pf_ratio"]:
+            lmf[v] = _ff(v)[lm.index].to_numpy()
+        lmf["sofa_total"] = lm["sofa_total"].to_numpy()
+        h0 = panel[panel["hour"] == 0]
+        for v in ["hr", "resp_rate", "map", "spo2"]:
+            v0 = pd.Series(_ff(v)[h0.index].to_numpy(), index=h0["stay_id"].to_numpy())
+            base = lmf["stay_id"].map(v0).to_numpy()
+            lmf[f"{v}_slope6"] = lmf[v].to_numpy() - base
+        lmf["qsofa"] = _hourly_qsofa(lmf["resp_rate"], lmf["gcs"], lmf["map"])
+        lmf["sirs"] = _hourly_sirs(lmf["hr"], lmf["resp_rate"], lmf["temp_c"],
+                                   lmf["wbc"])
+        lmf = lmf.merge(cohort[["stay_id", "age", "gender", "hospital_expire_flag"]],
+                        on="stay_id", how="left")
+        onset_mapped = lmf["stay_id"].map(onset)
+        lmf["event"] = onset_mapped.notna().astype(int)
+        lmf["onset_within_h"] = ((onset_mapped > LANDMARK_H) &
+                                 (onset_mapped <= LANDMARK_H + HORIZON_H)).astype(int)
 
-    out = C.OUTPUT_DIR / "landmark_h6_eicu.csv"
-    lmf.to_csv(out, index=False)
-    U.log("=" * 60)
-    U.log(f"wrote {out.name}: {len(lmf):,} at-risk stays @ h6, "
-          f"onset-within-12h rate {lmf['onset_within_h'].mean():.3f} "
-          f"({int(lmf['onset_within_h'].sum()):,} events)")
-    U.log(f"  any later onset: {int(lmf['event'].sum()):,} "
-          f"({lmf['event'].mean():.3f})")
+    out_path = C.OUTPUT_DIR / "21_landmark_h6_eicu.parquet"
+    lmf.to_parquet(out_path, index=False)
+    log_separator(log)
+    log.info("saved %s: %s at-risk stays @ h6, onset-within-12h rate %.3f (%s events)",
+             out_path.name, f"{len(lmf):,}", lmf['onset_within_h'].mean(),
+             f"{int(lmf['onset_within_h'].sum()):,}")
+    log.info("  any later onset: %s (%.3f)",
+             f"{int(lmf['event'].sum()):,}", lmf['event'].mean())
 
 
 if __name__ == "__main__":

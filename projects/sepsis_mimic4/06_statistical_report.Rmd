@@ -54,12 +54,12 @@ PAL <- c("No sepsis" = "#5B9BD5", "Sepsis-3" = "#C0504D")
 
 ```{r load-data}
 find_data <- function() {
-  cands <- c("../../processed_data/analysis_matrix.csv",
-             "processed_data/analysis_matrix.csv",
-             "analysis_matrix.csv")
+  cands <- c("../../processed_data/05_analysis_matrix.parquet",
+             "processed_data/05_analysis_matrix.parquet",
+             "05_analysis_matrix.parquet")
   hit <- cands[file.exists(cands)]
   if (length(hit) == 0)
-    stop("analysis_matrix.csv not found. Run 04_extract_measurements.py then ",
+    stop("05_analysis_matrix.parquet not found. Run 04_extract_measurements.py then ",
          "05_sofa_sepsis3.py first.")
   hit[1]
 }
@@ -69,7 +69,10 @@ to_bool <- function(x) {
   tolower(as.character(x)) %in% c("true", "t", "1", "yes")
 }
 
-raw <- read.csv(find_data(), stringsAsFactors = FALSE)
+OUT <- dirname(find_data())
+FIG <- if (dir.exists("figure")) "figure" else { dir.create("figure"); "figure" }
+
+raw <- as.data.frame(arrow::read_parquet(find_data()))
 
 raw$sepsis <- factor(ifelse(to_bool(raw$sepsis3), "Sepsis-3", "No sepsis"),
                      levels = c("No sepsis", "Sepsis-3"))
@@ -1121,6 +1124,215 @@ of sample, is well calibrated and clinically useful, benefits from a
 non-linear lactate term, is free of collinearity, and is robust to the
 missing-data mechanism, while also revealing that measurement itself
 carries information.*
+
+```{r export-values, include=FALSE}
+# ── Export all key statistics and coefficients for thesis / downstream use ──
+
+# 1. Hypothesis tests
+hyp_tests <- data.frame(
+  test = c("welch_t", "welch_t", "welch_t", "welch_t", "welch_t", "welch_t", "welch_t",
+           "wilcoxon", "wilcoxon", "wilcoxon",
+           "chisq", "chisq", "chisq", "chisq"),
+  metric = c("t_statistic", "df", "p_value", "mean_no_sepsis", "mean_sepsis",
+             "cohens_d", "cohens_d_ci",
+             "W", "p_value", "rank_biserial_r",
+             "chi_squared", "df", "p_value", "cramers_v_adjusted"),
+  value = c(sprintf("%.4f", t1$statistic), sprintf("%.1f", t1$parameter),
+            sprintf("%.2e", t1$p.value), sprintf("%.4f", t1$estimate[1]),
+            sprintf("%.4f", t1$estimate[2]),
+            sprintf("%.4f", d1$Cohens_d),
+            sprintf("[%.4f, %.4f]", d1$CI_low, d1$CI_high),
+            format(w1$statistic, big.mark=""), sprintf("%.2e", w1$p.value),
+            sprintf("%.4f", rb$r_rank_biserial),
+            sprintf("%.2f", c1$statistic), as.character(c1$parameter),
+            sprintf("%.2e", c1$p.value), sprintf("%.4f", v1$Cramers_v_adjusted)),
+  stringsAsFactors = FALSE
+)
+write.csv(hyp_tests, file.path(OUT, "06_hypothesis_tests.csv"), row.names = FALSE)
+
+# 2. MLE parameters
+mle_tab <- data.frame(
+  parameter = c("mu_hat", "sigma_hat", "se_mu", "n_septic",
+                "median_lactate", "median_ci_low", "median_ci_high"),
+  value = c(mu_hat, sigma_hat, se_mu, n_s, median_lactate,
+            exp(mu_hat - 1.96 * se_mu), exp(mu_hat + 1.96 * se_mu)),
+  stringsAsFactors = FALSE
+)
+write.csv(mle_tab, file.path(OUT, "06_mle_params.csv"), row.names = FALSE)
+
+# 3. GLM coefficients and odds ratios
+glm_export <- bind_rows(
+  broom::tidy(m1) %>% mutate(model = "M1_lactate_only"),
+  broom::tidy(m2) %>% mutate(model = "M2_six_predictors")
+)
+glm_export$odds_ratio <- exp(glm_export$estimate)
+or_ci_full <- rbind(exp(confint.default(m1)), exp(confint.default(m2)))
+glm_export$or_ci_low  <- or_ci_full[, 1]
+glm_export$or_ci_high <- or_ci_full[, 2]
+write.csv(glm_export, file.path(OUT, "06_glm_coefficients.csv"), row.names = FALSE)
+
+# 4. Model comparison and discrimination
+model_comp <- data.frame(
+  metric = c("aic_m1", "aic_m2", "deviance_m1", "deviance_m2",
+             "insample_auc_m1", "insample_auc_m2",
+             "cv_auc_m1", "cv_auc_m2", "cv_auc_m2_ci_low", "cv_auc_m2_ci_high",
+             "delong_p_m1_vs_m2",
+             "brier_score", "brier_null", "brier_reduction_pct", "calibration_slope",
+             "pr_auc", "prevalence",
+             "gam_edf", "gam_aic_improvement", "max_vif",
+             "missingness_rate", "sep_prev_measured", "sep_prev_unmeasured",
+             "missingness_chisq_p"),
+  value = c(AIC(m1), AIC(m2), m1$deviance, m2$deviance,
+            {r1<-rank(predict(m1,type="response")); n1<-sum(dat$y==1); n0<-sum(dat$y==0);
+             (sum(r1[dat$y==1])-n1*(n1+1)/2)/(n1*n0)}, auc2_is,
+            auc1, auc2, ci2[1], ci2[3],
+            delong$p.value,
+            brier, brier_ref, 100*(1-brier/brier_ref), cal_slope,
+            prauc, prev,
+            edf, d_aic, max(vif_tab$VIF),
+            miss_rate, sep_meas, sep_unmeas, mchi$p.value),
+  stringsAsFactors = FALSE
+)
+write.csv(model_comp, file.path(OUT, "06_model_metrics.csv"), row.names = FALSE)
+
+# 5. VIF table
+write.csv(vif_tab, file.path(OUT, "06_vif.csv"), row.names = FALSE)
+
+# 6. Mixture model parameters
+mix_export <- data.frame(
+  parameter = c("pi1", "mu1_log", "mu2_log", "sigma1_log", "sigma2_log",
+                "mu1_mmol", "mu2_mmol", "unsupervised_accuracy_pct"),
+  value = c(pi1, mu1, mu2, s1, s2, mix_means[1], mix_means[2], mix_acc),
+  stringsAsFactors = FALSE
+)
+write.csv(mix_export, file.path(OUT, "06_mixture_params.csv"), row.names = FALSE)
+
+# 7. MCMC posterior summary
+mcmc_export <- data.frame(
+  parameter = c("posterior_mean", "posterior_sd", "ci_025", "ci_975",
+                "implied_median_lactate", "gelman_rubin_rhat",
+                "effective_sample_size", "accept_rate_chain1", "accept_rate_chain2"),
+  value = c(post_mean, post_sd, post_ci[1], post_ci[2],
+            exp(post_mean), rhat, ess, run1$accept_rate, run2$accept_rate),
+  stringsAsFactors = FALSE
+)
+write.csv(mcmc_export, file.path(OUT, "06_mcmc_posterior.csv"), row.names = FALSE)
+
+# 8. HMM parameters
+hmm_export <- data.frame(
+  parameter = c("best_k", "bic_1state", "bic_2state", "bic_3state",
+                "emission_mu1", "emission_mu2", "emission_sd1", "emission_sd2",
+                "trans_11", "trans_12", "trans_21", "trans_22",
+                "stationary_1", "stationary_2",
+                "unsupervised_accuracy_pct"),
+  value = c(best_k, bic_vals[1], bic_vals[2], bic_vals[3],
+            mu_h1, mu_h2, sd_h1, sd_h2,
+            trans_mat[1,1], trans_mat[1,2], trans_mat[2,1], trans_mat[2,2],
+            stat[1], stat[2], 100*hmm_acc),
+  stringsAsFactors = FALSE
+)
+write.csv(hmm_export, file.path(OUT, "06_hmm_params.csv"), row.names = FALSE)
+
+# 9. MICE imputed odds ratios
+write.csv(comp, file.path(OUT, "06_mice_odds_ratios.csv"), row.names = FALSE)
+
+# 10. Summary statistics table
+write.csv(as.data.frame(summary_tab), file.path(OUT, "06_summary_stats.csv"), row.names = FALSE)
+
+# 11. Calibration data
+write.csv(as.data.frame(cal_tab), file.path(OUT, "06_calibration_data.csv"), row.names = FALSE)
+```
+
+```{r export-figures, include=FALSE}
+# ── Export all figures as publication-quality PNGs ──
+
+# Fig 1: EDA boxplots
+png(file.path(FIG, "06_eda_boxplots.png"), width = 1200, height = 600, res = 200)
+print(
+  dat %>%
+    dplyr::select(sepsis, all_of(c("lactate_max","resp_rate_max","hr_max"))) %>%
+    pivot_longer(-sepsis, names_to = "Feature", values_to = "Value") %>%
+    mutate(Feature = c(lactate_max="Lactate, max", resp_rate_max="Resp. rate, max",
+                       hr_max="Heart rate, max")[Feature]) %>%
+    ggplot(aes(sepsis, Value, fill = sepsis)) +
+    geom_boxplot(alpha=0.75, outlier.size=0.4, outlier.alpha=0.25) +
+    facet_wrap(~Feature, scales="free_y", nrow=1) +
+    scale_fill_manual(values=PAL) + labs(x=NULL, y=NULL) +
+    theme(legend.position="none")
+)
+dev.off()
+
+# Fig 2: Lactate density
+png(file.path(FIG, "06_lactate_density.png"), width = 1000, height = 700, res = 200)
+print(
+  dat %>% mutate(lac = pmin(lactate_max, 15)) %>%
+    ggplot(aes(lac, fill = sepsis)) + geom_density(alpha = 0.55) +
+    scale_fill_manual(values = PAL) +
+    labs(x = "Maximum lactate (mmol/L)", y = "Density", fill = NULL) +
+    theme(legend.position = "top")
+)
+dev.off()
+
+# Fig 3: KDE
+png(file.path(FIG, "06_kde_loglactate.png"), width = 1000, height = 700, res = 200)
+print(
+  ggplot(tibble(loglac = loglac), aes(loglac)) +
+    geom_histogram(aes(y = after_stat(density)), bins=40, fill="grey85", colour="grey60") +
+    geom_density(bw=bw_sil, colour="#C0504D", linewidth=0.9) +
+    labs(x = "log(maximum lactate)", y = "Density",
+         subtitle = sprintf("Gaussian kernel, bandwidth = %.3f", bw_sil))
+)
+dev.off()
+
+# Fig 4: Gaussian mixture
+png(file.path(FIG, "06_mixture_fit.png"), width = 1000, height = 700, res = 200)
+print(
+  ggplot(tibble(loglac = loglac), aes(loglac)) +
+    geom_histogram(aes(y = after_stat(density)), bins=40, fill="grey88", colour="grey60") +
+    geom_line(data = mix_df, aes(x, comp1), linetype="dashed", colour="#5B9BD5") +
+    geom_line(data = mix_df, aes(x, comp2), linetype="dashed", colour="#C0504D") +
+    geom_line(data = mix_df, aes(x, total), colour="black", linewidth=0.7) +
+    labs(x = "log(maximum lactate)", y = "Density")
+)
+dev.off()
+
+# Fig 5: MCMC trace + posterior
+png(file.path(FIG, "06_mcmc_diagnostics.png"), width = 1400, height = 600, res = 200)
+print(p_trace + p_post)
+dev.off()
+
+# Fig 6: Calibration
+png(file.path(FIG, "06_calibration.png"), width = 900, height = 900, res = 200)
+print(
+  ggplot(cal_tab, aes(pred, obs)) +
+    geom_abline(linetype = "dashed", colour = "grey55") +
+    geom_line(colour = "#C0504D") + geom_point(colour = "#C0504D", size = 1.6) +
+    coord_equal(xlim = c(0, max(cal_tab$pred, cal_tab$obs)),
+                ylim = c(0, max(cal_tab$pred, cal_tab$obs))) +
+    labs(x = "Mean predicted risk", y = "Observed sepsis rate")
+)
+dev.off()
+
+# Fig 7: PR + decision curve
+png(file.path(FIG, "06_pr_decision_curve.png"), width = 1400, height = 650, res = 200)
+print(p_pr + p_dca)
+dev.off()
+
+# Fig 8: GAM spline
+png(file.path(FIG, "06_gam_spline.png"), width = 1000, height = 700, res = 200)
+nd_gam <- tibble(lactate_max = seq(min(dat$lactate_max), quantile(dat$lactate_max, 0.99),
+                                   length.out = 200))
+pr_gam <- predict(g_gam, nd_gam, se.fit = TRUE)
+nd_gam <- nd_gam %>% mutate(fit = pr_gam$fit, lo = fit - 1.96*pr_gam$se.fit,
+                             hi = fit + 1.96*pr_gam$se.fit)
+print(
+  ggplot(nd_gam, aes(lactate_max, fit)) +
+    geom_ribbon(aes(ymin=lo, ymax=hi), fill="#C0504D", alpha=0.2) +
+    geom_line(colour="#C0504D") +
+    labs(x = "Maximum lactate (mmol/L)", y = "log-odds of Sepsis-3")
+)
+dev.off()
+```
 
 # Conclusion {#conclusion}
 

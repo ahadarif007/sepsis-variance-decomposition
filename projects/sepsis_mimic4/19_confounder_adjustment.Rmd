@@ -47,11 +47,11 @@ find_data <- function(f) {
   hit <- cands[file.exists(cands)][1]
   if (is.na(hit)) stop("cannot find ", f); hit
 }
-OUT <- dirname(find_data("analysis_matrix.csv"))
+OUT <- dirname(find_data("05_analysis_matrix.parquet"))
 FIG <- if (dir.exists("figure")) "figure" else { dir.create("figure"); "figure" }
 
-am <- read.csv(find_data("analysis_matrix.csv"))
-si <- read.csv(find_data("suspected_infection.csv"))
+am <- as.data.frame(arrow::read_parquet(find_data("05_analysis_matrix.parquet")))
+si <- as.data.frame(arrow::read_parquet(find_data("03_suspected_infection.parquet")))
 # Explicit format prevents silent date-only fallback when any element is malformed.
 parse_dt <- function(x) as.POSIXct(x, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
 am$intime <- parse_dt(am$intime)
@@ -140,8 +140,8 @@ bal <- bal.tab(m.out, un = TRUE, m.threshold = 0.1)
 bal_df <- as.data.frame(bal$Balance)
 bal_df$covariate <- rownames(bal_df)
 write.csv(bal_df[, c("covariate", grep("Diff", names(bal_df), value = TRUE))],
-          file.path(OUT, "tier7_covariate_balance.csv"), row.names = FALSE)
-png(file.path(FIG, "tier7_balance_love_plot.png"), width = 1200, height = 900, res = 150)
+          file.path(OUT, "19_tier7_covariate_balance.csv"), row.names = FALSE)
+png(file.path(FIG, "19_tier7_balance_love_plot.png"), width = 1200, height = 900, res = 150)
 print(love.plot(m.out, stats = "mean.diffs", threshold = 0.1, abs = TRUE,
                 var.order = "unadjusted",
                 title = "Covariate balance: before vs after PS matching"))
@@ -212,7 +212,7 @@ effects <- data.frame(
 effects[, -(1:2)] <- round(effects[, -(1:2)], 4)
 cat("\nAntibiotic-timing effect on in-hospital mortality, by method:\n")
 print(effects, row.names = FALSE)
-write.csv(effects, file.path(OUT, "tier7_effect_estimates.csv"), row.names = FALSE)
+write.csv(effects, file.path(OUT, "19_tier7_effect_estimates.csv"), row.names = FALSE)
 
 cat("\nTier 7 (confounder-adjusted causal analysis) complete.\n")
 ```

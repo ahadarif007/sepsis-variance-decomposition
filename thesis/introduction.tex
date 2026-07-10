@@ -4,24 +4,45 @@
 \section{Context and Motivation}
 Sepsis, defined by the Sepsis-3 consensus as life-threatening organ dysfunction
 caused by a dysregulated host response to infection \cite{singer2016sepsis3},
-remains a major driver of mortality in the intensive care unit (ICU). Because
-timely treatment materially improves outcomes, predicting the \emph{onset} of
-sepsis ahead of clinical recognition is of direct clinical value. Two modelling
-traditions address this problem. The first, and by far the more actively
-published, is machine learning; the second, older and still foundational, is
-classical statistics, namely Cox proportional-hazards regression, logistic
-regression, and trajectory modelling. Statistical models retain a specific
-advantage for real-time clinical use: they yield directly interpretable hazard
-and odds ratios, they can be checked against formal assumptions, and they can be
-benchmarked transparently against established rule-based scores such as the
-Systemic Inflammatory Response Syndrome (SIRS) criteria, the quick Sequential
-Organ Failure Assessment (qSOFA), and the National Early Warning Score (NEWS).
+remains a leading cause of mortality in the intensive care unit (ICU). Globally,
+sepsis accounts for approximately 11 million deaths annually, representing
+nearly 20\% of all deaths worldwide. Because each hour of delayed treatment
+increases mortality by a measurable margin, predicting the \emph{onset} of
+sepsis ahead of clinical recognition is of direct clinical value: an early
+warning, even by a few hours, can accelerate the initiation of antibiotics,
+fluid resuscitation, and source control.
 
-On the MIMIC-IV database \cite{johnson2023mimiciv}, however, the statistical
-literature has developed unevenly. As detailed in Chapter~\ref{ch:review}, most
-studies predict mortality \emph{after} sepsis is diagnosed rather than onset
-itself; the proportional-hazards assumption is rarely tested before a Cox model
-is fitted; and external validation is largely absent from the onset-prediction
+Two modelling traditions address this prediction problem. The first, and by far
+the more actively published, is machine learning: gradient-boosted trees,
+recurrent neural networks, and transformer architectures dominate the recent
+literature. The second, older and still foundational, is classical statistics:
+Cox proportional-hazards regression, logistic regression, generalised estimating
+equations, and trajectory modelling. Statistical models retain specific
+advantages for real-time clinical use that are often undervalued in the current
+literature:
+
+\begin{itemize}
+  \item They yield directly interpretable hazard ratios and odds ratios that
+  clinicians can relate to their bedside experience.
+  \item Their assumptions (proportional hazards, linearity in the log-odds,
+  independence of observations) can be formally tested, and the consequences of
+  violation can be quantified and addressed.
+  \item They can be benchmarked transparently against the established rule-based
+  scores that clinicians already use: the Systemic Inflammatory Response
+  Syndrome (SIRS) criteria, the quick Sequential Organ Failure Assessment
+  (qSOFA), and the full SOFA score.
+  \item Their coefficients are closed-form and portable: a model fitted on one
+  database can be transported to another by applying the same linear predictor,
+  without retraining or access to the development data.
+\end{itemize}
+
+On the MIMIC-IV database \cite{johnson2023mimiciv}---a large, de-identified
+critical-care database from the Beth Israel Deaconess Medical Center
+containing over 65{,}000 adult ICU stays---the statistical literature has
+developed unevenly. As detailed in Chapter~\ref{ch:review}, most studies
+predict mortality \emph{after} sepsis is diagnosed rather than onset itself;
+the proportional-hazards assumption is rarely tested before a Cox model is
+fitted; and external validation is largely absent from the onset-prediction
 literature specifically. The single statistical real-time onset benchmark,
 TREWScore \cite{henry2015trewscore}, was fitted on the older MIMIC-II database
 in 2015 and has not been revisited on MIMIC-IV with purely statistical,
@@ -29,21 +50,33 @@ interpretable tools.
 
 \section{Research Gap}
 \label{sec:gap}
-Three gaps motivate this work and are established in detail in
-Chapter~\ref{ch:review}:
+Three specific gaps motivate this work and are established in detail through
+the systematic review of Chapter~\ref{ch:review}:
+
 \begin{itemize}
   \item \textbf{G1 (Onset versus prognosis).} MIMIC-IV statistical work
-  overwhelmingly predicts mortality after diagnosis. Genuine pre-onset,
-  real-time detection with purely statistical tools has not been revisited on
-  MIMIC-IV since TREWScore's 2015 MIMIC-II study.
+  overwhelmingly predicts mortality after diagnosis. The dominant pattern
+  couples LASSO variable selection with a logistic nomogram
+  \cite{yuan2023nomogram}, and the trajectory literature uses GBTM to link SOFA
+  shapes to mortality \cite{yang2022gbtm}. Genuine pre-onset, real-time
+  detection with purely statistical tools has not been revisited on MIMIC-IV
+  since TREWScore's 2015 MIMIC-II study \cite{henry2015trewscore}.
+
   \item \textbf{G2 (Untested proportional hazards).} Sepsis hazards are
   frequently non-proportional \cite{kasal2004cox}, yet no reviewed MIMIC-IV Cox
   study reports testing the assumption, weakening confidence in the reported
-  hazard ratios.
+  hazard ratios. The appropriate response to a failed proportional-hazards
+  test---a time-varying reformulation---is absent from the MIMIC-IV onset
+  literature.
+
   \item \textbf{G3 (Validation asymmetry).} External validation is common in the
   prognostic nomogram literature but essentially absent from onset-prediction
-  and trajectory studies, precisely where systematic reviews show performance
-  degrades most \cite{wang2025srpm}.
+  and trajectory studies. Wang \emph{et al.} \cite{wang2025srpm} reviewed 91
+  sepsis real-time prediction models and found that the median AUROC falls from
+  0.886 internally to 0.783 externally, demonstrating that the
+  internal-to-external gap, rather than raw internal discrimination, is the
+  field's central weakness. This gap is precisely where onset-prediction models
+  are most vulnerable, yet precisely where validation is most lacking.
 \end{itemize}
 
 \section{Research Question and Objectives}
@@ -53,57 +86,74 @@ These gaps motivate one primary research question and three sub-questions.
 \vspace{4pt}
 \noindent\textbf{RQ.} \emph{Can a purely statistical (Cox proportional-hazards /
 time-varying / landmark) model, using routinely available real-time vitals and
-labs in MIMIC-IV, predict impending Sepsis-3 onset ahead of clinical
-recognition, with performance comparable to or exceeding the rule-based scores
-SIRS, qSOFA, and NEWS?}
+laboratory values in MIMIC-IV, predict impending Sepsis-3 onset ahead of
+clinical recognition, with performance comparable to or exceeding the rule-based
+scores SIRS, qSOFA, and SOFA?}
 
 \begin{itemize}
   \item \textbf{SQ1.} Which routinely measured variables are the strongest
-  statistically significant predictors of onset, and does the
+  statistically significant predictors of incident onset, and does the
   proportional-hazards assumption hold for the fitted Cox model?
   \item \textbf{SQ2.} Does modelling trajectories through a time-varying or
-  landmark extension improve early detection over a static single-time-point
-  model?
+  dynamic landmark extension improve early detection over a static
+  single-time-point model?
   \item \textbf{SQ3.} How does discriminative performance compare with SIRS,
-  qSOFA, and NEWS, and does it survive the transition from internal to external
-  (eICU-CRD) evaluation?
+  qSOFA, and SOFA on the correct incident-onset task, and does it survive the
+  transition from internal (MIMIC-IV) to external (eICU-CRD) evaluation?
 \end{itemize}
 
 \section{Contributions}
 \label{sec:contrib}
 This thesis makes the following contributions, each mapped to the gap it
-closes.
+closes:
+
 \begin{enumerate}
   \item \textbf{C1: First interpretable statistical real-time Sepsis-3 onset
-  model on MIMIC-IV (closes G1).} Continuously updated hourly risk is reached
-  through a dynamic landmark supermodel
-  \cite{vanhouwelingen2007landmark,fries2023dynamiclm}, and incident sepsis is
-  explicitly separated from prevalent sepsis using an hour-six landmark.
+  model on MIMIC-IV (closes G1).} A dynamic landmark supermodel
+  \cite{vanhouwelingen2007landmark,fries2023dynamiclm} is fitted across six
+  landmark hours $\{6, 12, 18, 24, 36, 48\}$ with feature-by-time interactions,
+  yielding one interpretable model that emits continuously updated hourly risk.
+  Incident sepsis is explicitly separated from prevalent sepsis using an
+  hour-six landmark, and the model reaches an overall pooled out-of-sample
+  AUROC of 0.797 across all landmarks.
+
   \item \textbf{C2: Explicit proportional-hazards testing with a triggered
   time-varying reformulation (closes G2).} The Schoenfeld residual test is
-  reported for the onset Cox model; because the global test fails, a
-  time-varying Cox model is fitted in direct response.
-  \item \textbf{C3: Reframing the task.} On the correct incident-onset
-  target, SOFA is inversely discriminative, qSOFA is near chance, and SIRS is
-  weak, while a multivariable landmark model reaches an area under the curve of
-  0.775, showing that severity scores detect established organ failure, not
-  impending onset.
-  \item \textbf{C4: Informative-missingness characterisation.} Binary
-  ``was this lab ordered'' indicators are stronger predictors than the imputed
-  values themselves \cite{groenwold2020missingness,singh2021missingness},
-  quantifying a label-recognition ceiling.
+  applied to the onset Cox model; because the global test fails ($p < 10^{-16}$),
+  a time-varying Cox model on a counting-process formulation is fitted in direct
+  response, demonstrating a workflow that the MIMIC-IV literature has omitted.
+
+  \item \textbf{C3: Reframing the benchmark.} On the correct incident-onset
+  target, standard bedside scores are non-discriminative to inverse: SOFA at
+  hour 6 achieves an AUROC of only 0.36, qSOFA 0.49, and SIRS 0.59. A
+  multivariable landmark nomogram attains 0.775, demonstrating that severity
+  scores detect \emph{established} organ failure, not \emph{impending} onset.
+
+  \item \textbf{C4: Informative-missingness characterisation.} Binary ``was
+  this lab ordered'' indicators are the strongest predictors in the elastic-net
+  nomogram \cite{groenwold2020missingness,singh2021missingness}. The P/F ratio
+  measurement indicator alone carries an odds ratio of 5.46, quantifying a
+  label-recognition ceiling intrinsic to retrospectively labelled ICU data.
+
   \item \textbf{C5: A reproducible, transportable pipeline that is externally
-  validated on eICU-CRD (closes G3).} Because the models are closed-form, their
-  coefficients transport directly to a second database; the frozen model is
-  applied without refitting to the eICU Collaborative Research Database
-  \cite{pollard2018eicu}.
+  validated on eICU-CRD (closes G3).} The frozen MIMIC model is applied
+  without refitting to the eICU Collaborative Research Database
+  \cite{pollard2018eicu} (113{,}597 at-risk stays, 200+ US ICUs).
+  Discrimination transports at AUROC 0.686 against an internal eICU ceiling of
+  0.712, and a single-parameter recalibration corrects the expected
+  miscalibration.
 \end{enumerate}
 
 \section{Thesis Structure}
-Chapter~\ref{ch:methodology} sets out the research and software methodology.
+The remainder of this thesis is organised as follows.
+Chapter~\ref{ch:methodology} sets out the research methodology, data sources,
+cohort construction, and evaluation framework.
 Chapter~\ref{ch:review} reviews the related statistical and machine-learning
-literature and formalises the gaps above. Chapter~\ref{ch:design} describes the
-system architecture and the design of each pipeline stage.
+literature and formalises the three gaps above.
+Chapter~\ref{ch:design} describes the system architecture and the design of
+each pipeline stage, from data extraction through the seven statistical tiers.
 Chapter~\ref{ch:evaluation} presents and critically discusses the internal and
-external results. Chapter~\ref{ch:conclusion} concludes and identifies avenues
-for further work.
+external results, with particular emphasis on the dynamic landmark supermodel
+(Tier~2), which is the central methodological contribution of this work.
+Chapter~\ref{ch:conclusion} concludes with a summary of findings and avenues
+for further research.

@@ -47,11 +47,11 @@ find_data <- function(f) {
   hit <- cands[file.exists(cands)][1]
   if (is.na(hit)) stop("cannot find ", f); hit
 }
-OUT <- dirname(find_data("panel_sample_long.csv"))
+OUT <- dirname(find_data("08_panel_sample_long.parquet"))
 FIG <- if (dir.exists("figure")) "figure" else { dir.create("figure"); "figure" }
 
-panel  <- read.csv(find_data("panel_sample_long.csv"))
-cohort <- read.csv(find_data("cohort.csv"))[, c("stay_id","age","gender",
+panel  <- as.data.frame(arrow::read_parquet(find_data("08_panel_sample_long.parquet")))
+cohort <- as.data.frame(arrow::read_parquet(find_data("02_cohort.parquet")))[, c("stay_id","age","gender",
                                                  "hospital_expire_flag","los_hours")]
 ```
 
@@ -84,6 +84,8 @@ cat("\nBIC by k:\n"); print(sf)
 best <- getModel(sf, which = "BIC")
 K <- ncol(best@posterior$scaled)
 cat(sprintf("Selected K = %d classes by BIC\n", K))
+bic_tab <- data.frame(k = 2:4, BIC = BIC(sf), selected = (2:4) == K)
+write.csv(bic_tab, file.path(OUT, "18_gbtm_bic.csv"), row.names = FALSE)
 ```
 
 ## Per-Stay Class Assignment
@@ -105,7 +107,7 @@ assign_tab <- data.frame(stay_id = as.integer(names(cls_by_stay)),
 sev_order <- order(tapply(d$sofa_total, cls_by_stay[as.character(d$stay_id)], mean))
 remap <- setNames(seq_along(sev_order), sev_order)
 assign_tab$class <- remap[as.character(assign_tab$class)]
-write.csv(assign_tab, file.path(OUT, "tier6_gbtm_assignments.csv"), row.names = FALSE)
+write.csv(assign_tab, file.path(OUT, "18_tier6_gbtm_assignments.csv"), row.names = FALSE)
 ```
 
 ## Mean Trajectory Per Class and Trajectory Plot
@@ -114,9 +116,9 @@ write.csv(assign_tab, file.path(OUT, "tier6_gbtm_assignments.csv"), row.names = 
 d$class <- remap[as.character(cls_by_stay[as.character(d$stay_id)])]
 means <- aggregate(sofa_total ~ hour + class, data = d, FUN = mean)
 means <- means[order(means$class, means$hour), ]
-write.csv(means, file.path(OUT, "tier6_gbtm_class_means.csv"), row.names = FALSE)
+write.csv(means, file.path(OUT, "18_tier6_gbtm_class_means.csv"), row.names = FALSE)
 
-png(file.path(FIG, "gbtm_trajectories.png"), width = 1100, height = 850, res = 200)
+png(file.path(FIG, "18_gbtm_trajectories.png"), width = 1100, height = 850, res = 200)
 cols <- c("steelblue","darkorange","firebrick","purple")[1:K]
 plot(NULL, xlim = c(0, 24), ylim = range(means$sofa_total),
      xlab = "ICU hour", ylab = "Mean SOFA total",
@@ -145,7 +147,7 @@ cox_tab <- data.frame(term = rownames(cox_s$coefficients),
                        p_value = signif(cox_s$coefficients[, "Pr(>|z|)"], 3))
 cat("\nCox model: trajectory class vs in-hospital mortality (ref = mildest class):\n")
 print(cox_tab, row.names = FALSE)
-write.csv(cox_tab, file.path(OUT, "tier6_mortality_cox.csv"), row.names = FALSE)
+write.csv(cox_tab, file.path(OUT, "18_tier6_mortality_cox.csv"), row.names = FALSE)
 ```
 
 ## Link Trajectory Class to Incident Sepsis-3
@@ -164,7 +166,7 @@ onset_tab <- data.frame(term = rownames(glm_s),
                          p_value = signif(glm_s[, "Pr(>|z|)"], 3))
 cat("\nLogistic model: trajectory class vs incident Sepsis-3 (ref = mildest class):\n")
 print(onset_tab, row.names = FALSE)
-write.csv(onset_tab, file.path(OUT, "tier6_onset_assoc.csv"), row.names = FALSE)
+write.csv(onset_tab, file.path(OUT, "18_tier6_onset_assoc.csv"), row.names = FALSE)
 
 cat("\nTier 6 (GBTM) complete.\n")
 ```

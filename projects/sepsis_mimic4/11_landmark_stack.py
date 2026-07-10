@@ -15,7 +15,7 @@ At each landmark hour s (LANDMARK_GRID):
   * label      = incident onset within (s, s+HORIZON]
 Reproduces 08_onset_label.py's hour-6 rows exactly when s == 6.
 
-Output: processed_data/landmark_stack.csv  (one row per stay x landmark)
+Output: processed_data/11_landmark_stack.parquet  (one row per stay x landmark)
 """
 from __future__ import annotations
 
@@ -24,88 +24,79 @@ import pandas as pd
 
 import config as C
 import utils as U
+from clinical_scores import ff, qsofa, sirs
+from logging_utils import setup_logging, step, log_separator
 
-LANDMARK_GRID = [6, 12, 18, 24, 36, 48]   # hours at which we make a prediction
-HORIZON_H = 12                            # predict onset within this many hours
-SLOPE_LOOKBACK_H = 6                      # trajectory slope window
-
-
-def ff(panel: pd.DataFrame, v: str) -> pd.Series:
-    return panel[f"{v}_ff"] if f"{v}_ff" in panel.columns else panel[v]
-
-
-def qsofa(rr, gcs, mp):
-    # quickSOFA: resp rate >=22, GCS <15, MAP <70 as proxy for SBP <=100.
-    return ((rr >= 22).astype(int) + (gcs < 15).astype(int)
-            + (mp < 70).astype(int))
-
-
-def sirs(hr, rr, temp, wbc):
-    # SIRS: HR >90, resp rate >20, temp outside [36, 38]C, WBC outside [4, 12] K/uL.
-    return ((hr > 90).astype(int) + (rr > 20).astype(int)
-            + ((temp > 38) | (temp < 36)).astype(int)
-            + ((wbc > 12) | (wbc < 4)).astype(int))
+LANDMARK_GRID = [6, 12, 18, 24, 36, 48]
+HORIZON_H = 12
+SLOPE_LOOKBACK_H = 6
 
 
 def main() -> None:
-    U.log("loading labelled hourly panel + cohort ...")
-    panel = pd.read_parquet(C.OUTPUT_DIR / "hourly_labeled.parquet")
-    panel = panel.sort_values(["stay_id", "hour"]).reset_index(drop=True)
-    cohort = U.load("cohort", C.OUTPUT_DIR)[
-        ["stay_id", "age", "gender", "hospital_expire_flag"]]
+    log = setup_logging("11_landmark_stack")
 
-    onset = panel.groupby("stay_id")["onset_hour"].first()   # NaN if never septic
-    censor = panel.groupby("stay_id")["hour"].max()          # last observed hour
+    with step(log, "loading labelled hourly panel + cohort"):
+        panel = pd.read_parquet(C.OUTPUT_DIR / "08_hourly_labeled.parquet")
+        panel = panel.sort_values(["stay_id", "hour"]).reset_index(drop=True)
+        cohort = U.load("02_cohort", C.OUTPUT_DIR)[
+            ["stay_id", "age", "gender", "hospital_expire_flag"]]
+    log.info("panel: %s stay-hours, %s stays",
+             f"{len(panel):,}", f"{panel['stay_id'].nunique():,}")
+
+    onset = panel.groupby("stay_id")["onset_hour"].first()
+    censor = panel.groupby("stay_id")["hour"].max()
 
     VITALS_LABS = ["hr", "resp_rate", "map", "spo2", "temp_c", "gcs",
                    "lactate", "creatinine", "wbc", "pf_ratio"]
     SLOPE_VARS = ["hr", "resp_rate", "map", "spo2"]
 
-    # index panels by (stay_id, hour) for O(1) lookback lookups
-    by_hour = {h: panel[panel["hour"] == h].set_index("stay_id")
-               for h in set(LANDMARK_GRID) | {s - SLOPE_LOOKBACK_H
-                                              for s in LANDMARK_GRID}}
+    # Pre-index panel rows by hour for fast lookup at each landmark.
+    needed_hours = set(LANDMARK_GRID) | {lm - SLOPE_LOOKBACK_H for lm in LANDMARK_GRID}
+    by_hour = {h: panel[panel["hour"] == h].set_index("stay_id") for h in needed_hours}
 
     blocks = []
-    for s in LANDMARK_GRID:
-        at_s = by_hour[s]
-        if at_s.empty:
+    for landmark_hour in LANDMARK_GRID:
+        rows_at_landmark = by_hour[landmark_hour]
+        if rows_at_landmark.empty:
+            log.warning("no stays observed at landmark hour %d", landmark_hour)
             continue
-        oh = onset.reindex(at_s.index)
-        at_risk = oh.isna() | (oh > s)          # not yet septic by s
-        cur = at_s[at_risk.values]
-        f = pd.DataFrame({"stay_id": cur.index.to_numpy()})
-        f["landmark_time"] = s
-        for v in VITALS_LABS:
-            f[v] = ff(cur, v).to_numpy()
-        f["sofa_total"] = cur["sofa_total"].to_numpy()
-        # 6h trajectory slopes = value@s - value@(s-6)
-        prev = by_hour[s - SLOPE_LOOKBACK_H]
-        for v in SLOPE_VARS:
-            past = ff(prev, v).reindex(cur.index).to_numpy() if not prev.empty \
-                else np.full(len(cur), np.nan)
-            f[f"{v}_slope6"] = f[v].to_numpy() - past
-        f["qsofa"] = qsofa(f["resp_rate"], f["gcs"], f["map"]).to_numpy()
-        f["sirs"] = sirs(f["hr"], f["resp_rate"], f["temp_c"], f["wbc"]).to_numpy()
-        # label: incident onset within (s, s+HORIZON]
-        oh_c = onset.reindex(cur.index)
-        f["onset_within_h"] = ((oh_c > s) & (oh_c <= s + HORIZON_H)).astype(int).to_numpy()
-        # also carry time-to-event from this landmark (for landmark-Cox option)
-        ev = oh_c.notna().astype(int)
-        cens = censor.reindex(cur.index)
-        te = np.where(ev == 1, oh_c, cens) - s
-        f["event"] = ev.to_numpy()
-        f["t_event"] = np.clip(te, 0.5, None)
-        blocks.append(f)
-        U.log(f"  s={s:>2}h: {len(f):>6,} at-risk, "
-              f"{int(f['onset_within_h'].sum()):>5,} onset within {HORIZON_H}h "
-              f"({f['onset_within_h'].mean():.1%})")
+        onset_hours = onset.reindex(rows_at_landmark.index)
+        at_risk = onset_hours.isna() | (onset_hours > landmark_hour)
+        eligible = rows_at_landmark[at_risk.values]
+        features = pd.DataFrame({"stay_id": eligible.index.to_numpy()})
+        features["landmark_time"] = landmark_hour
+        for var in VITALS_LABS:
+            features[var] = ff(eligible, var).to_numpy()
+        features["sofa_total"] = eligible["sofa_total"].to_numpy()
+        # 6h trajectory slopes: value@landmark - value@(landmark - 6)
+        lookback_rows = by_hour[landmark_hour - SLOPE_LOOKBACK_H]
+        for var in SLOPE_VARS:
+            past_values = ff(lookback_rows, var).reindex(eligible.index).to_numpy() \
+                if not lookback_rows.empty else np.full(len(eligible), np.nan)
+            features[f"{var}_slope6"] = features[var].to_numpy() - past_values
+        features["qsofa"] = qsofa(features["resp_rate"], features["gcs"], features["map"]).to_numpy()
+        features["sirs"] = sirs(features["hr"], features["resp_rate"], features["temp_c"], features["wbc"]).to_numpy()
+        onset_at_eligible = onset.reindex(eligible.index)
+        features["onset_within_h"] = ((onset_at_eligible > landmark_hour)
+                                      & (onset_at_eligible <= landmark_hour + HORIZON_H)).astype(int).to_numpy()
+        event_indicator = onset_at_eligible.notna().astype(int)
+        censor_hours = censor.reindex(eligible.index)
+        time_to_event = np.where(event_indicator == 1, onset_at_eligible, censor_hours) - landmark_hour
+        features["event"] = event_indicator.to_numpy()
+        features["t_event"] = np.clip(time_to_event, 0.5, None)
+        blocks.append(features)
+        log.info("  s=%2dh: %6s at-risk, %5s onset within %dh (%.1f%%)",
+                 landmark_hour, f"{len(features):,}",
+                 f"{int(features['onset_within_h'].sum()):,}",
+                 HORIZON_H, features['onset_within_h'].mean() * 100)
 
     stack = pd.concat(blocks, ignore_index=True)
     stack = stack.merge(cohort, on="stay_id", how="left")
-    U.log(f"stacked landmark dataset: {len(stack):,} rows across "
-          f"{len(LANDMARK_GRID)} landmarks, {stack['stay_id'].nunique():,} stays")
-    U.save(stack, "landmark_stack", C.OUTPUT_DIR, fmt="csv")
+    log_separator(log)
+    log.info("stacked landmark dataset: %s rows across %d landmarks, %s stays",
+             f"{len(stack):,}", len(LANDMARK_GRID),
+             f"{stack['stay_id'].nunique():,}")
+    U.save(stack, "11_landmark_stack", C.OUTPUT_DIR)
 
 
 if __name__ == "__main__":

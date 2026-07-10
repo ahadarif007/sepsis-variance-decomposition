@@ -16,7 +16,7 @@ and record t_suspicion, the triggering antibiotic, and the culture type.
 
 Output
 ------
-processed_data/suspected_infection.csv
+processed_data/03_suspected_infection.parquet
   stay_id, subject_id, hadm_id, t_suspicion, t_abx, t_culture,
   abx_drug, spec_type_desc
 """
@@ -28,13 +28,14 @@ import pandas as pd
 
 import config as C
 import utils as U
+from logging_utils import setup_logging, step, log_separator
 
 # Hours before ICU admission to include pre-ICU events.
 PRE_ICU_BUFFER_HOURS = 48
 
 
 def load_cohort() -> pd.DataFrame:
-    return U.load("cohort", C.OUTPUT_DIR, parse_dates=["intime", "outtime"])[
+    return U.load("02_cohort", C.OUTPUT_DIR, parse_dates=["intime", "outtime"])[
         ["stay_id", "subject_id", "hadm_id", "intime", "outtime"]
     ]
 
@@ -177,49 +178,49 @@ def main() -> None:
     ap = argparse.ArgumentParser(
         description="Detect suspected infection (Sepsis-3) per ICU stay."
     )
-    ap.add_argument("--parquet", action="store_true", help="also write a parquet copy")
-    args = ap.parse_args()
+    ap.parse_args()
 
-    U.log("loading cohort ...")
-    cohort = load_cohort()
-    cohort["hadm_id"] = cohort["hadm_id"].dropna().astype(int)
-    cohort_hadm = set(cohort["hadm_id"].dropna().astype(int))
-    U.log(f"cohort: {len(cohort):,} stays, {len(cohort_hadm):,} unique hadm_ids")
+    log = setup_logging("03_suspected_infection")
 
-    U.log("loading antibiotic prescriptions (streaming) ...")
-    abx = load_antibiotics(cohort_hadm)
-    U.log(f"antibiotics: {len(abx):,} orders, {abx['hadm_id'].nunique():,} unique admissions")
+    with step(log, "loading cohort"):
+        cohort = load_cohort()
+        cohort["hadm_id"] = cohort["hadm_id"].dropna().astype(int)
+        cohort_hadm = set(cohort["hadm_id"].dropna().astype(int))
+    log.info("cohort: %s stays, %s unique hadm_ids",
+             f"{len(cohort):,}", f"{len(cohort_hadm):,}")
 
-    U.log("loading culture draws ...")
-    cultures = load_cultures(cohort_hadm)
+    with step(log, "loading antibiotic prescriptions (streaming)"):
+        abx = load_antibiotics(cohort_hadm)
+    log.info("antibiotics: %s orders across %s admissions",
+             f"{len(abx):,}", f"{abx['hadm_id'].nunique():,}")
 
-    U.log("pairing antibiotics x cultures ...")
-    result = find_suspicion(cohort, abx, cultures)
+    with step(log, "loading culture draws"):
+        cultures = load_cultures(cohort_hadm)
+
+    with step(log, "pairing antibiotics x cultures (Sepsis-3 windows)"):
+        result = find_suspicion(cohort, abx, cultures)
 
     if result.empty:
-        U.log("ERROR: no suspected infection records produced - check inputs")
+        log.error("no suspected infection records produced — check inputs")
         return
 
     n_stays = cohort["stay_id"].nunique()
     n_susp = result["stay_id"].nunique()
-    U.log("=" * 50)
-    U.log(f"suspected infection: {n_susp:,} / {n_stays:,} stays  ({n_susp / n_stays:.1%})")
+    log_separator(log)
+    log.info("suspected infection: %s / %s stays (%.1f%%)",
+             f"{n_susp:,}", f"{n_stays:,}", n_susp / n_stays * 100)
 
-    # Quick breakdown by culture type.
     top_specs = result["spec_type_desc"].value_counts().head(10)
-    U.log("top culture types:")
+    log.info("top culture types:")
     for spec, cnt in top_specs.items():
-        U.log(f"  {spec:<35s} {cnt:,}")
+        log.info("  %-35s %s", spec, f"{cnt:,}")
 
-    # Top antibiotics triggering suspicion.
     top_abx = result["abx_drug"].value_counts().head(10)
-    U.log("top triggering antibiotics:")
+    log.info("top triggering antibiotics:")
     for drug, cnt in top_abx.items():
-        U.log(f"  {drug:<35s} {cnt:,}")
+        log.info("  %-35s %s", drug, f"{cnt:,}")
 
-    U.save(result, "suspected_infection", C.OUTPUT_DIR, fmt="csv")
-    if args.parquet:
-        U.save(result, "suspected_infection", C.OUTPUT_DIR, fmt="parquet")
+    U.save(result, "03_suspected_infection", C.OUTPUT_DIR)
 
 
 if __name__ == "__main__":

@@ -34,18 +34,18 @@ find_data <- function(f) {
   if (!length(hit)) stop("Not found: ", f); hit[1]
 }
 fig <- function(f) { c(file.path("figure", f), f)[file.exists(c(file.path("figure", f), f))][1] }
-m1  <- read.csv(find_data("tier1_metrics.csv"))
-c1  <- read.csv(find_data("tier1_coefs.csv"))
-a2  <- read.csv(find_data("tier2_auc_by_landmark.csv"))
-gm  <- read.csv(find_data("tier3_gee.csv"))
-cx  <- read.csv(find_data("tier3_tvcox.csv"))
-ut  <- read.csv(find_data("tier4_utility.csv"))
-al  <- read.csv(find_data("tier4_alarm_sweep.csv"))
-sg  <- read.csv(find_data("tier5_subgroups.csv"))
-gc  <- read.csv(find_data("tier6_mortality_cox.csv"))
-go  <- read.csv(find_data("tier6_onset_assoc.csv"))
-gm6 <- read.csv(find_data("tier6_gbtm_class_means.csv"))
-ce  <- read.csv(find_data("tier7_effect_estimates.csv"))
+m1  <- read.csv(find_data("10_tier1_metrics.csv"))
+c1  <- read.csv(find_data("10_tier1_coefs.csv"))
+a2  <- read.csv(find_data("12_tier2_auc_by_landmark.csv"))
+gm  <- read.csv(find_data("13_tier3_gee.csv"))
+cx  <- read.csv(find_data("13_tier3_tvcox.csv"))
+ut  <- read.csv(find_data("15_tier4_utility.csv"))
+al  <- read.csv(find_data("15_tier4_alarm_sweep.csv"))
+sg  <- read.csv(find_data("16_tier5_subgroups.csv"))
+gc  <- read.csv(find_data("18_tier6_mortality_cox.csv"))
+go  <- read.csv(find_data("18_tier6_onset_assoc.csv"))
+gm6 <- read.csv(find_data("18_tier6_gbtm_class_means.csv"))
+ce  <- read.csv(find_data("19_tier7_effect_estimates.csv"))
 en_auc <- m1$auroc[m1$model == "Tier1 full-feature elastic net"]
 p1_auc <- m1$auroc[grepl("0.755", m1$model)]
 alpha <- gm$OR_glm[gm$term == "__alpha_within_patient__"]
@@ -137,7 +137,7 @@ kable(a2, booktabs = TRUE, row.names = FALSE,
 ```
 
 ```{r auc-s, fig.cap="AUC(s): the supermodel's out-of-sample discrimination as a function of the hour at which the prediction is made, versus per-landmark models.", out.width="62%"}
-include_graphics(fig("auc_by_landmark.png"))
+include_graphics(fig("12_auc_by_landmark.png"))
 ```
 
 The single supermodel matches the accuracy of a bespoke model at every
@@ -211,7 +211,7 @@ kable(show, booktabs = TRUE, row.names = FALSE,
 ```
 
 ```{r alarm, fig.cap="Sensitivity versus false-alarm burden for the real-time supermodel. High sensitivity is reachable only at an alarm rate that would fatigue bedside staff.", out.width="62%"}
-include_graphics(fig("alarm_tradeoff.png"))
+include_graphics(fig("15_alarm_tradeoff.png"))
 ```
 
 Catching 90% of septic patients in a timely window costs about
@@ -247,7 +247,7 @@ trajectories on the sampled panel (2,438 stays with sufficient repeated
 observations), selecting `r K6` classes by BIC.
 
 ```{r gbtm-fig, fig.cap="GBTM: latent SOFA-trajectory classes over the first 24 ICU hours.", out.width="62%"}
-include_graphics(fig("gbtm_trajectories.png"))
+include_graphics(fig("18_gbtm_trajectories.png"))
 ```
 
 Class membership shows a strong, monotonic dose-response relationship with
@@ -298,7 +298,7 @@ kable(ce, booktabs = TRUE, row.names = FALSE,
 ```
 
 ```{r t7fig, fig.cap="Covariate balance (standardized mean difference) before and after propensity-score matching.", out.width="70%"}
-include_graphics(fig("tier7_balance_love_plot.png"))
+include_graphics(fig("19_tier7_balance_love_plot.png"))
 ```
 
 Matching brings every covariate's standardized mean difference below the

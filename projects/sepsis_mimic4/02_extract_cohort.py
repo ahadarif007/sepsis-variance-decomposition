@@ -13,7 +13,7 @@ Pipeline
         - ICU LOS >= MIN_ICU_LOS_HOURS
         - first ICU stay per patient (optional)
   4. Attach mortality flags (in-hospital + ICU).
-  5. Save -> processed_data/cohort.csv
+  5. Save -> processed_data/02_cohort.parquet
 
 Output columns
 --------------
@@ -24,7 +24,7 @@ Output columns
 Usage
 -----
     python 02_extract_cohort.py
-    python 02_extract_cohort.py --parquet  # also write a typed parquet copy
+    python 02_extract_cohort.py
 """
 from __future__ import annotations
 
@@ -34,6 +34,7 @@ import pandas as pd
 
 import config as C
 import utils as U
+from logging_utils import setup_logging, step, log_cohort_filter, log_separator
 
 
 def load_inputs() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
@@ -85,42 +86,44 @@ def build_cohort(icustays, patients, admissions) -> pd.DataFrame:
     return df
 
 
-def apply_criteria(df: pd.DataFrame) -> pd.DataFrame:
+def apply_criteria(df: pd.DataFrame, logger) -> pd.DataFrame:
+    logger.info("applying inclusion criteria ...")
     before = len(df)
-    log = []
 
+    count_before = len(df)
     df = df[df["age"] >= C.MIN_AGE]
-    log.append(f"age >= {C.MIN_AGE}: {before} -> {len(df)}")
+    log_cohort_filter(logger, f"age >= {C.MIN_AGE}", count_before, len(df))
 
-    n = len(df)
+    count_before = len(df)
     df = df[df["los_hours"] >= C.MIN_ICU_LOS_HOURS]
-    log.append(f"LOS >= {C.MIN_ICU_LOS_HOURS}h: {n} -> {len(df)}")
+    log_cohort_filter(logger, f"LOS >= {C.MIN_ICU_LOS_HOURS}h", count_before, len(df))
 
     if C.FIRST_ICU_STAY_ONLY:
-        n = len(df)
+        count_before = len(df)
         df = (df.sort_values("intime")
                 .groupby("subject_id", as_index=False)
                 .first())
-        log.append(f"first ICU stay only: {n} -> {len(df)}")
+        log_cohort_filter(logger, "first ICU stay only", count_before, len(df))
 
-    U.log("inclusion criteria applied:")
-    for line in log:
-        U.log("  " + line)
+    logger.info("inclusion criteria complete: %s -> %s stays",
+                f"{before:,}", f"{len(df):,}")
     return df
 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--parquet", action="store_true", help="also write cohort.parquet")
-    args = ap.parse_args()
+    ap.parse_args()
 
-    U.log("loading icustays / patients / admissions ...")
-    icustays, patients, admissions = load_inputs()
-    U.log(f"icustays={len(icustays):,}  patients={len(patients):,}  "
-          f"admissions={len(admissions):,}")
+    log = setup_logging("02_extract_cohort")
 
-    cohort = build_cohort(icustays, patients, admissions)
-    cohort = apply_criteria(cohort)
+    with step(log, "loading icustays / patients / admissions"):
+        icustays, patients, admissions = load_inputs()
+    log.info("loaded icustays=%s  patients=%s  admissions=%s",
+             f"{len(icustays):,}", f"{len(patients):,}", f"{len(admissions):,}")
+
+    with step(log, "building cohort"):
+        cohort = build_cohort(icustays, patients, admissions)
+    cohort = apply_criteria(cohort, log)
 
     keep_cols = [
         "subject_id", "hadm_id", "stay_id", "gender", "age",
@@ -130,18 +133,16 @@ def main() -> None:
     ]
     cohort = cohort[[c for c in keep_cols if c in cohort.columns]]
 
-    # Quick summary.
-    U.log("=" * 50)
-    U.log(f"FINAL COHORT: {len(cohort):,} ICU stays / "
-          f"{cohort['subject_id'].nunique():,} patients")
-    U.log(f"  female: {(cohort['gender'] == 'F').mean():.1%}  "
-          f"age median: {cohort['age'].median():.0f}")
-    U.log(f"  in-hospital mortality: {cohort['hospital_expire_flag'].mean():.1%}")
-    U.log(f"  ICU mortality: {cohort['died_in_icu'].mean():.1%}")
+    log_separator(log)
+    log.info("FINAL COHORT: %s ICU stays / %s patients",
+             f"{len(cohort):,}", f"{cohort['subject_id'].nunique():,}")
+    log.info("  female: %.1f%%  age median: %.0f",
+             (cohort['gender'] == 'F').mean() * 100, cohort['age'].median())
+    log.info("  in-hospital mortality: %.1f%%",
+             cohort['hospital_expire_flag'].mean() * 100)
+    log.info("  ICU mortality: %.1f%%", cohort['died_in_icu'].mean() * 100)
 
-    U.save(cohort, "cohort", C.OUTPUT_DIR, fmt="csv")
-    if args.parquet:
-        U.save(cohort, "cohort", C.OUTPUT_DIR, fmt="parquet")
+    U.save(cohort, "02_cohort", C.OUTPUT_DIR)
 
 
 if __name__ == "__main__":

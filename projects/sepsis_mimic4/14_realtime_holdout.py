@@ -10,7 +10,7 @@ Features match 11_landmark_stack.py exactly (landmark_time = current hour).
 For each holdout stay, every hour h in [6, last_pred_hour] is emitted,
 where last_pred_hour is onset_hour (septic) or censor_hour (non-septic).
 
-Output: processed_data/realtime_holdout_features.csv
+Output: processed_data/14_realtime_holdout_features.parquet
         processed_data/realtime_holdout_ids.csv (holdout stay_ids, so
         15_realtime_eval.R trains on the complement to avoid leakage)
 """
@@ -21,6 +21,8 @@ import pandas as pd
 
 import config as C
 import utils as U
+from clinical_scores import ff, qsofa, sirs
+from logging_utils import setup_logging, step, log_separator
 
 N_HOLDOUT = 6000
 START_H = 6
@@ -28,75 +30,65 @@ SLOPE_LOOKBACK_H = 6
 SEED = 486649
 
 
-def ff(panel, v):
-    return panel[f"{v}_ff"] if f"{v}_ff" in panel.columns else panel[v]
-
-
-def qsofa(rr, gcs, mp):
-    # quickSOFA: resp rate >=22, GCS <15, and MAP <70 as a proxy for SBP <=100.
-    return (rr >= 22).astype(int) + (gcs < 15).astype(int) + (mp < 70).astype(int)
-
-
-def sirs(hr, rr, temp, wbc):
-    # SIRS: HR >90, resp rate >20, temp outside [36, 38]C, WBC outside [4, 12] K/uL.
-    return ((hr > 90).astype(int) + (rr > 20).astype(int)
-            + ((temp > 38) | (temp < 36)).astype(int)
-            + ((wbc > 12) | (wbc < 4)).astype(int))
-
-
 def main():
-    U.log("loading labelled hourly panel + cohort ...")
-    panel = pd.read_parquet(C.OUTPUT_DIR / "hourly_labeled.parquet")
-    panel = panel.sort_values(["stay_id", "hour"]).reset_index(drop=True)
-    cohort = U.load("cohort", C.OUTPUT_DIR)[
-        ["stay_id", "age", "gender", "hospital_expire_flag"]]
+    log = setup_logging("14_realtime_holdout")
+
+    with step(log, "loading labelled hourly panel + cohort"):
+        panel = pd.read_parquet(C.OUTPUT_DIR / "08_hourly_labeled.parquet")
+        panel = panel.sort_values(["stay_id", "hour"]).reset_index(drop=True)
+        cohort = U.load("02_cohort", C.OUTPUT_DIR)[
+            ["stay_id", "age", "gender", "hospital_expire_flag"]]
 
     onset = panel.groupby("stay_id")["onset_hour"].first()
     censor = panel.groupby("stay_id")["hour"].max()
 
     rng = np.random.default_rng(SEED)
-    ids = np.array(sorted(panel["stay_id"].unique()))
-    hold = rng.choice(ids, size=min(N_HOLDOUT, len(ids)), replace=False)
-    pd.DataFrame({"stay_id": np.sort(hold)}).to_csv(
-        C.OUTPUT_DIR / "realtime_holdout_ids.csv", index=False)
+    all_stay_ids = np.array(sorted(panel["stay_id"].unique()))
+    holdout_ids = rng.choice(all_stay_ids, size=min(N_HOLDOUT, len(all_stay_ids)), replace=False)
+    pd.DataFrame({"stay_id": np.sort(holdout_ids)}).to_csv(
+        C.OUTPUT_DIR / "14_realtime_holdout_ids.csv", index=False)
+    log.info("holdout sample: %s / %s stays (seed=%d)",
+             f"{len(holdout_ids):,}", f"{len(all_stay_ids):,}", SEED)
 
-    sub = panel[panel["stay_id"].isin(hold)].copy()
-    # last hour we score for each stay: onset (septic) else censor
-    last_pred = onset.reindex(sub["stay_id"].values).to_numpy()
-    cens_v = censor.reindex(sub["stay_id"].values).to_numpy()
-    last_pred = np.where(np.isnan(last_pred), cens_v, last_pred)
-    keep = (sub["hour"].to_numpy() >= START_H) & (sub["hour"].to_numpy() <= last_pred)
-    sub = sub[keep].copy()
+    with step(log, "building holdout feature stream"):
+        holdout_panel = panel[panel["stay_id"].isin(holdout_ids)].copy()
+        onset_values = onset.reindex(holdout_panel["stay_id"].values).to_numpy()
+        censor_values = censor.reindex(holdout_panel["stay_id"].values).to_numpy()
+        # Each stay is scored up to onset (septic) or censor (non-septic).
+        last_pred_hour = np.where(np.isnan(onset_values), censor_values, onset_values)
+        in_range = ((holdout_panel["hour"].to_numpy() >= START_H)
+                    & (holdout_panel["hour"].to_numpy() <= last_pred_hour))
+        holdout_panel = holdout_panel[in_range].copy()
 
-    VITALS_LABS = ["hr", "resp_rate", "map", "spo2", "temp_c", "gcs",
-                   "lactate", "creatinine", "wbc", "pf_ratio"]
-    SLOPE_VARS = ["hr", "resp_rate", "map", "spo2"]
+        VITALS_LABS = ["hr", "resp_rate", "map", "spo2", "temp_c", "gcs",
+                       "lactate", "creatinine", "wbc", "pf_ratio"]
+        SLOPE_VARS = ["hr", "resp_rate", "map", "spo2"]
 
-    out = pd.DataFrame({"stay_id": sub["stay_id"].to_numpy(),
-                        "hour": sub["hour"].to_numpy()})
-    out["landmark_time"] = sub["hour"].to_numpy()
-    for v in VITALS_LABS:
-        out[v] = ff(sub, v).to_numpy()
-    out["sofa_total"] = sub["sofa_total"].to_numpy()
+        features = pd.DataFrame({"stay_id": holdout_panel["stay_id"].to_numpy(),
+                                  "hour": holdout_panel["hour"].to_numpy()})
+        features["landmark_time"] = holdout_panel["hour"].to_numpy()
+        for var in VITALS_LABS:
+            features[var] = ff(holdout_panel, var).to_numpy()
+        features["sofa_total"] = holdout_panel["sofa_total"].to_numpy()
 
-    # 6h slopes: value@h - value@(h-6). Build a (stay,hour)->value map per var.
-    for v in SLOPE_VARS:
-        val = ff(panel, v)
-        key = panel["stay_id"].to_numpy() * 100000 + panel["hour"].to_numpy()
-        m = pd.Series(val.to_numpy(), index=key)
-        cur_key = out["stay_id"].to_numpy() * 100000 + out["hour"].to_numpy()
-        prev_key = out["stay_id"].to_numpy() * 100000 + (out["hour"].to_numpy() - SLOPE_LOOKBACK_H)
-        out[f"{v}_slope6"] = out[v].to_numpy() - m.reindex(prev_key).to_numpy()
+        # 6h slope: look up each variable's value 6 hours ago via composite key.
+        for var in SLOPE_VARS:
+            ff_values = ff(panel, var)
+            composite_key = panel["stay_id"].to_numpy() * 100000 + panel["hour"].to_numpy()
+            value_by_key = pd.Series(ff_values.to_numpy(), index=composite_key)
+            current_key = features["stay_id"].to_numpy() * 100000 + features["hour"].to_numpy()
+            lookback_key = features["stay_id"].to_numpy() * 100000 + (features["hour"].to_numpy() - SLOPE_LOOKBACK_H)
+            features[f"{var}_slope6"] = features[var].to_numpy() - value_by_key.reindex(lookback_key).to_numpy()
 
-    out["qsofa"] = qsofa(out["resp_rate"], out["gcs"], out["map"]).to_numpy()
-    out["sirs"] = sirs(out["hr"], out["resp_rate"], out["temp_c"], out["wbc"]).to_numpy()
-    out = out.merge(cohort, on="stay_id", how="left")
-    # carry the truth for utility scoring
-    out["onset_hour"] = onset.reindex(out["stay_id"].values).to_numpy()
+        features["qsofa"] = qsofa(features["resp_rate"], features["gcs"], features["map"]).to_numpy()
+        features["sirs"] = sirs(features["hr"], features["resp_rate"], features["temp_c"], features["wbc"]).to_numpy()
+        features = features.merge(cohort, on="stay_id", how="left")
+        features["onset_hour"] = onset.reindex(features["stay_id"].values).to_numpy()
 
-    U.log(f"holdout: {len(hold):,} stays, {len(out):,} stay-hours scored "
-          f"(hours {START_H}..onset/censor)")
-    U.save(out, "realtime_holdout_features", C.OUTPUT_DIR, fmt="csv")
+    log_separator(log)
+    log.info("holdout: %s stays, %s stay-hours scored (hours %d..onset/censor)",
+             f"{len(holdout_ids):,}", f"{len(features):,}", START_H)
+    U.save(features, "14_realtime_holdout_features", C.OUTPUT_DIR)
 
 
 if __name__ == "__main__":

@@ -9,16 +9,20 @@ statistical work on MIMIC-IV overwhelmingly predicts mortality after diagnosis,
 rarely tests the proportional-hazards assumption, and seldom validates
 onset-prediction models externally.
 
-The work delivered an interpretable pipeline that reaches continuously updated
-hourly risk through a dynamic landmark supermodel (C1), formally tests and acts
-on the proportional-hazards assumption (C2), reframes the benchmark by showing
-that bedside severity scores fail on the incident-onset task while a
-multivariable nomogram reaches an AUROC of 0.775 (C3), characterises an
-informative-missingness ceiling in which whether a laboratory test was ordered
-outweighs its value (C4), and, closing the validation gap, transports the
-frozen model to eICU-CRD (C5). External discrimination held at 0.686 against an
-internal eICU ceiling of 0.712, and the expected miscalibration was corrected by
-a single-parameter recalibration.
+The work delivered an interpretable pipeline whose central deliverable is a
+dynamic landmark supermodel (C1): a single elastic-net logistic model fitted on
+207{,}010 stacked landmark rows across 48{,}829 stays, producing a pooled
+out-of-sample AUROC of \textbf{0.797} across six prediction hours. The
+supermodel matches or exceeds bespoke per-landmark models while remaining one
+parsimonious, deployable object that emits continuously updated hourly risk.
+The pipeline formally tests and acts on the proportional-hazards assumption
+(C2), reframes the benchmark by showing that bedside severity scores fail on
+the incident-onset task while a multivariable nomogram reaches an AUROC of
+0.775 (C3), characterises an informative-missingness ceiling in which whether
+a laboratory test was ordered outweighs its value (C4), and, closing the
+validation gap, transports the frozen model to eICU-CRD (C5). External
+discrimination held at 0.686 against an internal eICU ceiling of 0.712, and
+the expected miscalibration was corrected by a single-parameter recalibration.
 
 The central lesson is that, for retrospectively labelled ICU data, the ceiling
 on onset prediction is set by the labelling process rather than by model

@@ -32,7 +32,7 @@ The Tier-1 elastic-net nomogram was **developed and frozen on MIMIC-IV v3.1**
 (single centre, Boston). Here it is applied **without any refitting** to the
 **eICU Collaborative Research Database v2.0** (200+ US ICUs) to measure how
 well it *transports* to a completely independent, multi-centre population. The
-eICU hour-6 landmark table (`landmark_h6_eicu.csv`) was built by
+eICU hour-6 landmark table (`landmark_h6_eicu.parquet`) was built by
 `21_eicu_external_panel.py` using the identical cohort, panel, hourly-SOFA,
 onset, and feature definitions as the MIMIC pipeline (scripts `02/03/07/08`).
 
@@ -70,11 +70,11 @@ find_data <- function(f) {
   if (is.na(hit)) stop("cannot find ", f)
   hit
 }
-OUT <- dirname(find_data("landmark_h6_eicu.csv"))
+OUT <- dirname(find_data("21_landmark_h6_eicu.parquet"))
 FIG <- if (dir.exists("figure")) "figure" else { dir.create("figure"); "figure" }
 
-ext   <- read.csv(find_data("landmark_h6_eicu.csv"))
-coefs <- read.csv(find_data("tier1_coefs.csv"))          # frozen MIMIC model
+ext   <- arrow::read_parquet(find_data("21_landmark_h6_eicu.parquet"))
+coefs <- read.csv(find_data("10_tier1_coefs.csv"))          # frozen MIMIC model
 cat(sprintf("eICU landmark: %d at-risk stays, onset-within-12h rate %.3f (%d events)\n",
             nrow(ext), mean(ext$onset_within_h), sum(ext$onset_within_h)))
 ```
@@ -134,6 +134,10 @@ transportability summary: slope 1 = perfect, <1 = frozen risks too extreme
 (typical under dataset shift), and the intercept captures baseline-rate drift.
 
 ```{r metrics}
+ok <- complete.cases(y, risk_frozen)
+y <- y[ok]; risk_frozen <- risk_frozen[ok]; lp <- lp[ok]
+ext <- ext[ok, ]; X <- X[ok, ]
+
 roc_frozen <- roc(y, risk_frozen, quiet = TRUE, direction = "<")
 auc_ci     <- ci.auc(roc_frozen)                    # DeLong 95% CI
 prauc      <- pr.curve(scores.class0 = risk_frozen[y == 1],
@@ -209,7 +213,7 @@ res <- data.frame(
   n_stays        = nrow(ext),
   n_events       = sum(y))
 res[] <- lapply(res, function(x) if (is.numeric(x)) round(x, 4) else x)
-write.csv(res, file.path(OUT, "external_validation_eicu.csv"), row.names = FALSE)
+write.csv(res, file.path(OUT, "22_external_validation_eicu.csv"), row.names = FALSE)
 knitr::kable(t(res), caption = "eICU external-validation summary (saved to CSV).")
 ```
 
@@ -219,7 +223,7 @@ Decile-binned observed vs predicted risk, for the frozen model and after
 intercept/slope recalibration.
 
 ```{r calibration, fig.width=6, fig.height=6}
-png(file.path(FIG, "calibration_eicu.png"), width = 1100, height = 1000, res = 200)
+png(file.path(FIG, "22_calibration_eicu.png"), width = 1100, height = 1000, res = 200)
 decile_cal <- function(p) {
   bins <- cut(p, quantile(p, seq(0, 1, 0.1)), include.lowest = TRUE)
   aggregate(cbind(pred = p, obs = y), list(bin = bins), mean)
@@ -240,7 +244,7 @@ dev.off()
 ```
 
 ```{r show-fig, echo=FALSE, out.width="70%", fig.align="center", fig.cap="eICU calibration: frozen MIMIC model versus intercept/slope recalibration."}
-knitr::include_graphics(file.path(FIG, "calibration_eicu.png"))
+knitr::include_graphics(file.path(FIG, "22_calibration_eicu.png"))
 ```
 
 ## Interpretation

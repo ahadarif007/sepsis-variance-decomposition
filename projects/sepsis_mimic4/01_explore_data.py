@@ -32,6 +32,7 @@ import pandas as pd
 
 import config as C
 import utils as U
+from logging_utils import setup_logging, step, log_data_profile
 
 # Tables small enough to count/inspect fully without worry.
 SMALL_TABLES = {
@@ -71,12 +72,14 @@ def inventory() -> None:
         print(f"\n!! {len(missing)} file(s) missing - check paths in config.py")
 
 
-def schemas(sample_rows: int, count_small: bool, count_all: bool) -> None:
-    section("2. SCHEMAS + SAMPLES")
+def schemas(sample_rows: int, count_small: bool, count_all: bool,
+            logger=None) -> None:
+    section("2. SCHEMAS + DATA STRUCTURE PROFILES")
     for name, path in C.FILES.items():
         if not path.exists():
             continue
-        print(f"\n--- {name}  ({U.human_size(path.stat().st_size)}) ---")
+        fmt = "gzip CSV" if path.suffix == ".gz" else "CSV"
+        print(f"\n--- {name}  ({U.human_size(path.stat().st_size)}, {fmt}) ---")
         try:
             cols = U.peek_header(path)
             print(f"columns ({len(cols)}): {', '.join(cols)}")
@@ -84,15 +87,33 @@ def schemas(sample_rows: int, count_small: bool, count_all: bool) -> None:
             print(f"  (could not read header: {e})")
             continue
 
-        # Sample a few rows (cheap for any file; nrows stops early).
+        # Profile a sample large enough to be representative but small enough
+        # to keep logs readable (500 rows for structure, not full data dumps).
         try:
-            sample = U.read_table(path, nrows=sample_rows)
+            sample = U.read_table(path, nrows=500)
+            if logger:
+                log_data_profile(logger, sample, name)
+            else:
+                print(f"  shape: {sample.shape[0]} rows × {sample.shape[1]} cols")
+                for col in sample.columns:
+                    s = sample[col]
+                    null_pct = s.isna().mean() * 100
+                    dtype = str(s.dtype)
+                    null_tag = f"null:{null_pct:.0f}%" if null_pct > 0 else "no nulls"
+                    print(f"  {col:<28s} {dtype:<12s} {null_tag}")
+        except Exception as e:
+            print(f"  (could not profile: {e})")
+
+        # Show 2-3 sample rows as a quick sanity check (not a data dump).
+        try:
+            head = U.read_table(path, nrows=min(sample_rows, 3))
             with pd.option_context("display.max_columns", None,
                                    "display.width", 200,
                                    "display.max_colwidth", 22):
-                print(sample.to_string(index=False))
-        except Exception as e:
-            print(f"  (could not sample: {e})")
+                print(f"  first {len(head)} rows:")
+                print(head.to_string(index=False))
+        except Exception:
+            pass
 
         # Optional row counts.
         do_count = count_all or (
@@ -159,11 +180,11 @@ def sepsis_icd_codes() -> None:
     if not C.FILES["d_icd_diagnoses"].exists():
         print("d_icd_diagnoses missing.")
         return
-    d = U.read_table(C.FILES["d_icd_diagnoses"], dtype={"icd_code": "string"})
-    title = d["long_title"].astype("string").str.lower()
-    mask = title.str.contains("sepsis|septic|septicemia|septicaemia",
-                              na=False, regex=True)
-    hits = d[mask]
+    diagnoses = U.read_table(C.FILES["d_icd_diagnoses"], dtype={"icd_code": "string"})
+    title_lower = diagnoses["long_title"].astype("string").str.lower()
+    mask = title_lower.str.contains("sepsis|septic|septicemia|septicaemia",
+                                    na=False, regex=True)
+    hits = diagnoses[mask]
     print(f"{len(hits)} matching code(s):")
     with pd.option_context("display.max_rows", 80, "display.width", 200,
                            "display.max_colwidth", 70):
@@ -242,6 +263,32 @@ def cohort_preview() -> None:
         print(f"first-stay-only count:    {len(first):,}")
 
 
+def profile_intermediates(logger) -> None:
+    """Profile any parquet/csv intermediates already in processed_data/."""
+    section("7. PROCESSED INTERMEDIATES (parquet / csv)")
+    if not C.OUTPUT_DIR.exists():
+        print("  (no processed_data/ directory yet)")
+        return
+    files = sorted(C.OUTPUT_DIR.glob("*"))
+    data_files = [f for f in files if f.suffix in (".parquet", ".csv")]
+    if not data_files:
+        print("  (no intermediate data files found)")
+        return
+    print(f"  {len(data_files)} intermediate file(s) in {C.OUTPUT_DIR.name}/\n")
+    for f in data_files:
+        fmt = f.suffix.lstrip(".")
+        size = U.human_size(f.stat().st_size)
+        try:
+            if fmt == "parquet":
+                df = pd.read_parquet(f)
+            else:
+                df = pd.read_csv(f, nrows=500, low_memory=False)
+            print(f"  {f.name:<40s} {size:>10s}  {len(df):>7,} rows × {len(df.columns)} cols")
+            log_data_profile(logger, df, f.stem, max_categories=5)
+        except Exception as e:
+            print(f"  {f.name:<40s} {size:>10s}  (error: {e})")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Profile MIMIC-IV for sepsis work.")
     ap.add_argument("--sample", type=int, default=3,
@@ -252,16 +299,35 @@ def main() -> None:
                     help="count rows of EVERY table (slow)")
     args = ap.parse_args()
 
+    log = setup_logging("01_explore_data")
+    log.info("starting MIMIC-IV data exploration (project root: %s)", C.PROJECT_ROOT)
+
     buf = io.StringIO()
     with redirect_stdout(buf):
         print("MIMIC-IV v3.1 - SEPSIS DATA EXPLORATION REPORT")
         print(f"project root: {C.PROJECT_ROOT}")
-        inventory()
-        schemas(args.sample, args.count_small, args.count_all)
-        mine_dictionaries()
-        sepsis_icd_codes()
-        verify_candidate_itemids()
-        cohort_preview()
+
+        with step(log, "file inventory"):
+            inventory()
+
+        with step(log, "schemas + data structure profiles"):
+            schemas(args.sample, args.count_small, args.count_all, logger=log)
+
+        with step(log, "dictionary mining"):
+            mine_dictionaries()
+
+        with step(log, "sepsis ICD codes"):
+            sepsis_icd_codes()
+
+        with step(log, "candidate itemid verification"):
+            verify_candidate_itemids()
+
+        with step(log, "cohort size preview"):
+            cohort_preview()
+
+        with step(log, "profile processed intermediates"):
+            profile_intermediates(log)
+
         print("\n" + "=" * 78)
         print("DONE. Send this whole report back to refine the next stages:")
         print(" - which itemids are confirmed (section 5)")
@@ -271,9 +337,9 @@ def main() -> None:
 
     report = buf.getvalue()
     print(report)  # to console
-    out_path = C.OUTPUT_DIR / "exploration_report.txt"
+    out_path = C.OUTPUT_DIR / "01_exploration_report.txt"
     out_path.write_text(report)
-    U.log(f"report saved -> {out_path}")
+    log.info("report saved -> %s (%s)", out_path, U.human_size(len(report)))
 
 
 if __name__ == "__main__":

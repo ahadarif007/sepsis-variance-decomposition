@@ -9,6 +9,7 @@ memory at once.
 """
 from __future__ import annotations
 
+import logging
 import sys
 import time
 from pathlib import Path
@@ -23,13 +24,18 @@ try:
 except Exception:  # pragma: no cover
     _HAS_TQDM = False
 
+_log = logging.getLogger("utils")
+
 
 # --------------------------------------------------------------------------- #
-# Logging
+# Logging (legacy wrapper — new code should use logging_utils directly)
 # --------------------------------------------------------------------------- #
 def log(msg: str) -> None:
-    """Timestamped stderr log so it doesn't pollute piped stdout."""
-    print(f"[{time.strftime('%H:%M:%S')}] {msg}", file=sys.stderr, flush=True)
+    """Timestamped stderr log. Bridges to Python logging when configured."""
+    if _log.handlers or _log.parent and _log.parent.handlers:
+        _log.info(msg)
+    else:
+        print(f"[{time.strftime('%H:%M:%S')}] {msg}", file=sys.stderr, flush=True)
 
 
 def human_size(num_bytes: int) -> str:
@@ -72,8 +78,10 @@ def count_rows(path: Path, chunksize: int = 5_000_000) -> int:
 
 
 def peek_header(path: Path) -> list[str]:
-    """Read just the CSV header line from a gzipped file."""
-    with open(path, "r") as fh:
+    """Read just the CSV header line (handles both plain and gzipped files)."""
+    import gzip
+    opener = gzip.open if path.suffix == ".gz" else open
+    with opener(path, "rt") as fh:
         return fh.readline().rstrip("\n").split(",")
 
 
@@ -94,7 +102,10 @@ def save(df: pd.DataFrame, name: str, out_dir: Path, fmt: str = "parquet") -> Pa
         df.to_csv(path, index=False)
     else:
         raise ValueError(f"Unknown fmt: {fmt}")
-    log(f"wrote {path.name}  ({len(df):,} rows, {human_size(path.stat().st_size)})")
+    _log.info(
+        "saved %s (%s rows, %d cols, %s)",
+        path.name, f"{len(df):,}", len(df.columns), human_size(path.stat().st_size),
+    )
     return path
 
 
@@ -108,12 +119,18 @@ def load(name: str, out_dir: Path,
     will refuse `string - Timedelta`. (Parquet is already typed, so the
     argument is only applied to the CSV path.)
     """
-    csv = out_dir / f"{name}.csv"
-    if csv.exists():
-        return pd.read_csv(csv, low_memory=False, parse_dates=parse_dates)
     pq = out_dir / f"{name}.parquet"
     if pq.exists():
-        return pd.read_parquet(pq)
+        df = pd.read_parquet(pq)
+        _log.info("loaded %s (%s rows, %s)", pq.name, f"{len(df):,}",
+                  human_size(pq.stat().st_size))
+        return df
+    csv = out_dir / f"{name}.csv"
+    if csv.exists():
+        df = pd.read_csv(csv, low_memory=False, parse_dates=parse_dates)
+        _log.info("loaded %s (%s rows, %s)", csv.name, f"{len(df):,}",
+                  human_size(csv.stat().st_size))
+        return df
     raise FileNotFoundError(f"No intermediate named '{name}' in {out_dir}")
 
 
@@ -176,11 +193,11 @@ def stream_windowed_agg(
     path = Path(path)
     want = set(int(i) for i in itemids)
     # Dedupe column list so key_col == "stay_id" (chartevents) doesn't double-select.
-    wcols: list[str] = []
-    for c in [key_col, "stay_id", "win_start", "win_end"]:
-        if c not in wcols:
-            wcols.append(c)
-    win = windows[wcols].copy()
+    window_columns: list[str] = []
+    for col_name in [key_col, "stay_id", "win_start", "win_end"]:
+        if col_name not in window_columns:
+            window_columns.append(col_name)
+    win = windows[window_columns].copy()
     win[key_col] = pd.to_numeric(win[key_col], errors="coerce")
     win = win.dropna(subset=[key_col])
     win[key_col] = win[key_col].astype("int64")
@@ -208,32 +225,36 @@ def stream_windowed_agg(
         sub = sub.dropna(subset=[key_col, value_col])
         sub[key_col] = sub[key_col].astype("int64")
 
-        m = sub.merge(win, on=key_col, how="inner")
-        if m.empty:
+        merged = sub.merge(win, on=key_col, how="inner")
+        if merged.empty:
             continue
-        in_win = (m[time_col] >= m["win_start"]) & (m[time_col] <= m["win_end"])
-        m = m[in_win]
-        if m.empty:
+        in_window = (merged[time_col] >= merged["win_start"]) & (merged[time_col] <= merged["win_end"])
+        merged = merged[in_window]
+        if merged.empty:
             continue
 
-        g = m.groupby(["stay_id", "itemid"])[value_col].agg(
+        grouped = merged.groupby(["stay_id", "itemid"])[value_col].agg(
             vmin="min", vmax="max", vsum="sum", vcount="count"
         ).reset_index()
-        partials.append(g)
+        partials.append(grouped)
 
     if not partials:
-        log(f"{path.name}: scanned {total:,} rows, kept 0 in-window")
+        _log.warning("stream %s: scanned %s rows, kept 0 in-window",
+                     path.name, f"{total:,}")
         return pd.DataFrame(
             columns=["stay_id", "itemid", "vmin", "vmax", "vmean", "vcount"]
         )
 
-    allp = pd.concat(partials, ignore_index=True)
-    out = allp.groupby(["stay_id", "itemid"]).agg(
+    combined = pd.concat(partials, ignore_index=True)
+    result = combined.groupby(["stay_id", "itemid"]).agg(
         vmin=("vmin", "min"), vmax=("vmax", "max"),
         vsum=("vsum", "sum"), vcount=("vcount", "sum"),
     ).reset_index()
-    out["vmean"] = out["vsum"] / out["vcount"]
-    out = out.drop(columns=["vsum"])
-    log(f"{path.name}: scanned {total:,} rows, "
-        f"{out['stay_id'].nunique():,} stays x {out['itemid'].nunique()} itemids")
-    return out[["stay_id", "itemid", "vmin", "vmax", "vmean", "vcount"]]
+    result["vmean"] = result["vsum"] / result["vcount"]
+    result = result.drop(columns=["vsum"])
+    _log.info(
+        "stream %s: scanned %s rows -> %s stays x %d itemids",
+        path.name, f"{total:,}",
+        f"{result['stay_id'].nunique():,}", result["itemid"].nunique(),
+    )
+    return result[["stay_id", "itemid", "vmin", "vmax", "vmean", "vcount"]]

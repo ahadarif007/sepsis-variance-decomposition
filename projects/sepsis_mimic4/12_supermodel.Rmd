@@ -45,14 +45,14 @@ find_data <- function(f) {
   hit <- cands[file.exists(cands)][1]
   if (is.na(hit)) stop("cannot find ", f); hit
 }
-OUT <- dirname(find_data("landmark_stack.csv"))
+OUT <- dirname(find_data("11_landmark_stack.parquet"))
 FIG <- if (dir.exists("figure")) "figure" else { dir.create("figure"); "figure" }
 ```
 
 ## Load Landmark Stack
 
 ```{r load-data}
-st <- read.csv(find_data("landmark_stack.csv"))
+st <- as.data.frame(arrow::read_parquet(find_data("11_landmark_stack.parquet")))
 cat(sprintf("Loaded stack: %d rows, %d stays, landmarks {%s}\n",
             nrow(st), length(unique(st$stay_id)),
             paste(sort(unique(st$landmark_time)), collapse = ",")))
@@ -154,16 +154,18 @@ tab$auc_separate   <- round(tab$auc_separate, 4)
 overall <- as.numeric(auc(roc(y, oos, quiet=TRUE, direction="<")))
 cat(sprintf("\nOverall supermodel out-of-sample AUROC (pooled): %.4f\n", overall))
 print(tab, row.names = FALSE)
-write.csv(tab, file.path(OUT, "tier2_auc_by_landmark.csv"), row.names=FALSE)
-write.csv(data.frame(stay_id=st$stay_id, landmark_time=st$landmark_time,
+write.csv(tab, file.path(OUT, "12_tier2_auc_by_landmark.csv"), row.names=FALSE)
+arrow::write_parquet(data.frame(stay_id=st$stay_id, landmark_time=st$landmark_time,
                      onset_within_h=y, risk=oos),
-          file.path(OUT, "tier2_supermodel_oos.csv"), row.names=FALSE)
+          file.path(OUT, "12_tier2_supermodel_oos.parquet"))
+write.csv(data.frame(metric = "overall_pooled_auroc", value = overall),
+          file.path(OUT, "12_overall_auroc.csv"), row.names = FALSE)
 ```
 
 ## AUC by Landmark Figure
 
 ```{r auc-figure, fig.width=7, fig.height=5}
-png(file.path(FIG, "auc_by_landmark.png"), width=1100, height=850, res=200)
+png(file.path(FIG, "12_auc_by_landmark.png"), width=1100, height=850, res=200)
 plot(tab$landmark_h, tab$auc_supermodel, type="b", pch=19, col="steelblue",
      ylim=range(c(tab$auc_supermodel, tab$auc_separate, 0.5)),
      xlab="Prediction hour s (landmark)", ylab="Out-of-sample AUROC (12h horizon)",

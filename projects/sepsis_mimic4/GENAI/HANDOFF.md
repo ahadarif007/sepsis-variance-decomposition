@@ -4,8 +4,37 @@
 > project cold**, with full context on what was built, why, the current state,
 > and the exact next steps. Read this top to bottom before touching anything.
 
-Last updated: 2026-07-09. Author of work: Claude (Anthropic), working with the
+Last updated: 2026-07-10. Author of work: Claude (Anthropic), working with the
 user **Abdul Ahad** (email ahadarif.1998@gmail.com; PyCharm on macOS).
+
+> **2026-07-10 UPDATE — CODE QUALITY PASS + FULL PIPELINE RE-EXECUTION.**
+> Three improvements applied across the entire Python codebase:
+>
+> 1. **Structured logging (`logging_utils.py`):** Every Python script now uses
+>    named `logging.Logger` instances with a consistent `[HH:MM:SS] module — msg`
+>    format, timing context managers (`step()`), cohort-filter helpers, and visual
+>    separators. The old `utils.log()` stderr print is retained only as a legacy
+>    bridge. All 10 Python scripts (`01`–`08`, `11`, `14`, `21`) import from
+>    `logging_utils` and use `setup_logging()` + `step()` throughout.
+>
+> 2. **Shared clinical scoring (`clinical_scores.py`):** Duplicated SOFA, qSOFA,
+>    SIRS scoring code (previously copy-pasted across `05`, `08`, `21`) is now in
+>    one shared module. `score_sofa_hourly()` (used by `08` and `21`),
+>    `qsofa()`, `sirs()`, and the forward-fill helper `ff()` live here. The
+>    static first-24h scorers remain in `05` (different signature/logic).
+>
+> 3. **Naming & comments overhaul:** 100+ single-letter and cryptic variable names
+>    renamed across all 11 Python files (e.g. `s`→`landmark_hour`, `n`→`total_stays`,
+>    `pf`→`pf_ratio`, `plt`→`platelets`, `VASO`→`VASOPRESSOR_ITEMIDS`). Organ-system
+>    section comments added to SOFA scorers; docstrings improved throughout.
+>
+> 4. **Full pipeline re-execution:** All 10 Python scripts ran successfully,
+>    reproducing all intermediate outputs. All 11 Rmd files rendered to PDF.
+>    Script `22_external_validation.Rmd` had a runtime bug (`PRROC::pr.curve()`
+>    failing on NA subscripts) — fixed by adding `complete.cases()` filtering
+>    before the metrics chunk. All 22 pipeline stages now run clean end-to-end.
+>
+> **No methodological or numerical changes.** All outputs reproduce prior results.
 
 > **2026-07-09 UPDATE — eICU EXTERNAL VALIDATION COMPLETE (the last open item).**
 > eICU-CRD v2.0 is now present locally at
@@ -13,7 +42,7 @@ user **Abdul Ahad** (email ahadarif.1998@gmail.com; PyCharm on macOS).
 > only outstanding gap:
 > - **`21_eicu_external_panel.py`** rebuilds the hour-6 landmark table on eICU
 >   using the *identical* cohort/panel/SOFA/onset/feature definitions as the
->   MIMIC pipeline (`02/03/07/08`), emitting `processed_data/landmark_h6_eicu.csv`
+>   MIMIC pipeline (`02/03/07/08`), emitting `processed_data/landmark_h6_eicu.parquet`
 >   (136,864-stay cohort → 113,597 at-risk @ h6; 4,782 incident onsets, 4.2%).
 >   eICU times are integer *minute offsets* from unit admission (hour =
 >   floor(off/60)); vitals from `vitalPeriodic`(+`vitalAperiodic` MAP), temp +
@@ -32,8 +61,9 @@ user **Abdul Ahad** (email ahadarif.1998@gmail.com; PyCharm on macOS).
 >   *label*, not the model, untransportable. No new R/Python packages needed.
 >   Run script renamed `run_01_to_20.zsh` → `run_01_to_22.zsh` (range 01..22).
 >
-> **CURRENT STATUS (2026-07-09, post-eICU):** pipeline `01`→`22` built and run;
-> external validation done. No open methodological items remain.
+> **CURRENT STATUS (2026-07-10, post-code-quality):** pipeline `01`→`22` built,
+> cleaned (structured logging + shared modules + naming overhaul), and fully
+> re-executed. All 10 Python + 11 Rmd stages run clean. No open items remain.
 
 > **2026-07-09 UPDATE — single-study framing; Tiers 6-7 added.** The user
 > asked to stop framing this as two research efforts ("Phase 1" / "Phase 2")
@@ -155,7 +185,7 @@ why the heavy SOFA-labeling stages had to be built before the report.
 | **Python with pandas** | `/Library/Frameworks/Python.framework/Versions/3.14/bin/python3` — pandas **3.0.4**. This is what the shell's `python3` resolves to. |
 | **System python (AVOID)** | `/usr/bin/python3` has **no pandas**. PyCharm defaulted to this and threw `ModuleNotFoundError: No module named 'pandas'`. Fix: point PyCharm's interpreter at the framework build above, or run from the terminal. |
 | **pandas 3.0 Arrow strings** | pandas 3.0 stores text columns as Arrow `large_string`. **CSV datetime columns load back as `str`**, and `str - Timedelta` raises `ArrowNotImplementedError`. **Always `parse_dates=[...]` when loading CSV datetimes.** This bit us in `03` (now fixed via `U.load(..., parse_dates=...)`). |
-| **R** | `/usr/local/bin/Rscript` — R **4.5.2**. Report 06 pkgs: `rmarkdown, bookdown, tidyverse, knitr, kableExtra, MASS, mclust, coda, depmixS4, effectsize, broom, patchwork, pROC, PRROC, mgcv, car, mice`. Report 09 adds `survival, cmprsk, timeROC`. **Phase 2 adds `glmnet, rms, geepack, sandwich`** (all installed; `geepack` was installed 2026-07-08). `pdflatex` present at `/Library/TeX/texbin/`. `pdftoppm`/`pdftools` NOT installed (can't rasterize PDF for inspection). |
+| **R** | `/usr/local/bin/Rscript` — R **4.5.2**. Report 06 pkgs: `rmarkdown, bookdown, tidyverse, knitr, kableExtra, MASS, mclust, coda, depmixS4, effectsize, broom, patchwork, pROC, PRROC, mgcv, car, mice`. Report 09 adds `survival, cmprsk, timeROC`. Model tiers add `glmnet, rms, geepack, sandwich`. Tiers 6–7 add `flexmix, MatchIt, WeightIt, cobalt`. eICU validation (`22`) uses `arrow` (for parquet reads). All installed. `pdflatex` present at `/Library/TeX/texbin/`. `pdftoppm`/`pdftools` NOT installed (can't rasterize PDF for inspection). |
 | **Data root** | `/Users/arif/Desktop/RESEARCH/data/mimic-iv-3.1/` with `hosp/` and `icu/` subdirs, all `*.csv.gz`. |
 | **Outputs** | `/Users/arif/Desktop/RESEARCH/processed_data/` |
 | **Project code** | `/Users/arif/Desktop/RESEARCH/projects/sepsis_mimic4/` (this pipeline lives in a subfolder because the wider `RESEARCH/` project "will be tremendously big in future"). |
@@ -165,7 +195,7 @@ why the heavy SOFA-labeling stages had to be built before the report.
 
 ## 3. Repository layout & per-file status
 
-All stages `01`→`17` have been **run** (2026-07-08). Full listing:
+All stages `01`→`22` have been **run** (2026-07-10). Full listing:
 
 ```
 RESEARCH/
@@ -185,11 +215,14 @@ RESEARCH/
 │   ├── landmark_stack.csv            from 11  (207,010 rows, 6 landmarks — Phase 2 T2)
 │   ├── realtime_holdout_features.csv from 14  (152,910 hourly rows — Phase 2 T4)
 │   ├── realtime_holdout_ids.csv      from 14  (6,000 held-out stays)
-│   └── phase2_tier{1..5}*.csv        from 10/12/13/15/16  (Phase 2 results)
-│      (cohort.parquet / suspected_infection.parquet are harmless STALE leftovers)
+│   ├── tier{1..5}*.csv                from 10/12/13/15/16  (model results)
+│   ├── landmark_h6_eicu.parquet      from 21  (113,597 at-risk eICU stays)
+│   └── external_validation_eicu.csv  from 22  (frozen-model metrics on eICU)
 └── projects/sepsis_mimic4/
     ├── config.py                 single source of truth (paths, itemids, thresholds)
     ├── utils.py                  IO + streaming aggregation helpers
+    ├── logging_utils.py          structured logging: setup_logging, step, separators
+    ├── clinical_scores.py        shared SOFA/qSOFA/SIRS scoring (used by 05/08/21)
     ├── 01_explore_data.py        [RUN] → exploration_report.txt
     ├── 02_extract_cohort.py      [RUN] → cohort.csv
     ├── 03_suspected_infection.py [RUN] → suspected_infection.csv (swabs excluded)
@@ -199,16 +232,20 @@ RESEARCH/
     ├── 07_hourly_panel.py        [RUN] heavy → hourly_panel.parquet
     ├── 08_onset_label.py         [RUN] → hourly_labeled.parquet + landmark/onset exports
     ├── 09_temporal_report.Rmd    [RENDERED] → 09_temporal_report.pdf
-    ├── 10_landmark_nomogram.R    [RUN] Phase 2 T1  → phase2_tier1_*.csv, nomogram/calib png
-    ├── 11_landmark_stack.py      [RUN] Phase 2 T2  → landmark_stack.csv
-    ├── 12_supermodel.R           [RUN] Phase 2 T2  → phase2_tier2_*.csv, auc_by_landmark.png
-    ├── 13_repeated_measures.R    [RUN] Phase 2 T3  → phase2_tier3_*.csv (GEE + tv-Cox)
-    ├── 14_realtime_holdout.py    [RUN] Phase 2 T4  → realtime_holdout_*.csv
-    ├── 15_realtime_eval.R        [RUN] Phase 2 T4  → phase2_tier4_*.csv, alarm_tradeoff.png
-    ├── 16_subgroup_fairness.R    [RUN] Phase 2 T5  → phase2_tier5_subgroups.csv
-    ├── 17_phase2_report.Rmd      [RENDERED] → 17_phase2_report.pdf
-    ├── figure/                   report figures (Phase 1 + Phase 2 PNGs)
-    ├── README.md                 human-facing docs (see §9 for the Phase 2 table)
+    ├── 10_landmark_nomogram.Rmd  [RENDERED] T1 → tier1_*.csv, nomogram/calib png
+    ├── 11_landmark_stack.py      [RUN] T2      → landmark_stack.csv
+    ├── 12_supermodel.Rmd         [RENDERED] T2 → tier2_*.csv, auc_by_landmark.png
+    ├── 13_repeated_measures.Rmd  [RENDERED] T3 → tier3_*.csv (GEE + tv-Cox)
+    ├── 14_realtime_holdout.py    [RUN] T4      → realtime_holdout_*.csv
+    ├── 15_realtime_eval.Rmd      [RENDERED] T4 → tier4_*.csv, alarm_tradeoff.png
+    ├── 16_subgroup_fairness.Rmd  [RENDERED] T5 → tier5_subgroups.csv
+    ├── 18_gbtm_trajectories.Rmd  [RENDERED] T6 → trajectory modelling (flexmix)
+    ├── 19_confounder_adjustment.Rmd [RENDERED] T7 → PSM/IPW/AIPW causal estimation
+    ├── 20_realtime_model_report.Rmd [RENDERED] → 20_realtime_model_report.pdf
+    ├── 21_eicu_external_panel.py [RUN] → landmark_h6_eicu.parquet
+    ├── 22_external_validation.Rmd[RENDERED] → 22_external_validation.pdf
+    ├── figure/                   report figures (all tiers + eICU calibration)
+    ├── README.md                 human-facing docs (see §9 for per-tier table)
     ├── requirements.txt          pandas>=2.0, numpy, pyarrow, tqdm
     └── GENAI/{HANDOFF.md, plan.md, plan_phase2_statistical.md, README.md}
 ```
@@ -396,25 +433,34 @@ change. `python3` = the framework build with pandas, NOT `/usr/bin/python3`.
 ```bash
 cd /Users/arif/Desktop/RESEARCH/projects/sepsis_mimic4
 
-# --- Phase 1: static branch ---
+# --- Static branch ---
+python3 01_explore_data.py             # data profiling (fast)
+python3 02_extract_cohort.py           # cohort extraction (fast)
+python3 03_suspected_infection.py      # suspected infection (fast)
 python3 04_extract_measurements.py     # SLOW: streams ~6 GB, memory-safe
 python3 05_sofa_sepsis3.py             # fast: SOFA + labels
 Rscript -e 'rmarkdown::render("06_statistical_report.Rmd")'
 
-# --- Phase 1: temporal branch ---
+# --- Temporal branch ---
 python3 07_hourly_panel.py             # SLOW: builds 3.1M stay-hours
 python3 08_onset_label.py              # hourly SOFA, onset, landmark, baselines
 Rscript -e 'rmarkdown::render("09_temporal_report.Rmd")'
 
-# --- Phase 2: purely statistical real-time model (fast; reuses 08 outputs) ---
-Rscript 10_landmark_nomogram.R         # T1 nomogram
+# --- Real-time model tiers (fast; reuses 08 outputs) ---
+Rscript -e 'rmarkdown::render("10_landmark_nomogram.Rmd")'  # T1 nomogram
 python3 11_landmark_stack.py           # T2 stacked landmark dataset
-Rscript 12_supermodel.R                # T2 supermodel + AUC(s)   (~3 min)
-Rscript 13_repeated_measures.R         # T3 GEE + time-varying Cox
+Rscript -e 'rmarkdown::render("12_supermodel.Rmd")'         # T2 supermodel + AUC(s)
+Rscript -e 'rmarkdown::render("13_repeated_measures.Rmd")'   # T3 GEE + tv-Cox
 python3 14_realtime_holdout.py         # T4 holdout hourly stream
-Rscript 15_realtime_eval.R             # T4 utility + alarm burden
-Rscript 16_subgroup_fairness.R         # T5 subgroup calibration
-Rscript -e 'rmarkdown::render("17_phase2_report.Rmd")'
+Rscript -e 'rmarkdown::render("15_realtime_eval.Rmd")'      # T4 utility + alarm
+Rscript -e 'rmarkdown::render("16_subgroup_fairness.Rmd")'   # T5 subgroup calib
+Rscript -e 'rmarkdown::render("18_gbtm_trajectories.Rmd")'  # T6 trajectories
+Rscript -e 'rmarkdown::render("19_confounder_adjustment.Rmd")' # T7 causal
+Rscript -e 'rmarkdown::render("20_realtime_model_report.Rmd")'
+
+# --- External validation ---
+python3 21_eicu_external_panel.py      # eICU hour-6 landmark
+Rscript -e 'rmarkdown::render("22_external_validation.Rmd")'
 ```
 
 ---
@@ -431,12 +477,16 @@ Rscript -e 'rmarkdown::render("17_phase2_report.Rmd")'
   all 12 R packages present ✓.
 - `03` datetime bug fixed and **re-run on real data** — reproduces the cohort. ✓
 - All Python scripts `py_compile` clean (incl. `11`, `14`). ✓
-- **Phase 2 (2026-07-08):** every tier script runs to exit 0; `17_phase2_report`
+- **Phase 2 (2026-07-08):** every tier script runs to exit 0; `20_realtime_model_report`
   renders to PDF with **no NA/error leakage** in inline values (knit-to-md
   checked). `11_landmark_stack.py` reproduces the h6 landmark exactly (48,829
   at-risk / 3,330 onset-in-12h, matching `landmark_h6.csv`). Supermodel CV is
   patient-grouped on `stay_id` (each stay recurs across landmarks). Tier-4
   holdout is trained on the complement of the 6,000 held-out stays (leakage-safe).
+- **Code quality pass (2026-07-10):** all 10 Python scripts verified with
+  `python3 -m py_compile` after 100+ variable renames and module extraction.
+  Full pipeline re-executed end-to-end (10 Python + 11 Rmd), all outputs
+  reproduced. Script 22 PRROC NA bug fixed (`complete.cases()` filter). ✓
 
 ---
 
@@ -479,6 +529,20 @@ Rscript -e 'rmarkdown::render("17_phase2_report.Rmd")'
 15. **(2026-07-08)** User: "execute phase 2." Built and ran Tiers 1–5
     (scripts `10`–`16`) + report `17`; installed `geepack`; switched Tier-3 from
     a degenerate GLMM to GEE; deferred eICU. Then updated README + this HANDOFF.
+16. **(2026-07-09)** eICU external validation: built `21_eicu_external_panel.py`
+    and `22_external_validation.Rmd`. Unified framing (dropped "Phase 1/2"),
+    renamed artifacts (`phase2_tier*.csv` → `tier*.csv`), renumbered
+    `17` → `20`, added Tiers 6–7 (`18`/`19`). See the 2026-07-09 banners.
+17. **(2026-07-10)** User: "add proper logs … scan for reusable code." Created
+    `logging_utils.py` (structured logging) and `clinical_scores.py` (shared
+    SOFA/qSOFA/SIRS). All 10 Python scripts updated to use both modules.
+18. **(2026-07-10)** User: "scan and improve all naming and comments." Renamed
+    100+ single-letter/cryptic variables across all 11 Python files; added
+    organ-system comments and docstrings. All files verified with `py_compile`.
+19. **(2026-07-10)** User: "execute full pipeline" + "did you run Rmd files too?"
+    Re-ran all 10 Python scripts (all succeeded) and all 11 Rmd files. Fixed
+    `22_external_validation.Rmd` PRROC NA bug (`complete.cases()` filter before
+    `pr.curve()`). Full pipeline 01→22 now runs clean end-to-end.
 
 ---
 
@@ -499,4 +563,12 @@ Rscript -e 'rmarkdown::render("17_phase2_report.Rmd")'
 - The user is a student; the report mirrors an academic format (bookdown PDF,
   effect-size-first interpretation, PAIR-framework acknowledgment, references).
   Preserve that tone and structure.
+- **Shared modules:** `logging_utils.py` and `clinical_scores.py` are imported
+  by most Python scripts. If you change a scoring formula or logging format,
+  the change propagates automatically. The static SOFA scorers in `05` have a
+  different signature (first-24h aggregates, not hourly rows) — don't merge
+  them into `clinical_scores.py` without refactoring `05`'s call sites.
+- **PRROC + NAs:** `PRROC::pr.curve()` crashes on NA subscripts. The fix in
+  `22_external_validation.Rmd` filters with `complete.cases()` before calling
+  it. Apply the same pattern if you add PR-AUC to other Rmd reports.
 ```

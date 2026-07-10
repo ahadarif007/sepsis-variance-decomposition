@@ -11,7 +11,9 @@ stays from MIMIC-IV v3.1, each stay was resampled to an hourly grid of vitals
 and laboratory values, hourly Sequential Organ Failure Assessment (SOFA) scores
 were computed, and the exact onset hour was labelled under the Sepsis-3
 consensus definition. Continuously updated risk was obtained through a dynamic
-landmark supermodel rather than any neural or ensemble method.
+landmark supermodel---a single elastic-net logistic model fitted on stacked
+landmark datasets across six prediction hours, achieving a pooled
+out-of-sample AUROC of 0.797---rather than any neural or ensemble method.
 
 Three methodological commitments distinguish the work. First, the
 proportional-hazards assumption underlying Cox regression was formally tested
