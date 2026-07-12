@@ -10,8 +10,8 @@ closed-form model.
 
 \section{Overall Architecture}
 The system is organised as a linear pipeline of numbered, single-purpose stages
-grouped into three layers---\textbf{Extract}, \textbf{Model}, and
-\textbf{Evaluate}---as shown in Figure~\ref{image:sysArchitecture}. Each stage
+grouped into three layers (\textbf{Extract}, \textbf{Model}, and
+\textbf{Evaluate}), as shown in Figure~\ref{image:sysArchitecture}. Each stage
 reads the artefact written by the previous stage and writes its own, so any
 stage can be re-run in isolation. A single configuration module
 (\texttt{config.py}) is the sole source of truth for file paths, clinical item
@@ -85,7 +85,7 @@ Hourly SOFA is scored, and the exact onset hour is located.
 Figure~\ref{fig:onset_histogram} shows the distribution of onset hours,
 revealing a critical distinction: a large spike at hour 0 marks
 \emph{prevalent} sepsis (already present at admission), while the right tail
-represents \emph{incident} sepsis developing in the ICU---the target of
+represents \emph{incident} sepsis developing in the ICU, the target of
 early prediction.
 
 \begin{figure}[H]

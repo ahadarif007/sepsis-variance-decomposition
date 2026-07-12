@@ -11,23 +11,23 @@ stays from MIMIC-IV v3.1, each stay was resampled to an hourly grid of vitals
 and laboratory values, hourly Sequential Organ Failure Assessment (SOFA) scores
 were computed, and the exact onset hour was labelled under the Sepsis-3
 consensus definition. Continuously updated risk was obtained through a dynamic
-landmark supermodel---a single elastic-net logistic model fitted on stacked
-landmark datasets across six prediction hours, achieving a pooled
-out-of-sample AUROC of 0.797---rather than any neural or ensemble method.
+landmark supermodel rather than any neural or ensemble method: a single
+elastic-net logistic model fitted on stacked landmark datasets across six
+prediction hours, achieving a pooled out-of-sample AUROC of 0.797.
 
 Three methodological commitments distinguish the work. First, the
 proportional-hazards assumption underlying Cox regression was formally tested
 using Schoenfeld residuals and, because the global test failed, a time-varying
 reformulation was fitted in response. Second, incident (new-onset) sepsis was
 separated from prevalent sepsis using an hour-six landmark, which revealed that
-standard bedside scores are non-discriminative to inverse on this task (SOFA
-area under the receiver operating characteristic curve 0.36, qSOFA 0.49, SIRS
-0.59), whereas a multivariable landmark nomogram attained 0.775. Third, an
+standard bedside scores range from non-discriminative to inverse on this task
+(SOFA area under the receiver operating characteristic curve 0.36, qSOFA 0.49,
+SIRS 0.59), whereas a multivariable landmark nomogram attained 0.775. Third, an
 informative-missingness analysis showed that whether a laboratory test was
 ordered is a stronger predictor than its measured value, quantifying a
 label-recognition ceiling intrinsic to retrospectively labelled ICU data.
-Finally, the frozen model was externally validated on the eICU Collaborative
-Research Database of more than 200 United States ICUs: discrimination
+Beyond this internal analysis, the frozen model was externally validated on the
+eICU Collaborative Research Database of more than 200 United States ICUs: discrimination
 transported with modest degradation (area under the curve 0.686 against an
 internal eICU ceiling of 0.711), and a single-parameter recalibration corrected
 the expected miscalibration. All extraction, modelling, and evaluation code is

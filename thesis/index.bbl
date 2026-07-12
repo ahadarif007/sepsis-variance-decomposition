@@ -7,6 +7,22 @@ Mervyn Singer, Clifford~S. Deutschman, Christopher~W. Seymour, Manu
   shock (sepsis-3).
 \newblock {\em JAMA}, 315(8):801--810, 2016.
 
+\bibitem{rudd2020global}
+Kristina~E. Rudd, Sarah~Charlotte Johnson, Kareha~M. Agesa, Katya~Anne
+  Shackelford, Derrick Tsoi, Daniel~Rhodes Kievlan, Danny~V. Colombara,
+  Kevin~S. Ikuta, Niranjan Kissoon, Simon Finfer, et~al.
+\newblock Global, regional, and national sepsis incidence and mortality,
+  1990--2017: analysis for the global burden of disease study.
+\newblock {\em The Lancet}, 395(10219):200--211, 2020.
+
+\bibitem{seymour2017time}
+Christopher~W. Seymour, Foster Gesten, Hallie~C. Prescott, Marcus~E. Friedrich,
+  Theodore~J. Iwashyna, Gary~S. Phillips, Stanley Lemeshow, Tiffany Osborn,
+  Kathleen~M. Terry, and Mitchell~M. Levy.
+\newblock Time to treatment and mortality during mandated emergency care for
+  sepsis.
+\newblock {\em New England Journal of Medicine}, 376(23):2235--2244, 2017.
+
 \bibitem{johnson2023mimiciv}
 Alistair E.~W. Johnson, Lucas Bulgarelli, Lu~Shen, Alvin Gayles, Ayad Shammout,
   Steven Horng, Tom~J. Pollard, et~al.
@@ -79,6 +95,12 @@ Tom~J. Pollard, Alistair E.~W. Johnson, Jesse~D. Raffa, Leo~A. Celi, Roger~G.
 \newblock The {eICU} collaborative research database, a freely available
   multi-center database for critical care research.
 \newblock {\em Scientific Data}, 5(1):180178, 2018.
+
+\bibitem{collins2015tripod}
+Gary~S. Collins, Johannes~B. Reitsma, Douglas~G. Altman, and Karel G.~M. Moons.
+\newblock Transparent reporting of a multivariable prediction model for
+  individual prognosis or diagnosis ({TRIPOD}): the {TRIPOD} statement.
+\newblock {\em BMJ}, 350:g7594, 2015.
 
 \bibitem{seymour2016criteria}
 Christopher~W. Seymour, Vincent~X. Liu, Theodore~J. Iwashyna, Frank~M.

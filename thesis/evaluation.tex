@@ -138,8 +138,9 @@ information that a single-timepoint snapshot discards.
 %==========================================================================
 
 Table~\ref{table:bench} reports discrimination at the hour-six landmark for
-incident onset within 12 hours. The rule-based scores are non-discriminative
-to inverse, whereas the statistical landmark models clearly exceed them.
+incident onset within 12 hours. The rule-based scores range from
+non-discriminative to inverse, whereas the statistical landmark models clearly
+exceed them.
 
 \begin{table}[H]
     \centering
@@ -461,7 +462,7 @@ carries a hazard ratio of \textbf{5.019} ($p = 3.9 \times 10^{-8}$) relative to 
 mildest class, adjusted for age (Table~\ref{table:gbtm_mortality}). For
 incident Sepsis-3, the most-severe class carries an odds ratio of
 \textbf{18.81} ($p = 1.5 \times 10^{-74}$), confirming that the SOFA trajectory
-\emph{shape}---not just its terminal value---is informative of subsequent
+\emph{shape}, not just its terminal value, is informative of subsequent
 onset (Table~\ref{table:gbtm_onset}).
 
 \begin{table}[H]
@@ -652,7 +653,7 @@ clinically relevant range of threshold probabilities.
 
 The central empirical finding of this thesis is that the ceiling on
 incident-onset prediction is set by the \emph{label's dependence on clinician
-recognition}---when cultures and antibiotics are ordered---rather than by model
+recognition} (when cultures and antibiotics are ordered) rather than by model
 class. This is why the strongest predictors are missingness indicators and why
 a purely statistical model is competitive with more complex approaches: no
 neural network is required to approach a ceiling imposed by the labelling

@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2026.1.28)  12 JUL 2026 19:36
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2026.1.28)  12 JUL 2026 22:52
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1252,7 +1252,7 @@ First, the proportional-
  (./introduction.tex
 Chapter 1.
 
-Overfull \hbox (3.86685pt too wide) in paragraph at lines 34--37
+Overfull \hbox (3.86685pt too wide) in paragraph at lines 35--38
 []\T1/cmr/m/n/12 Their co-ef-fi-cients are closed-form and portable: a model fi
 t-ted on one database
  []
@@ -1264,7 +1264,7 @@ pdfTeX warning (ext4): destination with the same identifier (name{page.1}) has
 been already used, duplicate ignored
 <to be read again> 
                    \relax 
-l.37 \end{itemize}
+l.38 \end{itemize}
                    [1
 
 
@@ -1272,7 +1272,7 @@ l.37 \end{itemize}
 
 {/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/cm-super/cm-super-ts1.enc}]
 
-Overfull \hbox (5.93793pt too wide) in paragraph at lines 57--64
+Overfull \hbox (5.93793pt too wide) in paragraph at lines 58--65
 \T1/cmr/m/n/12 ingly pre-dicts mor-tal-ity af-ter di-ag-no-sis. The dom-i-nant 
 pat-tern cou-ples LASSO
  []
@@ -1335,7 +1335,7 @@ Package fancyhdr Warning: \headheight is too small (12.0pt):
 (fancyhdr)                \addtolength{\topmargin}{-15.11469pt}.
 
 [7]
-Overfull \hbox (0.13991pt too wide) in paragraph at lines 151--155
+Overfull \hbox (0.13991pt too wide) in paragraph at lines 152--156
 \T1/cmr/m/n/12 The pipeline im-ple-ments seven an-a-lyt-i-cal stages, each ad-d
 ress-ing a spe-cific method-
  []
@@ -1350,19 +1350,19 @@ Package fancyhdr Warning: \headheight is too small (12.0pt):
 (fancyhdr)                \addtolength{\topmargin}{-15.11469pt}.
 
 [8]
-Overfull \hbox (6.14401pt too wide) in paragraph at lines 174--179
+Overfull \hbox (6.14401pt too wide) in paragraph at lines 175--180
 \T1/cmr/m/n/12 (sand-wich) stan-dard er-rors quan-tify the within-patient cor-r
 e-la-tion ig-nored by pooled
  []
 
 
-Overfull \hbox (3.85432pt too wide) in paragraph at lines 190--193
+Overfull \hbox (3.85432pt too wide) in paragraph at lines 191--194
  []\T1/cmr/bx/n/12 Analysis 6: Group-based tra-jec-tory mod-elling.[] \T1/cmr/m
 /n/12 A latent-class growth model
  []
 
 
-Overfull \hbox (1.77574pt too wide) in paragraph at lines 203--207
+Overfull \hbox (1.77574pt too wide) in paragraph at lines 204--208
  []\T1/cmr/bx/n/12 Discrimination.[] \T1/cmr/m/n/12 The area un-der the re-ceiv
 er op-er-at-ing char-ac-ter-is-tic curve (AU-
  []
@@ -1447,7 +1447,7 @@ Package fancyhdr Warning: \headheight is too small (12.0pt):
 
  (./design.tex
 Chapter 4.
-<images/architecture.png, id=668, 2208.25pt x 1455.4375pt>
+<images/architecture.png, id=674, 2208.25pt x 1455.4375pt>
 File: images/architecture.png Graphic file (type png)
 <use images/architecture.png>
 Package pdftex.def Info: images/architecture.png  used on input line 22.
@@ -1463,7 +1463,7 @@ Underfull \vbox (badness 10000) has occurred while \output is active []
 
 
 ]
-<images/06_eda_boxplots.png, id=675, 1204.5pt x 602.25pt>
+<images/06_eda_boxplots.png, id=681, 1204.5pt x 602.25pt>
 File: images/06_eda_boxplots.png Graphic file (type png)
 <use images/06_eda_boxplots.png>
 Package pdftex.def Info: images/06_eda_boxplots.png  used on input line 45.
@@ -1487,7 +1487,7 @@ has been already used, duplicate ignored
                                                   \__shipout_drop_firstpage_...
 l.51 
       <./images/architecture.png>]
-<images/06_lactate_density.png, id=683, 1003.75pt x 702.625pt>
+<images/06_lactate_density.png, id=689, 1003.75pt x 702.625pt>
 File: images/06_lactate_density.png Graphic file (type png)
 <use images/06_lactate_density.png>
 Package pdftex.def Info: images/06_lactate_density.png  used on input line 58.
@@ -1514,7 +1514,7 @@ has been already used, duplicate ignored
                                                   \__shipout_drop_firstpage_...
 l.72 
       <./images/06_eda_boxplots.png> <./images/06_lactate_density.png>]
-<images/09_onset_histogram.png, id=693, 1204.5pt x 602.25pt>
+<images/09_onset_histogram.png, id=699, 1204.5pt x 602.25pt>
 File: images/09_onset_histogram.png Graphic file (type png)
 <use images/09_onset_histogram.png>
 Package pdftex.def Info: images/09_onset_histogram.png  used on input line 93.
@@ -1538,7 +1538,7 @@ has been already used, duplicate ignored
                                                   \__shipout_drop_firstpage_...
 l.106 
        <./images/09_onset_histogram.png>]
-<images/10_nomogram_h6.png, id=705, 1806.75pt x 1405.25pt>
+<images/10_nomogram_h6.png, id=711, 1806.75pt x 1405.25pt>
 File: images/10_nomogram_h6.png Graphic file (type png)
 <use images/10_nomogram_h6.png>
 Package pdftex.def Info: images/10_nomogram_h6.png  used on input line 126.
@@ -1609,7 +1609,7 @@ Package fancyhdr Warning: \headheight is too small (12.0pt):
 
  (./evaluation.tex
 Chapter 5.
-<images/09_km_cumulative_incidence.png, id=738, 1204.5pt x 702.625pt>
+<images/09_km_cumulative_incidence.png, id=744, 1204.5pt x 702.625pt>
 File: images/09_km_cumulative_incidence.png Graphic file (type png)
 <use images/09_km_cumulative_incidence.png>
 Package pdftex.def Info: images/09_km_cumulative_incidence.png  used on input l
@@ -1623,7 +1623,7 @@ ine 40.
 
 
 ]
-<images/09_competing_risks_cif.png, id=746, 1204.5pt x 702.625pt>
+<images/09_competing_risks_cif.png, id=752, 1204.5pt x 702.625pt>
 File: images/09_competing_risks_cif.png Graphic file (type png)
 <use images/09_competing_risks_cif.png>
 Package pdftex.def Info: images/09_competing_risks_cif.png  used on input line 
@@ -1675,7 +1675,7 @@ as been already used, duplicate ignored
 l.99 T
       he global Schoenfeld residual test \textbf{rejects proportional hazards} 
 <./images/09_competing_risks_cif.png>]
-<images/09_trajectories_acf.png, id=761, 1405.25pt x 602.25pt>
+<images/09_trajectories_acf.png, id=767, 1405.25pt x 602.25pt>
 File: images/09_trajectories_acf.png Graphic file (type png)
 <use images/09_trajectories_acf.png>
 Package pdftex.def Info: images/09_trajectories_acf.png  used on input line 121
@@ -1715,12 +1715,12 @@ pdfTeX warning (ext4): destination with the same identifier (name{table.5.2}) h
 as been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.207 
+l.208 
       ]
-<images/10_calibration_h6.png, id=775, 1003.75pt x 1003.75pt>
+<images/10_calibration_h6.png, id=781, 1003.75pt x 1003.75pt>
 File: images/10_calibration_h6.png Graphic file (type png)
 <use images/10_calibration_h6.png>
-Package pdftex.def Info: images/10_calibration_h6.png  used on input line 223.
+Package pdftex.def Info: images/10_calibration_h6.png  used on input line 224.
 (pdftex.def)             Requested size: 230.04079pt x 230.03058pt.
 
 Underfull \vbox (badness 10000) has occurred while \output is active []
@@ -1739,9 +1739,9 @@ pdfTeX warning (ext4): destination with the same identifier (name{table.5.3}) h
 as been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.229 
+l.230 
       ]
-Overfull \hbox (42.77907pt too wide) in paragraph at lines 249--264
+Overfull \hbox (42.77907pt too wide) in paragraph at lines 250--265
  [][] 
  []
 
@@ -1762,12 +1762,12 @@ pdfTeX warning (ext4): destination with the same identifier (name{figure.5.4})
 has been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.267 
+l.268 
        <./images/10_calibration_h6.png>]
-<images/12_auc_by_landmark.png, id=787, 1104.125pt x 853.1875pt>
+<images/12_auc_by_landmark.png, id=793, 1104.125pt x 853.1875pt>
 File: images/12_auc_by_landmark.png Graphic file (type png)
 <use images/12_auc_by_landmark.png>
-Package pdftex.def Info: images/12_auc_by_landmark.png  used on input line 272.
+Package pdftex.def Info: images/12_auc_by_landmark.png  used on input line 273.
 
 (pdftex.def)             Requested size: 313.69025pt x 242.39287pt.
 
@@ -1787,18 +1787,18 @@ pdfTeX warning (ext4): destination with the same identifier (name{table.5.4}) h
 as been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.290 
+l.291 
       
 pdfTeX warning (ext4): destination with the same identifier (name{figure.5.5}) 
 has been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.290 
+l.291 
        <./images/12_auc_by_landmark.png>]
-<images/09_timedep_auc.png, id=794, 1003.75pt x 702.625pt>
+<images/09_timedep_auc.png, id=800, 1003.75pt x 702.625pt>
 File: images/09_timedep_auc.png Graphic file (type png)
 <use images/09_timedep_auc.png>
-Package pdftex.def Info: images/09_timedep_auc.png  used on input line 307.
+Package pdftex.def Info: images/09_timedep_auc.png  used on input line 308.
 (pdftex.def)             Requested size: 313.69025pt x 219.58049pt.
 
 Underfull \vbox (badness 10000) has occurred while \output is active []
@@ -1829,12 +1829,12 @@ pdfTeX warning (ext4): destination with the same identifier (name{figure.5.6})
 has been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.347 
+l.348 
        <./images/09_timedep_auc.png>]
-<images/15_alarm_tradeoff.png, id=808, 1104.125pt x 853.1875pt>
+<images/15_alarm_tradeoff.png, id=814, 1104.125pt x 853.1875pt>
 File: images/15_alarm_tradeoff.png Graphic file (type png)
 <use images/15_alarm_tradeoff.png>
-Package pdftex.def Info: images/15_alarm_tradeoff.png  used on input line 376.
+Package pdftex.def Info: images/15_alarm_tradeoff.png  used on input line 377.
 (pdftex.def)             Requested size: 313.69025pt x 242.39287pt.
 
 Underfull \vbox (badness 5446) has occurred while \output is active []
@@ -1853,9 +1853,9 @@ pdfTeX warning (ext4): destination with the same identifier (name{table.5.5}) h
 as been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.384 
+l.385 
       ]
-Overfull \hbox (0.62268pt too wide) in paragraph at lines 385--391
+Overfull \hbox (0.62268pt too wide) in paragraph at lines 386--392
 []\T1/cmr/m/n/12 Table []5.6[] sum-marises three op-er-at-ing points that il-lu
 s-trate the trade-off. Catch-
  []
@@ -1877,19 +1877,19 @@ pdfTeX warning (ext4): destination with the same identifier (name{figure.5.7})
 has been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.417 
+l.418 
       
 pdfTeX warning (ext4): destination with the same identifier (name{table.5.6}) h
 as been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.417 
+l.418 
        <./images/15_alarm_tradeoff.png>]
-<images/18_gbtm_trajectories.png, id=823, 1104.125pt x 853.1875pt>
+<images/18_gbtm_trajectories.png, id=829, 1104.125pt x 853.1875pt>
 File: images/18_gbtm_trajectories.png Graphic file (type png)
 <use images/18_gbtm_trajectories.png>
-Package pdftex.def Info: images/18_gbtm_trajectories.png  used on input line 44
-9.
+Package pdftex.def Info: images/18_gbtm_trajectories.png  used on input line 45
+0.
 (pdftex.def)             Requested size: 313.69025pt x 242.39287pt.
 
 Underfull \vbox (badness 10000) has occurred while \output is active []
@@ -1908,7 +1908,7 @@ pdfTeX warning (ext4): destination with the same identifier (name{table.5.7}) h
 as been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.457 
+l.458 
       ]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
@@ -1926,29 +1926,29 @@ pdfTeX warning (ext4): destination with the same identifier (name{figure.5.8})
 has been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.499 
+l.500 
       
 pdfTeX warning (ext4): destination with the same identifier (name{table.5.8}) h
 as been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.499 
+l.500 
        <./images/18_gbtm_trajectories.png>]
-Overfull \hbox (11.312pt too wide) in paragraph at lines 505--505
+Overfull \hbox (11.312pt too wide) in paragraph at lines 506--506
 []\T1/cmr/bx/n/17.28 Analysis 7: Confounder-Adjusted Causal Anal-
  []
 
 
-Overfull \hbox (0.48727pt too wide) in paragraph at lines 508--515
+Overfull \hbox (0.48727pt too wide) in paragraph at lines 509--516
 \T1/cmr/m/n/12 and dou-bly ro-bust augmented-IPW es-ti-ma-tion to es-ti-mate th
 e confounder-adjusted
  []
 
-<images/19_analysis7_balance_love_plot.png, id=837, 1204.5pt x 903.375pt>
+<images/19_analysis7_balance_love_plot.png, id=843, 1204.5pt x 903.375pt>
 File: images/19_analysis7_balance_love_plot.png Graphic file (type png)
 <use images/19_analysis7_balance_love_plot.png>
 Package pdftex.def Info: images/19_analysis7_balance_love_plot.png  used on inp
-ut line 522.
+ut line 523.
 (pdftex.def)             Requested size: 313.69025pt x 235.2717pt.
 
 Underfull \vbox (badness 10000) has occurred while \output is active []
@@ -1967,7 +1967,7 @@ pdfTeX warning (ext4): destination with the same identifier (name{table.5.9}) h
 as been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.528 
+l.529 
       ]
 Underfull \vbox (badness 6910) has occurred while \output is active []
 
@@ -1985,18 +1985,18 @@ pdfTeX warning (ext4): destination with the same identifier (name{figure.5.9})
 has been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.566 
+l.567 
       
 pdfTeX warning (ext4): destination with the same identifier (name{table.5.10}) 
 has been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.566 
+l.567 
        <./images/19_analysis7_balance_love_plot.png>]
-<images/22_calibration_eicu.png, id=851, 1104.125pt x 1003.75pt>
+<images/22_calibration_eicu.png, id=857, 1104.125pt x 1003.75pt>
 File: images/22_calibration_eicu.png Graphic file (type png)
 <use images/22_calibration_eicu.png>
-Package pdftex.def Info: images/22_calibration_eicu.png  used on input line 596
+Package pdftex.def Info: images/22_calibration_eicu.png  used on input line 597
 .
 (pdftex.def)             Requested size: 271.86234pt x 247.15384pt.
 
@@ -2016,12 +2016,12 @@ pdfTeX warning (ext4): destination with the same identifier (name{table.5.11})
 has been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.603 
+l.604 
       ]
-<images/06_gam_spline.png, id=859, 1003.75pt x 702.625pt>
+<images/06_gam_spline.png, id=865, 1003.75pt x 702.625pt>
 File: images/06_gam_spline.png Graphic file (type png)
 <use images/06_gam_spline.png>
-Package pdftex.def Info: images/06_gam_spline.png  used on input line 629.
+Package pdftex.def Info: images/06_gam_spline.png  used on input line 630.
 (pdftex.def)             Requested size: 271.86234pt x 190.30095pt.
 
 
@@ -2037,13 +2037,13 @@ pdfTeX warning (ext4): destination with the same identifier (name{figure.5.10})
  has been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.636 
+l.637 
        <./images/22_calibration_eicu.png>]
-<images/06_pr_decision_curve.png, id=866, 1405.25pt x 652.4375pt>
+<images/06_pr_decision_curve.png, id=872, 1405.25pt x 652.4375pt>
 File: images/06_pr_decision_curve.png Graphic file (type png)
 <use images/06_pr_decision_curve.png>
-Package pdftex.def Info: images/06_pr_decision_curve.png  used on input line 63
-9.
+Package pdftex.def Info: images/06_pr_decision_curve.png  used on input line 64
+0.
 (pdftex.def)             Requested size: 313.69025pt x 145.63727pt.
 
 
@@ -2059,15 +2059,15 @@ pdfTeX warning (ext4): destination with the same identifier (name{figure.5.11})
  has been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.662 
+l.663 
       
 pdfTeX warning (ext4): destination with the same identifier (name{figure.5.12})
  has been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.662 
+l.663 
        <./images/06_gam_spline.png> <./images/06_pr_decision_curve.png>]
-Overfull \hbox (6.13716pt too wide) in paragraph at lines 693--696
+Overfull \hbox (6.13716pt too wide) in paragraph at lines 694--697
 []\T1/cmr/m/n/12 The ex-ter-nal val-i-da-tion on eICU-CRD re-quires an adap-ta-
 tion in the suspected-
  []
@@ -2109,12 +2109,6 @@ Package fancyhdr Warning: \headheight is too small (12.0pt):
 
 
 ]
-Underfull \hbox (badness 1297) in paragraph at lines 106--111
-[]\T1/cmr/m/n/12 Matthew A. Reyna, Christo-pher S. Josef, Rus-sell Jeter, Supre
-eth P.
- []
-
-
 
 
 Package fancyhdr Warning: \headheight is too small (12.0pt): 
@@ -2123,7 +2117,13 @@ Package fancyhdr Warning: \headheight is too small (12.0pt):
 (fancyhdr)                You might also make \topmargin smaller:
 (fancyhdr)                \addtolength{\topmargin}{-15.11469pt}.
 
-[47])
+[47]
+Underfull \hbox (badness 1297) in paragraph at lines 128--133
+[]\T1/cmr/m/n/12 Matthew A. Reyna, Christo-pher S. Josef, Rus-sell Jeter, Supre
+eth P.
+ []
+
+)
 
 
 Package fancyhdr Warning: \headheight is too small (12.0pt): 
@@ -2151,10 +2151,10 @@ Package rerunfilecheck Info: File `index.out' has not changed.
 (rerunfilecheck)             Checksum: 31F7C963CBF8723ADCCB1D135D80BD00;13418.
  ) 
 Here is how much of TeX's memory you used:
- 25948 strings out of 473190
- 476223 string characters out of 5715800
- 903692 words of memory out of 5000000
- 48444 multiletter control sequences out of 15000+600000
+ 25954 strings out of 473190
+ 476336 string characters out of 5715800
+ 903807 words of memory out of 5000000
+ 48447 multiletter control sequences out of 15000+600000
  594937 words of font info for 75 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  102i,12n,107p,1008b,735s stack positions out of 10000i,1000n,20000p,200000b,200000s
@@ -2173,10 +2173,10 @@ dist/fonts/type1/public/cm-super/sfrm1200.pfb></usr/local/texlive/2025/texmf-di
 st/fonts/type1/public/cm-super/sfss2074.pfb></usr/local/texlive/2025/texmf-dist
 /fonts/type1/public/cm-super/sfti1200.pfb></usr/local/texlive/2025/texmf-dist/f
 onts/type1/public/cm-super/sftt1200.pfb>
-Output written on index.pdf (58 pages, 1429672 bytes).
+Output written on index.pdf (58 pages, 1431391 bytes).
 PDF statistics:
- 1022 PDF objects out of 1200 (max. 8388607)
- 885 compressed objects within 9 object streams
- 215 named destinations out of 1000 (max. 500000)
+ 1032 PDF objects out of 1200 (max. 8388607)
+ 895 compressed objects within 9 object streams
+ 218 named destinations out of 1000 (max. 500000)
  588 words of extra memory for PDF output out of 10000 (max. 10000000)
 
