@@ -28,7 +28,7 @@ knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE,
 
 ## Overview
 
-The Tier-1 elastic-net nomogram was **developed and frozen on MIMIC-IV v3.1**
+The Analysis-1 elastic-net nomogram was **developed and frozen on MIMIC-IV v3.1**
 (single centre, Boston). Here it is applied **without any refitting** to the
 **eICU Collaborative Research Database v2.0** (200+ US ICUs) to measure how
 well it *transports* to a completely independent, multi-centre population. The
@@ -74,7 +74,7 @@ OUT <- dirname(find_data("21_landmark_h6_eicu.parquet"))
 FIG <- if (dir.exists("figure")) "figure" else { dir.create("figure"); "figure" }
 
 ext   <- arrow::read_parquet(find_data("21_landmark_h6_eicu.parquet"))
-coefs <- read.csv(find_data("10_tier1_coefs.csv"))          # frozen MIMIC model
+coefs <- read.csv(find_data("10_analysis1_coefs.csv"))          # frozen MIMIC model
 cat(sprintf("eICU landmark: %d at-risk stays, onset-within-12h rate %.3f (%d events)\n",
             nrow(ext), mean(ext$onset_within_h), sum(ext$onset_within_h)))
 ```

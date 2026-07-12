@@ -1,5 +1,5 @@
 ---
-title: "Tier 1: Full-Feature Elastic-Net Nomogram at the Hour-6 Landmark"
+title: "Analysis 1: Full-Feature Elastic-Net Nomogram at the Hour-6 Landmark"
 author: "Abdul Ahad. Student ID: G00486649"
 date: "`r format(Sys.Date(), '%d %B %Y')`"
 output:
@@ -141,14 +141,14 @@ dl_vs_traj   <- roc.test(roc_en, roc_trj, method = "delong")$p.value
 
 metrics <- data.frame(
   model = c("Baseline static (glm)", "Baseline + trajectory slopes (glm, 0.755 AUROC)",
-            "Tier1 full-feature elastic net"),
+            "Analysis1 full-feature elastic net"),
   auroc = c(auc_of(p_static), auc_of(p_traj), auc_of(oos_en)),
   prauc = c(prauc_of(p_static), prauc_of(p_traj), prauc_of(oos_en)),
   brier = c(brier(p_static), brier(p_traj), brier(oos_en)))
 metrics$delong_p_vs_baseline_traj <- c(NA, NA, dl_vs_traj)
 metrics[ ,-1] <- round(metrics[ ,-1], 4)
 print(metrics, row.names = FALSE)
-write.csv(metrics, file.path(OUT, "10_tier1_metrics.csv"), row.names = FALSE)
+write.csv(metrics, file.path(OUT, "10_analysis1_metrics.csv"), row.names = FALSE)
 ```
 
 ## Final Model Coefficients
@@ -163,19 +163,19 @@ coefs <- data.frame(term = rownames(co), coef = as.numeric(co))
 coefs$odds_ratio <- exp(coefs$coef)
 coefs <- coefs[coefs$coef != 0, ]
 coefs[ ,c("coef","odds_ratio")] <- round(coefs[ ,c("coef","odds_ratio")], 4)
-write.csv(coefs, file.path(OUT, "10_tier1_coefs.csv"), row.names = FALSE)
+write.csv(coefs, file.path(OUT, "10_analysis1_coefs.csv"), row.names = FALSE)
 cat(sprintf("\nSelected features (non-zero at lambda.min): %d / %d\n",
             nrow(coefs) - 1, ncol(X)))
 ```
 
 ## Export Out-of-Sample Predictions
 
-Per-stay out-of-sample risk estimates feed into the Tier 4 alarm/utility analysis downstream.
+Per-stay out-of-sample risk estimates feed into the Analysis 4 alarm/utility analysis downstream.
 
 ```{r export-oos-predictions}
 arrow::write_parquet(data.frame(stay_id = lm6$stay_id, onset_within_h = y,
                      risk_en = oos_en, risk_baseline_traj = p_traj),
-          file.path(OUT, "10_tier1_oos_pred.parquet"))
+          file.path(OUT, "10_analysis1_oos_pred.parquet"))
 ```
 
 ## Calibration Curve
@@ -211,5 +211,5 @@ dev.off()
 ## Done
 
 ```{r done}
-cat("\nTier 1 complete. Outputs in", OUT, "and", FIG, "\n")
+cat("\nAnalysis 1 complete. Outputs in", OUT, "and", FIG, "\n")
 ```

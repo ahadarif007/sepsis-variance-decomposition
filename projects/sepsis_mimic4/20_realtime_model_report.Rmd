@@ -34,19 +34,19 @@ find_data <- function(f) {
   if (!length(hit)) stop("Not found: ", f); hit[1]
 }
 fig <- function(f) { c(file.path("figure", f), f)[file.exists(c(file.path("figure", f), f))][1] }
-m1  <- read.csv(find_data("10_tier1_metrics.csv"))
-c1  <- read.csv(find_data("10_tier1_coefs.csv"))
-a2  <- read.csv(find_data("12_tier2_auc_by_landmark.csv"))
-gm  <- read.csv(find_data("13_tier3_gee.csv"))
-cx  <- read.csv(find_data("13_tier3_tvcox.csv"))
-ut  <- read.csv(find_data("15_tier4_utility.csv"))
-al  <- read.csv(find_data("15_tier4_alarm_sweep.csv"))
-sg  <- read.csv(find_data("16_tier5_subgroups.csv"))
-gc  <- read.csv(find_data("18_tier6_mortality_cox.csv"))
-go  <- read.csv(find_data("18_tier6_onset_assoc.csv"))
-gm6 <- read.csv(find_data("18_tier6_gbtm_class_means.csv"))
-ce  <- read.csv(find_data("19_tier7_effect_estimates.csv"))
-en_auc <- m1$auroc[m1$model == "Tier1 full-feature elastic net"]
+m1  <- read.csv(find_data("10_analysis1_metrics.csv"))
+c1  <- read.csv(find_data("10_analysis1_coefs.csv"))
+a2  <- read.csv(find_data("12_analysis2_auc_by_landmark.csv"))
+gm  <- read.csv(find_data("13_analysis3_gee.csv"))
+cx  <- read.csv(find_data("13_analysis3_tvcox.csv"))
+ut  <- read.csv(find_data("15_analysis4_utility.csv"))
+al  <- read.csv(find_data("15_analysis4_alarm_sweep.csv"))
+sg  <- read.csv(find_data("16_analysis5_subgroups.csv"))
+gc  <- read.csv(find_data("18_analysis6_mortality_cox.csv"))
+go  <- read.csv(find_data("18_analysis6_onset_assoc.csv"))
+gm6 <- read.csv(find_data("18_analysis6_gbtm_class_means.csv"))
+ce  <- read.csv(find_data("19_analysis7_effect_estimates.csv"))
+en_auc <- m1$auroc[m1$model == "Analysis1 full-feature elastic net"]
 p1_auc <- m1$auroc[grepl("0.755", m1$model)]
 alpha <- gm$OR_glm[gm$term == "__alpha_within_patient__"]
 se_infl_max <- max(gm$SE_inflation, na.rm = TRUE)
@@ -71,15 +71,15 @@ multivariable hourly logistic model reached a cross-validated AUROC of
 out-discriminating SOFA, qSOFA and SIRS. This report builds the real-time
 model itself and closes two gaps identified in comparable MIMIC-IV studies:
 group-based trajectory modelling (GBTM) and propensity-based confounder
-adjustment. All seven tiers are built **entirely from classical statistics**
+adjustment. All seven analyses are built **entirely from classical statistics**
 (no gradient boosting, no neural sequence models), reaching real-time
 prediction through **dynamic landmarking** (van Houwelingen 2007).
 
-# Tier 1: statistical ceiling (full-feature nomogram at hour 6)
+# Analysis 1: statistical ceiling (full-feature nomogram at hour 6)
 
 The earlier multivariable model used only non-circular predictors and, because
 plain complete-case regression cannot use the 70-88%-missing labs at hour 6,
-effectively dropped them. Tier 1 lifts both restrictions with an elastic-net
+effectively dropped them. Analysis 1 lifts both restrictions with an elastic-net
 penalised logistic model over the full feature set. The missing labs are handled
 by an **informative-missingness design** (median imputation plus a "was it
 measured" indicator per lab and per trajectory slope). Evaluation is
@@ -110,7 +110,7 @@ high organ dysfunction marking prevalent rather than incident disease.
 top <- c1[order(-abs(c1$coef)), ]; top <- top[top$term != "(Intercept)", ][1:10, ]
 kable(top, booktabs = TRUE, row.names = FALSE,
       col.names = c("Feature","Coefficient","Odds ratio"),
-      caption = "Ten largest standardized effects in the Tier-1 model (\\_msg = measurement indicator).") %>%
+      caption = "Ten largest standardized effects in the Analysis-1 model (\\_msg = measurement indicator).") %>%
   kable_styling(latex_options = "hold_position")
 ```
 
@@ -119,7 +119,7 @@ landmark the labs that would lift discrimination are mostly not yet drawn, so
 their imputed values add little beyond the fact of their absence.
 `r sprintf("%d", nrow(c1)-1)` of the 27 candidate features survive penalization.
 
-# Tier 2: real-time deliverable (dynamic landmark supermodel)
+# Analysis 2: real-time deliverable (dynamic landmark supermodel)
 
 A single landmark answers "predict from hour 6." A deployed system must predict
 at *every* hour. The classical solution is a **landmark supermodel**: the
@@ -148,7 +148,7 @@ mid-stay window (hours 18-24) where incident onset is rarest and hardest, and
 recovers later. This *is* the real-time model, produced entirely within the
 classical statistics domain.
 
-# Tier 3: within-patient correlation
+# Analysis 3: within-patient correlation
 
 The earlier analysis did not address the correlation among repeated hourly rows
 from one patient. Two classical repeated-measures tools close that gap on the
@@ -187,7 +187,7 @@ kable(cx, booktabs = TRUE, row.names = FALSE,
 These are inferential, correlation-correct companions to the predictive
 supermodel, not competitors to it.
 
-# Tier 4: real-time evaluation (utility and alarm burden)
+# Analysis 4: real-time evaluation (utility and alarm burden)
 
 Discrimination alone is insufficient for a streaming alarm. The supermodel emits
 an hourly risk on a held-out 6,000-stay set (trained on the remainder, no
@@ -222,9 +222,9 @@ non-septic patients: untenable alarm fatigue. A calmer operating point
 `r sprintf("%.1f", op50$fa_per_patient_day)` per patient-day. This is the
 number a deployment decision actually turns on.
 
-# Tier 5: subgroup fairness
+# Analysis 5: subgroup fairness
 
-Within MIMIC-IV, the Tier-1 risk is well calibrated and similarly discriminating
+Within MIMIC-IV, the Analysis-1 risk is well calibrated and similarly discriminating
 across sex and age bands. A model can discriminate well overall yet fail a
 subgroup; that is not the case here.
 
@@ -235,13 +235,13 @@ kable(sg, booktabs = TRUE, row.names = FALSE,
   kable_styling(latex_options = c("hold_position","scale_down"))
 ```
 
-# Tier 6: group-based trajectory modelling (GBTM)
+# Analysis 6: group-based trajectory modelling (GBTM)
 
 Comparable MIMIC-IV studies (Yang et al. 2022) use **group-based trajectory
 modelling** to summarise repeated SOFA scores into latent trajectory classes
 and link membership to mortality via Cox regression. The earlier temporal
 report used a within-patient HMM, which clusters *states within one patient*
-rather than *trajectory shapes across patients*. Tier 6 fits a latent-class
+rather than *trajectory shapes across patients*. Analysis 6 fits a latent-class
 growth model (flexmix grouped-mixture-of-regressions) to first-24h SOFA
 trajectories on the sampled panel (2,438 stays with sufficient repeated
 observations), selecting `r K6` classes by BIC.
@@ -272,11 +272,11 @@ and Sepsis-3 risk than the mild, flat class: the SOFA trajectory *shape*,
 not just its hour-24 endpoint, is informative, consistent with the
 project's broader finding that dynamics carry signal a snapshot misses.
 
-# Tier 7: confounder-adjusted causal analysis
+# Analysis 7: confounder-adjusted causal analysis
 
-Every prior tier reports an *association* (a risk score, a hazard ratio).
+Every prior analysis reports an *association* (a risk score, a hazard ratio).
 Following the causal-adjustment designs of Guo et al. (2025) and Zou et al.
-(2022), Tier 7 applies **propensity score matching (PSM)**, **inverse
+(2022), Analysis 7 applies **propensity score matching (PSM)**, **inverse
 probability weighting (IPW)**, and **doubly robust estimation** to estimate a
 confounder-adjusted treatment effect. The question: does administering
 antibiotics within 3 h of ICU admission (the Surviving Sepsis Campaign's
@@ -298,7 +298,7 @@ kable(ce, booktabs = TRUE, row.names = FALSE,
 ```
 
 ```{r t7fig, fig.cap="Covariate balance (standardized mean difference) before and after propensity-score matching.", out.width="70%"}
-include_graphics(fig("19_tier7_balance_love_plot.png"))
+include_graphics(fig("19_analysis7_balance_love_plot.png"))
 ```
 
 Matching brings every covariate's standardized mean difference below the

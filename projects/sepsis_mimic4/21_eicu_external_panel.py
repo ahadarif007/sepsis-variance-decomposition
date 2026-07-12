@@ -2,8 +2,8 @@
 21_eicu_external_panel.py
 =========================
 External validation: rebuilds the hour-6 landmark table on the eICU
-Collaborative Research Database v2.0. The frozen MIMIC-IV Tier-1 nomogram
-(processed_data/tier1_coefs.csv) is scored on this independent, multi-centre
+Collaborative Research Database v2.0. The frozen MIMIC-IV Analysis-1 nomogram
+(processed_data/analysis1_coefs.csv) is scored on this independent, multi-centre
 US ICU population.
 
 The output mirrors landmark_h6.csv column-for-column, so 22_external_validation.Rmd

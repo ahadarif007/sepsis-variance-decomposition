@@ -1,56 +1,56 @@
-Pipeline started: 2026-07-10 17:54:23
+Pipeline started: 2026-07-11 00:51:59
 
 ============================================================
 [01]  /Library/Frameworks/Python.framework/Versions/3.14/bin/python3 -u /Users/arif/Desktop/RESEARCH/projects/sepsis_mimic4/01_explore_data.py
 ============================================================
-[17:54:23] 01_explore_data              INFO   starting MIMIC-IV data exploration (project root: /Users/arif/Desktop/RESEARCH)
-[17:54:23] 01_explore_data              INFO   file inventory ...
-[17:54:23] 01_explore_data              INFO   file inventory done (0.0s)
-[17:54:23] 01_explore_data              INFO   schemas + data structure profiles ...
-[17:54:23] 01_explore_data              INFO   ── admissions: 500 rows × 16 cols (131.3 KB) ──
-[17:54:23] 01_explore_data              INFO   ── d_hcpcs: 500 rows × 4 cols (24.4 KB) ──
-[17:54:23] 01_explore_data              INFO   ── d_icd_diagnoses: 500 rows × 3 cols (58.2 KB) ──
-[17:54:23] 01_explore_data              INFO   ── d_icd_procedures: 500 rows × 3 cols (48.2 KB) ──
-[17:54:23] 01_explore_data              INFO   ── d_labitems: 500 rows × 4 cols (30.5 KB) ──
-[17:54:23] 01_explore_data              INFO   ── diagnoses_icd: 500 rows × 5 cols (21.9 KB) ──
-[17:54:23] 01_explore_data              INFO   ── drgcodes: 500 rows × 7 cols (49.3 KB) ──
-[17:54:24] 01_explore_data              INFO   ── emar: 500 rows × 12 cols (99.4 KB) ──
-[17:54:24] 01_explore_data              INFO   ── emar_detail: 500 rows × 33 cols (154.3 KB) ──
-[17:54:24] 01_explore_data              INFO   ── hcpcsevents: 500 rows × 6 cols (43.5 KB) ──
-[17:54:24] 01_explore_data              INFO   ── labevents: 500 rows × 16 cols (94.3 KB) ──
-[17:54:24] 01_explore_data              INFO   ── microbiologyevents: 500 rows × 25 cols (180.1 KB) ──
-[17:54:24] 01_explore_data              INFO   ── omr: 500 rows × 5 cols (33.1 KB) ──
-[17:54:24] 01_explore_data              INFO   ── patients: 500 rows × 6 cols (30.1 KB) ──
-[17:54:24] 01_explore_data              INFO   ── pharmacy: 500 rows × 27 cols (188.9 KB) ──
-[17:54:24] 01_explore_data              INFO   ── poe: 500 rows × 12 cols (78.5 KB) ──
-[17:54:24] 01_explore_data              INFO   ── poe_detail: 500 rows × 5 cols (37.9 KB) ──
-[17:54:24] 01_explore_data              INFO   ── prescriptions: 500 rows × 21 cols (134.3 KB) ──
-[17:54:24] 01_explore_data              INFO   ── procedures_icd: 500 rows × 6 cols (31.1 KB) ──
-[17:54:24] 01_explore_data              INFO   ── provider: 500 rows × 1 cols (7.0 KB) ──
-[17:54:24] 01_explore_data              INFO   ── services: 500 rows × 5 cols (30.9 KB) ──
-[17:54:24] 01_explore_data              INFO   ── transfers: 500 rows × 7 cols (54.2 KB) ──
-[17:54:24] 01_explore_data              INFO   ── caregiver: 500 rows × 1 cols (4.0 KB) ──
-[17:54:24] 01_explore_data              INFO     COLUMN                       DTYPE        NULLS        SUMMARY
-[17:54:24] 01_explore_data              INFO     caregiver_id                 int64        no nulls     min=3  med=1372  max=2928  uniq=500
-[17:54:24] 01_explore_data              INFO   ── chartevents: 500 rows × 11 cols (67.4 KB) ──
-[17:54:24] 01_explore_data              INFO   ── d_items: 500 rows × 9 cols (68.5 KB) ──
-[17:54:24] 01_explore_data              INFO   ── datetimeevents: 500 rows × 10 cols (69.8 KB) ──
-[17:54:24] 01_explore_data              INFO   ── icustays: 500 rows × 8 cols (83.0 KB) ──
-[17:54:24] 01_explore_data              INFO   ── ingredientevents: 500 rows × 17 cols (104.7 KB) ──
-[17:54:24] 01_explore_data              INFO   ── inputevents: 500 rows × 26 cols (170.5 KB) ──
-[17:54:24] 01_explore_data              INFO   ── outputevents: 500 rows × 9 cols (54.8 KB) ──
-[17:54:24] 01_explore_data              INFO   ── procedureevents: 500 rows × 22 cols (136.0 KB) ──
-[17:54:24] 01_explore_data              INFO   schemas + data structure profiles done (0.1s)
-[17:54:24] 01_explore_data              INFO   dictionary mining ...
-[17:54:24] 01_explore_data              INFO   dictionary mining done (0.0s)
-[17:54:24] 01_explore_data              INFO   sepsis ICD codes ...
-[17:54:24] 01_explore_data              INFO   sepsis ICD codes done (0.1s)
-[17:54:24] 01_explore_data              INFO   candidate itemid verification ...
-[17:54:24] 01_explore_data              INFO   candidate itemid verification done (0.0s)
-[17:54:24] 01_explore_data              INFO   cohort size preview ...
-[17:54:24] 01_explore_data              INFO   cohort size preview done (0.2s)
-[17:54:24] 01_explore_data              INFO   profile processed intermediates ...
-[17:54:24] 01_explore_data              INFO   profile processed intermediates done (0.0s)
+[00:51:59] 01_explore_data              INFO   starting MIMIC-IV data exploration (project root: /Users/arif/Desktop/RESEARCH)
+[00:51:59] 01_explore_data              INFO   file inventory ...
+[00:51:59] 01_explore_data              INFO   file inventory done (0.0s)
+[00:51:59] 01_explore_data              INFO   schemas + data structure profiles ...
+[00:51:59] 01_explore_data              INFO   ── admissions: 500 rows × 16 cols (131.3 KB) ──
+[00:51:59] 01_explore_data              INFO   ── d_hcpcs: 500 rows × 4 cols (24.4 KB) ──
+[00:51:59] 01_explore_data              INFO   ── d_icd_diagnoses: 500 rows × 3 cols (58.2 KB) ──
+[00:51:59] 01_explore_data              INFO   ── d_icd_procedures: 500 rows × 3 cols (48.2 KB) ──
+[00:51:59] 01_explore_data              INFO   ── d_labitems: 500 rows × 4 cols (30.5 KB) ──
+[00:51:59] 01_explore_data              INFO   ── diagnoses_icd: 500 rows × 5 cols (21.9 KB) ──
+[00:51:59] 01_explore_data              INFO   ── drgcodes: 500 rows × 7 cols (49.3 KB) ──
+[00:51:59] 01_explore_data              INFO   ── emar: 500 rows × 12 cols (99.4 KB) ──
+[00:51:59] 01_explore_data              INFO   ── emar_detail: 500 rows × 33 cols (154.3 KB) ──
+[00:51:59] 01_explore_data              INFO   ── hcpcsevents: 500 rows × 6 cols (43.5 KB) ──
+[00:51:59] 01_explore_data              INFO   ── labevents: 500 rows × 16 cols (94.3 KB) ──
+[00:51:59] 01_explore_data              INFO   ── microbiologyevents: 500 rows × 25 cols (180.1 KB) ──
+[00:51:59] 01_explore_data              INFO   ── omr: 500 rows × 5 cols (33.1 KB) ──
+[00:51:59] 01_explore_data              INFO   ── patients: 500 rows × 6 cols (30.1 KB) ──
+[00:51:59] 01_explore_data              INFO   ── pharmacy: 500 rows × 27 cols (188.9 KB) ──
+[00:51:59] 01_explore_data              INFO   ── poe: 500 rows × 12 cols (78.5 KB) ──
+[00:51:59] 01_explore_data              INFO   ── poe_detail: 500 rows × 5 cols (37.9 KB) ──
+[00:51:59] 01_explore_data              INFO   ── prescriptions: 500 rows × 21 cols (134.3 KB) ──
+[00:51:59] 01_explore_data              INFO   ── procedures_icd: 500 rows × 6 cols (31.1 KB) ──
+[00:51:59] 01_explore_data              INFO   ── provider: 500 rows × 1 cols (7.0 KB) ──
+[00:51:59] 01_explore_data              INFO   ── services: 500 rows × 5 cols (30.9 KB) ──
+[00:51:59] 01_explore_data              INFO   ── transfers: 500 rows × 7 cols (54.2 KB) ──
+[00:51:59] 01_explore_data              INFO   ── caregiver: 500 rows × 1 cols (4.0 KB) ──
+[00:51:59] 01_explore_data              INFO     COLUMN                       DTYPE        NULLS        SUMMARY
+[00:51:59] 01_explore_data              INFO     caregiver_id                 int64        no nulls     min=3  med=1372  max=2928  uniq=500
+[00:51:59] 01_explore_data              INFO   ── chartevents: 500 rows × 11 cols (67.4 KB) ──
+[00:51:59] 01_explore_data              INFO   ── d_items: 500 rows × 9 cols (68.5 KB) ──
+[00:51:59] 01_explore_data              INFO   ── datetimeevents: 500 rows × 10 cols (69.8 KB) ──
+[00:51:59] 01_explore_data              INFO   ── icustays: 500 rows × 8 cols (83.0 KB) ──
+[00:51:59] 01_explore_data              INFO   ── ingredientevents: 500 rows × 17 cols (104.7 KB) ──
+[00:51:59] 01_explore_data              INFO   ── inputevents: 500 rows × 26 cols (170.5 KB) ──
+[00:51:59] 01_explore_data              INFO   ── outputevents: 500 rows × 9 cols (54.8 KB) ──
+[00:51:59] 01_explore_data              INFO   ── procedureevents: 500 rows × 22 cols (136.0 KB) ──
+[00:51:59] 01_explore_data              INFO   schemas + data structure profiles done (0.1s)
+[00:51:59] 01_explore_data              INFO   dictionary mining ...
+[00:51:59] 01_explore_data              INFO   dictionary mining done (0.0s)
+[00:51:59] 01_explore_data              INFO   sepsis ICD codes ...
+[00:51:59] 01_explore_data              INFO   sepsis ICD codes done (0.1s)
+[00:51:59] 01_explore_data              INFO   candidate itemid verification ...
+[00:51:59] 01_explore_data              INFO   candidate itemid verification done (0.0s)
+[00:51:59] 01_explore_data              INFO   cohort size preview ...
+[00:52:00] 01_explore_data              INFO   cohort size preview done (0.2s)
+[00:52:00] 01_explore_data              INFO   profile processed intermediates ...
+[00:52:00] 01_explore_data              INFO   profile processed intermediates done (0.0s)
 MIMIC-IV v3.1 - SEPSIS DATA EXPLORATION REPORT
 project root: /Users/arif/Desktop/RESEARCH
 
@@ -1229,437 +1229,437 @@ DONE. Send this whole report back to refine the next stages:
  - cohort sizes (section 6) so we can set thresholds
 ==============================================================================
 
-[17:54:24] 01_explore_data              INFO   report saved -> /Users/arif/Desktop/RESEARCH/processed_data/01_exploration_report.txt (121.5 KB)
+[00:52:00] 01_explore_data              INFO   report saved -> /Users/arif/Desktop/RESEARCH/processed_data/01_exploration_report.txt (121.5 KB)
 [01] exit 0  (1s)
 
 ============================================================
 [02]  /Library/Frameworks/Python.framework/Versions/3.14/bin/python3 -u /Users/arif/Desktop/RESEARCH/projects/sepsis_mimic4/02_extract_cohort.py
 ============================================================
-[17:54:24] 02_extract_cohort            INFO   loading icustays / patients / admissions ...
-[17:54:25] 02_extract_cohort            INFO   loading icustays / patients / admissions done (0.7s)
-[17:54:25] 02_extract_cohort            INFO   loaded icustays=94,458  patients=364,627  admissions=546,028
-[17:54:25] 02_extract_cohort            INFO   building cohort ...
-[17:54:25] 02_extract_cohort            INFO   building cohort done (0.0s)
-[17:54:25] 02_extract_cohort            INFO   applying inclusion criteria ...
-[17:54:25] 02_extract_cohort            INFO     filter [age >= 18]: 94,458 -> 94,458 (dropped 0, 0.0%)
-[17:54:25] 02_extract_cohort            INFO     filter [LOS >= 4.0h]: 94,458 -> 93,730 (dropped 728, 0.8%)
-[17:54:25] 02_extract_cohort            INFO     filter [first ICU stay only]: 93,730 -> 65,241 (dropped 28,489, 30.4%)
-[17:54:25] 02_extract_cohort            INFO   inclusion criteria complete: 94,458 -> 65,241 stays
-[17:54:25] 02_extract_cohort            INFO   ============================================================
-[17:54:25] 02_extract_cohort            INFO   FINAL COHORT: 65,241 ICU stays / 65,241 patients
-[17:54:25] 02_extract_cohort            INFO     female: 43.8%  age median: 66
-[17:54:25] 02_extract_cohort            INFO     in-hospital mortality: 10.8%
-[17:54:25] 02_extract_cohort            INFO     ICU mortality: 7.3%
-[17:54:25] utils                        INFO   saved 02_cohort.parquet (65,241 rows, 17 cols, 4.5 MB)
+[00:52:00] 02_extract_cohort            INFO   loading icustays / patients / admissions ...
+[00:52:01] 02_extract_cohort            INFO   loading icustays / patients / admissions done (0.8s)
+[00:52:01] 02_extract_cohort            INFO   loaded icustays=94,458  patients=364,627  admissions=546,028
+[00:52:01] 02_extract_cohort            INFO   building cohort ...
+[00:52:01] 02_extract_cohort            INFO   building cohort done (0.0s)
+[00:52:01] 02_extract_cohort            INFO   applying inclusion criteria ...
+[00:52:01] 02_extract_cohort            INFO     filter [age >= 18]: 94,458 -> 94,458 (dropped 0, 0.0%)
+[00:52:01] 02_extract_cohort            INFO     filter [LOS >= 4.0h]: 94,458 -> 93,730 (dropped 728, 0.8%)
+[00:52:01] 02_extract_cohort            INFO     filter [first ICU stay only]: 93,730 -> 65,241 (dropped 28,489, 30.4%)
+[00:52:01] 02_extract_cohort            INFO   inclusion criteria complete: 94,458 -> 65,241 stays
+[00:52:01] 02_extract_cohort            INFO   ============================================================
+[00:52:01] 02_extract_cohort            INFO   FINAL COHORT: 65,241 ICU stays / 65,241 patients
+[00:52:01] 02_extract_cohort            INFO     female: 43.8%  age median: 66
+[00:52:01] 02_extract_cohort            INFO     in-hospital mortality: 10.8%
+[00:52:01] 02_extract_cohort            INFO     ICU mortality: 7.3%
+[00:52:01] utils                        INFO   saved 02_cohort.parquet (65,241 rows, 17 cols, 4.5 MB)
 [02] exit 0  (1s)
 
 ============================================================
 [03]  /Library/Frameworks/Python.framework/Versions/3.14/bin/python3 -u /Users/arif/Desktop/RESEARCH/projects/sepsis_mimic4/03_suspected_infection.py
 ============================================================
-[17:54:25] 03_suspected_infection       INFO   loading cohort ...
-[17:54:25] utils                        INFO   loaded 02_cohort.parquet (65,241 rows, 4.5 MB)
-[17:54:25] 03_suspected_infection       INFO   loading cohort done (0.0s)
-[17:54:25] 03_suspected_infection       INFO   cohort: 65,241 stays, 65,241 unique hadm_ids
-[17:54:25] 03_suspected_infection       INFO   loading antibiotic prescriptions (streaming) ...
-[17:54:49] utils                        INFO   prescriptions: scanned 20,292,611 rows, kept 312,248 antibiotic rows
-[17:54:49] 03_suspected_infection       INFO   loading antibiotic prescriptions (streaming) done (24.1s)
-[17:54:49] 03_suspected_infection       INFO   antibiotics: 311,194 orders across 47,232 admissions
-[17:54:49] 03_suspected_infection       INFO   loading culture draws ...
-[17:54:54] utils                        INFO   excluding 49,948 surveillance-screen specimens (C, E, & A Screening, CRE Screen, Cipro Resistant Screen, MRSA SCREEN, SWAB - R/O YEAST, Staph aureus swab, Swab R/O Yeast Screen)
-[17:54:54] utils                        INFO   cultures: 259,465 unique specimen draws in cohort
-[17:54:54] 03_suspected_infection       INFO   loading culture draws done (4.7s)
-[17:54:54] 03_suspected_infection       INFO   pairing antibiotics x cultures (Sepsis-3 windows) ...
-[17:54:54] utils                        INFO   raw abxxculture pairs in cohort: 3,976,790
-[17:54:54] utils                        INFO   after ICU-window filter: 1,779,357 pairs
-[17:54:54] utils                        INFO   qualifying pairs (within Sepsis-3 windows): 589,082
-[17:54:54] 03_suspected_infection       INFO   pairing antibiotics x cultures (Sepsis-3 windows) done (0.4s)
-[17:54:54] 03_suspected_infection       INFO   ============================================================
-[17:54:54] 03_suspected_infection       INFO   suspected infection: 26,432 / 65,241 stays (40.5%)
-[17:54:54] 03_suspected_infection       INFO   top culture types:
-[17:54:54] 03_suspected_infection       INFO     BLOOD CULTURE                       10,152
-[17:54:54] 03_suspected_infection       INFO     URINE                               8,050
-[17:54:54] 03_suspected_infection       INFO     SPUTUM                              2,777
-[17:54:54] 03_suspected_infection       INFO     STOOL                               913
-[17:54:54] 03_suspected_infection       INFO     SWAB                                769
-[17:54:54] 03_suspected_infection       INFO     Rapid Respiratory Viral Screen & Culture 390
-[17:54:54] 03_suspected_infection       INFO     TISSUE                              366
-[17:54:54] 03_suspected_infection       INFO     BRONCHOALVEOLAR LAVAGE              361
-[17:54:54] 03_suspected_infection       INFO     SEROLOGY/BLOOD                      340
-[17:54:54] 03_suspected_infection       INFO     CSF;SPINAL FLUID                    281
-[17:54:54] 03_suspected_infection       INFO   top triggering antibiotics:
-[17:54:54] 03_suspected_infection       INFO     Vancomycin                          6,084
-[17:54:54] 03_suspected_infection       INFO     CefePIME                            2,513
-[17:54:54] 03_suspected_infection       INFO     Piperacillin-Tazobactam             2,413
-[17:54:54] 03_suspected_infection       INFO     CefazoLIN                           1,875
-[17:54:54] 03_suspected_infection       INFO     CefTRIAXone                         1,711
-[17:54:54] 03_suspected_infection       INFO     CeFAZolin                           1,608
-[17:54:54] 03_suspected_infection       INFO     CeftriaXONE                         1,293
-[17:54:54] 03_suspected_infection       INFO     Levofloxacin                        898
-[17:54:54] 03_suspected_infection       INFO     MetRONIDAZOLE (FLagyl)              767
-[17:54:54] 03_suspected_infection       INFO     Azithromycin                        711
-[17:54:55] utils                        INFO   saved 03_suspected_infection.parquet (26,432 rows, 8 cols, 1.3 MB)
+[00:52:01] 03_suspected_infection       INFO   loading cohort ...
+[00:52:01] utils                        INFO   loaded 02_cohort.parquet (65,241 rows, 4.5 MB)
+[00:52:01] 03_suspected_infection       INFO   loading cohort done (0.0s)
+[00:52:01] 03_suspected_infection       INFO   cohort: 65,241 stays, 65,241 unique hadm_ids
+[00:52:01] 03_suspected_infection       INFO   loading antibiotic prescriptions (streaming) ...
+[00:52:26] utils                        INFO   prescriptions: scanned 20,292,611 rows, kept 312,248 antibiotic rows
+[00:52:26] 03_suspected_infection       INFO   loading antibiotic prescriptions (streaming) done (24.8s)
+[00:52:26] 03_suspected_infection       INFO   antibiotics: 311,194 orders across 47,232 admissions
+[00:52:26] 03_suspected_infection       INFO   loading culture draws ...
+[00:52:30] utils                        INFO   excluding 49,948 surveillance-screen specimens (C, E, & A Screening, CRE Screen, Cipro Resistant Screen, MRSA SCREEN, SWAB - R/O YEAST, Staph aureus swab, Swab R/O Yeast Screen)
+[00:52:31] utils                        INFO   cultures: 259,465 unique specimen draws in cohort
+[00:52:31] 03_suspected_infection       INFO   loading culture draws done (4.6s)
+[00:52:31] 03_suspected_infection       INFO   pairing antibiotics x cultures (Sepsis-3 windows) ...
+[00:52:31] utils                        INFO   raw abxxculture pairs in cohort: 3,976,790
+[00:52:31] utils                        INFO   after ICU-window filter: 1,779,357 pairs
+[00:52:31] utils                        INFO   qualifying pairs (within Sepsis-3 windows): 589,082
+[00:52:31] 03_suspected_infection       INFO   pairing antibiotics x cultures (Sepsis-3 windows) done (0.4s)
+[00:52:31] 03_suspected_infection       INFO   ============================================================
+[00:52:31] 03_suspected_infection       INFO   suspected infection: 26,432 / 65,241 stays (40.5%)
+[00:52:31] 03_suspected_infection       INFO   top culture types:
+[00:52:31] 03_suspected_infection       INFO     BLOOD CULTURE                       10,152
+[00:52:31] 03_suspected_infection       INFO     URINE                               8,050
+[00:52:31] 03_suspected_infection       INFO     SPUTUM                              2,777
+[00:52:31] 03_suspected_infection       INFO     STOOL                               913
+[00:52:31] 03_suspected_infection       INFO     SWAB                                769
+[00:52:31] 03_suspected_infection       INFO     Rapid Respiratory Viral Screen & Culture 390
+[00:52:31] 03_suspected_infection       INFO     TISSUE                              366
+[00:52:31] 03_suspected_infection       INFO     BRONCHOALVEOLAR LAVAGE              361
+[00:52:31] 03_suspected_infection       INFO     SEROLOGY/BLOOD                      340
+[00:52:31] 03_suspected_infection       INFO     CSF;SPINAL FLUID                    281
+[00:52:31] 03_suspected_infection       INFO   top triggering antibiotics:
+[00:52:31] 03_suspected_infection       INFO     Vancomycin                          6,084
+[00:52:31] 03_suspected_infection       INFO     CefePIME                            2,513
+[00:52:31] 03_suspected_infection       INFO     Piperacillin-Tazobactam             2,413
+[00:52:31] 03_suspected_infection       INFO     CefazoLIN                           1,875
+[00:52:31] 03_suspected_infection       INFO     CefTRIAXone                         1,711
+[00:52:31] 03_suspected_infection       INFO     CeFAZolin                           1,608
+[00:52:31] 03_suspected_infection       INFO     CeftriaXONE                         1,293
+[00:52:31] 03_suspected_infection       INFO     Levofloxacin                        898
+[00:52:31] 03_suspected_infection       INFO     MetRONIDAZOLE (FLagyl)              767
+[00:52:31] 03_suspected_infection       INFO     Azithromycin                        711
+[00:52:31] utils                        INFO   saved 03_suspected_infection.parquet (26,432 rows, 8 cols, 1.3 MB)
 [03] exit 0  (30s)
 
 ============================================================
 [04]  /Library/Frameworks/Python.framework/Versions/3.14/bin/python3 -u /Users/arif/Desktop/RESEARCH/projects/sepsis_mimic4/04_extract_measurements.py
 ============================================================
-[17:54:55] 04_extract_measurements      INFO   loading cohort ...
-[17:54:55] utils                        INFO   loaded 02_cohort.parquet (65,241 rows, 4.5 MB)
-[17:54:55] 04_extract_measurements      INFO   loading cohort done (0.0s)
-[17:54:55] 04_extract_measurements      INFO   cohort: 65,241 stays
-[17:54:55] 04_extract_measurements      INFO   streaming chartevents ...
+[00:52:31] 04_extract_measurements      INFO   loading cohort ...
+[00:52:31] utils                        INFO   loaded 02_cohort.parquet (65,241 rows, 4.5 MB)
+[00:52:31] 04_extract_measurements      INFO   loading cohort done (0.0s)
+[00:52:31] 04_extract_measurements      INFO   cohort: 65,241 stays
+[00:52:31] 04_extract_measurements      INFO   streaming chartevents ...
 
 scan chartevents.csv.gz: 0chunk [00:00, ?chunk/s]
-scan chartevents.csv.gz: 1chunk [00:00,  1.35chunk/s]
+scan chartevents.csv.gz: 1chunk [00:00,  1.36chunk/s]
 scan chartevents.csv.gz: 2chunk [00:01,  1.36chunk/s]
 scan chartevents.csv.gz: 3chunk [00:02,  1.37chunk/s]
-scan chartevents.csv.gz: 4chunk [00:02,  1.38chunk/s]
-scan chartevents.csv.gz: 5chunk [00:03,  1.39chunk/s]
-scan chartevents.csv.gz: 6chunk [00:04,  1.39chunk/s]
-scan chartevents.csv.gz: 7chunk [00:05,  1.39chunk/s]
-scan chartevents.csv.gz: 8chunk [00:05,  1.39chunk/s]
-scan chartevents.csv.gz: 9chunk [00:06,  1.38chunk/s]
-scan chartevents.csv.gz: 10chunk [00:07,  1.38chunk/s]
-scan chartevents.csv.gz: 11chunk [00:07,  1.38chunk/s]
+scan chartevents.csv.gz: 4chunk [00:02,  1.36chunk/s]
+scan chartevents.csv.gz: 5chunk [00:03,  1.37chunk/s]
+scan chartevents.csv.gz: 6chunk [00:04,  1.37chunk/s]
+scan chartevents.csv.gz: 7chunk [00:05,  1.37chunk/s]
+scan chartevents.csv.gz: 8chunk [00:05,  1.37chunk/s]
+scan chartevents.csv.gz: 9chunk [00:06,  1.37chunk/s]
+scan chartevents.csv.gz: 10chunk [00:07,  1.37chunk/s]
+scan chartevents.csv.gz: 11chunk [00:08,  1.38chunk/s]
 scan chartevents.csv.gz: 12chunk [00:08,  1.38chunk/s]
 scan chartevents.csv.gz: 13chunk [00:09,  1.38chunk/s]
-scan chartevents.csv.gz: 14chunk [00:10,  1.39chunk/s]
-scan chartevents.csv.gz: 15chunk [00:10,  1.39chunk/s]
-scan chartevents.csv.gz: 16chunk [00:11,  1.39chunk/s]
-scan chartevents.csv.gz: 17chunk [00:12,  1.39chunk/s]
-scan chartevents.csv.gz: 18chunk [00:13,  1.39chunk/s]
-scan chartevents.csv.gz: 19chunk [00:13,  1.39chunk/s]
-scan chartevents.csv.gz: 20chunk [00:14,  1.39chunk/s]
+scan chartevents.csv.gz: 14chunk [00:10,  1.35chunk/s]
+scan chartevents.csv.gz: 15chunk [00:10,  1.36chunk/s]
+scan chartevents.csv.gz: 16chunk [00:11,  1.36chunk/s]
+scan chartevents.csv.gz: 17chunk [00:12,  1.37chunk/s]
+scan chartevents.csv.gz: 18chunk [00:13,  1.38chunk/s]
+scan chartevents.csv.gz: 19chunk [00:13,  1.38chunk/s]
+scan chartevents.csv.gz: 20chunk [00:14,  1.38chunk/s]
 scan chartevents.csv.gz: 21chunk [00:15,  1.39chunk/s]
-scan chartevents.csv.gz: 22chunk [00:15,  1.38chunk/s]
-scan chartevents.csv.gz: 23chunk [00:16,  1.38chunk/s]
-scan chartevents.csv.gz: 24chunk [00:17,  1.38chunk/s]
-scan chartevents.csv.gz: 25chunk [00:18,  1.38chunk/s]
-scan chartevents.csv.gz: 26chunk [00:18,  1.38chunk/s]
-scan chartevents.csv.gz: 27chunk [00:19,  1.38chunk/s]
-scan chartevents.csv.gz: 28chunk [00:20,  1.38chunk/s]
-scan chartevents.csv.gz: 29chunk [00:20,  1.38chunk/s]
-scan chartevents.csv.gz: 30chunk [00:21,  1.38chunk/s]
-scan chartevents.csv.gz: 31chunk [00:22,  1.38chunk/s]
-scan chartevents.csv.gz: 32chunk [00:23,  1.38chunk/s]
-scan chartevents.csv.gz: 33chunk [00:23,  1.38chunk/s]
-scan chartevents.csv.gz: 34chunk [00:24,  1.38chunk/s]
-scan chartevents.csv.gz: 35chunk [00:25,  1.38chunk/s]
+scan chartevents.csv.gz: 22chunk [00:16,  1.39chunk/s]
+scan chartevents.csv.gz: 23chunk [00:16,  1.39chunk/s]
+scan chartevents.csv.gz: 24chunk [00:17,  1.39chunk/s]
+scan chartevents.csv.gz: 25chunk [00:18,  1.39chunk/s]
+scan chartevents.csv.gz: 26chunk [00:18,  1.39chunk/s]
+scan chartevents.csv.gz: 27chunk [00:19,  1.39chunk/s]
+scan chartevents.csv.gz: 28chunk [00:20,  1.39chunk/s]
+scan chartevents.csv.gz: 29chunk [00:21,  1.39chunk/s]
+scan chartevents.csv.gz: 30chunk [00:21,  1.39chunk/s]
+scan chartevents.csv.gz: 31chunk [00:22,  1.39chunk/s]
+scan chartevents.csv.gz: 32chunk [00:23,  1.39chunk/s]
+scan chartevents.csv.gz: 33chunk [00:23,  1.39chunk/s]
+scan chartevents.csv.gz: 34chunk [00:24,  1.39chunk/s]
+scan chartevents.csv.gz: 35chunk [00:25,  1.39chunk/s]
 scan chartevents.csv.gz: 36chunk [00:26,  1.38chunk/s]
 scan chartevents.csv.gz: 37chunk [00:26,  1.38chunk/s]
-scan chartevents.csv.gz: 38chunk [00:27,  1.37chunk/s]
-scan chartevents.csv.gz: 39chunk [00:28,  1.37chunk/s]
-scan chartevents.csv.gz: 40chunk [00:28,  1.37chunk/s]
-scan chartevents.csv.gz: 41chunk [00:29,  1.37chunk/s]
-scan chartevents.csv.gz: 42chunk [00:30,  1.37chunk/s]
-scan chartevents.csv.gz: 43chunk [00:31,  1.37chunk/s]
-scan chartevents.csv.gz: 44chunk [00:31,  1.36chunk/s]
-scan chartevents.csv.gz: 45chunk [00:32,  1.37chunk/s]
-scan chartevents.csv.gz: 46chunk [00:33,  1.37chunk/s]
-scan chartevents.csv.gz: 47chunk [00:34,  1.37chunk/s]
-scan chartevents.csv.gz: 48chunk [00:34,  1.37chunk/s]
-scan chartevents.csv.gz: 49chunk [00:35,  1.37chunk/s]
-scan chartevents.csv.gz: 50chunk [00:36,  1.37chunk/s]
-scan chartevents.csv.gz: 51chunk [00:37,  1.37chunk/s]
-scan chartevents.csv.gz: 52chunk [00:37,  1.37chunk/s]
-scan chartevents.csv.gz: 53chunk [00:38,  1.37chunk/s]
-scan chartevents.csv.gz: 54chunk [00:39,  1.36chunk/s]
-scan chartevents.csv.gz: 55chunk [00:39,  1.37chunk/s]
-scan chartevents.csv.gz: 56chunk [00:40,  1.38chunk/s]
-scan chartevents.csv.gz: 57chunk [00:41,  1.38chunk/s]
-scan chartevents.csv.gz: 58chunk [00:42,  1.38chunk/s]
-scan chartevents.csv.gz: 59chunk [00:42,  1.39chunk/s]
-scan chartevents.csv.gz: 60chunk [00:43,  1.39chunk/s]
-scan chartevents.csv.gz: 61chunk [00:44,  1.39chunk/s]
-scan chartevents.csv.gz: 62chunk [00:44,  1.39chunk/s]
-scan chartevents.csv.gz: 63chunk [00:45,  1.39chunk/s]
-scan chartevents.csv.gz: 64chunk [00:46,  1.39chunk/s]
-scan chartevents.csv.gz: 65chunk [00:47,  1.39chunk/s]
-scan chartevents.csv.gz: 66chunk [00:47,  1.39chunk/s]
-scan chartevents.csv.gz: 67chunk [00:48,  1.40chunk/s]
-scan chartevents.csv.gz: 68chunk [00:49,  1.40chunk/s]
-scan chartevents.csv.gz: 69chunk [00:49,  1.40chunk/s]
-scan chartevents.csv.gz: 70chunk [00:50,  1.40chunk/s]
-scan chartevents.csv.gz: 71chunk [00:51,  1.39chunk/s]
+scan chartevents.csv.gz: 38chunk [00:27,  1.38chunk/s]
+scan chartevents.csv.gz: 39chunk [00:28,  1.38chunk/s]
+scan chartevents.csv.gz: 40chunk [00:28,  1.38chunk/s]
+scan chartevents.csv.gz: 41chunk [00:29,  1.38chunk/s]
+scan chartevents.csv.gz: 42chunk [00:30,  1.38chunk/s]
+scan chartevents.csv.gz: 43chunk [00:31,  1.39chunk/s]
+scan chartevents.csv.gz: 44chunk [00:31,  1.38chunk/s]
+scan chartevents.csv.gz: 45chunk [00:32,  1.39chunk/s]
+scan chartevents.csv.gz: 46chunk [00:33,  1.39chunk/s]
+scan chartevents.csv.gz: 47chunk [00:34,  1.40chunk/s]
+scan chartevents.csv.gz: 48chunk [00:34,  1.40chunk/s]
+scan chartevents.csv.gz: 49chunk [00:35,  1.40chunk/s]
+scan chartevents.csv.gz: 50chunk [00:36,  1.40chunk/s]
+scan chartevents.csv.gz: 51chunk [00:36,  1.40chunk/s]
+scan chartevents.csv.gz: 52chunk [00:37,  1.40chunk/s]
+scan chartevents.csv.gz: 53chunk [00:38,  1.40chunk/s]
+scan chartevents.csv.gz: 54chunk [00:39,  1.40chunk/s]
+scan chartevents.csv.gz: 55chunk [00:39,  1.40chunk/s]
+scan chartevents.csv.gz: 56chunk [00:40,  1.40chunk/s]
+scan chartevents.csv.gz: 57chunk [00:41,  1.40chunk/s]
+scan chartevents.csv.gz: 58chunk [00:41,  1.39chunk/s]
+scan chartevents.csv.gz: 59chunk [00:42,  1.38chunk/s]
+scan chartevents.csv.gz: 60chunk [00:43,  1.37chunk/s]
+scan chartevents.csv.gz: 61chunk [00:44,  1.37chunk/s]
+scan chartevents.csv.gz: 62chunk [00:44,  1.37chunk/s]
+scan chartevents.csv.gz: 63chunk [00:45,  1.36chunk/s]
+scan chartevents.csv.gz: 64chunk [00:46,  1.34chunk/s]
+scan chartevents.csv.gz: 65chunk [00:47,  1.35chunk/s]
+scan chartevents.csv.gz: 66chunk [00:47,  1.35chunk/s]
+scan chartevents.csv.gz: 67chunk [00:48,  1.36chunk/s]
+scan chartevents.csv.gz: 68chunk [00:49,  1.37chunk/s]
+scan chartevents.csv.gz: 69chunk [00:50,  1.37chunk/s]
+scan chartevents.csv.gz: 70chunk [00:50,  1.39chunk/s]
+scan chartevents.csv.gz: 71chunk [00:51,  1.40chunk/s]
 scan chartevents.csv.gz: 72chunk [00:52,  1.39chunk/s]
-scan chartevents.csv.gz: 73chunk [00:52,  1.39chunk/s]
-scan chartevents.csv.gz: 74chunk [00:53,  1.39chunk/s]
+scan chartevents.csv.gz: 73chunk [00:52,  1.40chunk/s]
+scan chartevents.csv.gz: 74chunk [00:53,  1.40chunk/s]
 scan chartevents.csv.gz: 75chunk [00:54,  1.39chunk/s]
 scan chartevents.csv.gz: 76chunk [00:55,  1.38chunk/s]
-scan chartevents.csv.gz: 77chunk [00:55,  1.39chunk/s]
-scan chartevents.csv.gz: 78chunk [00:56,  1.38chunk/s]
-scan chartevents.csv.gz: 79chunk [00:57,  1.38chunk/s]
-scan chartevents.csv.gz: 80chunk [00:57,  1.38chunk/s]
-scan chartevents.csv.gz: 81chunk [00:58,  1.38chunk/s]
-scan chartevents.csv.gz: 82chunk [00:59,  1.38chunk/s]
-scan chartevents.csv.gz: 83chunk [01:00,  1.38chunk/s]
-scan chartevents.csv.gz: 84chunk [01:00,  1.37chunk/s]
-scan chartevents.csv.gz: 85chunk [01:01,  1.37chunk/s]
-scan chartevents.csv.gz: 86chunk [01:02,  1.38chunk/s]
-scan chartevents.csv.gz: 87chunk [01:03,  1.37chunk/s]
-scan chartevents.csv.gz: 88chunk [01:03,  1.38chunk/s]
-scan chartevents.csv.gz: 89chunk [01:04,  1.38chunk/s]
-scan chartevents.csv.gz: 90chunk [01:05,  1.38chunk/s]
-scan chartevents.csv.gz: 91chunk [01:05,  1.38chunk/s]
+scan chartevents.csv.gz: 77chunk [00:55,  1.36chunk/s]
+scan chartevents.csv.gz: 78chunk [00:56,  1.36chunk/s]
+scan chartevents.csv.gz: 79chunk [00:57,  1.37chunk/s]
+scan chartevents.csv.gz: 80chunk [00:57,  1.36chunk/s]
+scan chartevents.csv.gz: 81chunk [00:58,  1.36chunk/s]
+scan chartevents.csv.gz: 82chunk [00:59,  1.36chunk/s]
+scan chartevents.csv.gz: 83chunk [01:00,  1.36chunk/s]
+scan chartevents.csv.gz: 84chunk [01:00,  1.35chunk/s]
+scan chartevents.csv.gz: 85chunk [01:01,  1.35chunk/s]
+scan chartevents.csv.gz: 86chunk [01:02,  1.34chunk/s]
+scan chartevents.csv.gz: 87chunk [01:03,  1.34chunk/s]
+scan chartevents.csv.gz: 88chunk [01:03,  1.37chunk/s]
+scan chartevents.csv.gz: 89chunk [01:04,  1.39chunk/s]
+scan chartevents.csv.gz: 90chunk [01:05,  1.40chunk/s]
+scan chartevents.csv.gz: 91chunk [01:06,  1.38chunk/s]
 scan chartevents.csv.gz: 92chunk [01:06,  1.38chunk/s]
-scan chartevents.csv.gz: 93chunk [01:07,  1.38chunk/s]
-scan chartevents.csv.gz: 94chunk [01:08,  1.38chunk/s]
-scan chartevents.csv.gz: 95chunk [01:08,  1.38chunk/s]
-scan chartevents.csv.gz: 96chunk [01:09,  1.38chunk/s]
-scan chartevents.csv.gz: 97chunk [01:10,  1.39chunk/s]
-scan chartevents.csv.gz: 98chunk [01:10,  1.39chunk/s]
-scan chartevents.csv.gz: 99chunk [01:11,  1.39chunk/s]
-scan chartevents.csv.gz: 100chunk [01:12,  1.39chunk/s]
-scan chartevents.csv.gz: 101chunk [01:13,  1.39chunk/s]
-scan chartevents.csv.gz: 102chunk [01:13,  1.39chunk/s]
-scan chartevents.csv.gz: 103chunk [01:14,  1.38chunk/s]
-scan chartevents.csv.gz: 104chunk [01:15,  1.39chunk/s]
-scan chartevents.csv.gz: 105chunk [01:16,  1.39chunk/s]
-scan chartevents.csv.gz: 106chunk [01:16,  1.39chunk/s]
-scan chartevents.csv.gz: 107chunk [01:17,  1.39chunk/s]
-scan chartevents.csv.gz: 108chunk [01:18,  1.39chunk/s]
-scan chartevents.csv.gz: 109chunk [01:18,  1.39chunk/s]
-scan chartevents.csv.gz: 110chunk [01:19,  1.39chunk/s]
-scan chartevents.csv.gz: 111chunk [01:20,  1.39chunk/s]
+scan chartevents.csv.gz: 93chunk [01:07,  1.39chunk/s]
+scan chartevents.csv.gz: 94chunk [01:08,  1.40chunk/s]
+scan chartevents.csv.gz: 95chunk [01:08,  1.40chunk/s]
+scan chartevents.csv.gz: 96chunk [01:09,  1.40chunk/s]
+scan chartevents.csv.gz: 97chunk [01:10,  1.40chunk/s]
+scan chartevents.csv.gz: 98chunk [01:11,  1.40chunk/s]
+scan chartevents.csv.gz: 99chunk [01:11,  1.40chunk/s]
+scan chartevents.csv.gz: 100chunk [01:12,  1.40chunk/s]
+scan chartevents.csv.gz: 101chunk [01:13,  1.40chunk/s]
+scan chartevents.csv.gz: 102chunk [01:13,  1.40chunk/s]
+scan chartevents.csv.gz: 103chunk [01:14,  1.40chunk/s]
+scan chartevents.csv.gz: 104chunk [01:15,  1.41chunk/s]
+scan chartevents.csv.gz: 105chunk [01:15,  1.41chunk/s]
+scan chartevents.csv.gz: 106chunk [01:16,  1.41chunk/s]
+scan chartevents.csv.gz: 107chunk [01:17,  1.41chunk/s]
+scan chartevents.csv.gz: 108chunk [01:18,  1.40chunk/s]
+scan chartevents.csv.gz: 109chunk [01:18,  1.40chunk/s]
+scan chartevents.csv.gz: 110chunk [01:19,  1.40chunk/s]
+scan chartevents.csv.gz: 111chunk [01:20,  1.40chunk/s]
 scan chartevents.csv.gz: 112chunk [01:21,  1.38chunk/s]
-scan chartevents.csv.gz: 113chunk [01:21,  1.39chunk/s]
-scan chartevents.csv.gz: 114chunk [01:22,  1.39chunk/s]
-scan chartevents.csv.gz: 115chunk [01:23,  1.39chunk/s]
-scan chartevents.csv.gz: 116chunk [01:23,  1.39chunk/s]
-scan chartevents.csv.gz: 117chunk [01:24,  1.39chunk/s]
-scan chartevents.csv.gz: 118chunk [01:25,  1.39chunk/s]
-scan chartevents.csv.gz: 119chunk [01:26,  1.39chunk/s]
-scan chartevents.csv.gz: 120chunk [01:26,  1.39chunk/s]
-scan chartevents.csv.gz: 121chunk [01:27,  1.39chunk/s]
-scan chartevents.csv.gz: 122chunk [01:28,  1.39chunk/s]
-scan chartevents.csv.gz: 123chunk [01:29,  1.39chunk/s]
-scan chartevents.csv.gz: 124chunk [01:29,  1.39chunk/s]
+scan chartevents.csv.gz: 113chunk [01:21,  1.37chunk/s]
+scan chartevents.csv.gz: 114chunk [01:22,  1.37chunk/s]
+scan chartevents.csv.gz: 115chunk [01:23,  1.37chunk/s]
+scan chartevents.csv.gz: 116chunk [01:23,  1.37chunk/s]
+scan chartevents.csv.gz: 117chunk [01:24,  1.36chunk/s]
+scan chartevents.csv.gz: 118chunk [01:25,  1.36chunk/s]
+scan chartevents.csv.gz: 119chunk [01:26,  1.37chunk/s]
+scan chartevents.csv.gz: 120chunk [01:26,  1.37chunk/s]
+scan chartevents.csv.gz: 121chunk [01:27,  1.38chunk/s]
+scan chartevents.csv.gz: 122chunk [01:28,  1.38chunk/s]
+scan chartevents.csv.gz: 123chunk [01:29,  1.38chunk/s]
+scan chartevents.csv.gz: 124chunk [01:29,  1.38chunk/s]
 scan chartevents.csv.gz: 125chunk [01:30,  1.38chunk/s]
-scan chartevents.csv.gz: 126chunk [01:31,  1.39chunk/s]
-scan chartevents.csv.gz: 127chunk [01:31,  1.39chunk/s]
-scan chartevents.csv.gz: 128chunk [01:32,  1.39chunk/s]
-scan chartevents.csv.gz: 129chunk [01:33,  1.39chunk/s]
-scan chartevents.csv.gz: 130chunk [01:34,  1.39chunk/s]
-scan chartevents.csv.gz: 131chunk [01:34,  1.39chunk/s]
-scan chartevents.csv.gz: 132chunk [01:35,  1.39chunk/s]
-scan chartevents.csv.gz: 133chunk [01:36,  1.39chunk/s]
-scan chartevents.csv.gz: 134chunk [01:36,  1.38chunk/s]
-scan chartevents.csv.gz: 135chunk [01:37,  1.39chunk/s]
-scan chartevents.csv.gz: 136chunk [01:38,  1.38chunk/s]
+scan chartevents.csv.gz: 126chunk [01:31,  1.38chunk/s]
+scan chartevents.csv.gz: 127chunk [01:31,  1.37chunk/s]
+scan chartevents.csv.gz: 128chunk [01:32,  1.37chunk/s]
+scan chartevents.csv.gz: 129chunk [01:33,  1.37chunk/s]
+scan chartevents.csv.gz: 130chunk [01:34,  1.37chunk/s]
+scan chartevents.csv.gz: 131chunk [01:34,  1.35chunk/s]
+scan chartevents.csv.gz: 132chunk [01:35,  1.35chunk/s]
+scan chartevents.csv.gz: 133chunk [01:36,  1.35chunk/s]
+scan chartevents.csv.gz: 134chunk [01:37,  1.36chunk/s]
+scan chartevents.csv.gz: 135chunk [01:37,  1.38chunk/s]
+scan chartevents.csv.gz: 136chunk [01:38,  1.39chunk/s]
 scan chartevents.csv.gz: 137chunk [01:39,  1.38chunk/s]
-scan chartevents.csv.gz: 138chunk [01:39,  1.38chunk/s]
-scan chartevents.csv.gz: 139chunk [01:40,  1.38chunk/s]
+scan chartevents.csv.gz: 138chunk [01:39,  1.39chunk/s]
+scan chartevents.csv.gz: 139chunk [01:40,  1.39chunk/s]
 scan chartevents.csv.gz: 140chunk [01:41,  1.39chunk/s]
-scan chartevents.csv.gz: 141chunk [01:41,  1.39chunk/s]
+scan chartevents.csv.gz: 141chunk [01:42,  1.39chunk/s]
 scan chartevents.csv.gz: 142chunk [01:42,  1.39chunk/s]
 scan chartevents.csv.gz: 143chunk [01:43,  1.39chunk/s]
 scan chartevents.csv.gz: 144chunk [01:44,  1.39chunk/s]
-scan chartevents.csv.gz: 145chunk [01:44,  1.39chunk/s]
+scan chartevents.csv.gz: 145chunk [01:45,  1.39chunk/s]
 scan chartevents.csv.gz: 146chunk [01:45,  1.39chunk/s]
-scan chartevents.csv.gz: 147chunk [01:46,  1.39chunk/s]
-scan chartevents.csv.gz: 148chunk [01:47,  1.39chunk/s]
-scan chartevents.csv.gz: 149chunk [01:47,  1.39chunk/s]
-scan chartevents.csv.gz: 150chunk [01:48,  1.39chunk/s]
-scan chartevents.csv.gz: 151chunk [01:49,  1.37chunk/s]
-scan chartevents.csv.gz: 152chunk [01:49,  1.36chunk/s]
-scan chartevents.csv.gz: 153chunk [01:50,  1.36chunk/s]
-scan chartevents.csv.gz: 154chunk [01:51,  1.29chunk/s]
-scan chartevents.csv.gz: 155chunk [01:52,  1.31chunk/s]
-scan chartevents.csv.gz: 156chunk [01:53,  1.32chunk/s]
-scan chartevents.csv.gz: 157chunk [01:53,  1.33chunk/s]
-scan chartevents.csv.gz: 158chunk [01:54,  1.33chunk/s]
-scan chartevents.csv.gz: 159chunk [01:55,  1.34chunk/s]
-scan chartevents.csv.gz: 160chunk [01:56,  1.34chunk/s]
-scan chartevents.csv.gz: 161chunk [01:56,  1.35chunk/s]
-scan chartevents.csv.gz: 162chunk [01:57,  1.35chunk/s]
-scan chartevents.csv.gz: 163chunk [01:58,  1.36chunk/s]
-scan chartevents.csv.gz: 164chunk [01:58,  1.36chunk/s]
-scan chartevents.csv.gz: 165chunk [01:59,  1.33chunk/s]
-scan chartevents.csv.gz: 166chunk [02:00,  1.34chunk/s]
-scan chartevents.csv.gz: 167chunk [02:01,  1.34chunk/s]
-scan chartevents.csv.gz: 168chunk [02:01,  1.34chunk/s]
-scan chartevents.csv.gz: 169chunk [02:02,  1.35chunk/s]
-scan chartevents.csv.gz: 170chunk [02:03,  1.35chunk/s]
-scan chartevents.csv.gz: 171chunk [02:04,  1.35chunk/s]
-scan chartevents.csv.gz: 172chunk [02:04,  1.35chunk/s]
-scan chartevents.csv.gz: 173chunk [02:05,  1.35chunk/s]
-scan chartevents.csv.gz: 174chunk [02:06,  1.35chunk/s]
-scan chartevents.csv.gz: 175chunk [02:07,  1.35chunk/s]
-scan chartevents.csv.gz: 176chunk [02:07,  1.35chunk/s]
-scan chartevents.csv.gz: 177chunk [02:08,  1.35chunk/s]
-scan chartevents.csv.gz: 178chunk [02:09,  1.35chunk/s]
-scan chartevents.csv.gz: 179chunk [02:10,  1.35chunk/s]
-scan chartevents.csv.gz: 180chunk [02:10,  1.35chunk/s]
-scan chartevents.csv.gz: 181chunk [02:11,  1.35chunk/s]
-scan chartevents.csv.gz: 182chunk [02:12,  1.35chunk/s]
-scan chartevents.csv.gz: 183chunk [02:13,  1.36chunk/s]
-scan chartevents.csv.gz: 184chunk [02:13,  1.36chunk/s]
-scan chartevents.csv.gz: 185chunk [02:14,  1.36chunk/s]
-scan chartevents.csv.gz: 186chunk [02:15,  1.36chunk/s]
-scan chartevents.csv.gz: 187chunk [02:15,  1.36chunk/s]
-scan chartevents.csv.gz: 188chunk [02:16,  1.36chunk/s]
-scan chartevents.csv.gz: 189chunk [02:17,  1.35chunk/s]
-scan chartevents.csv.gz: 190chunk [02:18,  1.36chunk/s]
-scan chartevents.csv.gz: 191chunk [02:18,  1.36chunk/s]
-scan chartevents.csv.gz: 192chunk [02:19,  1.36chunk/s]
-scan chartevents.csv.gz: 193chunk [02:20,  1.36chunk/s]
-scan chartevents.csv.gz: 194chunk [02:21,  1.36chunk/s]
-scan chartevents.csv.gz: 195chunk [02:21,  1.36chunk/s]
-scan chartevents.csv.gz: 196chunk [02:22,  1.36chunk/s]
-scan chartevents.csv.gz: 197chunk [02:23,  1.35chunk/s]
-scan chartevents.csv.gz: 198chunk [02:24,  1.35chunk/s]
-scan chartevents.csv.gz: 199chunk [02:24,  1.35chunk/s]
-scan chartevents.csv.gz: 200chunk [02:25,  1.35chunk/s]
-scan chartevents.csv.gz: 201chunk [02:26,  1.35chunk/s]
-scan chartevents.csv.gz: 202chunk [02:27,  1.35chunk/s]
-scan chartevents.csv.gz: 203chunk [02:27,  1.35chunk/s]
-scan chartevents.csv.gz: 204chunk [02:28,  1.35chunk/s]
-scan chartevents.csv.gz: 205chunk [02:29,  1.35chunk/s]
-scan chartevents.csv.gz: 206chunk [02:30,  1.35chunk/s]
-scan chartevents.csv.gz: 207chunk [02:30,  1.35chunk/s]
-scan chartevents.csv.gz: 208chunk [02:31,  1.36chunk/s]
-scan chartevents.csv.gz: 209chunk [02:32,  1.36chunk/s]
-scan chartevents.csv.gz: 210chunk [02:32,  1.36chunk/s]
-scan chartevents.csv.gz: 211chunk [02:33,  1.35chunk/s]
-scan chartevents.csv.gz: 212chunk [02:34,  1.35chunk/s]
-scan chartevents.csv.gz: 213chunk [02:35,  1.36chunk/s]
+scan chartevents.csv.gz: 147chunk [01:46,  1.38chunk/s]
+scan chartevents.csv.gz: 148chunk [01:47,  1.37chunk/s]
+scan chartevents.csv.gz: 149chunk [01:47,  1.38chunk/s]
+scan chartevents.csv.gz: 150chunk [01:48,  1.38chunk/s]
+scan chartevents.csv.gz: 151chunk [01:49,  1.38chunk/s]
+scan chartevents.csv.gz: 152chunk [01:50,  1.38chunk/s]
+scan chartevents.csv.gz: 153chunk [01:50,  1.38chunk/s]
+scan chartevents.csv.gz: 154chunk [01:51,  1.38chunk/s]
+scan chartevents.csv.gz: 155chunk [01:52,  1.38chunk/s]
+scan chartevents.csv.gz: 156chunk [01:53,  1.38chunk/s]
+scan chartevents.csv.gz: 157chunk [01:53,  1.38chunk/s]
+scan chartevents.csv.gz: 158chunk [01:54,  1.37chunk/s]
+scan chartevents.csv.gz: 159chunk [01:55,  1.37chunk/s]
+scan chartevents.csv.gz: 160chunk [01:55,  1.37chunk/s]
+scan chartevents.csv.gz: 161chunk [01:56,  1.36chunk/s]
+scan chartevents.csv.gz: 162chunk [01:57,  1.37chunk/s]
+scan chartevents.csv.gz: 163chunk [01:58,  1.38chunk/s]
+scan chartevents.csv.gz: 164chunk [01:58,  1.38chunk/s]
+scan chartevents.csv.gz: 165chunk [01:59,  1.38chunk/s]
+scan chartevents.csv.gz: 166chunk [02:00,  1.38chunk/s]
+scan chartevents.csv.gz: 167chunk [02:01,  1.37chunk/s]
+scan chartevents.csv.gz: 168chunk [02:01,  1.37chunk/s]
+scan chartevents.csv.gz: 169chunk [02:02,  1.37chunk/s]
+scan chartevents.csv.gz: 170chunk [02:03,  1.37chunk/s]
+scan chartevents.csv.gz: 171chunk [02:03,  1.38chunk/s]
+scan chartevents.csv.gz: 172chunk [02:04,  1.38chunk/s]
+scan chartevents.csv.gz: 173chunk [02:05,  1.39chunk/s]
+scan chartevents.csv.gz: 174chunk [02:06,  1.39chunk/s]
+scan chartevents.csv.gz: 175chunk [02:06,  1.39chunk/s]
+scan chartevents.csv.gz: 176chunk [02:07,  1.39chunk/s]
+scan chartevents.csv.gz: 177chunk [02:08,  1.38chunk/s]
+scan chartevents.csv.gz: 178chunk [02:08,  1.38chunk/s]
+scan chartevents.csv.gz: 179chunk [02:09,  1.38chunk/s]
+scan chartevents.csv.gz: 180chunk [02:10,  1.38chunk/s]
+scan chartevents.csv.gz: 181chunk [02:11,  1.38chunk/s]
+scan chartevents.csv.gz: 182chunk [02:11,  1.38chunk/s]
+scan chartevents.csv.gz: 183chunk [02:12,  1.38chunk/s]
+scan chartevents.csv.gz: 184chunk [02:13,  1.38chunk/s]
+scan chartevents.csv.gz: 185chunk [02:14,  1.38chunk/s]
+scan chartevents.csv.gz: 186chunk [02:14,  1.37chunk/s]
+scan chartevents.csv.gz: 187chunk [02:15,  1.38chunk/s]
+scan chartevents.csv.gz: 188chunk [02:16,  1.38chunk/s]
+scan chartevents.csv.gz: 189chunk [02:16,  1.38chunk/s]
+scan chartevents.csv.gz: 190chunk [02:17,  1.39chunk/s]
+scan chartevents.csv.gz: 191chunk [02:18,  1.39chunk/s]
+scan chartevents.csv.gz: 192chunk [02:19,  1.39chunk/s]
+scan chartevents.csv.gz: 193chunk [02:19,  1.38chunk/s]
+scan chartevents.csv.gz: 194chunk [02:20,  1.38chunk/s]
+scan chartevents.csv.gz: 195chunk [02:21,  1.38chunk/s]
+scan chartevents.csv.gz: 196chunk [02:22,  1.38chunk/s]
+scan chartevents.csv.gz: 197chunk [02:22,  1.38chunk/s]
+scan chartevents.csv.gz: 198chunk [02:23,  1.37chunk/s]
+scan chartevents.csv.gz: 199chunk [02:24,  1.37chunk/s]
+scan chartevents.csv.gz: 200chunk [02:24,  1.37chunk/s]
+scan chartevents.csv.gz: 201chunk [02:25,  1.36chunk/s]
+scan chartevents.csv.gz: 202chunk [02:26,  1.36chunk/s]
+scan chartevents.csv.gz: 203chunk [02:27,  1.36chunk/s]
+scan chartevents.csv.gz: 204chunk [02:27,  1.36chunk/s]
+scan chartevents.csv.gz: 205chunk [02:28,  1.36chunk/s]
+scan chartevents.csv.gz: 206chunk [02:29,  1.36chunk/s]
+scan chartevents.csv.gz: 207chunk [02:30,  1.31chunk/s]
+scan chartevents.csv.gz: 208chunk [02:30,  1.32chunk/s]
+scan chartevents.csv.gz: 209chunk [02:31,  1.33chunk/s]
+scan chartevents.csv.gz: 210chunk [02:32,  1.34chunk/s]
+scan chartevents.csv.gz: 211chunk [02:33,  1.34chunk/s]
+scan chartevents.csv.gz: 212chunk [02:33,  1.35chunk/s]
+scan chartevents.csv.gz: 213chunk [02:34,  1.36chunk/s]
 scan chartevents.csv.gz: 214chunk [02:35,  1.36chunk/s]
 scan chartevents.csv.gz: 215chunk [02:36,  1.36chunk/s]
-scan chartevents.csv.gz: 216chunk [02:37,  1.36chunk/s]
-scan chartevents.csv.gz: 217chunk [02:37,  1.58chunk/s]
+scan chartevents.csv.gz: 216chunk [02:36,  1.36chunk/s]
+scan chartevents.csv.gz: 217chunk [02:37,  1.59chunk/s]
 scan chartevents.csv.gz: 217chunk [02:37,  1.38chunk/s]
-[17:57:33] utils                        INFO   stream chartevents.csv.gz: scanned 432,997,491 rows -> 65,171 stays x 12 itemids
-[17:57:33] 04_extract_measurements      INFO   streaming chartevents done (157.9s)
-[17:57:33] 04_extract_measurements      INFO   streaming labevents ...
+[00:55:09] utils                        INFO   stream chartevents.csv.gz: scanned 432,997,491 rows -> 65,171 stays x 12 itemids
+[00:55:09] 04_extract_measurements      INFO   streaming chartevents done (157.3s)
+[00:55:09] 04_extract_measurements      INFO   streaming labevents ...
 
 scan labevents.csv.gz: 0chunk [00:00, ?chunk/s]
-scan labevents.csv.gz: 1chunk [00:00,  1.18chunk/s]
-scan labevents.csv.gz: 2chunk [00:01,  1.16chunk/s]
+scan labevents.csv.gz: 1chunk [00:00,  1.20chunk/s]
+scan labevents.csv.gz: 2chunk [00:01,  1.17chunk/s]
 scan labevents.csv.gz: 3chunk [00:02,  1.19chunk/s]
-scan labevents.csv.gz: 4chunk [00:03,  1.20chunk/s]
-scan labevents.csv.gz: 5chunk [00:04,  1.21chunk/s]
-scan labevents.csv.gz: 6chunk [00:04,  1.21chunk/s]
-scan labevents.csv.gz: 7chunk [00:05,  1.21chunk/s]
-scan labevents.csv.gz: 8chunk [00:06,  1.21chunk/s]
-scan labevents.csv.gz: 9chunk [00:07,  1.21chunk/s]
-scan labevents.csv.gz: 10chunk [00:08,  1.20chunk/s]
-scan labevents.csv.gz: 11chunk [00:09,  1.20chunk/s]
-scan labevents.csv.gz: 12chunk [00:09,  1.20chunk/s]
-scan labevents.csv.gz: 13chunk [00:10,  1.21chunk/s]
-scan labevents.csv.gz: 14chunk [00:11,  1.20chunk/s]
-scan labevents.csv.gz: 15chunk [00:12,  1.20chunk/s]
-scan labevents.csv.gz: 16chunk [00:13,  1.21chunk/s]
-scan labevents.csv.gz: 17chunk [00:14,  1.21chunk/s]
-scan labevents.csv.gz: 18chunk [00:14,  1.21chunk/s]
-scan labevents.csv.gz: 19chunk [00:15,  1.21chunk/s]
-scan labevents.csv.gz: 20chunk [00:16,  1.21chunk/s]
-scan labevents.csv.gz: 21chunk [00:17,  1.21chunk/s]
-scan labevents.csv.gz: 22chunk [00:18,  1.21chunk/s]
-scan labevents.csv.gz: 23chunk [00:19,  1.21chunk/s]
-scan labevents.csv.gz: 24chunk [00:19,  1.21chunk/s]
-scan labevents.csv.gz: 25chunk [00:20,  1.21chunk/s]
-scan labevents.csv.gz: 26chunk [00:21,  1.21chunk/s]
-scan labevents.csv.gz: 27chunk [00:22,  1.20chunk/s]
-scan labevents.csv.gz: 28chunk [00:23,  1.20chunk/s]
-scan labevents.csv.gz: 29chunk [00:24,  1.20chunk/s]
-scan labevents.csv.gz: 30chunk [00:24,  1.20chunk/s]
-scan labevents.csv.gz: 31chunk [00:25,  1.20chunk/s]
-scan labevents.csv.gz: 32chunk [00:26,  1.20chunk/s]
-scan labevents.csv.gz: 33chunk [00:27,  1.20chunk/s]
-scan labevents.csv.gz: 34chunk [00:28,  1.20chunk/s]
-scan labevents.csv.gz: 35chunk [00:29,  1.20chunk/s]
-scan labevents.csv.gz: 36chunk [00:29,  1.20chunk/s]
-scan labevents.csv.gz: 37chunk [00:30,  1.20chunk/s]
-scan labevents.csv.gz: 38chunk [00:31,  1.21chunk/s]
-scan labevents.csv.gz: 39chunk [00:32,  1.21chunk/s]
-scan labevents.csv.gz: 40chunk [00:33,  1.21chunk/s]
-scan labevents.csv.gz: 41chunk [00:34,  1.21chunk/s]
+scan labevents.csv.gz: 4chunk [00:03,  1.21chunk/s]
+scan labevents.csv.gz: 5chunk [00:04,  1.22chunk/s]
+scan labevents.csv.gz: 6chunk [00:04,  1.22chunk/s]
+scan labevents.csv.gz: 7chunk [00:05,  1.23chunk/s]
+scan labevents.csv.gz: 8chunk [00:06,  1.23chunk/s]
+scan labevents.csv.gz: 9chunk [00:07,  1.23chunk/s]
+scan labevents.csv.gz: 10chunk [00:08,  1.23chunk/s]
+scan labevents.csv.gz: 11chunk [00:08,  1.24chunk/s]
+scan labevents.csv.gz: 12chunk [00:09,  1.24chunk/s]
+scan labevents.csv.gz: 13chunk [00:10,  1.24chunk/s]
+scan labevents.csv.gz: 14chunk [00:11,  1.24chunk/s]
+scan labevents.csv.gz: 15chunk [00:12,  1.24chunk/s]
+scan labevents.csv.gz: 16chunk [00:13,  1.24chunk/s]
+scan labevents.csv.gz: 17chunk [00:13,  1.24chunk/s]
+scan labevents.csv.gz: 18chunk [00:14,  1.24chunk/s]
+scan labevents.csv.gz: 19chunk [00:15,  1.24chunk/s]
+scan labevents.csv.gz: 20chunk [00:16,  1.24chunk/s]
+scan labevents.csv.gz: 21chunk [00:17,  1.24chunk/s]
+scan labevents.csv.gz: 22chunk [00:17,  1.24chunk/s]
+scan labevents.csv.gz: 23chunk [00:18,  1.24chunk/s]
+scan labevents.csv.gz: 24chunk [00:19,  1.24chunk/s]
+scan labevents.csv.gz: 25chunk [00:20,  1.24chunk/s]
+scan labevents.csv.gz: 26chunk [00:21,  1.24chunk/s]
+scan labevents.csv.gz: 27chunk [00:21,  1.24chunk/s]
+scan labevents.csv.gz: 28chunk [00:22,  1.24chunk/s]
+scan labevents.csv.gz: 29chunk [00:23,  1.24chunk/s]
+scan labevents.csv.gz: 30chunk [00:24,  1.23chunk/s]
+scan labevents.csv.gz: 31chunk [00:25,  1.23chunk/s]
+scan labevents.csv.gz: 32chunk [00:25,  1.23chunk/s]
+scan labevents.csv.gz: 33chunk [00:26,  1.23chunk/s]
+scan labevents.csv.gz: 34chunk [00:27,  1.23chunk/s]
+scan labevents.csv.gz: 35chunk [00:28,  1.22chunk/s]
+scan labevents.csv.gz: 36chunk [00:29,  1.22chunk/s]
+scan labevents.csv.gz: 37chunk [00:30,  1.22chunk/s]
+scan labevents.csv.gz: 38chunk [00:30,  1.21chunk/s]
+scan labevents.csv.gz: 39chunk [00:31,  1.21chunk/s]
+scan labevents.csv.gz: 40chunk [00:32,  1.21chunk/s]
+scan labevents.csv.gz: 41chunk [00:33,  1.21chunk/s]
 scan labevents.csv.gz: 42chunk [00:34,  1.21chunk/s]
 scan labevents.csv.gz: 43chunk [00:35,  1.21chunk/s]
-scan labevents.csv.gz: 44chunk [00:36,  1.21chunk/s]
-scan labevents.csv.gz: 45chunk [00:37,  1.21chunk/s]
-scan labevents.csv.gz: 46chunk [00:38,  1.20chunk/s]
-scan labevents.csv.gz: 47chunk [00:39,  1.20chunk/s]
-scan labevents.csv.gz: 48chunk [00:39,  1.20chunk/s]
-scan labevents.csv.gz: 49chunk [00:40,  1.20chunk/s]
-scan labevents.csv.gz: 50chunk [00:41,  1.20chunk/s]
-scan labevents.csv.gz: 51chunk [00:42,  1.20chunk/s]
-scan labevents.csv.gz: 52chunk [00:43,  1.20chunk/s]
-scan labevents.csv.gz: 53chunk [00:43,  1.21chunk/s]
-scan labevents.csv.gz: 54chunk [00:44,  1.21chunk/s]
-scan labevents.csv.gz: 55chunk [00:45,  1.21chunk/s]
-scan labevents.csv.gz: 56chunk [00:46,  1.21chunk/s]
-scan labevents.csv.gz: 57chunk [00:47,  1.22chunk/s]
-scan labevents.csv.gz: 58chunk [00:48,  1.22chunk/s]
-scan labevents.csv.gz: 59chunk [00:48,  1.23chunk/s]
-scan labevents.csv.gz: 60chunk [00:49,  1.23chunk/s]
-scan labevents.csv.gz: 61chunk [00:50,  1.23chunk/s]
-scan labevents.csv.gz: 62chunk [00:51,  1.23chunk/s]
-scan labevents.csv.gz: 63chunk [00:52,  1.23chunk/s]
-scan labevents.csv.gz: 64chunk [00:52,  1.23chunk/s]
-scan labevents.csv.gz: 65chunk [00:53,  1.23chunk/s]
-scan labevents.csv.gz: 66chunk [00:54,  1.22chunk/s]
-scan labevents.csv.gz: 67chunk [00:55,  1.22chunk/s]
-scan labevents.csv.gz: 68chunk [00:56,  1.22chunk/s]
-scan labevents.csv.gz: 69chunk [00:57,  1.22chunk/s]
-scan labevents.csv.gz: 70chunk [00:57,  1.22chunk/s]
-scan labevents.csv.gz: 71chunk [00:58,  1.22chunk/s]
-scan labevents.csv.gz: 72chunk [00:59,  1.22chunk/s]
-scan labevents.csv.gz: 73chunk [01:00,  1.22chunk/s]
-scan labevents.csv.gz: 74chunk [01:01,  1.22chunk/s]
-scan labevents.csv.gz: 75chunk [01:01,  1.22chunk/s]
-scan labevents.csv.gz: 76chunk [01:02,  1.22chunk/s]
-scan labevents.csv.gz: 77chunk [01:03,  1.21chunk/s]
-scan labevents.csv.gz: 78chunk [01:04,  1.21chunk/s]
-scan labevents.csv.gz: 79chunk [01:05,  1.21chunk/s]
-scan labevents.csv.gz: 80chunk [01:05,  1.59chunk/s]
-scan labevents.csv.gz: 80chunk [01:05,  1.22chunk/s]
-[17:58:38] utils                        INFO   stream labevents.csv.gz: scanned 158,374,764 rows -> 64,032 stays x 7 itemids
-[17:58:38] 04_extract_measurements      INFO   streaming labevents done (65.5s)
-[17:58:38] 04_extract_measurements      INFO   assembling per-stay features ...
-[17:58:38] 04_extract_measurements      INFO   assembling per-stay features done (0.1s)
-[17:58:38] 04_extract_measurements      INFO   loading vasopressors (inputevents) ...
-[17:58:50] 04_extract_measurements      INFO   loading vasopressors (inputevents) done (11.2s)
-[17:58:50] 04_extract_measurements      INFO   loading urine output (outputevents) ...
-[17:58:52] 04_extract_measurements      INFO   loading urine output (outputevents) done (2.3s)
-[17:58:52] 04_extract_measurements      INFO   ============================================================
-[17:58:52] 04_extract_measurements      INFO   stay_measurements: 65,241 stays
-[17:58:52] 04_extract_measurements      INFO     lactate present:   38,579 (59.1%)
-[17:58:52] 04_extract_measurements      INFO     GCS present:       64,965 (99.6%)
-[17:58:52] 04_extract_measurements      INFO     P/F ratio present: 27,250 (41.8%)
-[17:58:52] 04_extract_measurements      INFO     any vasopressor:   17,097
-[17:58:52] utils                        INFO   saved 04_stay_measurements.parquet (65,241 rows, 42 cols, 6.0 MB)
-[04] exit 0  (237s)
+scan labevents.csv.gz: 44chunk [00:35,  1.22chunk/s]
+scan labevents.csv.gz: 45chunk [00:36,  1.22chunk/s]
+scan labevents.csv.gz: 46chunk [00:37,  1.22chunk/s]
+scan labevents.csv.gz: 47chunk [00:38,  1.23chunk/s]
+scan labevents.csv.gz: 48chunk [00:39,  1.23chunk/s]
+scan labevents.csv.gz: 49chunk [00:39,  1.23chunk/s]
+scan labevents.csv.gz: 50chunk [00:40,  1.23chunk/s]
+scan labevents.csv.gz: 51chunk [00:41,  1.23chunk/s]
+scan labevents.csv.gz: 52chunk [00:42,  1.23chunk/s]
+scan labevents.csv.gz: 53chunk [00:43,  1.24chunk/s]
+scan labevents.csv.gz: 54chunk [00:43,  1.24chunk/s]
+scan labevents.csv.gz: 55chunk [00:44,  1.24chunk/s]
+scan labevents.csv.gz: 56chunk [00:45,  1.24chunk/s]
+scan labevents.csv.gz: 57chunk [00:46,  1.24chunk/s]
+scan labevents.csv.gz: 58chunk [00:47,  1.24chunk/s]
+scan labevents.csv.gz: 59chunk [00:47,  1.24chunk/s]
+scan labevents.csv.gz: 60chunk [00:48,  1.24chunk/s]
+scan labevents.csv.gz: 61chunk [00:49,  1.25chunk/s]
+scan labevents.csv.gz: 62chunk [00:50,  1.24chunk/s]
+scan labevents.csv.gz: 63chunk [00:51,  1.23chunk/s]
+scan labevents.csv.gz: 64chunk [00:52,  1.22chunk/s]
+scan labevents.csv.gz: 65chunk [00:52,  1.21chunk/s]
+scan labevents.csv.gz: 66chunk [00:53,  1.21chunk/s]
+scan labevents.csv.gz: 67chunk [00:54,  1.21chunk/s]
+scan labevents.csv.gz: 68chunk [00:55,  1.21chunk/s]
+scan labevents.csv.gz: 69chunk [00:56,  1.22chunk/s]
+scan labevents.csv.gz: 70chunk [00:56,  1.22chunk/s]
+scan labevents.csv.gz: 71chunk [00:57,  1.22chunk/s]
+scan labevents.csv.gz: 72chunk [00:58,  1.23chunk/s]
+scan labevents.csv.gz: 73chunk [00:59,  1.23chunk/s]
+scan labevents.csv.gz: 74chunk [01:00,  1.23chunk/s]
+scan labevents.csv.gz: 75chunk [01:01,  1.23chunk/s]
+scan labevents.csv.gz: 76chunk [01:01,  1.23chunk/s]
+scan labevents.csv.gz: 77chunk [01:02,  1.23chunk/s]
+scan labevents.csv.gz: 78chunk [01:03,  1.23chunk/s]
+scan labevents.csv.gz: 79chunk [01:04,  1.23chunk/s]
+scan labevents.csv.gz: 80chunk [01:04,  1.62chunk/s]
+scan labevents.csv.gz: 80chunk [01:04,  1.24chunk/s]
+[00:56:13] utils                        INFO   stream labevents.csv.gz: scanned 158,374,764 rows -> 64,032 stays x 7 itemids
+[00:56:13] 04_extract_measurements      INFO   streaming labevents done (64.5s)
+[00:56:13] 04_extract_measurements      INFO   assembling per-stay features ...
+[00:56:13] 04_extract_measurements      INFO   assembling per-stay features done (0.1s)
+[00:56:13] 04_extract_measurements      INFO   loading vasopressors (inputevents) ...
+[00:56:24] 04_extract_measurements      INFO   loading vasopressors (inputevents) done (10.9s)
+[00:56:24] 04_extract_measurements      INFO   loading urine output (outputevents) ...
+[00:56:27] 04_extract_measurements      INFO   loading urine output (outputevents) done (2.3s)
+[00:56:27] 04_extract_measurements      INFO   ============================================================
+[00:56:27] 04_extract_measurements      INFO   stay_measurements: 65,241 stays
+[00:56:27] 04_extract_measurements      INFO     lactate present:   38,579 (59.1%)
+[00:56:27] 04_extract_measurements      INFO     GCS present:       64,965 (99.6%)
+[00:56:27] 04_extract_measurements      INFO     P/F ratio present: 27,250 (41.8%)
+[00:56:27] 04_extract_measurements      INFO     any vasopressor:   17,097
+[00:56:27] utils                        INFO   saved 04_stay_measurements.parquet (65,241 rows, 42 cols, 6.0 MB)
+[04] exit 0  (236s)
 
 ============================================================
 [05]  /Library/Frameworks/Python.framework/Versions/3.14/bin/python3 -u /Users/arif/Desktop/RESEARCH/projects/sepsis_mimic4/05_sofa_sepsis3.py
 ============================================================
-[17:58:52] 05_sofa_sepsis3              INFO   loading stay_measurements + suspected_infection ...
-[17:58:52] utils                        INFO   loaded 04_stay_measurements.parquet (65,241 rows, 6.0 MB)
-[17:58:52] utils                        INFO   loaded 03_suspected_infection.parquet (26,432 rows, 1.3 MB)
-[17:58:52] 05_sofa_sepsis3              INFO   loading stay_measurements + suspected_infection done (0.0s)
-[17:58:52] 05_sofa_sepsis3              INFO   scoring SOFA components ...
-[17:58:52] 05_sofa_sepsis3              INFO   scoring SOFA components done (0.0s)
-[17:58:52] 05_sofa_sepsis3              INFO   applying Sepsis-3 labels ...
-[17:58:52] 05_sofa_sepsis3              INFO   applying Sepsis-3 labels done (0.0s)
-[17:58:52] 05_sofa_sepsis3              INFO   ============================================================
-[17:58:52] 05_sofa_sepsis3              INFO   FINAL: 65,241 ICU stays
-[17:58:52] 05_sofa_sepsis3              INFO     suspected infection: 26,432 (40.5%)
-[17:58:52] 05_sofa_sepsis3              INFO     SOFA total median: 5 [p25 2, p75 10]
-[17:58:52] 05_sofa_sepsis3              INFO     Sepsis-3 positive: 24,203 (37.1%)
-[17:58:52] 05_sofa_sepsis3              INFO     septic shock: 6,018 (9.2%)
-[17:58:52] 05_sofa_sepsis3              INFO     mortality by group (in-hospital):
-[17:58:52] 05_sofa_sepsis3              INFO       no sepsis  n=41,038  mortality=6.1%  SOFA=4.5
-[17:58:52] 05_sofa_sepsis3              INFO       sepsis-3   n=24,203  mortality=18.7%  SOFA=8.5
-[17:58:52] 05_sofa_sepsis3              INFO     SOFA component means (septic vs not):
-[17:58:52] 05_sofa_sepsis3              INFO       sofa_resp    septic=2.03  non=0.90
-[17:58:52] 05_sofa_sepsis3              INFO       sofa_coag    septic=0.72  non=0.41
-[17:58:52] 05_sofa_sepsis3              INFO       sofa_liver   septic=0.47  non=0.12
-[17:58:52] 05_sofa_sepsis3              INFO       sofa_cardio  septic=1.87  non=1.11
-[17:58:52] 05_sofa_sepsis3              INFO       sofa_cns     septic=2.33  non=1.42
-[17:58:52] 05_sofa_sepsis3              INFO       sofa_renal   septic=1.08  non=0.58
-[17:58:52] utils                        INFO   saved 05_analysis_matrix.parquet (65,241 rows, 52 cols, 6.2 MB)
-[05] exit 0  (0s)
+[00:56:27] 05_sofa_sepsis3              INFO   loading stay_measurements + suspected_infection ...
+[00:56:27] utils                        INFO   loaded 04_stay_measurements.parquet (65,241 rows, 6.0 MB)
+[00:56:27] utils                        INFO   loaded 03_suspected_infection.parquet (26,432 rows, 1.3 MB)
+[00:56:27] 05_sofa_sepsis3              INFO   loading stay_measurements + suspected_infection done (0.0s)
+[00:56:27] 05_sofa_sepsis3              INFO   scoring SOFA components ...
+[00:56:27] 05_sofa_sepsis3              INFO   scoring SOFA components done (0.0s)
+[00:56:27] 05_sofa_sepsis3              INFO   applying Sepsis-3 labels ...
+[00:56:27] 05_sofa_sepsis3              INFO   applying Sepsis-3 labels done (0.0s)
+[00:56:27] 05_sofa_sepsis3              INFO   ============================================================
+[00:56:27] 05_sofa_sepsis3              INFO   FINAL: 65,241 ICU stays
+[00:56:27] 05_sofa_sepsis3              INFO     suspected infection: 26,432 (40.5%)
+[00:56:27] 05_sofa_sepsis3              INFO     SOFA total median: 5 [p25 2, p75 10]
+[00:56:27] 05_sofa_sepsis3              INFO     Sepsis-3 positive: 24,203 (37.1%)
+[00:56:27] 05_sofa_sepsis3              INFO     septic shock: 6,018 (9.2%)
+[00:56:27] 05_sofa_sepsis3              INFO     mortality by group (in-hospital):
+[00:56:27] 05_sofa_sepsis3              INFO       no sepsis  n=41,038  mortality=6.1%  SOFA=4.5
+[00:56:27] 05_sofa_sepsis3              INFO       sepsis-3   n=24,203  mortality=18.7%  SOFA=8.5
+[00:56:27] 05_sofa_sepsis3              INFO     SOFA component means (septic vs not):
+[00:56:27] 05_sofa_sepsis3              INFO       sofa_resp    septic=2.03  non=0.90
+[00:56:27] 05_sofa_sepsis3              INFO       sofa_coag    septic=0.72  non=0.41
+[00:56:27] 05_sofa_sepsis3              INFO       sofa_liver   septic=0.47  non=0.12
+[00:56:27] 05_sofa_sepsis3              INFO       sofa_cardio  septic=1.87  non=1.11
+[00:56:27] 05_sofa_sepsis3              INFO       sofa_cns     septic=2.33  non=1.42
+[00:56:27] 05_sofa_sepsis3              INFO       sofa_renal   septic=1.08  non=0.58
+[00:56:27] utils                        INFO   saved 05_analysis_matrix.parquet (65,241 rows, 52 cols, 6.2 MB)
+[05] exit 0  (1s)
 
 ============================================================
 [06]  Rscript -e rmarkdown::render('06_statistical_report.Rmd')
@@ -1752,7 +1752,7 @@ processing file: 06_statistical_report.Rmd
 83/83                      
 output file: 06_statistical_report.knit.md
 
-/opt/homebrew/bin/pandoc +RTS -K512m -RTS 06_statistical_report.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output 06_statistical_report.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine pdflatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//RtmpIq3Rri/rmarkdown-str109352e35211.html --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//RtmpIq3Rri/rmarkdown-str10934a21049a.html --variable tables=yes --standalone -Mhas-frontmatter=false 
+/opt/homebrew/bin/pandoc +RTS -K512m -RTS 06_statistical_report.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output 06_statistical_report.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine pdflatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//RtmpIz5Y8d/rmarkdown-str367e5e9b5ec0.html --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//RtmpIz5Y8d/rmarkdown-str367e2a69bfc6.html --variable tables=yes --standalone -Mhas-frontmatter=false 
 [WARNING] Deprecated: --highlight-style. Use --syntax-highlighting instead.
 
 Output created: 06_statistical_report.pdf
@@ -1761,368 +1761,368 @@ Output created: 06_statistical_report.pdf
 ============================================================
 [07]  /Library/Frameworks/Python.framework/Versions/3.14/bin/python3 -u /Users/arif/Desktop/RESEARCH/projects/sepsis_mimic4/07_hourly_panel.py
 ============================================================
-[17:59:14] 07_hourly_panel              INFO   loading cohort ...
-[17:59:14] utils                        INFO   loaded 02_cohort.parquet (65,241 rows, 4.5 MB)
-[17:59:14] 07_hourly_panel              INFO   loading cohort done (0.0s)
-[17:59:14] 07_hourly_panel              INFO   cohort: 65,241 stays; horizon 72h
-[17:59:14] 07_hourly_panel              INFO   streaming chartevents ...
+[00:56:49] 07_hourly_panel              INFO   loading cohort ...
+[00:56:49] utils                        INFO   loaded 02_cohort.parquet (65,241 rows, 4.5 MB)
+[00:56:49] 07_hourly_panel              INFO   loading cohort done (0.0s)
+[00:56:49] 07_hourly_panel              INFO   cohort: 65,241 stays; horizon 72h
+[00:56:49] 07_hourly_panel              INFO   streaming chartevents ...
 
 scan chartevents.csv.gz: 0chunk [00:00, ?chunk/s]
-scan chartevents.csv.gz: 1chunk [00:00,  1.31chunk/s]
-scan chartevents.csv.gz: 2chunk [00:01,  1.32chunk/s]
-scan chartevents.csv.gz: 3chunk [00:02,  1.33chunk/s]
-scan chartevents.csv.gz: 4chunk [00:03,  1.34chunk/s]
-scan chartevents.csv.gz: 5chunk [00:03,  1.34chunk/s]
-scan chartevents.csv.gz: 6chunk [00:04,  1.34chunk/s]
-scan chartevents.csv.gz: 7chunk [00:05,  1.34chunk/s]
-scan chartevents.csv.gz: 8chunk [00:05,  1.34chunk/s]
-scan chartevents.csv.gz: 9chunk [00:06,  1.34chunk/s]
-scan chartevents.csv.gz: 10chunk [00:07,  1.34chunk/s]
-scan chartevents.csv.gz: 11chunk [00:08,  1.34chunk/s]
-scan chartevents.csv.gz: 12chunk [00:08,  1.34chunk/s]
-scan chartevents.csv.gz: 13chunk [00:09,  1.34chunk/s]
-scan chartevents.csv.gz: 14chunk [00:10,  1.34chunk/s]
-scan chartevents.csv.gz: 15chunk [00:11,  1.35chunk/s]
-scan chartevents.csv.gz: 16chunk [00:11,  1.35chunk/s]
-scan chartevents.csv.gz: 17chunk [00:12,  1.35chunk/s]
-scan chartevents.csv.gz: 18chunk [00:13,  1.34chunk/s]
-scan chartevents.csv.gz: 19chunk [00:14,  1.35chunk/s]
-scan chartevents.csv.gz: 20chunk [00:14,  1.34chunk/s]
-scan chartevents.csv.gz: 21chunk [00:15,  1.35chunk/s]
-scan chartevents.csv.gz: 22chunk [00:16,  1.34chunk/s]
-scan chartevents.csv.gz: 23chunk [00:17,  1.34chunk/s]
-scan chartevents.csv.gz: 24chunk [00:17,  1.34chunk/s]
-scan chartevents.csv.gz: 25chunk [00:18,  1.34chunk/s]
-scan chartevents.csv.gz: 26chunk [00:19,  1.34chunk/s]
-scan chartevents.csv.gz: 27chunk [00:20,  1.34chunk/s]
-scan chartevents.csv.gz: 28chunk [00:20,  1.34chunk/s]
-scan chartevents.csv.gz: 29chunk [00:21,  1.34chunk/s]
-scan chartevents.csv.gz: 30chunk [00:22,  1.34chunk/s]
-scan chartevents.csv.gz: 31chunk [00:23,  1.34chunk/s]
-scan chartevents.csv.gz: 32chunk [00:23,  1.34chunk/s]
-scan chartevents.csv.gz: 33chunk [00:24,  1.33chunk/s]
-scan chartevents.csv.gz: 34chunk [00:25,  1.34chunk/s]
-scan chartevents.csv.gz: 35chunk [00:26,  1.34chunk/s]
-scan chartevents.csv.gz: 36chunk [00:26,  1.34chunk/s]
-scan chartevents.csv.gz: 37chunk [00:27,  1.34chunk/s]
-scan chartevents.csv.gz: 38chunk [00:28,  1.34chunk/s]
-scan chartevents.csv.gz: 39chunk [00:29,  1.34chunk/s]
-scan chartevents.csv.gz: 40chunk [00:30,  1.21chunk/s]
-scan chartevents.csv.gz: 41chunk [00:30,  1.24chunk/s]
-scan chartevents.csv.gz: 42chunk [00:31,  1.27chunk/s]
-scan chartevents.csv.gz: 43chunk [00:32,  1.29chunk/s]
-scan chartevents.csv.gz: 44chunk [00:33,  1.30chunk/s]
-scan chartevents.csv.gz: 45chunk [00:33,  1.31chunk/s]
-scan chartevents.csv.gz: 46chunk [00:34,  1.32chunk/s]
-scan chartevents.csv.gz: 47chunk [00:35,  1.32chunk/s]
-scan chartevents.csv.gz: 48chunk [00:36,  1.32chunk/s]
-scan chartevents.csv.gz: 49chunk [00:36,  1.33chunk/s]
-scan chartevents.csv.gz: 50chunk [00:37,  1.32chunk/s]
-scan chartevents.csv.gz: 51chunk [00:38,  1.33chunk/s]
-scan chartevents.csv.gz: 52chunk [00:39,  1.33chunk/s]
-scan chartevents.csv.gz: 53chunk [00:39,  1.33chunk/s]
-scan chartevents.csv.gz: 54chunk [00:40,  1.33chunk/s]
-scan chartevents.csv.gz: 55chunk [00:41,  1.33chunk/s]
-scan chartevents.csv.gz: 56chunk [00:42,  1.33chunk/s]
-scan chartevents.csv.gz: 57chunk [00:42,  1.33chunk/s]
-scan chartevents.csv.gz: 58chunk [00:43,  1.33chunk/s]
-scan chartevents.csv.gz: 59chunk [00:44,  1.33chunk/s]
-scan chartevents.csv.gz: 60chunk [00:45,  1.33chunk/s]
-scan chartevents.csv.gz: 61chunk [00:45,  1.33chunk/s]
-scan chartevents.csv.gz: 62chunk [00:46,  1.33chunk/s]
-scan chartevents.csv.gz: 63chunk [00:47,  1.33chunk/s]
-scan chartevents.csv.gz: 64chunk [00:48,  1.33chunk/s]
-scan chartevents.csv.gz: 65chunk [00:48,  1.32chunk/s]
-scan chartevents.csv.gz: 66chunk [00:49,  1.32chunk/s]
-scan chartevents.csv.gz: 67chunk [00:50,  1.32chunk/s]
-scan chartevents.csv.gz: 68chunk [00:51,  1.32chunk/s]
-scan chartevents.csv.gz: 69chunk [00:51,  1.32chunk/s]
-scan chartevents.csv.gz: 70chunk [00:52,  1.32chunk/s]
-scan chartevents.csv.gz: 71chunk [00:53,  1.32chunk/s]
-scan chartevents.csv.gz: 72chunk [00:54,  1.32chunk/s]
-scan chartevents.csv.gz: 73chunk [00:54,  1.33chunk/s]
-scan chartevents.csv.gz: 74chunk [00:55,  1.33chunk/s]
-scan chartevents.csv.gz: 75chunk [00:56,  1.33chunk/s]
-scan chartevents.csv.gz: 76chunk [00:57,  1.33chunk/s]
-scan chartevents.csv.gz: 77chunk [00:58,  1.33chunk/s]
-scan chartevents.csv.gz: 78chunk [00:58,  1.32chunk/s]
-scan chartevents.csv.gz: 79chunk [01:00,  1.10chunk/s]
-scan chartevents.csv.gz: 80chunk [01:00,  1.16chunk/s]
-scan chartevents.csv.gz: 81chunk [01:01,  1.21chunk/s]
-scan chartevents.csv.gz: 82chunk [01:02,  1.24chunk/s]
-scan chartevents.csv.gz: 83chunk [01:03,  1.26chunk/s]
-scan chartevents.csv.gz: 84chunk [01:03,  1.28chunk/s]
-scan chartevents.csv.gz: 85chunk [01:04,  1.29chunk/s]
-scan chartevents.csv.gz: 86chunk [01:05,  1.30chunk/s]
-scan chartevents.csv.gz: 87chunk [01:06,  1.31chunk/s]
-scan chartevents.csv.gz: 88chunk [01:06,  1.32chunk/s]
-scan chartevents.csv.gz: 89chunk [01:07,  1.32chunk/s]
-scan chartevents.csv.gz: 90chunk [01:08,  1.32chunk/s]
-scan chartevents.csv.gz: 91chunk [01:09,  1.32chunk/s]
-scan chartevents.csv.gz: 92chunk [01:09,  1.32chunk/s]
-scan chartevents.csv.gz: 93chunk [01:10,  1.32chunk/s]
-scan chartevents.csv.gz: 94chunk [01:11,  1.33chunk/s]
-scan chartevents.csv.gz: 95chunk [01:12,  1.33chunk/s]
-scan chartevents.csv.gz: 96chunk [01:12,  1.33chunk/s]
-scan chartevents.csv.gz: 97chunk [01:13,  1.33chunk/s]
-scan chartevents.csv.gz: 98chunk [01:14,  1.33chunk/s]
-scan chartevents.csv.gz: 99chunk [01:15,  1.33chunk/s]
-scan chartevents.csv.gz: 100chunk [01:15,  1.33chunk/s]
-scan chartevents.csv.gz: 101chunk [01:16,  1.33chunk/s]
-scan chartevents.csv.gz: 102chunk [01:17,  1.33chunk/s]
-scan chartevents.csv.gz: 103chunk [01:18,  1.33chunk/s]
-scan chartevents.csv.gz: 104chunk [01:18,  1.33chunk/s]
-scan chartevents.csv.gz: 105chunk [01:19,  1.33chunk/s]
-scan chartevents.csv.gz: 106chunk [01:20,  1.33chunk/s]
-scan chartevents.csv.gz: 107chunk [01:21,  1.33chunk/s]
-scan chartevents.csv.gz: 108chunk [01:21,  1.33chunk/s]
-scan chartevents.csv.gz: 109chunk [01:22,  1.33chunk/s]
-scan chartevents.csv.gz: 110chunk [01:23,  1.33chunk/s]
-scan chartevents.csv.gz: 111chunk [01:24,  1.33chunk/s]
-scan chartevents.csv.gz: 112chunk [01:24,  1.33chunk/s]
-scan chartevents.csv.gz: 113chunk [01:25,  1.32chunk/s]
-scan chartevents.csv.gz: 114chunk [01:26,  1.32chunk/s]
-scan chartevents.csv.gz: 115chunk [01:27,  1.32chunk/s]
-scan chartevents.csv.gz: 116chunk [01:27,  1.33chunk/s]
-scan chartevents.csv.gz: 117chunk [01:28,  1.32chunk/s]
-scan chartevents.csv.gz: 118chunk [01:30,  1.07s/chunk]
-scan chartevents.csv.gz: 119chunk [01:31,  1.02chunk/s]
-scan chartevents.csv.gz: 120chunk [01:32,  1.09chunk/s]
-scan chartevents.csv.gz: 121chunk [01:32,  1.15chunk/s]
-scan chartevents.csv.gz: 122chunk [01:33,  1.19chunk/s]
-scan chartevents.csv.gz: 123chunk [01:34,  1.23chunk/s]
-scan chartevents.csv.gz: 124chunk [01:35,  1.25chunk/s]
-scan chartevents.csv.gz: 125chunk [01:35,  1.27chunk/s]
-scan chartevents.csv.gz: 126chunk [01:36,  1.28chunk/s]
-scan chartevents.csv.gz: 127chunk [01:37,  1.29chunk/s]
-scan chartevents.csv.gz: 128chunk [01:38,  1.29chunk/s]
-scan chartevents.csv.gz: 129chunk [01:38,  1.30chunk/s]
-scan chartevents.csv.gz: 130chunk [01:39,  1.31chunk/s]
-scan chartevents.csv.gz: 131chunk [01:40,  1.31chunk/s]
-scan chartevents.csv.gz: 132chunk [01:41,  1.31chunk/s]
-scan chartevents.csv.gz: 133chunk [01:41,  1.31chunk/s]
-scan chartevents.csv.gz: 134chunk [01:42,  1.31chunk/s]
-scan chartevents.csv.gz: 135chunk [01:43,  1.32chunk/s]
-scan chartevents.csv.gz: 136chunk [01:44,  1.32chunk/s]
-scan chartevents.csv.gz: 137chunk [01:44,  1.31chunk/s]
-scan chartevents.csv.gz: 138chunk [01:45,  1.32chunk/s]
-scan chartevents.csv.gz: 139chunk [01:46,  1.32chunk/s]
-scan chartevents.csv.gz: 140chunk [01:47,  1.32chunk/s]
-scan chartevents.csv.gz: 141chunk [01:47,  1.32chunk/s]
-scan chartevents.csv.gz: 142chunk [01:48,  1.31chunk/s]
-scan chartevents.csv.gz: 143chunk [01:49,  1.31chunk/s]
-scan chartevents.csv.gz: 144chunk [01:50,  1.31chunk/s]
-scan chartevents.csv.gz: 145chunk [01:51,  1.31chunk/s]
-scan chartevents.csv.gz: 146chunk [01:51,  1.32chunk/s]
-scan chartevents.csv.gz: 147chunk [01:52,  1.31chunk/s]
-scan chartevents.csv.gz: 148chunk [01:53,  1.31chunk/s]
-scan chartevents.csv.gz: 149chunk [01:54,  1.31chunk/s]
-scan chartevents.csv.gz: 150chunk [01:54,  1.31chunk/s]
-scan chartevents.csv.gz: 151chunk [01:55,  1.32chunk/s]
-scan chartevents.csv.gz: 152chunk [01:56,  1.31chunk/s]
-scan chartevents.csv.gz: 153chunk [01:57,  1.32chunk/s]
-scan chartevents.csv.gz: 154chunk [01:57,  1.31chunk/s]
-scan chartevents.csv.gz: 155chunk [01:58,  1.31chunk/s]
-scan chartevents.csv.gz: 156chunk [01:59,  1.32chunk/s]
-scan chartevents.csv.gz: 157chunk [02:01,  1.14s/chunk]
-scan chartevents.csv.gz: 158chunk [02:02,  1.03s/chunk]
-scan chartevents.csv.gz: 159chunk [02:02,  1.06chunk/s]
-scan chartevents.csv.gz: 160chunk [02:03,  1.13chunk/s]
-scan chartevents.csv.gz: 161chunk [02:04,  1.18chunk/s]
-scan chartevents.csv.gz: 162chunk [02:05,  1.23chunk/s]
-scan chartevents.csv.gz: 163chunk [02:05,  1.26chunk/s]
-scan chartevents.csv.gz: 164chunk [02:06,  1.29chunk/s]
-scan chartevents.csv.gz: 165chunk [02:07,  1.30chunk/s]
-scan chartevents.csv.gz: 166chunk [02:08,  1.32chunk/s]
-scan chartevents.csv.gz: 167chunk [02:08,  1.33chunk/s]
-scan chartevents.csv.gz: 168chunk [02:09,  1.33chunk/s]
-scan chartevents.csv.gz: 169chunk [02:10,  1.33chunk/s]
-scan chartevents.csv.gz: 170chunk [02:11,  1.33chunk/s]
-scan chartevents.csv.gz: 171chunk [02:11,  1.34chunk/s]
-scan chartevents.csv.gz: 172chunk [02:12,  1.34chunk/s]
-scan chartevents.csv.gz: 173chunk [02:13,  1.34chunk/s]
-scan chartevents.csv.gz: 174chunk [02:14,  1.34chunk/s]
-scan chartevents.csv.gz: 175chunk [02:14,  1.34chunk/s]
-scan chartevents.csv.gz: 176chunk [02:15,  1.35chunk/s]
-scan chartevents.csv.gz: 177chunk [02:16,  1.35chunk/s]
-scan chartevents.csv.gz: 178chunk [02:17,  1.35chunk/s]
-scan chartevents.csv.gz: 179chunk [02:17,  1.35chunk/s]
-scan chartevents.csv.gz: 180chunk [02:18,  1.35chunk/s]
-scan chartevents.csv.gz: 181chunk [02:19,  1.34chunk/s]
-scan chartevents.csv.gz: 182chunk [02:20,  1.34chunk/s]
-scan chartevents.csv.gz: 183chunk [02:20,  1.34chunk/s]
-scan chartevents.csv.gz: 184chunk [02:21,  1.34chunk/s]
-scan chartevents.csv.gz: 185chunk [02:22,  1.33chunk/s]
-scan chartevents.csv.gz: 186chunk [02:23,  1.33chunk/s]
-scan chartevents.csv.gz: 187chunk [02:23,  1.32chunk/s]
-scan chartevents.csv.gz: 188chunk [02:24,  1.32chunk/s]
-scan chartevents.csv.gz: 189chunk [02:25,  1.31chunk/s]
-scan chartevents.csv.gz: 190chunk [02:26,  1.31chunk/s]
-scan chartevents.csv.gz: 191chunk [02:26,  1.31chunk/s]
-scan chartevents.csv.gz: 192chunk [02:27,  1.31chunk/s]
-scan chartevents.csv.gz: 193chunk [02:28,  1.31chunk/s]
-scan chartevents.csv.gz: 194chunk [02:29,  1.31chunk/s]
-scan chartevents.csv.gz: 195chunk [02:29,  1.30chunk/s]
-scan chartevents.csv.gz: 196chunk [02:32,  1.28s/chunk]
-scan chartevents.csv.gz: 197chunk [02:33,  1.12s/chunk]
-scan chartevents.csv.gz: 198chunk [02:33,  1.02s/chunk]
-scan chartevents.csv.gz: 199chunk [02:34,  1.07chunk/s]
-scan chartevents.csv.gz: 200chunk [02:35,  1.13chunk/s]
-scan chartevents.csv.gz: 201chunk [02:36,  1.19chunk/s]
-scan chartevents.csv.gz: 202chunk [02:36,  1.22chunk/s]
-scan chartevents.csv.gz: 203chunk [02:37,  1.25chunk/s]
-scan chartevents.csv.gz: 204chunk [02:38,  1.27chunk/s]
-scan chartevents.csv.gz: 205chunk [02:39,  1.29chunk/s]
-scan chartevents.csv.gz: 206chunk [02:40,  1.29chunk/s]
-scan chartevents.csv.gz: 207chunk [02:40,  1.30chunk/s]
-scan chartevents.csv.gz: 208chunk [02:41,  1.31chunk/s]
-scan chartevents.csv.gz: 209chunk [02:42,  1.32chunk/s]
-scan chartevents.csv.gz: 210chunk [02:43,  1.32chunk/s]
-scan chartevents.csv.gz: 211chunk [02:43,  1.32chunk/s]
-scan chartevents.csv.gz: 212chunk [02:44,  1.33chunk/s]
-scan chartevents.csv.gz: 213chunk [02:45,  1.33chunk/s]
-scan chartevents.csv.gz: 214chunk [02:46,  1.33chunk/s]
-scan chartevents.csv.gz: 215chunk [02:46,  1.33chunk/s]
-scan chartevents.csv.gz: 216chunk [02:47,  1.33chunk/s]
-scan chartevents.csv.gz: 217chunk [02:47,  1.55chunk/s]
-scan chartevents.csv.gz: 217chunk [02:47,  1.29chunk/s]
-[18:02:02] utils                        INFO   chartevents.csv.gz: scanned 432,997,491 rows
-[18:02:04] 07_hourly_panel              INFO   streaming chartevents done (169.7s)
-[18:02:04] 07_hourly_panel              INFO   streaming labevents ...
+scan chartevents.csv.gz: 1chunk [00:00,  1.29chunk/s]
+scan chartevents.csv.gz: 2chunk [00:01,  1.26chunk/s]
+scan chartevents.csv.gz: 3chunk [00:02,  1.28chunk/s]
+scan chartevents.csv.gz: 4chunk [00:03,  1.29chunk/s]
+scan chartevents.csv.gz: 5chunk [00:03,  1.30chunk/s]
+scan chartevents.csv.gz: 6chunk [00:04,  1.30chunk/s]
+scan chartevents.csv.gz: 7chunk [00:05,  1.30chunk/s]
+scan chartevents.csv.gz: 8chunk [00:06,  1.31chunk/s]
+scan chartevents.csv.gz: 9chunk [00:06,  1.31chunk/s]
+scan chartevents.csv.gz: 10chunk [00:07,  1.31chunk/s]
+scan chartevents.csv.gz: 11chunk [00:08,  1.31chunk/s]
+scan chartevents.csv.gz: 12chunk [00:09,  1.31chunk/s]
+scan chartevents.csv.gz: 13chunk [00:09,  1.32chunk/s]
+scan chartevents.csv.gz: 14chunk [00:10,  1.32chunk/s]
+scan chartevents.csv.gz: 15chunk [00:11,  1.32chunk/s]
+scan chartevents.csv.gz: 16chunk [00:12,  1.32chunk/s]
+scan chartevents.csv.gz: 17chunk [00:12,  1.32chunk/s]
+scan chartevents.csv.gz: 18chunk [00:13,  1.32chunk/s]
+scan chartevents.csv.gz: 19chunk [00:14,  1.32chunk/s]
+scan chartevents.csv.gz: 20chunk [00:15,  1.31chunk/s]
+scan chartevents.csv.gz: 21chunk [00:16,  1.31chunk/s]
+scan chartevents.csv.gz: 22chunk [00:16,  1.31chunk/s]
+scan chartevents.csv.gz: 23chunk [00:17,  1.31chunk/s]
+scan chartevents.csv.gz: 24chunk [00:18,  1.31chunk/s]
+scan chartevents.csv.gz: 25chunk [00:19,  1.31chunk/s]
+scan chartevents.csv.gz: 26chunk [00:19,  1.30chunk/s]
+scan chartevents.csv.gz: 27chunk [00:20,  1.30chunk/s]
+scan chartevents.csv.gz: 28chunk [00:21,  1.30chunk/s]
+scan chartevents.csv.gz: 29chunk [00:22,  1.30chunk/s]
+scan chartevents.csv.gz: 30chunk [00:22,  1.30chunk/s]
+scan chartevents.csv.gz: 31chunk [00:23,  1.30chunk/s]
+scan chartevents.csv.gz: 32chunk [00:24,  1.30chunk/s]
+scan chartevents.csv.gz: 33chunk [00:25,  1.31chunk/s]
+scan chartevents.csv.gz: 34chunk [00:26,  1.31chunk/s]
+scan chartevents.csv.gz: 35chunk [00:26,  1.31chunk/s]
+scan chartevents.csv.gz: 36chunk [00:27,  1.31chunk/s]
+scan chartevents.csv.gz: 37chunk [00:28,  1.31chunk/s]
+scan chartevents.csv.gz: 38chunk [00:29,  1.31chunk/s]
+scan chartevents.csv.gz: 39chunk [00:29,  1.32chunk/s]
+scan chartevents.csv.gz: 40chunk [00:30,  1.19chunk/s]
+scan chartevents.csv.gz: 41chunk [00:31,  1.23chunk/s]
+scan chartevents.csv.gz: 42chunk [00:32,  1.25chunk/s]
+scan chartevents.csv.gz: 43chunk [00:33,  1.27chunk/s]
+scan chartevents.csv.gz: 44chunk [00:33,  1.28chunk/s]
+scan chartevents.csv.gz: 45chunk [00:34,  1.29chunk/s]
+scan chartevents.csv.gz: 46chunk [00:35,  1.30chunk/s]
+scan chartevents.csv.gz: 47chunk [00:36,  1.31chunk/s]
+scan chartevents.csv.gz: 48chunk [00:36,  1.31chunk/s]
+scan chartevents.csv.gz: 49chunk [00:37,  1.31chunk/s]
+scan chartevents.csv.gz: 50chunk [00:38,  1.31chunk/s]
+scan chartevents.csv.gz: 51chunk [00:39,  1.31chunk/s]
+scan chartevents.csv.gz: 52chunk [00:39,  1.31chunk/s]
+scan chartevents.csv.gz: 53chunk [00:40,  1.31chunk/s]
+scan chartevents.csv.gz: 54chunk [00:41,  1.31chunk/s]
+scan chartevents.csv.gz: 55chunk [00:42,  1.32chunk/s]
+scan chartevents.csv.gz: 56chunk [00:43,  1.31chunk/s]
+scan chartevents.csv.gz: 57chunk [00:43,  1.32chunk/s]
+scan chartevents.csv.gz: 58chunk [00:44,  1.31chunk/s]
+scan chartevents.csv.gz: 59chunk [00:45,  1.31chunk/s]
+scan chartevents.csv.gz: 60chunk [00:46,  1.31chunk/s]
+scan chartevents.csv.gz: 61chunk [00:46,  1.31chunk/s]
+scan chartevents.csv.gz: 62chunk [00:47,  1.31chunk/s]
+scan chartevents.csv.gz: 63chunk [00:48,  1.31chunk/s]
+scan chartevents.csv.gz: 64chunk [00:49,  1.31chunk/s]
+scan chartevents.csv.gz: 65chunk [00:49,  1.31chunk/s]
+scan chartevents.csv.gz: 66chunk [00:50,  1.31chunk/s]
+scan chartevents.csv.gz: 67chunk [00:51,  1.31chunk/s]
+scan chartevents.csv.gz: 68chunk [00:52,  1.31chunk/s]
+scan chartevents.csv.gz: 69chunk [00:52,  1.31chunk/s]
+scan chartevents.csv.gz: 70chunk [00:53,  1.31chunk/s]
+scan chartevents.csv.gz: 71chunk [00:54,  1.31chunk/s]
+scan chartevents.csv.gz: 72chunk [00:55,  1.31chunk/s]
+scan chartevents.csv.gz: 73chunk [00:55,  1.31chunk/s]
+scan chartevents.csv.gz: 74chunk [00:56,  1.31chunk/s]
+scan chartevents.csv.gz: 75chunk [00:57,  1.31chunk/s]
+scan chartevents.csv.gz: 76chunk [00:58,  1.31chunk/s]
+scan chartevents.csv.gz: 77chunk [00:59,  1.31chunk/s]
+scan chartevents.csv.gz: 78chunk [00:59,  1.31chunk/s]
+scan chartevents.csv.gz: 79chunk [01:01,  1.08chunk/s]
+scan chartevents.csv.gz: 80chunk [01:01,  1.14chunk/s]
+scan chartevents.csv.gz: 81chunk [01:02,  1.18chunk/s]
+scan chartevents.csv.gz: 82chunk [01:03,  1.22chunk/s]
+scan chartevents.csv.gz: 83chunk [01:04,  1.24chunk/s]
+scan chartevents.csv.gz: 84chunk [01:04,  1.25chunk/s]
+scan chartevents.csv.gz: 85chunk [01:05,  1.26chunk/s]
+scan chartevents.csv.gz: 86chunk [01:06,  1.27chunk/s]
+scan chartevents.csv.gz: 87chunk [01:07,  1.28chunk/s]
+scan chartevents.csv.gz: 88chunk [01:08,  1.29chunk/s]
+scan chartevents.csv.gz: 89chunk [01:08,  1.29chunk/s]
+scan chartevents.csv.gz: 90chunk [01:09,  1.30chunk/s]
+scan chartevents.csv.gz: 91chunk [01:10,  1.30chunk/s]
+scan chartevents.csv.gz: 92chunk [01:11,  1.30chunk/s]
+scan chartevents.csv.gz: 93chunk [01:11,  1.30chunk/s]
+scan chartevents.csv.gz: 94chunk [01:12,  1.30chunk/s]
+scan chartevents.csv.gz: 95chunk [01:13,  1.30chunk/s]
+scan chartevents.csv.gz: 96chunk [01:14,  1.31chunk/s]
+scan chartevents.csv.gz: 97chunk [01:14,  1.31chunk/s]
+scan chartevents.csv.gz: 98chunk [01:15,  1.31chunk/s]
+scan chartevents.csv.gz: 99chunk [01:16,  1.31chunk/s]
+scan chartevents.csv.gz: 100chunk [01:17,  1.31chunk/s]
+scan chartevents.csv.gz: 101chunk [01:17,  1.31chunk/s]
+scan chartevents.csv.gz: 102chunk [01:18,  1.32chunk/s]
+scan chartevents.csv.gz: 103chunk [01:19,  1.31chunk/s]
+scan chartevents.csv.gz: 104chunk [01:20,  1.32chunk/s]
+scan chartevents.csv.gz: 105chunk [01:21,  1.32chunk/s]
+scan chartevents.csv.gz: 106chunk [01:21,  1.32chunk/s]
+scan chartevents.csv.gz: 107chunk [01:22,  1.32chunk/s]
+scan chartevents.csv.gz: 108chunk [01:23,  1.31chunk/s]
+scan chartevents.csv.gz: 109chunk [01:24,  1.31chunk/s]
+scan chartevents.csv.gz: 110chunk [01:24,  1.31chunk/s]
+scan chartevents.csv.gz: 111chunk [01:25,  1.31chunk/s]
+scan chartevents.csv.gz: 112chunk [01:26,  1.31chunk/s]
+scan chartevents.csv.gz: 113chunk [01:27,  1.31chunk/s]
+scan chartevents.csv.gz: 114chunk [01:27,  1.31chunk/s]
+scan chartevents.csv.gz: 115chunk [01:28,  1.31chunk/s]
+scan chartevents.csv.gz: 116chunk [01:29,  1.31chunk/s]
+scan chartevents.csv.gz: 117chunk [01:30,  1.31chunk/s]
+scan chartevents.csv.gz: 118chunk [01:31,  1.08s/chunk]
+scan chartevents.csv.gz: 119chunk [01:32,  1.01chunk/s]
+scan chartevents.csv.gz: 120chunk [01:33,  1.09chunk/s]
+scan chartevents.csv.gz: 121chunk [01:34,  1.15chunk/s]
+scan chartevents.csv.gz: 122chunk [01:35,  1.19chunk/s]
+scan chartevents.csv.gz: 123chunk [01:35,  1.23chunk/s]
+scan chartevents.csv.gz: 124chunk [01:36,  1.25chunk/s]
+scan chartevents.csv.gz: 125chunk [01:37,  1.27chunk/s]
+scan chartevents.csv.gz: 126chunk [01:38,  1.28chunk/s]
+scan chartevents.csv.gz: 127chunk [01:38,  1.29chunk/s]
+scan chartevents.csv.gz: 128chunk [01:39,  1.30chunk/s]
+scan chartevents.csv.gz: 129chunk [01:40,  1.31chunk/s]
+scan chartevents.csv.gz: 130chunk [01:41,  1.31chunk/s]
+scan chartevents.csv.gz: 131chunk [01:41,  1.31chunk/s]
+scan chartevents.csv.gz: 132chunk [01:42,  1.31chunk/s]
+scan chartevents.csv.gz: 133chunk [01:43,  1.30chunk/s]
+scan chartevents.csv.gz: 134chunk [01:44,  1.27chunk/s]
+scan chartevents.csv.gz: 135chunk [01:45,  1.28chunk/s]
+scan chartevents.csv.gz: 136chunk [01:45,  1.29chunk/s]
+scan chartevents.csv.gz: 137chunk [01:46,  1.30chunk/s]
+scan chartevents.csv.gz: 138chunk [01:47,  1.30chunk/s]
+scan chartevents.csv.gz: 139chunk [01:48,  1.30chunk/s]
+scan chartevents.csv.gz: 140chunk [01:48,  1.30chunk/s]
+scan chartevents.csv.gz: 141chunk [01:49,  1.30chunk/s]
+scan chartevents.csv.gz: 142chunk [01:50,  1.31chunk/s]
+scan chartevents.csv.gz: 143chunk [01:51,  1.30chunk/s]
+scan chartevents.csv.gz: 144chunk [01:51,  1.30chunk/s]
+scan chartevents.csv.gz: 145chunk [01:52,  1.30chunk/s]
+scan chartevents.csv.gz: 146chunk [01:53,  1.31chunk/s]
+scan chartevents.csv.gz: 147chunk [01:54,  1.31chunk/s]
+scan chartevents.csv.gz: 148chunk [01:54,  1.32chunk/s]
+scan chartevents.csv.gz: 149chunk [01:55,  1.32chunk/s]
+scan chartevents.csv.gz: 150chunk [01:56,  1.33chunk/s]
+scan chartevents.csv.gz: 151chunk [01:57,  1.33chunk/s]
+scan chartevents.csv.gz: 152chunk [01:57,  1.32chunk/s]
+scan chartevents.csv.gz: 153chunk [01:58,  1.32chunk/s]
+scan chartevents.csv.gz: 154chunk [01:59,  1.32chunk/s]
+scan chartevents.csv.gz: 155chunk [02:00,  1.32chunk/s]
+scan chartevents.csv.gz: 156chunk [02:00,  1.32chunk/s]
+scan chartevents.csv.gz: 157chunk [02:03,  1.15s/chunk]
+scan chartevents.csv.gz: 158chunk [02:03,  1.04s/chunk]
+scan chartevents.csv.gz: 159chunk [02:04,  1.04chunk/s]
+scan chartevents.csv.gz: 160chunk [02:05,  1.11chunk/s]
+scan chartevents.csv.gz: 161chunk [02:06,  1.16chunk/s]
+scan chartevents.csv.gz: 162chunk [02:06,  1.21chunk/s]
+scan chartevents.csv.gz: 163chunk [02:07,  1.24chunk/s]
+scan chartevents.csv.gz: 164chunk [02:08,  1.26chunk/s]
+scan chartevents.csv.gz: 165chunk [02:09,  1.27chunk/s]
+scan chartevents.csv.gz: 166chunk [02:09,  1.29chunk/s]
+scan chartevents.csv.gz: 167chunk [02:10,  1.30chunk/s]
+scan chartevents.csv.gz: 168chunk [02:11,  1.30chunk/s]
+scan chartevents.csv.gz: 169chunk [02:12,  1.31chunk/s]
+scan chartevents.csv.gz: 170chunk [02:12,  1.31chunk/s]
+scan chartevents.csv.gz: 171chunk [02:13,  1.31chunk/s]
+scan chartevents.csv.gz: 172chunk [02:14,  1.30chunk/s]
+scan chartevents.csv.gz: 173chunk [02:15,  1.31chunk/s]
+scan chartevents.csv.gz: 174chunk [02:16,  1.30chunk/s]
+scan chartevents.csv.gz: 175chunk [02:16,  1.30chunk/s]
+scan chartevents.csv.gz: 176chunk [02:17,  1.27chunk/s]
+scan chartevents.csv.gz: 177chunk [02:18,  1.27chunk/s]
+scan chartevents.csv.gz: 178chunk [02:19,  1.29chunk/s]
+scan chartevents.csv.gz: 179chunk [02:19,  1.29chunk/s]
+scan chartevents.csv.gz: 180chunk [02:20,  1.30chunk/s]
+scan chartevents.csv.gz: 181chunk [02:21,  1.31chunk/s]
+scan chartevents.csv.gz: 182chunk [02:22,  1.31chunk/s]
+scan chartevents.csv.gz: 183chunk [02:22,  1.32chunk/s]
+scan chartevents.csv.gz: 184chunk [02:23,  1.33chunk/s]
+scan chartevents.csv.gz: 185chunk [02:24,  1.33chunk/s]
+scan chartevents.csv.gz: 186chunk [02:25,  1.33chunk/s]
+scan chartevents.csv.gz: 187chunk [02:25,  1.33chunk/s]
+scan chartevents.csv.gz: 188chunk [02:26,  1.33chunk/s]
+scan chartevents.csv.gz: 189chunk [02:27,  1.33chunk/s]
+scan chartevents.csv.gz: 190chunk [02:28,  1.33chunk/s]
+scan chartevents.csv.gz: 191chunk [02:28,  1.32chunk/s]
+scan chartevents.csv.gz: 192chunk [02:29,  1.32chunk/s]
+scan chartevents.csv.gz: 193chunk [02:30,  1.32chunk/s]
+scan chartevents.csv.gz: 194chunk [02:31,  1.32chunk/s]
+scan chartevents.csv.gz: 195chunk [02:32,  1.32chunk/s]
+scan chartevents.csv.gz: 196chunk [02:34,  1.30s/chunk]
+scan chartevents.csv.gz: 197chunk [02:35,  1.14s/chunk]
+scan chartevents.csv.gz: 198chunk [02:36,  1.02s/chunk]
+scan chartevents.csv.gz: 199chunk [02:36,  1.07chunk/s]
+scan chartevents.csv.gz: 200chunk [02:37,  1.14chunk/s]
+scan chartevents.csv.gz: 201chunk [02:38,  1.20chunk/s]
+scan chartevents.csv.gz: 202chunk [02:39,  1.24chunk/s]
+scan chartevents.csv.gz: 203chunk [02:39,  1.27chunk/s]
+scan chartevents.csv.gz: 204chunk [02:40,  1.29chunk/s]
+scan chartevents.csv.gz: 205chunk [02:41,  1.30chunk/s]
+scan chartevents.csv.gz: 206chunk [02:42,  1.31chunk/s]
+scan chartevents.csv.gz: 207chunk [02:42,  1.33chunk/s]
+scan chartevents.csv.gz: 208chunk [02:43,  1.34chunk/s]
+scan chartevents.csv.gz: 209chunk [02:44,  1.36chunk/s]
+scan chartevents.csv.gz: 210chunk [02:44,  1.36chunk/s]
+scan chartevents.csv.gz: 211chunk [02:45,  1.36chunk/s]
+scan chartevents.csv.gz: 212chunk [02:46,  1.36chunk/s]
+scan chartevents.csv.gz: 213chunk [02:47,  1.36chunk/s]
+scan chartevents.csv.gz: 214chunk [02:47,  1.36chunk/s]
+scan chartevents.csv.gz: 215chunk [02:48,  1.37chunk/s]
+scan chartevents.csv.gz: 216chunk [02:49,  1.37chunk/s]
+scan chartevents.csv.gz: 217chunk [02:49,  1.61chunk/s]
+scan chartevents.csv.gz: 217chunk [02:49,  1.28chunk/s]
+[00:59:39] utils                        INFO   chartevents.csv.gz: scanned 432,997,491 rows
+[00:59:40] 07_hourly_panel              INFO   streaming chartevents done (171.3s)
+[00:59:40] 07_hourly_panel              INFO   streaming labevents ...
 
 scan labevents.csv.gz: 0chunk [00:00, ?chunk/s]
-scan labevents.csv.gz: 1chunk [00:00,  1.19chunk/s]
-scan labevents.csv.gz: 2chunk [00:01,  1.14chunk/s]
-scan labevents.csv.gz: 3chunk [00:02,  1.12chunk/s]
-scan labevents.csv.gz: 4chunk [00:03,  1.15chunk/s]
-scan labevents.csv.gz: 5chunk [00:04,  1.17chunk/s]
-scan labevents.csv.gz: 6chunk [00:05,  1.19chunk/s]
-scan labevents.csv.gz: 7chunk [00:05,  1.19chunk/s]
-scan labevents.csv.gz: 8chunk [00:06,  1.20chunk/s]
-scan labevents.csv.gz: 9chunk [00:07,  1.20chunk/s]
-scan labevents.csv.gz: 10chunk [00:08,  1.20chunk/s]
-scan labevents.csv.gz: 11chunk [00:09,  1.21chunk/s]
-scan labevents.csv.gz: 12chunk [00:10,  1.21chunk/s]
-scan labevents.csv.gz: 13chunk [00:10,  1.21chunk/s]
-scan labevents.csv.gz: 14chunk [00:11,  1.21chunk/s]
-scan labevents.csv.gz: 15chunk [00:12,  1.21chunk/s]
-scan labevents.csv.gz: 16chunk [00:13,  1.21chunk/s]
-scan labevents.csv.gz: 17chunk [00:14,  1.21chunk/s]
-scan labevents.csv.gz: 18chunk [00:15,  1.21chunk/s]
-scan labevents.csv.gz: 19chunk [00:15,  1.21chunk/s]
-scan labevents.csv.gz: 20chunk [00:16,  1.21chunk/s]
-scan labevents.csv.gz: 21chunk [00:17,  1.21chunk/s]
-scan labevents.csv.gz: 22chunk [00:18,  1.21chunk/s]
-scan labevents.csv.gz: 23chunk [00:19,  1.21chunk/s]
-scan labevents.csv.gz: 24chunk [00:20,  1.21chunk/s]
-scan labevents.csv.gz: 25chunk [00:20,  1.21chunk/s]
-scan labevents.csv.gz: 26chunk [00:21,  1.21chunk/s]
-scan labevents.csv.gz: 27chunk [00:22,  1.22chunk/s]
-scan labevents.csv.gz: 28chunk [00:23,  1.21chunk/s]
-scan labevents.csv.gz: 29chunk [00:24,  1.22chunk/s]
-scan labevents.csv.gz: 30chunk [00:24,  1.22chunk/s]
-scan labevents.csv.gz: 31chunk [00:25,  1.22chunk/s]
-scan labevents.csv.gz: 32chunk [00:26,  1.22chunk/s]
-scan labevents.csv.gz: 33chunk [00:27,  1.22chunk/s]
-scan labevents.csv.gz: 34chunk [00:28,  1.22chunk/s]
-scan labevents.csv.gz: 35chunk [00:29,  1.22chunk/s]
+scan labevents.csv.gz: 1chunk [00:00,  1.15chunk/s]
+scan labevents.csv.gz: 2chunk [00:01,  1.12chunk/s]
+scan labevents.csv.gz: 3chunk [00:02,  1.16chunk/s]
+scan labevents.csv.gz: 4chunk [00:03,  1.19chunk/s]
+scan labevents.csv.gz: 5chunk [00:04,  1.21chunk/s]
+scan labevents.csv.gz: 6chunk [00:05,  1.22chunk/s]
+scan labevents.csv.gz: 7chunk [00:05,  1.23chunk/s]
+scan labevents.csv.gz: 8chunk [00:06,  1.25chunk/s]
+scan labevents.csv.gz: 9chunk [00:07,  1.25chunk/s]
+scan labevents.csv.gz: 10chunk [00:08,  1.25chunk/s]
+scan labevents.csv.gz: 11chunk [00:08,  1.26chunk/s]
+scan labevents.csv.gz: 12chunk [00:09,  1.27chunk/s]
+scan labevents.csv.gz: 13chunk [00:10,  1.27chunk/s]
+scan labevents.csv.gz: 14chunk [00:11,  1.27chunk/s]
+scan labevents.csv.gz: 15chunk [00:12,  1.27chunk/s]
+scan labevents.csv.gz: 16chunk [00:12,  1.27chunk/s]
+scan labevents.csv.gz: 17chunk [00:13,  1.26chunk/s]
+scan labevents.csv.gz: 18chunk [00:14,  1.26chunk/s]
+scan labevents.csv.gz: 19chunk [00:15,  1.25chunk/s]
+scan labevents.csv.gz: 20chunk [00:16,  1.25chunk/s]
+scan labevents.csv.gz: 21chunk [00:16,  1.26chunk/s]
+scan labevents.csv.gz: 22chunk [00:17,  1.26chunk/s]
+scan labevents.csv.gz: 23chunk [00:18,  1.26chunk/s]
+scan labevents.csv.gz: 24chunk [00:19,  1.27chunk/s]
+scan labevents.csv.gz: 25chunk [00:20,  1.26chunk/s]
+scan labevents.csv.gz: 26chunk [00:20,  1.26chunk/s]
+scan labevents.csv.gz: 27chunk [00:21,  1.26chunk/s]
+scan labevents.csv.gz: 28chunk [00:22,  1.26chunk/s]
+scan labevents.csv.gz: 29chunk [00:23,  1.25chunk/s]
+scan labevents.csv.gz: 30chunk [00:24,  1.25chunk/s]
+scan labevents.csv.gz: 31chunk [00:24,  1.24chunk/s]
+scan labevents.csv.gz: 32chunk [00:25,  1.24chunk/s]
+scan labevents.csv.gz: 33chunk [00:26,  1.21chunk/s]
+scan labevents.csv.gz: 34chunk [00:27,  1.22chunk/s]
+scan labevents.csv.gz: 35chunk [00:28,  1.22chunk/s]
 scan labevents.csv.gz: 36chunk [00:29,  1.22chunk/s]
-scan labevents.csv.gz: 37chunk [00:30,  1.22chunk/s]
-scan labevents.csv.gz: 38chunk [00:31,  1.22chunk/s]
-scan labevents.csv.gz: 39chunk [00:32,  1.22chunk/s]
-scan labevents.csv.gz: 40chunk [00:33,  1.19chunk/s]
-scan labevents.csv.gz: 41chunk [00:34,  1.20chunk/s]
-scan labevents.csv.gz: 42chunk [00:34,  1.20chunk/s]
-scan labevents.csv.gz: 43chunk [00:35,  1.20chunk/s]
-scan labevents.csv.gz: 44chunk [00:36,  1.20chunk/s]
-scan labevents.csv.gz: 45chunk [00:37,  1.19chunk/s]
-scan labevents.csv.gz: 46chunk [00:38,  1.14chunk/s]
-scan labevents.csv.gz: 47chunk [00:39,  1.17chunk/s]
-scan labevents.csv.gz: 48chunk [00:39,  1.17chunk/s]
-scan labevents.csv.gz: 49chunk [00:40,  1.18chunk/s]
-scan labevents.csv.gz: 50chunk [00:41,  1.19chunk/s]
-scan labevents.csv.gz: 51chunk [00:42,  1.19chunk/s]
-scan labevents.csv.gz: 52chunk [00:43,  1.19chunk/s]
-scan labevents.csv.gz: 53chunk [00:44,  1.20chunk/s]
-scan labevents.csv.gz: 54chunk [00:44,  1.20chunk/s]
-scan labevents.csv.gz: 55chunk [00:45,  1.20chunk/s]
-scan labevents.csv.gz: 56chunk [00:46,  1.19chunk/s]
-scan labevents.csv.gz: 57chunk [00:47,  1.19chunk/s]
-scan labevents.csv.gz: 58chunk [00:48,  1.19chunk/s]
-scan labevents.csv.gz: 59chunk [00:49,  1.19chunk/s]
-scan labevents.csv.gz: 60chunk [00:50,  1.20chunk/s]
-scan labevents.csv.gz: 61chunk [00:50,  1.19chunk/s]
-scan labevents.csv.gz: 62chunk [00:51,  1.19chunk/s]
-scan labevents.csv.gz: 63chunk [00:52,  1.19chunk/s]
-scan labevents.csv.gz: 64chunk [00:53,  1.19chunk/s]
-scan labevents.csv.gz: 65chunk [00:54,  1.19chunk/s]
-scan labevents.csv.gz: 66chunk [00:55,  1.20chunk/s]
-scan labevents.csv.gz: 67chunk [00:55,  1.20chunk/s]
-scan labevents.csv.gz: 68chunk [00:56,  1.20chunk/s]
-scan labevents.csv.gz: 69chunk [00:57,  1.20chunk/s]
-scan labevents.csv.gz: 70chunk [00:58,  1.20chunk/s]
-scan labevents.csv.gz: 71chunk [00:59,  1.20chunk/s]
-scan labevents.csv.gz: 72chunk [01:00,  1.20chunk/s]
-scan labevents.csv.gz: 73chunk [01:00,  1.20chunk/s]
-scan labevents.csv.gz: 74chunk [01:01,  1.20chunk/s]
-scan labevents.csv.gz: 75chunk [01:02,  1.21chunk/s]
-scan labevents.csv.gz: 76chunk [01:03,  1.20chunk/s]
-scan labevents.csv.gz: 77chunk [01:04,  1.20chunk/s]
-scan labevents.csv.gz: 78chunk [01:04,  1.20chunk/s]
-scan labevents.csv.gz: 79chunk [01:05,  1.16chunk/s]
-scan labevents.csv.gz: 80chunk [01:06,  1.52chunk/s]
-scan labevents.csv.gz: 80chunk [01:06,  1.21chunk/s]
-[18:03:10] utils                        INFO   labevents.csv.gz: scanned 158,374,764 rows
-[18:03:10] 07_hourly_panel              INFO   streaming labevents done (66.2s)
-[18:03:10] 07_hourly_panel              INFO   folding variables onto hourly grid ...
-[18:03:12] 07_hourly_panel              INFO   folding variables onto hourly grid done (2.1s)
-[18:03:12] 07_hourly_panel              INFO   unit conversions ...
-[18:03:12] 07_hourly_panel              INFO   unit conversions done (0.2s)
-[18:03:12] 07_hourly_panel              INFO   binning vasopressors (inputevents) ...
-[18:03:27] 07_hourly_panel              INFO   binning vasopressors (inputevents) done (15.2s)
-[18:03:27] 07_hourly_panel              INFO   binning urine (outputevents) ...
-[18:03:30] 07_hourly_panel              INFO   binning urine (outputevents) done (2.6s)
-[18:03:30] 07_hourly_panel              INFO   computing forward-fill + time-since-last ...
-[18:03:31] 07_hourly_panel              INFO   computing forward-fill + time-since-last done (0.9s)
-[18:03:31] 07_hourly_panel              INFO   ============================================================
-[18:03:31] 07_hourly_panel              INFO   hourly_panel: 3,095,002 stay-hours across 65,241 stays (mean 47.4 h/stay)
-[18:03:31] 07_hourly_panel              INFO     hourly coverage hr        : 92.1% of hours measured
-[18:03:31] 07_hourly_panel              INFO     hourly coverage map       : 86.0% of hours measured
-[18:03:31] 07_hourly_panel              INFO     hourly coverage lactate   : 5.2% of hours measured
-[18:03:31] 07_hourly_panel              INFO     hourly coverage gcs       : 28.5% of hours measured
-[18:03:31] 07_hourly_panel              INFO     hourly coverage pf_ratio  : 1.8% of hours measured
-[18:03:33] 07_hourly_panel              INFO   saved 07_hourly_panel.parquet (54.5 MB)
-[18:03:33] 07_hourly_panel              INFO   saved 07_hourly_panel_sample.csv (first 40 stays)
-[07] exit 0  (259s)
+scan labevents.csv.gz: 37chunk [00:29,  1.21chunk/s]
+scan labevents.csv.gz: 38chunk [00:30,  1.20chunk/s]
+scan labevents.csv.gz: 39chunk [00:31,  1.19chunk/s]
+scan labevents.csv.gz: 40chunk [00:32,  1.17chunk/s]
+scan labevents.csv.gz: 41chunk [00:33,  1.19chunk/s]
+scan labevents.csv.gz: 42chunk [00:34,  1.19chunk/s]
+scan labevents.csv.gz: 43chunk [00:34,  1.20chunk/s]
+scan labevents.csv.gz: 44chunk [00:35,  1.20chunk/s]
+scan labevents.csv.gz: 45chunk [00:36,  1.21chunk/s]
+scan labevents.csv.gz: 46chunk [00:37,  1.22chunk/s]
+scan labevents.csv.gz: 47chunk [00:38,  1.23chunk/s]
+scan labevents.csv.gz: 48chunk [00:38,  1.23chunk/s]
+scan labevents.csv.gz: 49chunk [00:39,  1.24chunk/s]
+scan labevents.csv.gz: 50chunk [00:40,  1.24chunk/s]
+scan labevents.csv.gz: 51chunk [00:41,  1.24chunk/s]
+scan labevents.csv.gz: 52chunk [00:42,  1.24chunk/s]
+scan labevents.csv.gz: 53chunk [00:42,  1.24chunk/s]
+scan labevents.csv.gz: 54chunk [00:43,  1.25chunk/s]
+scan labevents.csv.gz: 55chunk [00:44,  1.25chunk/s]
+scan labevents.csv.gz: 56chunk [00:45,  1.24chunk/s]
+scan labevents.csv.gz: 57chunk [00:46,  1.25chunk/s]
+scan labevents.csv.gz: 58chunk [00:46,  1.24chunk/s]
+scan labevents.csv.gz: 59chunk [00:47,  1.25chunk/s]
+scan labevents.csv.gz: 60chunk [00:48,  1.26chunk/s]
+scan labevents.csv.gz: 61chunk [00:49,  1.26chunk/s]
+scan labevents.csv.gz: 62chunk [00:50,  1.25chunk/s]
+scan labevents.csv.gz: 63chunk [00:50,  1.26chunk/s]
+scan labevents.csv.gz: 64chunk [00:51,  1.25chunk/s]
+scan labevents.csv.gz: 65chunk [00:52,  1.25chunk/s]
+scan labevents.csv.gz: 66chunk [00:53,  1.25chunk/s]
+scan labevents.csv.gz: 67chunk [00:54,  1.24chunk/s]
+scan labevents.csv.gz: 68chunk [00:54,  1.25chunk/s]
+scan labevents.csv.gz: 69chunk [00:55,  1.24chunk/s]
+scan labevents.csv.gz: 70chunk [00:56,  1.24chunk/s]
+scan labevents.csv.gz: 71chunk [00:57,  1.24chunk/s]
+scan labevents.csv.gz: 72chunk [00:58,  1.23chunk/s]
+scan labevents.csv.gz: 73chunk [00:59,  1.23chunk/s]
+scan labevents.csv.gz: 74chunk [00:59,  1.23chunk/s]
+scan labevents.csv.gz: 75chunk [01:00,  1.23chunk/s]
+scan labevents.csv.gz: 76chunk [01:01,  1.23chunk/s]
+scan labevents.csv.gz: 77chunk [01:02,  1.23chunk/s]
+scan labevents.csv.gz: 78chunk [01:03,  1.23chunk/s]
+scan labevents.csv.gz: 79chunk [01:04,  1.18chunk/s]
+scan labevents.csv.gz: 80chunk [01:04,  1.56chunk/s]
+scan labevents.csv.gz: 80chunk [01:04,  1.25chunk/s]
+[01:00:44] utils                        INFO   labevents.csv.gz: scanned 158,374,764 rows
+[01:00:44] 07_hourly_panel              INFO   streaming labevents done (64.3s)
+[01:00:44] 07_hourly_panel              INFO   folding variables onto hourly grid ...
+[01:00:46] 07_hourly_panel              INFO   folding variables onto hourly grid done (2.1s)
+[01:00:46] 07_hourly_panel              INFO   unit conversions ...
+[01:00:47] 07_hourly_panel              INFO   unit conversions done (0.2s)
+[01:00:47] 07_hourly_panel              INFO   binning vasopressors (inputevents) ...
+[01:01:02] 07_hourly_panel              INFO   binning vasopressors (inputevents) done (15.0s)
+[01:01:02] 07_hourly_panel              INFO   binning urine (outputevents) ...
+[01:01:04] 07_hourly_panel              INFO   binning urine (outputevents) done (2.5s)
+[01:01:05] 07_hourly_panel              INFO   computing forward-fill + time-since-last ...
+[01:01:06] 07_hourly_panel              INFO   computing forward-fill + time-since-last done (0.9s)
+[01:01:06] 07_hourly_panel              INFO   ============================================================
+[01:01:06] 07_hourly_panel              INFO   hourly_panel: 3,095,002 stay-hours across 65,241 stays (mean 47.4 h/stay)
+[01:01:06] 07_hourly_panel              INFO     hourly coverage hr        : 92.1% of hours measured
+[01:01:06] 07_hourly_panel              INFO     hourly coverage map       : 86.0% of hours measured
+[01:01:06] 07_hourly_panel              INFO     hourly coverage lactate   : 5.2% of hours measured
+[01:01:06] 07_hourly_panel              INFO     hourly coverage gcs       : 28.5% of hours measured
+[01:01:06] 07_hourly_panel              INFO     hourly coverage pf_ratio  : 1.8% of hours measured
+[01:01:07] 07_hourly_panel              INFO   saved 07_hourly_panel.parquet (54.5 MB)
+[01:01:07] 07_hourly_panel              INFO   saved 07_hourly_panel_sample.csv (first 40 stays)
+[07] exit 0  (258s)
 
 ============================================================
 [08]  /Library/Frameworks/Python.framework/Versions/3.14/bin/python3 -u /Users/arif/Desktop/RESEARCH/projects/sepsis_mimic4/08_onset_label.py
 ============================================================
-[18:03:33] 08_onset_label               INFO   loading hourly panel + suspected infection + cohort ...
-[18:03:33] utils                        INFO   loaded 03_suspected_infection.parquet (26,432 rows, 1.3 MB)
-[18:03:33] utils                        INFO   loaded 02_cohort.parquet (65,241 rows, 4.5 MB)
-[18:03:33] 08_onset_label               INFO   loading hourly panel + suspected infection + cohort done (0.2s)
-[18:03:33] 08_onset_label               INFO   panel: 3,095,002 stay-hours, 65,241 stays
-[18:03:33] 08_onset_label               INFO   scoring hourly SOFA ...
-[18:03:34] 08_onset_label               INFO   scoring hourly SOFA done (0.6s)
-[18:03:34] 08_onset_label               INFO   locating sepsis onset hour ...
-[18:03:34] 08_onset_label               INFO   locating sepsis onset hour done (0.2s)
-[18:03:34] 08_onset_label               INFO   building stay-level onset summary ...
-[18:03:34] 08_onset_label               INFO   building stay-level onset summary done (0.0s)
-[18:03:34] 08_onset_label               INFO   ============================================================
-[18:03:34] 08_onset_label               INFO   labelled panel: 3,095,002 stay-hours, 65,241 stays
-[18:03:34] 08_onset_label               INFO     suspected infection stays: 26,432
-[18:03:34] 08_onset_label               INFO     sepsis-3 (onset found): 20,861 (32.0%)
-[18:03:34] 08_onset_label               INFO     positive stay-hours: 1,169,343 (37.8%)
-[18:03:34] 08_onset_label               INFO     median onset hour (septic): 2h
-[18:03:34] 08_onset_label               INFO     competing deaths (no sepsis): 3,138
-[18:03:36] 08_onset_label               INFO   saved 08_hourly_labeled.parquet (58.1 MB)
-[18:03:36] utils                        INFO   saved 08_onset_summary.parquet (65,241 rows, 12 cols, 1.6 MB)
-[18:03:36] 08_onset_label               INFO   exporting R-friendly derived tables ...
-[18:03:36] utils                        INFO   saved 08_traj_means.csv (98 rows, 6 cols, 5.3 KB)
-[18:03:36] utils                        INFO   saved 08_landmark_h6.parquet (48,829 rows, 25 cols, 1.1 MB)
-[18:03:36] utils                        INFO   saved 08_panel_sample_long.parquet (117,648 rows, 11 cols, 601.0 KB)
-[18:03:36] 08_onset_label               INFO   exporting R-friendly derived tables done (0.2s)
+[01:01:07] 08_onset_label               INFO   loading hourly panel + suspected infection + cohort ...
+[01:01:08] utils                        INFO   loaded 03_suspected_infection.parquet (26,432 rows, 1.3 MB)
+[01:01:08] utils                        INFO   loaded 02_cohort.parquet (65,241 rows, 4.5 MB)
+[01:01:08] 08_onset_label               INFO   loading hourly panel + suspected infection + cohort done (0.2s)
+[01:01:08] 08_onset_label               INFO   panel: 3,095,002 stay-hours, 65,241 stays
+[01:01:08] 08_onset_label               INFO   scoring hourly SOFA ...
+[01:01:08] 08_onset_label               INFO   scoring hourly SOFA done (0.7s)
+[01:01:08] 08_onset_label               INFO   locating sepsis onset hour ...
+[01:01:09] 08_onset_label               INFO   locating sepsis onset hour done (0.2s)
+[01:01:09] 08_onset_label               INFO   building stay-level onset summary ...
+[01:01:09] 08_onset_label               INFO   building stay-level onset summary done (0.0s)
+[01:01:09] 08_onset_label               INFO   ============================================================
+[01:01:09] 08_onset_label               INFO   labelled panel: 3,095,002 stay-hours, 65,241 stays
+[01:01:09] 08_onset_label               INFO     suspected infection stays: 26,432
+[01:01:09] 08_onset_label               INFO     sepsis-3 (onset found): 20,861 (32.0%)
+[01:01:09] 08_onset_label               INFO     positive stay-hours: 1,169,343 (37.8%)
+[01:01:09] 08_onset_label               INFO     median onset hour (septic): 2h
+[01:01:09] 08_onset_label               INFO     competing deaths (no sepsis): 3,138
+[01:01:10] 08_onset_label               INFO   saved 08_hourly_labeled.parquet (58.1 MB)
+[01:01:10] utils                        INFO   saved 08_onset_summary.parquet (65,241 rows, 12 cols, 1.6 MB)
+[01:01:10] 08_onset_label               INFO   exporting R-friendly derived tables ...
+[01:01:10] utils                        INFO   saved 08_traj_means.csv (98 rows, 6 cols, 5.3 KB)
+[01:01:10] utils                        INFO   saved 08_landmark_h6.parquet (48,829 rows, 25 cols, 1.1 MB)
+[01:01:10] utils                        INFO   saved 08_panel_sample_long.parquet (117,648 rows, 11 cols, 601.0 KB)
+[01:01:10] 08_onset_label               INFO   exporting R-friendly derived tables done (0.2s)
 [08] exit 0  (3s)
 
 ============================================================
@@ -2166,11 +2166,11 @@ processing file: 09_temporal_report.Rmd
 33/33                 
 output file: 09_temporal_report.knit.md
 
-/opt/homebrew/bin/pandoc +RTS -K512m -RTS 09_temporal_report.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output 09_temporal_report.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine pdflatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//Rtmpop9fH9/rmarkdown-str11367e286352.html --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//Rtmpop9fH9/rmarkdown-str1136d90dd33.html --variable tables=yes --standalone -Mhas-frontmatter=false 
+/opt/homebrew/bin/pandoc +RTS -K512m -RTS 09_temporal_report.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output 09_temporal_report.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine pdflatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//Rtmpi6x2VX/rmarkdown-str371d26d253cf.html --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//Rtmpi6x2VX/rmarkdown-str371d3a7c4ef2.html --variable tables=yes --standalone -Mhas-frontmatter=false 
 [WARNING] Deprecated: --highlight-style. Use --syntax-highlighting instead.
 
 Output created: 09_temporal_report.pdf
-[09] exit 0  (8s)
+[09] exit 0  (7s)
 
 ============================================================
 [10]  Rscript -e rmarkdown::render('10_landmark_nomogram.Rmd')
@@ -2206,7 +2206,7 @@ processing file: 10_landmark_nomogram.Rmd
 26/26 [done]                  
 output file: 10_landmark_nomogram.knit.md
 
-/opt/homebrew/bin/pandoc +RTS -K512m -RTS 10_landmark_nomogram.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output 10_landmark_nomogram.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine pdflatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//RtmpaygkDu/rmarkdown-str11922fc6ee6.html --variable tables=yes --standalone -Mhas-frontmatter=false 
+/opt/homebrew/bin/pandoc +RTS -K512m -RTS 10_landmark_nomogram.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output 10_landmark_nomogram.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine pdflatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//RtmpdUTdyx/rmarkdown-str376f3972b52d.html --variable tables=yes --standalone -Mhas-frontmatter=false 
 [WARNING] Deprecated: --highlight-style. Use --syntax-highlighting instead.
 
 Output created: 10_landmark_nomogram.pdf
@@ -2215,19 +2215,19 @@ Output created: 10_landmark_nomogram.pdf
 ============================================================
 [11]  /Library/Frameworks/Python.framework/Versions/3.14/bin/python3 -u /Users/arif/Desktop/RESEARCH/projects/sepsis_mimic4/11_landmark_stack.py
 ============================================================
-[18:03:56] 11_landmark_stack            INFO   loading labelled hourly panel + cohort ...
-[18:03:57] utils                        INFO   loaded 02_cohort.parquet (65,241 rows, 4.5 MB)
-[18:03:57] 11_landmark_stack            INFO   loading labelled hourly panel + cohort done (0.2s)
-[18:03:57] 11_landmark_stack            INFO   panel: 3,095,002 stay-hours, 65,241 stays
-[18:03:57] 11_landmark_stack            INFO     s= 6h: 48,829 at-risk, 3,330 onset within 12h (6.8%)
-[18:03:57] 11_landmark_stack            INFO     s=12h: 44,576 at-risk, 1,369 onset within 12h (3.1%)
-[18:03:57] 11_landmark_stack            INFO     s=18h: 39,990 at-risk,   773 onset within 12h (1.9%)
-[18:03:57] 11_landmark_stack            INFO     s=24h: 33,610 at-risk,   353 onset within 12h (1.1%)
-[18:03:57] 11_landmark_stack            INFO     s=36h: 23,238 at-risk,   232 onset within 12h (1.0%)
-[18:03:57] 11_landmark_stack            INFO     s=48h: 16,767 at-risk,   152 onset within 12h (0.9%)
-[18:03:57] 11_landmark_stack            INFO   ============================================================
-[18:03:57] 11_landmark_stack            INFO   stacked landmark dataset: 207,010 rows across 6 landmarks, 48,829 stays
-[18:03:57] utils                        INFO   saved 11_landmark_stack.parquet (207,010 rows, 25 cols, 4.0 MB)
+[01:01:30] 11_landmark_stack            INFO   loading labelled hourly panel + cohort ...
+[01:01:30] utils                        INFO   loaded 02_cohort.parquet (65,241 rows, 4.5 MB)
+[01:01:30] 11_landmark_stack            INFO   loading labelled hourly panel + cohort done (0.2s)
+[01:01:30] 11_landmark_stack            INFO   panel: 3,095,002 stay-hours, 65,241 stays
+[01:01:30] 11_landmark_stack            INFO     s= 6h: 48,829 at-risk, 3,330 onset within 12h (6.8%)
+[01:01:30] 11_landmark_stack            INFO     s=12h: 44,576 at-risk, 1,369 onset within 12h (3.1%)
+[01:01:30] 11_landmark_stack            INFO     s=18h: 39,990 at-risk,   773 onset within 12h (1.9%)
+[01:01:30] 11_landmark_stack            INFO     s=24h: 33,610 at-risk,   353 onset within 12h (1.1%)
+[01:01:30] 11_landmark_stack            INFO     s=36h: 23,238 at-risk,   232 onset within 12h (1.0%)
+[01:01:30] 11_landmark_stack            INFO     s=48h: 16,767 at-risk,   152 onset within 12h (0.9%)
+[01:01:30] 11_landmark_stack            INFO   ============================================================
+[01:01:30] 11_landmark_stack            INFO   stacked landmark dataset: 207,010 rows across 6 landmarks, 48,829 stays
+[01:01:30] utils                        INFO   saved 11_landmark_stack.parquet (207,010 rows, 25 cols, 4.0 MB)
 [11] exit 0  (1s)
 
 ============================================================
@@ -2260,11 +2260,11 @@ processing file: 12_supermodel.Rmd
 22/22 [done]                 
 output file: 12_supermodel.knit.md
 
-/opt/homebrew/bin/pandoc +RTS -K512m -RTS 12_supermodel.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output 12_supermodel.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine pdflatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//RtmpPDo0FX/rmarkdown-str11b310425c0f.html --variable tables=yes --standalone -Mhas-frontmatter=false 
+/opt/homebrew/bin/pandoc +RTS -K512m -RTS 12_supermodel.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output 12_supermodel.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine pdflatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//RtmpUJB9y9/rmarkdown-str37902331bf50.html --variable tables=yes --standalone -Mhas-frontmatter=false 
 [WARNING] Deprecated: --highlight-style. Use --syntax-highlighting instead.
 
 Output created: 12_supermodel.pdf
-[12] exit 0  (172s)
+[12] exit 0  (171s)
 
 ============================================================
 [13]  Rscript -e rmarkdown::render('13_repeated_measures.Rmd')
@@ -2288,7 +2288,7 @@ processing file: 13_repeated_measures.Rmd
 14/14 [fit-tvcox]             
 output file: 13_repeated_measures.knit.md
 
-/opt/homebrew/bin/pandoc +RTS -K512m -RTS 13_repeated_measures.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output 13_repeated_measures.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine pdflatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//RtmpqpfZ6F/rmarkdown-str11ea4ed9bf4c.html --variable tables=yes --standalone -Mhas-frontmatter=false 
+/opt/homebrew/bin/pandoc +RTS -K512m -RTS 13_repeated_measures.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output 13_repeated_measures.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine pdflatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//RtmpH9r30A/rmarkdown-str37c6420b6b8e.html --variable tables=yes --standalone -Mhas-frontmatter=false 
 [WARNING] Deprecated: --highlight-style. Use --syntax-highlighting instead.
 
 Output created: 13_repeated_measures.pdf
@@ -2297,15 +2297,15 @@ Output created: 13_repeated_measures.pdf
 ============================================================
 [14]  /Library/Frameworks/Python.framework/Versions/3.14/bin/python3 -u /Users/arif/Desktop/RESEARCH/projects/sepsis_mimic4/14_realtime_holdout.py
 ============================================================
-[18:06:54] 14_realtime_holdout          INFO   loading labelled hourly panel + cohort ...
-[18:06:55] utils                        INFO   loaded 02_cohort.parquet (65,241 rows, 4.5 MB)
-[18:06:55] 14_realtime_holdout          INFO   loading labelled hourly panel + cohort done (0.2s)
-[18:06:55] 14_realtime_holdout          INFO   holdout sample: 6,000 / 65,241 stays (seed=486649)
-[18:06:55] 14_realtime_holdout          INFO   building holdout feature stream ...
-[18:06:55] 14_realtime_holdout          INFO   building holdout feature stream done (0.3s)
-[18:06:55] 14_realtime_holdout          INFO   ============================================================
-[18:06:55] 14_realtime_holdout          INFO   holdout: 6,000 stays, 152,910 stay-hours scored (hours 6..onset/censor)
-[18:06:55] utils                        INFO   saved 14_realtime_holdout_features.parquet (152,910 rows, 24 cols, 1.8 MB)
+[01:04:27] 14_realtime_holdout          INFO   loading labelled hourly panel + cohort ...
+[01:04:27] utils                        INFO   loaded 02_cohort.parquet (65,241 rows, 4.5 MB)
+[01:04:27] 14_realtime_holdout          INFO   loading labelled hourly panel + cohort done (0.2s)
+[01:04:27] 14_realtime_holdout          INFO   holdout sample: 6,000 / 65,241 stays (seed=486649)
+[01:04:27] 14_realtime_holdout          INFO   building holdout feature stream ...
+[01:04:28] 14_realtime_holdout          INFO   building holdout feature stream done (0.3s)
+[01:04:28] 14_realtime_holdout          INFO   ============================================================
+[01:04:28] 14_realtime_holdout          INFO   holdout: 6,000 stays, 152,910 stay-hours scored (hours 6..onset/censor)
+[01:04:28] utils                        INFO   saved 14_realtime_holdout_features.parquet (152,910 rows, 24 cols, 1.8 MB)
 [14] exit 0  (1s)
 
 ============================================================
@@ -2334,7 +2334,7 @@ processing file: 15_realtime_eval.Rmd
 18/18 [alarm-tradeoff-figure]
 output file: 15_realtime_eval.knit.md
 
-/opt/homebrew/bin/pandoc +RTS -K512m -RTS 15_realtime_eval.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output 15_realtime_eval.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine pdflatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//RtmppsukFw/rmarkdown-str120b1021064d.html --variable tables=yes --standalone -Mhas-frontmatter=false 
+/opt/homebrew/bin/pandoc +RTS -K512m -RTS 15_realtime_eval.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output 15_realtime_eval.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine pdflatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//RtmpZPbtt6/rmarkdown-str37e723c3b200.html --variable tables=yes --standalone -Mhas-frontmatter=false 
 [WARNING] Deprecated: --highlight-style. Use --syntax-highlighting instead.
 
 Output created: 15_realtime_eval.pdf
@@ -2358,7 +2358,7 @@ processing file: 16_subgroup_fairness.Rmd
 10/10 [compute-metrics]
 output file: 16_subgroup_fairness.knit.md
 
-/opt/homebrew/bin/pandoc +RTS -K512m -RTS 16_subgroup_fairness.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output 16_subgroup_fairness.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine pdflatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//Rtmpky7klS/rmarkdown-str122a444d7147.html --variable tables=yes --standalone -Mhas-frontmatter=false 
+/opt/homebrew/bin/pandoc +RTS -K512m -RTS 16_subgroup_fairness.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output 16_subgroup_fairness.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine pdflatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//RtmpLUhUyT/rmarkdown-str380750b94489.html --variable tables=yes --standalone -Mhas-frontmatter=false 
 [WARNING] Deprecated: --highlight-style. Use --syntax-highlighting instead.
 
 Output created: 16_subgroup_fairness.pdf
@@ -2391,7 +2391,7 @@ processing file: 18_gbtm_trajectories.Rmd
 18/18 [onset-association]
 output file: 18_gbtm_trajectories.knit.md
 
-/opt/homebrew/bin/pandoc +RTS -K512m -RTS 18_gbtm_trajectories.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output 18_gbtm_trajectories.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine pdflatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//RtmpsLHvGS/rmarkdown-str1246195d12e9.html --variable tables=yes --standalone -Mhas-frontmatter=false 
+/opt/homebrew/bin/pandoc +RTS -K512m -RTS 18_gbtm_trajectories.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output 18_gbtm_trajectories.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine pdflatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//RtmpGhrkbA/rmarkdown-str38242e13009b.html --variable tables=yes --standalone -Mhas-frontmatter=false 
 [WARNING] Deprecated: --highlight-style. Use --syntax-highlighting instead.
 
 Output created: 18_gbtm_trajectories.pdf
@@ -2429,7 +2429,7 @@ processing file: 19_confounder_adjustment.Rmd
 24/24 [summary-table]      
 output file: 19_confounder_adjustment.knit.md
 
-/opt/homebrew/bin/pandoc +RTS -K512m -RTS 19_confounder_adjustment.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output 19_confounder_adjustment.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine pdflatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//RtmpuWrPjB/rmarkdown-str126d61ac4e5e.html --variable tables=yes --standalone -Mhas-frontmatter=false 
+/opt/homebrew/bin/pandoc +RTS -K512m -RTS 19_confounder_adjustment.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output 19_confounder_adjustment.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine pdflatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//RtmpLOKdwE/rmarkdown-str384518272f7.html --variable tables=yes --standalone -Mhas-frontmatter=false 
 [WARNING] Deprecated: --highlight-style. Use --syntax-highlighting instead.
 
 Output created: 19_confounder_adjustment.pdf
@@ -2474,7 +2474,7 @@ processing file: 20_realtime_model_report.Rmd
 31/31            
 output file: 20_realtime_model_report.knit.md
 
-/opt/homebrew/bin/pandoc +RTS -K512m -RTS 20_realtime_model_report.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output 20_realtime_model_report.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine pdflatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//Rtmptx7hpK/rmarkdown-str128c636a9686.html --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//Rtmptx7hpK/rmarkdown-str128c6ac06a67.html --variable tables=yes --standalone -Mhas-frontmatter=false 
+/opt/homebrew/bin/pandoc +RTS -K512m -RTS 20_realtime_model_report.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output 20_realtime_model_report.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine pdflatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//RtmpG8r6qS/rmarkdown-str38671c9c5ac.html --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//RtmpG8r6qS/rmarkdown-str386765d0a01e.html --variable tables=yes --standalone -Mhas-frontmatter=false 
 [WARNING] Deprecated: --highlight-style. Use --syntax-highlighting instead.
 Warning: LaTeX Warning: `!h' float specifier changed to `!ht'.
 Warning: LaTeX Warning: `!h' float specifier changed to `!ht'.
@@ -2487,180 +2487,180 @@ Output created: 20_realtime_model_report.pdf
 ============================================================
 [21]  /Library/Frameworks/Python.framework/Versions/3.14/bin/python3 -u /Users/arif/Desktop/RESEARCH/projects/sepsis_mimic4/21_eicu_external_panel.py
 ============================================================
-[18:08:18] 21_eicu_external_panel       INFO   loading eICU patient table ...
-[18:08:18] 21_eicu_external_panel       INFO   loading eICU patient table done (0.2s)
-[18:08:18] 21_eicu_external_panel       INFO   raw patient rows: 200,859
-[18:08:18] 21_eicu_external_panel       INFO     filter [age >= 18]: 200,859 -> 200,234 (dropped 625, 0.3%)
-[18:08:18] 21_eicu_external_panel       INFO     filter [LOS >= 4.0h]: 200,234 -> 188,230 (dropped 12,004, 6.0%)
-[18:08:18] 21_eicu_external_panel       INFO     filter [first ICU stay/patient]: 188,230 -> 136,864 (dropped 51,366, 27.3%)
-[18:08:18] 21_eicu_external_panel       INFO   eICU cohort: 136,864 stays
-[18:08:18] 21_eicu_external_panel       INFO   streaming long hourly measurements ...
-[18:08:18] utils                        INFO   streaming vitalPeriodic (heavy) ...
+[01:05:50] 21_eicu_external_panel       INFO   loading eICU patient table ...
+[01:05:50] 21_eicu_external_panel       INFO   loading eICU patient table done (0.2s)
+[01:05:50] 21_eicu_external_panel       INFO   raw patient rows: 200,859
+[01:05:50] 21_eicu_external_panel       INFO     filter [age >= 18]: 200,859 -> 200,234 (dropped 625, 0.3%)
+[01:05:50] 21_eicu_external_panel       INFO     filter [LOS >= 4.0h]: 200,234 -> 188,230 (dropped 12,004, 6.0%)
+[01:05:51] 21_eicu_external_panel       INFO     filter [first ICU stay/patient]: 188,230 -> 136,864 (dropped 51,366, 27.3%)
+[01:05:51] 21_eicu_external_panel       INFO   eICU cohort: 136,864 stays
+[01:05:51] 21_eicu_external_panel       INFO   streaming long hourly measurements ...
+[01:05:51] utils                        INFO   streaming vitalPeriodic (heavy) ...
 
 scan vitalPeriodic.csv.gz: 0chunk [00:00, ?chunk/s]
-scan vitalPeriodic.csv.gz: 1chunk [00:01,  1.19s/chunk]
+scan vitalPeriodic.csv.gz: 1chunk [00:01,  1.18s/chunk]
 scan vitalPeriodic.csv.gz: 2chunk [00:02,  1.17s/chunk]
-scan vitalPeriodic.csv.gz: 3chunk [00:03,  1.13s/chunk]
-scan vitalPeriodic.csv.gz: 4chunk [00:04,  1.15s/chunk]
-scan vitalPeriodic.csv.gz: 5chunk [00:05,  1.13s/chunk]
-scan vitalPeriodic.csv.gz: 6chunk [00:06,  1.13s/chunk]
-scan vitalPeriodic.csv.gz: 7chunk [00:07,  1.12s/chunk]
-scan vitalPeriodic.csv.gz: 8chunk [00:09,  1.12s/chunk]
-scan vitalPeriodic.csv.gz: 9chunk [00:10,  1.12s/chunk]
-scan vitalPeriodic.csv.gz: 10chunk [00:11,  1.12s/chunk]
-scan vitalPeriodic.csv.gz: 11chunk [00:12,  1.13s/chunk]
-scan vitalPeriodic.csv.gz: 12chunk [00:13,  1.14s/chunk]
-scan vitalPeriodic.csv.gz: 13chunk [00:14,  1.15s/chunk]
-scan vitalPeriodic.csv.gz: 14chunk [00:15,  1.16s/chunk]
-scan vitalPeriodic.csv.gz: 15chunk [00:17,  1.18s/chunk]
-scan vitalPeriodic.csv.gz: 16chunk [00:18,  1.15s/chunk]
-scan vitalPeriodic.csv.gz: 17chunk [00:19,  1.14s/chunk]
-scan vitalPeriodic.csv.gz: 18chunk [00:20,  1.14s/chunk]
-scan vitalPeriodic.csv.gz: 19chunk [00:21,  1.13s/chunk]
-scan vitalPeriodic.csv.gz: 20chunk [00:22,  1.12s/chunk]
-scan vitalPeriodic.csv.gz: 21chunk [00:23,  1.08s/chunk]
-scan vitalPeriodic.csv.gz: 22chunk [00:24,  1.08s/chunk]
-scan vitalPeriodic.csv.gz: 23chunk [00:25,  1.09s/chunk]
-scan vitalPeriodic.csv.gz: 24chunk [00:26,  1.09s/chunk]
-scan vitalPeriodic.csv.gz: 25chunk [00:28,  1.09s/chunk]
-scan vitalPeriodic.csv.gz: 26chunk [00:29,  1.10s/chunk]
-scan vitalPeriodic.csv.gz: 27chunk [00:30,  1.10s/chunk]
-scan vitalPeriodic.csv.gz: 28chunk [00:31,  1.11s/chunk]
-scan vitalPeriodic.csv.gz: 29chunk [00:32,  1.11s/chunk]
-scan vitalPeriodic.csv.gz: 30chunk [00:34,  1.48s/chunk]
-scan vitalPeriodic.csv.gz: 31chunk [00:36,  1.39s/chunk]
-scan vitalPeriodic.csv.gz: 32chunk [00:37,  1.33s/chunk]
-scan vitalPeriodic.csv.gz: 33chunk [00:38,  1.30s/chunk]
-scan vitalPeriodic.csv.gz: 34chunk [00:39,  1.27s/chunk]
-scan vitalPeriodic.csv.gz: 35chunk [00:40,  1.24s/chunk]
-scan vitalPeriodic.csv.gz: 36chunk [00:41,  1.20s/chunk]
-scan vitalPeriodic.csv.gz: 37chunk [00:43,  1.17s/chunk]
-scan vitalPeriodic.csv.gz: 38chunk [00:44,  1.15s/chunk]
-scan vitalPeriodic.csv.gz: 39chunk [00:45,  1.14s/chunk]
-scan vitalPeriodic.csv.gz: 40chunk [00:46,  1.12s/chunk]
-scan vitalPeriodic.csv.gz: 41chunk [00:47,  1.10s/chunk]
-scan vitalPeriodic.csv.gz: 42chunk [00:48,  1.09s/chunk]
-scan vitalPeriodic.csv.gz: 43chunk [00:49,  1.08s/chunk]
-scan vitalPeriodic.csv.gz: 44chunk [00:50,  1.07s/chunk]
-scan vitalPeriodic.csv.gz: 45chunk [00:51,  1.12s/chunk]
-scan vitalPeriodic.csv.gz: 46chunk [00:53,  1.13s/chunk]
-scan vitalPeriodic.csv.gz: 47chunk [00:54,  1.15s/chunk]
-scan vitalPeriodic.csv.gz: 48chunk [00:55,  1.16s/chunk]
-scan vitalPeriodic.csv.gz: 49chunk [00:56,  1.11s/chunk]
-scan vitalPeriodic.csv.gz: 49chunk [00:56,  1.15s/chunk]
-[18:09:14] utils                        INFO     vitalPeriodic.csv.gz: scanned 146,671,642 rows
-[18:09:17] utils                        INFO   streaming vitalAperiodic (noninvasive MAP) ...
+scan vitalPeriodic.csv.gz: 3chunk [00:03,  1.14s/chunk]
+scan vitalPeriodic.csv.gz: 4chunk [00:04,  1.13s/chunk]
+scan vitalPeriodic.csv.gz: 5chunk [00:05,  1.15s/chunk]
+scan vitalPeriodic.csv.gz: 6chunk [00:06,  1.12s/chunk]
+scan vitalPeriodic.csv.gz: 7chunk [00:07,  1.10s/chunk]
+scan vitalPeriodic.csv.gz: 8chunk [00:08,  1.09s/chunk]
+scan vitalPeriodic.csv.gz: 9chunk [00:10,  1.09s/chunk]
+scan vitalPeriodic.csv.gz: 10chunk [00:11,  1.09s/chunk]
+scan vitalPeriodic.csv.gz: 11chunk [00:12,  1.11s/chunk]
+scan vitalPeriodic.csv.gz: 12chunk [00:13,  1.11s/chunk]
+scan vitalPeriodic.csv.gz: 13chunk [00:14,  1.11s/chunk]
+scan vitalPeriodic.csv.gz: 14chunk [00:15,  1.13s/chunk]
+scan vitalPeriodic.csv.gz: 15chunk [00:16,  1.15s/chunk]
+scan vitalPeriodic.csv.gz: 16chunk [00:17,  1.13s/chunk]
+scan vitalPeriodic.csv.gz: 17chunk [00:19,  1.11s/chunk]
+scan vitalPeriodic.csv.gz: 18chunk [00:20,  1.10s/chunk]
+scan vitalPeriodic.csv.gz: 19chunk [00:21,  1.10s/chunk]
+scan vitalPeriodic.csv.gz: 20chunk [00:22,  1.08s/chunk]
+scan vitalPeriodic.csv.gz: 21chunk [00:23,  1.05s/chunk]
+scan vitalPeriodic.csv.gz: 22chunk [00:24,  1.06s/chunk]
+scan vitalPeriodic.csv.gz: 23chunk [00:25,  1.06s/chunk]
+scan vitalPeriodic.csv.gz: 24chunk [00:26,  1.08s/chunk]
+scan vitalPeriodic.csv.gz: 25chunk [00:27,  1.08s/chunk]
+scan vitalPeriodic.csv.gz: 26chunk [00:28,  1.08s/chunk]
+scan vitalPeriodic.csv.gz: 27chunk [00:29,  1.09s/chunk]
+scan vitalPeriodic.csv.gz: 28chunk [00:30,  1.09s/chunk]
+scan vitalPeriodic.csv.gz: 29chunk [00:31,  1.10s/chunk]
+scan vitalPeriodic.csv.gz: 30chunk [00:34,  1.50s/chunk]
+scan vitalPeriodic.csv.gz: 31chunk [00:35,  1.39s/chunk]
+scan vitalPeriodic.csv.gz: 32chunk [00:36,  1.32s/chunk]
+scan vitalPeriodic.csv.gz: 33chunk [00:37,  1.27s/chunk]
+scan vitalPeriodic.csv.gz: 34chunk [00:39,  1.24s/chunk]
+scan vitalPeriodic.csv.gz: 35chunk [00:40,  1.21s/chunk]
+scan vitalPeriodic.csv.gz: 36chunk [00:41,  1.17s/chunk]
+scan vitalPeriodic.csv.gz: 37chunk [00:42,  1.13s/chunk]
+scan vitalPeriodic.csv.gz: 38chunk [00:43,  1.11s/chunk]
+scan vitalPeriodic.csv.gz: 39chunk [00:44,  1.10s/chunk]
+scan vitalPeriodic.csv.gz: 40chunk [00:45,  1.08s/chunk]
+scan vitalPeriodic.csv.gz: 41chunk [00:46,  1.07s/chunk]
+scan vitalPeriodic.csv.gz: 42chunk [00:47,  1.06s/chunk]
+scan vitalPeriodic.csv.gz: 43chunk [00:48,  1.06s/chunk]
+scan vitalPeriodic.csv.gz: 44chunk [00:49,  1.06s/chunk]
+scan vitalPeriodic.csv.gz: 45chunk [00:50,  1.10s/chunk]
+scan vitalPeriodic.csv.gz: 46chunk [00:52,  1.15s/chunk]
+scan vitalPeriodic.csv.gz: 47chunk [00:53,  1.16s/chunk]
+scan vitalPeriodic.csv.gz: 48chunk [00:54,  1.15s/chunk]
+scan vitalPeriodic.csv.gz: 49chunk [00:55,  1.11s/chunk]
+scan vitalPeriodic.csv.gz: 49chunk [00:55,  1.13s/chunk]
+[01:06:46] utils                        INFO     vitalPeriodic.csv.gz: scanned 146,671,642 rows
+[01:06:48] utils                        INFO   streaming vitalAperiodic (noninvasive MAP) ...
 
 scan vitalAperiodic.csv.gz: 0chunk [00:00, ?chunk/s]
-scan vitalAperiodic.csv.gz: 1chunk [00:00,  1.78chunk/s]
-scan vitalAperiodic.csv.gz: 2chunk [00:01,  1.76chunk/s]
-scan vitalAperiodic.csv.gz: 3chunk [00:01,  1.75chunk/s]
-scan vitalAperiodic.csv.gz: 4chunk [00:02,  1.73chunk/s]
-scan vitalAperiodic.csv.gz: 5chunk [00:02,  1.75chunk/s]
-scan vitalAperiodic.csv.gz: 6chunk [00:03,  1.74chunk/s]
-scan vitalAperiodic.csv.gz: 7chunk [00:03,  1.77chunk/s]
-scan vitalAperiodic.csv.gz: 8chunk [00:04,  1.78chunk/s]
-scan vitalAperiodic.csv.gz: 9chunk [00:04,  2.19chunk/s]
-scan vitalAperiodic.csv.gz: 9chunk [00:04,  1.89chunk/s]
-[18:09:21] utils                        INFO     vitalAperiodic.csv.gz: scanned 25,075,074 rows
-[18:09:22] utils                        INFO   streaming nurseCharting for GCS Total + temperature ...
+scan vitalAperiodic.csv.gz: 1chunk [00:00,  1.88chunk/s]
+scan vitalAperiodic.csv.gz: 2chunk [00:01,  1.83chunk/s]
+scan vitalAperiodic.csv.gz: 3chunk [00:01,  1.82chunk/s]
+scan vitalAperiodic.csv.gz: 4chunk [00:02,  1.82chunk/s]
+scan vitalAperiodic.csv.gz: 5chunk [00:02,  1.81chunk/s]
+scan vitalAperiodic.csv.gz: 6chunk [00:03,  1.81chunk/s]
+scan vitalAperiodic.csv.gz: 7chunk [00:03,  1.84chunk/s]
+scan vitalAperiodic.csv.gz: 8chunk [00:04,  1.85chunk/s]
+scan vitalAperiodic.csv.gz: 9chunk [00:04,  2.28chunk/s]
+scan vitalAperiodic.csv.gz: 9chunk [00:04,  1.97chunk/s]
+[01:06:53] utils                        INFO     vitalAperiodic.csv.gz: scanned 25,075,074 rows
+[01:06:53] utils                        INFO   streaming nurseCharting for GCS Total + temperature ...
 
 scan nurseCharting.csv.gz: 0chunk [00:00, ?chunk/s]
-scan nurseCharting.csv.gz: 1chunk [00:01,  1.22s/chunk]
+scan nurseCharting.csv.gz: 1chunk [00:01,  1.24s/chunk]
 scan nurseCharting.csv.gz: 2chunk [00:02,  1.22s/chunk]
-scan nurseCharting.csv.gz: 3chunk [00:03,  1.22s/chunk]
-scan nurseCharting.csv.gz: 4chunk [00:04,  1.22s/chunk]
-scan nurseCharting.csv.gz: 5chunk [00:06,  1.22s/chunk]
-scan nurseCharting.csv.gz: 6chunk [00:07,  1.22s/chunk]
-scan nurseCharting.csv.gz: 7chunk [00:08,  1.22s/chunk]
-scan nurseCharting.csv.gz: 8chunk [00:09,  1.21s/chunk]
-scan nurseCharting.csv.gz: 9chunk [00:10,  1.22s/chunk]
-scan nurseCharting.csv.gz: 10chunk [00:12,  1.21s/chunk]
-scan nurseCharting.csv.gz: 11chunk [00:13,  1.20s/chunk]
-scan nurseCharting.csv.gz: 12chunk [00:14,  1.20s/chunk]
-scan nurseCharting.csv.gz: 13chunk [00:15,  1.19s/chunk]
-scan nurseCharting.csv.gz: 14chunk [00:16,  1.19s/chunk]
-scan nurseCharting.csv.gz: 15chunk [00:18,  1.20s/chunk]
+scan nurseCharting.csv.gz: 3chunk [00:03,  1.21s/chunk]
+scan nurseCharting.csv.gz: 4chunk [00:04,  1.20s/chunk]
+scan nurseCharting.csv.gz: 5chunk [00:06,  1.20s/chunk]
+scan nurseCharting.csv.gz: 6chunk [00:07,  1.21s/chunk]
+scan nurseCharting.csv.gz: 7chunk [00:08,  1.20s/chunk]
+scan nurseCharting.csv.gz: 8chunk [00:09,  1.19s/chunk]
+scan nurseCharting.csv.gz: 9chunk [00:10,  1.20s/chunk]
+scan nurseCharting.csv.gz: 10chunk [00:12,  1.20s/chunk]
+scan nurseCharting.csv.gz: 11chunk [00:13,  1.19s/chunk]
+scan nurseCharting.csv.gz: 12chunk [00:14,  1.18s/chunk]
+scan nurseCharting.csv.gz: 13chunk [00:15,  1.17s/chunk]
+scan nurseCharting.csv.gz: 14chunk [00:16,  1.18s/chunk]
+scan nurseCharting.csv.gz: 15chunk [00:17,  1.19s/chunk]
 scan nurseCharting.csv.gz: 16chunk [00:19,  1.22s/chunk]
 scan nurseCharting.csv.gz: 17chunk [00:20,  1.24s/chunk]
 scan nurseCharting.csv.gz: 18chunk [00:21,  1.24s/chunk]
-scan nurseCharting.csv.gz: 19chunk [00:23,  1.23s/chunk]
+scan nurseCharting.csv.gz: 19chunk [00:22,  1.22s/chunk]
 scan nurseCharting.csv.gz: 20chunk [00:24,  1.23s/chunk]
-scan nurseCharting.csv.gz: 21chunk [00:25,  1.22s/chunk]
-scan nurseCharting.csv.gz: 22chunk [00:26,  1.22s/chunk]
-scan nurseCharting.csv.gz: 23chunk [00:28,  1.22s/chunk]
-scan nurseCharting.csv.gz: 24chunk [00:29,  1.21s/chunk]
-scan nurseCharting.csv.gz: 25chunk [00:30,  1.21s/chunk]
-scan nurseCharting.csv.gz: 26chunk [00:31,  1.21s/chunk]
-scan nurseCharting.csv.gz: 27chunk [00:32,  1.22s/chunk]
-scan nurseCharting.csv.gz: 28chunk [00:34,  1.22s/chunk]
-scan nurseCharting.csv.gz: 29chunk [00:35,  1.23s/chunk]
-scan nurseCharting.csv.gz: 30chunk [00:36,  1.27s/chunk]
-scan nurseCharting.csv.gz: 31chunk [00:37,  1.25s/chunk]
-scan nurseCharting.csv.gz: 32chunk [00:39,  1.24s/chunk]
-scan nurseCharting.csv.gz: 33chunk [00:40,  1.22s/chunk]
-scan nurseCharting.csv.gz: 34chunk [00:41,  1.21s/chunk]
-scan nurseCharting.csv.gz: 35chunk [00:42,  1.21s/chunk]
-scan nurseCharting.csv.gz: 36chunk [00:43,  1.21s/chunk]
-scan nurseCharting.csv.gz: 37chunk [00:45,  1.22s/chunk]
+scan nurseCharting.csv.gz: 21chunk [00:25,  1.23s/chunk]
+scan nurseCharting.csv.gz: 22chunk [00:26,  1.24s/chunk]
+scan nurseCharting.csv.gz: 23chunk [00:27,  1.25s/chunk]
+scan nurseCharting.csv.gz: 24chunk [00:29,  1.30s/chunk]
+scan nurseCharting.csv.gz: 25chunk [00:30,  1.31s/chunk]
+scan nurseCharting.csv.gz: 26chunk [00:31,  1.30s/chunk]
+scan nurseCharting.csv.gz: 27chunk [00:33,  1.28s/chunk]
+scan nurseCharting.csv.gz: 28chunk [00:34,  1.28s/chunk]
+scan nurseCharting.csv.gz: 29chunk [00:35,  1.27s/chunk]
+scan nurseCharting.csv.gz: 30chunk [00:37,  1.31s/chunk]
+scan nurseCharting.csv.gz: 31chunk [00:38,  1.27s/chunk]
+scan nurseCharting.csv.gz: 32chunk [00:39,  1.25s/chunk]
+scan nurseCharting.csv.gz: 33chunk [00:40,  1.23s/chunk]
+scan nurseCharting.csv.gz: 34chunk [00:41,  1.22s/chunk]
+scan nurseCharting.csv.gz: 35chunk [00:43,  1.20s/chunk]
+scan nurseCharting.csv.gz: 36chunk [00:44,  1.21s/chunk]
+scan nurseCharting.csv.gz: 37chunk [00:45,  1.21s/chunk]
 scan nurseCharting.csv.gz: 38chunk [00:46,  1.22s/chunk]
-scan nurseCharting.csv.gz: 39chunk [00:47,  1.23s/chunk]
-scan nurseCharting.csv.gz: 40chunk [00:48,  1.23s/chunk]
+scan nurseCharting.csv.gz: 39chunk [00:47,  1.22s/chunk]
+scan nurseCharting.csv.gz: 40chunk [00:49,  1.23s/chunk]
 scan nurseCharting.csv.gz: 41chunk [00:50,  1.22s/chunk]
-scan nurseCharting.csv.gz: 42chunk [00:51,  1.21s/chunk]
+scan nurseCharting.csv.gz: 42chunk [00:51,  1.20s/chunk]
 scan nurseCharting.csv.gz: 43chunk [00:52,  1.21s/chunk]
-scan nurseCharting.csv.gz: 44chunk [00:53,  1.22s/chunk]
-scan nurseCharting.csv.gz: 45chunk [00:54,  1.22s/chunk]
-scan nurseCharting.csv.gz: 46chunk [00:56,  1.24s/chunk]
+scan nurseCharting.csv.gz: 44chunk [00:53,  1.21s/chunk]
+scan nurseCharting.csv.gz: 45chunk [00:55,  1.21s/chunk]
+scan nurseCharting.csv.gz: 46chunk [00:56,  1.23s/chunk]
 scan nurseCharting.csv.gz: 47chunk [00:57,  1.22s/chunk]
-scan nurseCharting.csv.gz: 48chunk [00:58,  1.21s/chunk]
-scan nurseCharting.csv.gz: 49chunk [00:59,  1.21s/chunk]
-scan nurseCharting.csv.gz: 50chunk [01:00,  1.21s/chunk]
-scan nurseCharting.csv.gz: 51chunk [01:01,  1.04s/chunk]
+scan nurseCharting.csv.gz: 48chunk [00:58,  1.20s/chunk]
+scan nurseCharting.csv.gz: 49chunk [01:00,  1.21s/chunk]
+scan nurseCharting.csv.gz: 50chunk [01:01,  1.21s/chunk]
+scan nurseCharting.csv.gz: 51chunk [01:01,  1.05s/chunk]
 scan nurseCharting.csv.gz: 51chunk [01:01,  1.21s/chunk]
-[18:10:23] utils                        INFO     nurseCharting.csv.gz: scanned 151,604,232 rows
-[18:10:24] utils                        INFO   streaming lab table ...
+[01:07:55] utils                        INFO     nurseCharting.csv.gz: scanned 151,604,232 rows
+[01:07:56] utils                        INFO   streaming lab table ...
 
 scan lab.csv.gz: 0chunk [00:00, ?chunk/s]
-scan lab.csv.gz: 1chunk [00:00,  1.28chunk/s]
-scan lab.csv.gz: 2chunk [00:01,  1.24chunk/s]
-scan lab.csv.gz: 3chunk [00:02,  1.25chunk/s]
-scan lab.csv.gz: 4chunk [00:03,  1.24chunk/s]
-scan lab.csv.gz: 5chunk [00:04,  1.23chunk/s]
-scan lab.csv.gz: 6chunk [00:04,  1.22chunk/s]
-scan lab.csv.gz: 7chunk [00:05,  1.22chunk/s]
-scan lab.csv.gz: 8chunk [00:06,  1.22chunk/s]
-scan lab.csv.gz: 9chunk [00:07,  1.22chunk/s]
-scan lab.csv.gz: 10chunk [00:08,  1.21chunk/s]
-scan lab.csv.gz: 11chunk [00:08,  1.22chunk/s]
-scan lab.csv.gz: 12chunk [00:09,  1.23chunk/s]
-scan lab.csv.gz: 13chunk [00:10,  1.23chunk/s]
-scan lab.csv.gz: 14chunk [00:10,  1.32chunk/s]
-[18:10:34] utils                        INFO     lab.csv.gz: scanned 39,132,531 rows
-[18:10:35] 21_eicu_external_panel       INFO   streaming long hourly measurements done (136.6s)
-[18:10:35] 21_eicu_external_panel       INFO   measurements: 27,346,007 rows total
-[18:10:35] 21_eicu_external_panel       INFO   folding variables onto hourly grid ...
-[18:10:38] 21_eicu_external_panel       INFO   folding variables onto hourly grid done (3.6s)
-[18:10:38] 21_eicu_external_panel       INFO   unit conversions ...
-[18:10:38] 21_eicu_external_panel       INFO   unit conversions done (0.0s)
-[18:10:38] 21_eicu_external_panel       INFO   streaming vasopressors (infusionDrug) ...
-[18:10:38] utils                        INFO   streaming infusionDrug for vasopressors ...
-[18:10:40] 21_eicu_external_panel       INFO   streaming vasopressors (infusionDrug) done (2.3s)
-[18:10:41] 21_eicu_external_panel       INFO   forward-filling core variables ...
-[18:10:42] 21_eicu_external_panel       INFO   forward-filling core variables done (0.9s)
-[18:10:42] 21_eicu_external_panel       INFO   scoring hourly SOFA + locating onset ...
-[18:10:42] 21_eicu_external_panel       INFO   scoring hourly SOFA + locating onset done (0.3s)
-[18:10:42] 21_eicu_external_panel       INFO   detecting suspected infection ...
-[18:10:42] utils                        INFO   detecting suspected infection (antibiotics +/- culture) ...
-[18:10:56] utils                        INFO     stays with >=1 qualifying antibiotic: 39,167
-[18:10:56] utils                        INFO     stays with >=1 culture:               2,272
-[18:10:56] 21_eicu_external_panel       INFO   detecting suspected infection done (13.4s)
-[18:10:56] 21_eicu_external_panel       INFO   building hour-6 landmark table ...
-[18:10:56] 21_eicu_external_panel       INFO   building hour-6 landmark table done (0.1s)
-[18:10:56] 21_eicu_external_panel       INFO   ============================================================
-[18:10:56] 21_eicu_external_panel       INFO   saved 21_landmark_h6_eicu.parquet: 113,597 at-risk stays @ h6, onset-within-12h rate 0.042 (4,782 events)
-[18:10:56] 21_eicu_external_panel       INFO     any later onset: 6,025 (0.053)
-[21] exit 0  (159s)
+scan lab.csv.gz: 1chunk [00:00,  1.26chunk/s]
+scan lab.csv.gz: 2chunk [00:01,  1.27chunk/s]
+scan lab.csv.gz: 3chunk [00:02,  1.30chunk/s]
+scan lab.csv.gz: 4chunk [00:03,  1.30chunk/s]
+scan lab.csv.gz: 5chunk [00:03,  1.29chunk/s]
+scan lab.csv.gz: 6chunk [00:04,  1.28chunk/s]
+scan lab.csv.gz: 7chunk [00:05,  1.26chunk/s]
+scan lab.csv.gz: 8chunk [00:06,  1.26chunk/s]
+scan lab.csv.gz: 9chunk [00:07,  1.26chunk/s]
+scan lab.csv.gz: 10chunk [00:07,  1.25chunk/s]
+scan lab.csv.gz: 11chunk [00:08,  1.25chunk/s]
+scan lab.csv.gz: 12chunk [00:09,  1.26chunk/s]
+scan lab.csv.gz: 13chunk [00:10,  1.26chunk/s]
+scan lab.csv.gz: 14chunk [00:10,  1.35chunk/s]
+[01:08:06] utils                        INFO     lab.csv.gz: scanned 39,132,531 rows
+[01:08:06] 21_eicu_external_panel       INFO   streaming long hourly measurements done (135.8s)
+[01:08:06] 21_eicu_external_panel       INFO   measurements: 27,346,007 rows total
+[01:08:06] 21_eicu_external_panel       INFO   folding variables onto hourly grid ...
+[01:08:10] 21_eicu_external_panel       INFO   folding variables onto hourly grid done (3.7s)
+[01:08:10] 21_eicu_external_panel       INFO   unit conversions ...
+[01:08:10] 21_eicu_external_panel       INFO   unit conversions done (0.1s)
+[01:08:10] 21_eicu_external_panel       INFO   streaming vasopressors (infusionDrug) ...
+[01:08:10] utils                        INFO   streaming infusionDrug for vasopressors ...
+[01:08:12] 21_eicu_external_panel       INFO   streaming vasopressors (infusionDrug) done (2.3s)
+[01:08:13] 21_eicu_external_panel       INFO   forward-filling core variables ...
+[01:08:14] 21_eicu_external_panel       INFO   forward-filling core variables done (0.9s)
+[01:08:14] 21_eicu_external_panel       INFO   scoring hourly SOFA + locating onset ...
+[01:08:14] 21_eicu_external_panel       INFO   scoring hourly SOFA + locating onset done (0.4s)
+[01:08:14] 21_eicu_external_panel       INFO   detecting suspected infection ...
+[01:08:14] utils                        INFO   detecting suspected infection (antibiotics +/- culture) ...
+[01:08:27] utils                        INFO     stays with >=1 qualifying antibiotic: 39,167
+[01:08:27] utils                        INFO     stays with >=1 culture:               2,272
+[01:08:27] 21_eicu_external_panel       INFO   detecting suspected infection done (13.0s)
+[01:08:28] 21_eicu_external_panel       INFO   building hour-6 landmark table ...
+[01:08:28] 21_eicu_external_panel       INFO   building hour-6 landmark table done (0.1s)
+[01:08:28] 21_eicu_external_panel       INFO   ============================================================
+[01:08:28] 21_eicu_external_panel       INFO   saved 21_landmark_h6_eicu.parquet: 113,597 at-risk stays @ h6, onset-within-12h rate 0.042 (4,782 events)
+[01:08:28] 21_eicu_external_panel       INFO     any later onset: 6,025 (0.053)
+[21] exit 0  (158s)
 
 ============================================================
 [22]  Rscript -e rmarkdown::render('22_external_validation.Rmd')
@@ -2689,11 +2689,11 @@ processing file: 22_external_validation.Rmd
 19/19                   
 output file: 22_external_validation.knit.md
 
-/opt/homebrew/bin/pandoc +RTS -K512m -RTS 22_external_validation.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output 22_external_validation.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine pdflatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//RtmpwbFV85/rmarkdown-str12bf78d70931.html --variable tables=yes --standalone -Mhas-frontmatter=false 
+/opt/homebrew/bin/pandoc +RTS -K512m -RTS 22_external_validation.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output 22_external_validation.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine pdflatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//Rtmp8uWL1h/rmarkdown-str38c951e2f46a.html --variable tables=yes --standalone -Mhas-frontmatter=false 
 [WARNING] Deprecated: --highlight-style. Use --syntax-highlighting instead.
 
 Output created: 22_external_validation.pdf
 [22] exit 0  (14s)
 
-Pipeline finished: 2026-07-10 18:11:10
+Pipeline finished: 2026-07-11 01:08:42
 All steps completed successfully.

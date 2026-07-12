@@ -53,31 +53,31 @@ interpretable and benchmarked against established clinical scores.
                     _______________________________|
                     |
                     v
-       10  full-feature nomogram at hour 6         (Tier 1)
+       10  full-feature nomogram at hour 6         (Analysis 1)
                     |
                     v
-       11  stack multiple landmark time points      (Tier 2a)
+       11  stack multiple landmark time points      (Analysis 2a)
                     |
                     v
-       12  fit landmark supermodel                  (Tier 2b)
+       12  fit landmark supermodel                  (Analysis 2b)
                     |
                     v
-       13  GEE + time-varying Cox                   (Tier 3)
+       13  GEE + time-varying Cox                   (Analysis 3)
                     |
                     v
-       14  prepare holdout feature stream            (Tier 4a)
+       14  prepare holdout feature stream            (Analysis 4a)
                     |
                     v
-       15  evaluate as streaming alarm               (Tier 4b)
+       15  evaluate as streaming alarm               (Analysis 4b)
                     |
                     v
-       16  subgroup fairness check                   (Tier 5)
+       16  subgroup fairness check                   (Analysis 5)
                     |
                     v
-       18  trajectory class discovery (GBTM)         (Tier 6)
+       18  trajectory class discovery (GBTM)         (Analysis 6)
                     |
                     v
-       19  causal analysis (PSM / IPW)               (Tier 7)
+       19  causal analysis (PSM / IPW)               (Analysis 7)
                     |
                     v
        20  final combined report (PDF)
@@ -87,7 +87,7 @@ interpretable and benchmarked against established clinical scores.
        22  external validation (frozen transport + recalibration + eICU ceiling)
 ```
 
-Scripts 21-22 externally validate the frozen Tier-1 nomogram on eICU-CRD v2.0
+Scripts 21-22 externally validate the frozen Analysis-1 nomogram on eICU-CRD v2.0
 (see §9, "External validation").
 
 ---
@@ -187,67 +187,67 @@ Rscript -e 'rmarkdown::render("09_temporal_report.Rmd")'
 
 ---
 
-### Real-time model (Tiers 1 to 7)
+### Real-time model (Analyses 1 to 7)
 
 All scripts below reuse the outputs from script 08. They are fast and do not need to re-read the raw data.
 
-**10. Nomogram (Tier 1)** (R Markdown, produces PDF)
+**10. Nomogram (Analysis 1)** (R Markdown, produces PDF)
 Builds a full-feature elastic-net penalized logistic model at the hour-6 landmark. Uses an informative-missingness design: median-impute each lab, then add a binary "was it measured" indicator. Produces a clinician-facing nomogram and calibration plot.
 
 ```bash
 Rscript -e 'rmarkdown::render("10_landmark_nomogram.Rmd")'
 ```
 
-**11. Landmark stack (Tier 2a)** (Python)
+**11. Landmark stack (Analysis 2a)** (Python)
 Creates a single stacked dataset by repeating the modelling at multiple landmark times (6h, 12h, 18h, 24h, 36h, 48h). This is the input to the dynamic supermodel.
 
 ```bash
 python3 11_landmark_stack.py
 ```
 
-**12. Supermodel (Tier 2b)** (R Markdown, produces PDF)
+**12. Supermodel (Analysis 2b)** (R Markdown, produces PDF)
 Fits one "supermodel" across all the stacked landmarks so that a single model can emit an hourly-updating risk score at any point during the stay.
 
 ```bash
 Rscript -e 'rmarkdown::render("12_supermodel.Rmd")'
 ```
 
-**13. Repeated measures (Tier 3)** (R Markdown, produces PDF)
+**13. Repeated measures (Analysis 3)** (R Markdown, produces PDF)
 Fits GEE (Generalized Estimating Equations) to properly account for within-patient correlation in hourly data, and a ridge-penalized time-varying Cox model. Reports how much the standard errors inflate when correlation is handled correctly.
 
 ```bash
 Rscript -e 'rmarkdown::render("13_repeated_measures.Rmd")'
 ```
 
-**14. Holdout feature stream (Tier 4a)** (Python)
+**14. Holdout feature stream (Analysis 4a)** (Python)
 Builds an all-hours feature table for a random 6,000-stay holdout set. This is the test bed for simulating a real-time alarm system.
 
 ```bash
 python3 14_realtime_holdout.py
 ```
 
-**15. Real-time evaluation (Tier 4b)** (R Markdown, produces PDF)
+**15. Real-time evaluation (Analysis 4b)** (R Markdown, produces PDF)
 Runs the supermodel on the holdout hour-by-hour, computes the PhysioNet/CinC 2019 utility score, and reports alarm burden (false alarms per patient-day at various sensitivity thresholds).
 
 ```bash
 Rscript -e 'rmarkdown::render("15_realtime_eval.Rmd")'
 ```
 
-**16. Subgroup fairness (Tier 5)** (R Markdown, produces PDF)
+**16. Subgroup fairness (Analysis 5)** (R Markdown, produces PDF)
 Checks whether the model is equally well-calibrated and discriminating across sex and age subgroups.
 
 ```bash
 Rscript -e 'rmarkdown::render("16_subgroup_fairness.Rmd")'
 ```
 
-**18. GBTM trajectories (Tier 6)** (R Markdown, produces PDF)
+**18. GBTM trajectories (Analysis 6)** (R Markdown, produces PDF)
 Group-Based Trajectory Modelling: discovers latent classes of SOFA-score trajectories over the first 24 hours (e.g. "stable-low", "moderate-rising", "steep-worsening"), then links each class to mortality (Cox) and incident sepsis (logistic regression).
 
 ```bash
 Rscript -e 'rmarkdown::render("18_gbtm_trajectories.Rmd")'
 ```
 
-**19. Confounder adjustment (Tier 7)** (R Markdown, produces PDF)
+**19. Confounder adjustment (Analysis 7)** (R Markdown, produces PDF)
 Uses LASSO to select confounders, then estimates the causal effect of early antibiotics (<= 3h) on mortality using four methods: propensity-score matching (PSM), inverse probability weighting (IPW), augmented IPW, and doubly-robust estimation.
 
 ```bash
@@ -255,7 +255,7 @@ Rscript -e 'rmarkdown::render("19_confounder_adjustment.Rmd")'
 ```
 
 **20. Final report** (R Markdown, produces PDF)
-Narrates Tiers 1 through 7 into a single PDF report with all tables and figures.
+Narrates Analyses 1 through 7 into a single PDF report with all tables and figures.
 
 ```bash
 Rscript -e 'rmarkdown::render("20_realtime_model_report.Rmd")'
@@ -272,7 +272,7 @@ python 21_eicu_external_panel.py
 ```
 
 **22. External validation** (R Markdown, produces PDF)
-Applies the **frozen** Tier-1 nomogram (`tier1_coefs.csv`) to eICU without
+Applies the **frozen** Analysis-1 nomogram (`analysis1_coefs.csv`) to eICU without
 refitting, reporting: frozen-transport AUROC + DeLong CI, calibration
 slope/intercept, one-line recalibration, and an internal eICU elastic-net
 ceiling that separates loss of discrimination from miscalibration.
@@ -300,7 +300,7 @@ Rscript -e 'rmarkdown::render("22_external_validation.Rmd")'
 
 **SOFA scoring.** Assumed-zero baseline per Sepsis-3. In the static branch (script 05) SOFA uses the first 24 hours. In the temporal branch (script 08) SOFA is scored every hour from the forward-filled panel.
 
-**Non-circular predictors.** The cross-sectional model (script 06) deliberately excludes SOFA components from the predictor set to avoid the model partly re-deriving its own target. The Tier 1 nomogram (script 10) lifts this restriction and uses all features.
+**Non-circular predictors.** The cross-sectional model (script 06) deliberately excludes SOFA components from the predictor set to avoid the model partly re-deriving its own target. The Analysis 1 nomogram (script 10) lifts this restriction and uses all features.
 
 **Incident vs prevalent sepsis.** About 34% of septic stays are already septic at admission. The pipeline isolates incident (new-onset) sepsis using a landmark at hour 6, which is the clinically useful prediction target.
 
@@ -360,7 +360,7 @@ at which clinical action can realistically occur.
 | qSOFA at hour 6 | 0.49 |
 | SIRS at hour 6 | 0.59 |
 | Multivariable logistic + trajectory slopes | 0.755 |
-| Full-feature elastic-net nomogram (Tier 1) | **0.775** |
+| Full-feature elastic-net nomogram (Analysis 1) | **0.775** |
 
 Standard clinical scores are near-useless for true early prediction of incident
 onset in ICU patients. Our multivariable model beats every clinical score on the
@@ -368,7 +368,7 @@ same task, consistent with the pattern seen in the nomogram literature.
 
 ### Real-time model summary
 
-| Tier | Headline |
+| Analysis | Headline |
 |---|---|
 | 1. Nomogram | AUROC 0.775; missingness indicators are the strongest predictors |
 | 2. Supermodel | AUC(s) 0.65 to 0.77 across landmark hours; one deployable model |
@@ -378,7 +378,7 @@ same task, consistent with the pattern seen in the nomogram literature.
 | 6. GBTM | 3 latent trajectory classes; steepest-worsening has ~5x mortality HR |
 | 7. Causal | Early antibiotics (<= 3h) associated with lower mortality across all four estimators |
 
-### External validation on eICU-CRD (frozen Tier-1 nomogram, no refitting)
+### External validation on eICU-CRD (frozen Analysis-1 nomogram, no refitting)
 
 Applied as-is to 113,597 at-risk eICU stays across 200+ US ICUs (4,782 incident
 onsets within 12h of the hour-6 landmark):
@@ -438,15 +438,15 @@ RESEARCH/
     ├── 07_hourly_panel.py                   hourly time-series panel
     ├── 08_onset_label.py                    onset labelling and landmark cohort
     ├── 09_temporal_report.Rmd (.pdf)        longitudinal analysis report
-    ├── 10_landmark_nomogram.Rmd             Tier 1: elastic-net nomogram
-    ├── 11_landmark_stack.py                 Tier 2: stacked landmark dataset
-    ├── 12_supermodel.Rmd                    Tier 2: dynamic supermodel
-    ├── 13_repeated_measures.Rmd             Tier 3: GEE + time-varying Cox
-    ├── 14_realtime_holdout.py               Tier 4: holdout feature stream
-    ├── 15_realtime_eval.Rmd                 Tier 4: utility + alarm evaluation
-    ├── 16_subgroup_fairness.Rmd             Tier 5: subgroup calibration
-    ├── 18_gbtm_trajectories.Rmd             Tier 6: GBTM trajectory classes
-    ├── 19_confounder_adjustment.Rmd         Tier 7: PSM / IPW / doubly-robust
+    ├── 10_landmark_nomogram.Rmd             Analysis 1: elastic-net nomogram
+    ├── 11_landmark_stack.py                 Analysis 2: stacked landmark dataset
+    ├── 12_supermodel.Rmd                    Analysis 2: dynamic supermodel
+    ├── 13_repeated_measures.Rmd             Analysis 3: GEE + time-varying Cox
+    ├── 14_realtime_holdout.py               Analysis 4: holdout feature stream
+    ├── 15_realtime_eval.Rmd                 Analysis 4: utility + alarm evaluation
+    ├── 16_subgroup_fairness.Rmd             Analysis 5: subgroup calibration
+    ├── 18_gbtm_trajectories.Rmd             Analysis 6: GBTM trajectory classes
+    ├── 19_confounder_adjustment.Rmd         Analysis 7: PSM / IPW / doubly-robust
     ├── 20_realtime_model_report.Rmd (.pdf)  final combined report
     ├── 21_eicu_external_panel.py            eICU hour-6 landmark rebuild
     ├── 22_external_validation.Rmd (.pdf)    eICU external validation

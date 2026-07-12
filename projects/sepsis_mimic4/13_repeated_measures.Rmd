@@ -1,5 +1,5 @@
 ---
-title: "Tier 3: Within-Patient Correlation (Repeated Measures)"
+title: "Analysis 3: Within-Patient Correlation (Repeated Measures)"
 subtitle: "GEE and Penalized Time-Varying Cox Models on the Hourly Panel"
 author: "Abdul Ahad. Student ID: G00486649"
 date: "`r format(Sys.Date(), '%d %B %Y')`"
@@ -109,7 +109,7 @@ print(comp, row.names=FALSE)
 write.csv(rbind(comp,
                 data.frame(term="__alpha_within_patient__", OR_glm=round(alpha,4),
                            SE_naive=NA, SE_cluster_robust=NA, SE_inflation=NA)),
-          file.path(OUT, "13_tier3_gee.csv"), row.names=FALSE)
+          file.path(OUT, "13_analysis3_gee.csv"), row.names=FALSE)
 ```
 
 ## Penalized Time-Varying-Covariate Cox Model
@@ -133,6 +133,6 @@ cox_tab <- data.frame(
   HR   = round(exp(coef(tv)), 3))
 cat("\nTime-varying Cox (ridge) hazard ratios for incident onset:\n")
 print(cox_tab, row.names=FALSE)
-write.csv(cox_tab, file.path(OUT, "13_tier3_tvcox.csv"), row.names=FALSE)
-cat("\nTier 3 complete.\n")
+write.csv(cox_tab, file.path(OUT, "13_analysis3_tvcox.csv"), row.names=FALSE)
+cat("\nAnalysis 3 complete.\n")
 ```

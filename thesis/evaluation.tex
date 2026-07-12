@@ -3,7 +3,7 @@
 
 This chapter presents the experimental results of the pipeline, organised
 around the three sub-questions of Section~\ref{sec:rq}. The dynamic landmark
-supermodel (Tier~2) is the central contribution and receives the most detailed
+supermodel (Analysis~2) is the central contribution and receives the most detailed
 treatment. Internal MIMIC-IV results are presented first, followed by the
 external eICU-CRD validation and a critical discussion of strengths,
 limitations, and threats to validity.
@@ -16,8 +16,12 @@ Before reporting model performance, two empirical facts about the data must be
 established, as they shape every subsequent result.
 
 \paragraph{Prevalent versus incident sepsis.}
-Of the 65{,}241 stays in the cohort, 32.0\% meet Sepsis-3 criteria within 72
-hours, but 34\% of these are already septic at ICU admission (onset hour 0).
+Of the 65{,}241 stays in the cohort, 37.1\% satisfy the Sepsis-3 label on the
+first-24h analysis matrix (Section~\ref{sec:outcome}); an exact hourly onset
+time could then be located within the 72-hour panel for 32.0\% of all stays
+(20{,}861 stays), which constitute the temporal cohort used from here on. Of
+these temporally labelled cases, 34\% are already septic at ICU admission
+(onset hour 0).
 These prevalent cases are not predictable by any early-warning system.
 Conditioning at the hour-six landmark yields \textbf{48{,}829 at-risk stays},
 of which 4{,}750 (9.7\%) develop incident sepsis and 3{,}330 (6.8\%) develop
@@ -149,7 +153,7 @@ to inverse, whereas the statistical landmark models clearly exceed them.
         \hline
         Multivariable logistic (static, 6h)        & 0.749 \\
         Multivariable + 6h trajectory slopes       & 0.755 \\
-        Full-feature elastic-net nomogram (Tier 1)  & \textbf{0.775} \\
+        Full-feature elastic-net nomogram (Analysis 1)  & \textbf{0.775} \\
         \hline
     \end{tabular}
     \caption{Discrimination at the hour-six landmark (incident onset within
@@ -168,13 +172,13 @@ raises it to 0.755 (DeLong $p = 3.5 \times 10^{-7}$), supporting SQ2: the
 trajectory carries information a snapshot does not.
 
 %==========================================================================
-\section{Tier 1: Informative Missingness and the Nomogram (C4)}
+\section{Analysis 1: Informative Missingness and the Nomogram (C4)}
 %==========================================================================
 
 The full-feature elastic-net nomogram reaches AUROC \textbf{0.775}, a
 statistically significant gain over the 0.755 model (DeLong $p < 10^{-16}$).
 The most striking finding is \emph{what} carries the signal: the ten largest
-standardised coefficients are dominated by \textbf{missingness indicators}.
+coefficients are dominated by \textbf{missingness indicators}.
 
 \begin{table}[H]
     \centering
@@ -194,7 +198,7 @@ standardised coefficients are dominated by \textbf{missingness indicators}.
         gcs                                & 0.074 & 1.076 \\
         \hline
     \end{tabular}
-    \caption{Ten largest standardised coefficients in the Tier-1 elastic-net
+    \caption{Ten largest coefficients (original scale) in the Analysis-1 elastic-net
     model. Features ending in \_msg are binary ``was measured'' indicators.
     The act of ordering a P/F ratio is the single strongest predictor
     (OR 5.46), confirming an informative-missingness signal.}
@@ -211,24 +215,24 @@ not a model deficiency, and it sets an upper bound on what any retrospective
 model can achieve (C4).
 
 Figure~\ref{fig:calibration_h6} shows the out-of-sample calibration curve for
-the Tier-1 nomogram, demonstrating that predicted risks closely match observed
+the Analysis-1 nomogram, demonstrating that predicted risks closely match observed
 onset rates.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.55\textwidth]{images/10_calibration_h6.png}
-    \caption{Calibration curve (out-of-sample) for the Tier-1 elastic-net
+    \caption{Calibration curve (out-of-sample) for the Analysis-1 elastic-net
     nomogram at the hour-six landmark. Points near the diagonal indicate
     that predicted risks are usable as probabilities, not merely as a ranking.}
     \label{fig:calibration_h6}
 \end{figure}
 
 %==========================================================================
-\section{Tier 2: Dynamic Landmark Supermodel (C1)}
+\section{Analysis 2: Dynamic Landmark Supermodel (C1)}
 \label{sec:supermodel_results}
 %==========================================================================
 
-The Tier-2 supermodel is the central deliverable: a single elastic-net
+The Analysis-2 supermodel is the central deliverable: a single elastic-net
 logistic model fitted on 207{,}010 stacked landmark rows across 48{,}829
 stays, with 56 features including landmark time $s$, $s^2$, and 27
 feature-by-$s$ interactions. Patient-grouped five-fold cross-validation
@@ -309,7 +313,7 @@ prediction horizons.
 \end{figure}
 
 %==========================================================================
-\section{Tier 3: Within-Patient Correlation (GEE and Time-Varying Cox)}
+\section{Analysis 3: Within-Patient Correlation (GEE and Time-Varying Cox)}
 %==========================================================================
 
 The within-patient exchangeable correlation estimated by GEE is
@@ -348,7 +352,7 @@ lowers it. These are inferentially valid companions to the predictive
 supermodel, not competitors to it.
 
 %==========================================================================
-\section{Tier 4: Real-Time Evaluation (Utility and Alarm Burden)}
+\section{Analysis 4: Real-Time Evaluation (Utility and Alarm Burden)}
 %==========================================================================
 
 Discrimination alone is insufficient for a streaming alarm system. The
@@ -402,7 +406,7 @@ number a deployment decision actually turns on.
 \end{table}
 
 %==========================================================================
-\section{Tier 5: Subgroup Fairness}
+\section{Analysis 5: Subgroup Fairness}
 %==========================================================================
 
 Table~\ref{table:subgroups} reports discrimination and
@@ -433,7 +437,7 @@ ratios between 0.945 and 1.056 (perfect = 1.0) and AUROCs between 0.756 and
 \end{table}
 
 %==========================================================================
-\section{Tier 6: Group-Based Trajectory Modelling}
+\section{Analysis 6: Group-Based Trajectory Modelling}
 %==========================================================================
 
 A latent-class growth model fitted to first-24h SOFA trajectories (2{,}438
@@ -453,10 +457,10 @@ BIC. Figure~\ref{fig:gbtm} shows the mean SOFA trajectory per class.
 
 Class membership shows a strong, monotonic dose-response relationship with
 both outcomes. For in-hospital mortality, the most-severe class (Class 3)
-carries a hazard ratio of \textbf{5.019} ($p < 10^{-8}$) relative to the
+carries a hazard ratio of \textbf{5.019} ($p = 3.9 \times 10^{-8}$) relative to the
 mildest class, adjusted for age (Table~\ref{table:gbtm_mortality}). For
 incident Sepsis-3, the most-severe class carries an odds ratio of
-\textbf{18.81} ($p < 10^{-74}$), confirming that the SOFA trajectory
+\textbf{18.81} ($p = 1.5 \times 10^{-74}$), confirming that the SOFA trajectory
 \emph{shape}---not just its terminal value---is informative of subsequent
 onset (Table~\ref{table:gbtm_onset}).
 
@@ -467,8 +471,8 @@ onset (Table~\ref{table:gbtm_onset}).
         \textbf{Term} & \textbf{Hazard ratio} & \textbf{$p$-value} \\
         \hline\hline
         Class 2 (vs.\ Class 1) & 2.525 & 0.002 \\
-        Class 3 (vs.\ Class 1) & 5.019 & $< 10^{-8}$ \\
-        Age & 1.029 & $< 10^{-9}$ \\
+        Class 3 (vs.\ Class 1) & 5.019 & $3.9 \times 10^{-8}$ \\
+        Age & 1.029 & $1.7 \times 10^{-9}$ \\
         \hline
     \end{tabular}
     \caption{Cox model: in-hospital mortality by GBTM trajectory class
@@ -482,9 +486,9 @@ onset (Table~\ref{table:gbtm_onset}).
         \hline
         \textbf{Term} & \textbf{Odds ratio} & \textbf{$p$-value} \\
         \hline\hline
-        (Intercept) & 0.077 & $< 10^{-78}$ \\
-        Class 2 (vs.\ Class 1) & 6.862 & $< 10^{-37}$ \\
-        Class 3 (vs.\ Class 1) & 18.809 & $< 10^{-74}$ \\
+        (Intercept) & 0.077 & $8.5 \times 10^{-78}$ \\
+        Class 2 (vs.\ Class 1) & 6.862 & $9.8 \times 10^{-37}$ \\
+        Class 3 (vs.\ Class 1) & 18.809 & $1.5 \times 10^{-74}$ \\
         \hline
     \end{tabular}
     \caption{Logistic model: incident Sepsis-3 by GBTM trajectory class
@@ -498,11 +502,11 @@ trajectory classes only to mortality, by demonstrating that the trajectory
 shape also predicts the project's own outcome of interest: incident sepsis.
 
 %==========================================================================
-\section{Tier 7: Confounder-Adjusted Causal Analysis}
+\section{Analysis 7: Confounder-Adjusted Causal Analysis}
 %==========================================================================
 
-Every prior tier reports an \emph{association} (a risk score, a hazard ratio).
-Tier~7 applies propensity-score matching (PSM), inverse-probability weighting
+Every prior analysis reports an \emph{association} (a risk score, a hazard ratio).
+Analysis~7 applies propensity-score matching (PSM), inverse-probability weighting
 (IPW), and doubly robust augmented-IPW estimation to estimate the
 confounder-adjusted effect of early antibiotic administration ($\le 3$ hours
 of ICU admission) on in-hospital mortality among 24{,}203 Sepsis-3 patients
@@ -515,7 +519,7 @@ falls below the conventional 0.1 threshold after matching.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.75\textwidth]{images/19_tier7_balance_love_plot.png}
+    \includegraphics[width=0.75\textwidth]{images/19_analysis7_balance_love_plot.png}
     \caption{Love plot: covariate balance before (red) and after (teal)
     propensity-score matching. All standardised mean differences fall below
     0.1 after matching, confirming adequate balance.}
@@ -554,7 +558,7 @@ as an observational analysis, it cannot rule out unmeasured confounders.
 \label{sec:external_eval}
 %==========================================================================
 
-The frozen Tier-1 nomogram was applied without any refitting to
+The frozen Analysis-1 nomogram was applied without any refitting to
 \textbf{113{,}597 at-risk eICU stays} across more than 200 US ICUs (4{,}782
 incident onsets within 12 hours of the hour-six landmark).
 Table~\ref{table:external} reports the frozen-transport performance alongside
@@ -568,15 +572,15 @@ the MIMIC development performance and an internal eICU refit ceiling.
         \hline\hline
         AUROC (frozen transport)             & \textbf{0.686} & 0.775 \\
         \phantom{AUROC} 95\% CI              & [0.678, 0.694] & --- \\
-        AUROC (internal eICU refit ceiling)  & 0.712 & --- \\
+        AUROC (internal eICU refit ceiling)  & 0.711 & --- \\
         Calibration slope                    & 0.54  & 1.00 \\
         Mean predicted vs.\ observed risk    & 0.121 / 0.042 & --- \\
         Brier (frozen $\rightarrow$ recalibrated) & 0.052 / 0.040 & 0.059 \\
         \hline
     \end{tabular}
-    \caption{External validation of the frozen Tier-1 nomogram on eICU-CRD.
+    \caption{External validation of the frozen Analysis-1 nomogram on eICU-CRD.
     Discrimination transports with modest degradation; the gap between
-    frozen (0.686) and internal refit (0.712) reflects population
+    frozen (0.686) and internal refit (0.711) reflects population
     heterogeneity, not model failure.}
     \label{table:external}
 \end{table}
@@ -598,7 +602,7 @@ recalibration corrects this, reducing the Brier score from 0.052 to 0.040.
 \end{figure}
 
 \paragraph{Interpretation.} The frozen-transport AUROC (0.686) sits close to
-the eICU-native refit ceiling (0.712), so most of the drop from MIMIC's 0.775
+the eICU-native refit ceiling (0.711), so most of the drop from MIMIC's 0.775
 reflects a harder, more heterogeneous multi-centre population rather than
 model failure. The DeLong test between frozen and refit is significant
 ($p < 10^{-27}$), confirming a modest but real gap that could be closed by
@@ -606,6 +610,39 @@ local recalibration. This is the expected result for any single-centre model
 transported to 200+ ICUs, and it is consistent with the validation degradation
 reported by Wang \emph{et al.} \cite{wang2025srpm} across the broader
 literature.
+
+%==========================================================================
+\section{Supplementary Diagnostic Evidence}
+%==========================================================================
+
+Two additional figures provide complementary evidence for the modelling choices.
+Figure~\ref{fig:gam_spline} shows the GAM-estimated spline for lactate's
+effect on onset risk, confirming a monotone but non-linear relationship that
+justifies the log-transformation used in the pipeline.
+Figure~\ref{fig:pr_decision} shows the precision-recall curve and
+decision-curve analysis for the Analysis-1 nomogram, demonstrating net clinical
+benefit above both ``treat all'' and ``treat none'' strategies across a
+clinically relevant range of threshold probabilities.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.65\textwidth]{images/06_gam_spline.png}
+    \caption{GAM spline: the non-linear relationship between lactate and
+    log-odds of sepsis onset. The effect is monotone-increasing but saturates
+    at high lactate values, supporting the log-transformation used in the
+    linear models.}
+    \label{fig:gam_spline}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\textwidth]{images/06_pr_decision_curve.png}
+    \caption{Left: precision-recall curve for the Analysis-1 nomogram
+    (PR-AUC shown). Right: decision-curve analysis demonstrating net benefit
+    above both ``treat all'' and ``treat none'' across threshold probabilities
+    from 0.02 to 0.20.}
+    \label{fig:pr_decision}
+\end{figure}
 
 %==========================================================================
 \section{Discussion and Threats to Validity}

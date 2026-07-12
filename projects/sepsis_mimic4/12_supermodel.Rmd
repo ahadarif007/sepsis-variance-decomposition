@@ -1,5 +1,5 @@
 ---
-title: "Tier 2: Dynamic Landmark Supermodel"
+title: "Analysis 2: Dynamic Landmark Supermodel"
 author: "Abdul Ahad. Student ID: G00486649"
 date: "`r format(Sys.Date(), '%d %B %Y')`"
 output:
@@ -60,7 +60,7 @@ cat(sprintf("Loaded stack: %d rows, %d stays, landmarks {%s}\n",
 
 ## Feature Design
 
-Vitals and scores receive median imputation, consistent with the Tier 1 scheme. Labs and slopes are median/zero-imputed and paired with binary "measured" indicators to preserve the informative-missingness signal.
+Vitals and scores receive median imputation, consistent with the Analysis 1 scheme. Labs and slopes are median/zero-imputed and paired with binary "measured" indicators to preserve the informative-missingness signal.
 
 ```{r feature-design}
 vitals <- c("hr","resp_rate","map","spo2","temp_c","gcs")
@@ -135,7 +135,7 @@ for (sl in sort(unique(s))) {
 
 ## AUC by Landmark
 
-Out-of-sample AUROC at each prediction hour for both models, saved to `tier2_auc_by_landmark.csv` and `tier2_supermodel_oos.csv`.
+Out-of-sample AUROC at each prediction hour for both models, saved to `analysis2_auc_by_landmark.csv` and `analysis2_supermodel_oos.csv`.
 
 ```{r auc-by-landmark}
 auc_at <- function(p, sl) {
@@ -154,10 +154,10 @@ tab$auc_separate   <- round(tab$auc_separate, 4)
 overall <- as.numeric(auc(roc(y, oos, quiet=TRUE, direction="<")))
 cat(sprintf("\nOverall supermodel out-of-sample AUROC (pooled): %.4f\n", overall))
 print(tab, row.names = FALSE)
-write.csv(tab, file.path(OUT, "12_tier2_auc_by_landmark.csv"), row.names=FALSE)
+write.csv(tab, file.path(OUT, "12_analysis2_auc_by_landmark.csv"), row.names=FALSE)
 arrow::write_parquet(data.frame(stay_id=st$stay_id, landmark_time=st$landmark_time,
                      onset_within_h=y, risk=oos),
-          file.path(OUT, "12_tier2_supermodel_oos.parquet"))
+          file.path(OUT, "12_analysis2_supermodel_oos.parquet"))
 write.csv(data.frame(metric = "overall_pooled_auroc", value = overall),
           file.path(OUT, "12_overall_auroc.csv"), row.names = FALSE)
 ```

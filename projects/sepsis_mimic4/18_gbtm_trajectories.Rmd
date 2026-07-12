@@ -1,5 +1,5 @@
 ---
-title: "Tier 6: Group-Based Trajectory Modelling (GBTM)"
+title: "Analysis 6: Group-Based Trajectory Modelling (GBTM)"
 author: "Abdul Ahad. Student ID: G00486649"
 date: "`r format(Sys.Date(), '%d %B %Y')`"
 output:
@@ -107,7 +107,7 @@ assign_tab <- data.frame(stay_id = as.integer(names(cls_by_stay)),
 sev_order <- order(tapply(d$sofa_total, cls_by_stay[as.character(d$stay_id)], mean))
 remap <- setNames(seq_along(sev_order), sev_order)
 assign_tab$class <- remap[as.character(assign_tab$class)]
-write.csv(assign_tab, file.path(OUT, "18_tier6_gbtm_assignments.csv"), row.names = FALSE)
+write.csv(assign_tab, file.path(OUT, "18_analysis6_gbtm_assignments.csv"), row.names = FALSE)
 ```
 
 ## Mean Trajectory Per Class and Trajectory Plot
@@ -116,7 +116,7 @@ write.csv(assign_tab, file.path(OUT, "18_tier6_gbtm_assignments.csv"), row.names
 d$class <- remap[as.character(cls_by_stay[as.character(d$stay_id)])]
 means <- aggregate(sofa_total ~ hour + class, data = d, FUN = mean)
 means <- means[order(means$class, means$hour), ]
-write.csv(means, file.path(OUT, "18_tier6_gbtm_class_means.csv"), row.names = FALSE)
+write.csv(means, file.path(OUT, "18_analysis6_gbtm_class_means.csv"), row.names = FALSE)
 
 png(file.path(FIG, "18_gbtm_trajectories.png"), width = 1100, height = 850, res = 200)
 cols <- c("steelblue","darkorange","firebrick","purple")[1:K]
@@ -147,7 +147,7 @@ cox_tab <- data.frame(term = rownames(cox_s$coefficients),
                        p_value = signif(cox_s$coefficients[, "Pr(>|z|)"], 3))
 cat("\nCox model: trajectory class vs in-hospital mortality (ref = mildest class):\n")
 print(cox_tab, row.names = FALSE)
-write.csv(cox_tab, file.path(OUT, "18_tier6_mortality_cox.csv"), row.names = FALSE)
+write.csv(cox_tab, file.path(OUT, "18_analysis6_mortality_cox.csv"), row.names = FALSE)
 ```
 
 ## Link Trajectory Class to Incident Sepsis-3
@@ -166,7 +166,7 @@ onset_tab <- data.frame(term = rownames(glm_s),
                          p_value = signif(glm_s[, "Pr(>|z|)"], 3))
 cat("\nLogistic model: trajectory class vs incident Sepsis-3 (ref = mildest class):\n")
 print(onset_tab, row.names = FALSE)
-write.csv(onset_tab, file.path(OUT, "18_tier6_onset_assoc.csv"), row.names = FALSE)
+write.csv(onset_tab, file.path(OUT, "18_analysis6_onset_assoc.csv"), row.names = FALSE)
 
-cat("\nTier 6 (GBTM) complete.\n")
+cat("\nAnalysis 6 (GBTM) complete.\n")
 ```

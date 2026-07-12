@@ -1,5 +1,5 @@
 """
-11_landmark_stack.py - Tier 2 (data substrate)
+11_landmark_stack.py - Analysis 2 (data substrate)
 ===============================================
 Builds the stacked multi-landmark dataset for a dynamic-prediction supermodel
 (van Houwelingen 2007). Script 08 fits a single landmark at hour 6; a real-time

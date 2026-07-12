@@ -47,7 +47,7 @@ user **Abdul Ahad** (email ahadarif.1998@gmail.com; PyCharm on macOS).
 >   eICU times are integer *minute offsets* from unit admission (hour =
 >   floor(off/60)); vitals from `vitalPeriodic`(+`vitalAperiodic` MAP), temp +
 >   GCS from `nurseCharting`, labs from `lab`, vasopressors from `infusionDrug`.
-> - **`22_external_validation.Rmd`** applies the **frozen** Tier-1 coefficients
+> - **`22_external_validation.Rmd`** applies the **frozen** Analysis-1 coefficients
 >   (`tier1_coefs.csv`) with NO refitting → `external_validation_eicu.csv` +
 >   `figure/calibration_eicu.png`. Result: **frozen-transport AUROC 0.686**
 >   (95% CI 0.678–0.694) vs MIMIC 0.775; **internal eICU refit ceiling 0.712**
@@ -65,7 +65,7 @@ user **Abdul Ahad** (email ahadarif.1998@gmail.com; PyCharm on macOS).
 > cleaned (structured logging + shared modules + naming overhaul), and fully
 > re-executed. All 10 Python + 11 Rmd stages run clean. No open items remain.
 
-> **2026-07-09 UPDATE — single-study framing; Tiers 6-7 added.** The user
+> **2026-07-09 UPDATE — single-study framing; Analyses 6-7 added.** The user
 > asked to stop framing this as two research efforts ("Phase 1" / "Phase 2")
 > since it is **one research programme** — the whole pipeline `01`→`20` is
 > now described that way throughout code, reports, and README. Concretely:
@@ -74,13 +74,13 @@ user **Abdul Ahad** (email ahadarif.1998@gmail.com; PyCharm on macOS).
 >   a pre-existing naming/doc mismatch). Scripts `10,12,13,15,16` updated to
 >   match; all five re-run and verified to reproduce the original numbers.
 > - **Renamed** `17_phase2_report.Rmd` → `20_realtime_model_report.Rmd`
->   (renumbered so the final report sits after the new Tiers 6-7 below).
-> - **Two new tiers**, closing gaps the literature review flagged against
->   comparable MIMIC-IV statistical studies: **Tier 6** (`18_gbtm_trajectories.R`)
+>   (renumbered so the final report sits after the new Analyses 6-7 below).
+> - **Two new analyses**, closing gaps the literature review flagged against
+>   comparable MIMIC-IV statistical studies: **Analysis 6** (`18_gbtm_trajectories.R`)
 >   fits group-based trajectory modelling (flexmix latent-class growth model,
 >   since `lcmm`/`traj` aren't installed) on first-24h SOFA trajectories,
 >   linking class membership to mortality (Cox) and incident Sepsis-3
->   (logistic) — following Yang et al. 2022. **Tier 7**
+>   (logistic) — following Yang et al. 2022. **Analysis 7**
 >   (`19_confounder_adjustment.R`) uses LASSO-selected confounders, then PSM /
 >   IPW / doubly-robust (augmented-IPW) estimation of the effect of early
 >   (≤3h) antibiotics on mortality — following Guo et al. 2025 and Zou et al.
@@ -102,7 +102,7 @@ user **Abdul Ahad** (email ahadarif.1998@gmail.com; PyCharm on macOS).
 >   eICU remains the one open item in both documents and here.
 >
 > **CURRENT STATUS IN ONE LINE (2026-07-09):** the whole pipeline `01`→`20` is
-> built and run, covering Tiers 1-7. The only outstanding work is **external
+> built and run, covering Analyses 1-7. The only outstanding work is **external
 > validation on eICU** (deferred — no eICU database is present locally). Read
 > the dated update banners below (newest first), then the section detail.
 > Where a section body still says "[NOT RUN]" it has been corrected inline;
@@ -117,12 +117,12 @@ user **Abdul Ahad** (email ahadarif.1998@gmail.com; PyCharm on macOS).
 > report `17_phase2_report.Rmd` (rendered). Plan & results in
 > `GENAI/plan_phase2_statistical.md`; summary table in README §9. Outputs:
 > `processed_data/phase2_tier{1..5}*.csv`, figures in `figure/`. Headlines:
-> Tier 1 nomogram **0.775** AUROC (informative-missingness indicators dominate);
-> Tier 2 landmark **supermodel** gives hourly-updating risk, AUC(s) 0.65–0.77;
-> Tier 3 GEE within-patient corr 0.68, cluster-robust SEs up to 4.5× naive
+> Analysis 1 nomogram **0.775** AUROC (informative-missingness indicators dominate);
+> Analysis 2 landmark **supermodel** gives hourly-updating risk, AUC(s) 0.65–0.77;
+> Analysis 3 GEE within-patient corr 0.68, cluster-robust SEs up to 4.5× naive
 > (a per-patient random-intercept GLMM is DEGENERATE here — quasi-complete
-> separation — so GEE + sandwich SEs were used instead); Tier 4 PhysioNet
-> utility 0.29 + alarm-burden curve; Tier 5 subgroup fairness OK, **eICU external
+> separation — so GEE + sandwich SEs were used instead); Analysis 4 PhysioNet
+> utility 0.29 + alarm-burden curve; Analysis 5 subgroup fairness OK, **eICU external
 > validation deferred (no eICU data locally)**. New R pkgs used: `glmnet, rms,
 > geepack, sandwich` (geepack was installed this session). Everything reuses the
 > Phase-1 substrate (`hourly_labeled.parquet`, `landmark_h6.csv`); no heavy
@@ -185,7 +185,7 @@ why the heavy SOFA-labeling stages had to be built before the report.
 | **Python with pandas** | `/Library/Frameworks/Python.framework/Versions/3.14/bin/python3` — pandas **3.0.4**. This is what the shell's `python3` resolves to. |
 | **System python (AVOID)** | `/usr/bin/python3` has **no pandas**. PyCharm defaulted to this and threw `ModuleNotFoundError: No module named 'pandas'`. Fix: point PyCharm's interpreter at the framework build above, or run from the terminal. |
 | **pandas 3.0 Arrow strings** | pandas 3.0 stores text columns as Arrow `large_string`. **CSV datetime columns load back as `str`**, and `str - Timedelta` raises `ArrowNotImplementedError`. **Always `parse_dates=[...]` when loading CSV datetimes.** This bit us in `03` (now fixed via `U.load(..., parse_dates=...)`). |
-| **R** | `/usr/local/bin/Rscript` — R **4.5.2**. Report 06 pkgs: `rmarkdown, bookdown, tidyverse, knitr, kableExtra, MASS, mclust, coda, depmixS4, effectsize, broom, patchwork, pROC, PRROC, mgcv, car, mice`. Report 09 adds `survival, cmprsk, timeROC`. Model tiers add `glmnet, rms, geepack, sandwich`. Tiers 6–7 add `flexmix, MatchIt, WeightIt, cobalt`. eICU validation (`22`) uses `arrow` (for parquet reads). All installed. `pdflatex` present at `/Library/TeX/texbin/`. `pdftoppm`/`pdftools` NOT installed (can't rasterize PDF for inspection). |
+| **R** | `/usr/local/bin/Rscript` — R **4.5.2**. Report 06 pkgs: `rmarkdown, bookdown, tidyverse, knitr, kableExtra, MASS, mclust, coda, depmixS4, effectsize, broom, patchwork, pROC, PRROC, mgcv, car, mice`. Report 09 adds `survival, cmprsk, timeROC`. Model analyses add `glmnet, rms, geepack, sandwich`. Analyses 6–7 add `flexmix, MatchIt, WeightIt, cobalt`. eICU validation (`22`) uses `arrow` (for parquet reads). All installed. `pdflatex` present at `/Library/TeX/texbin/`. `pdftoppm`/`pdftools` NOT installed (can't rasterize PDF for inspection). |
 | **Data root** | `/Users/arif/Desktop/RESEARCH/data/mimic-iv-3.1/` with `hosp/` and `icu/` subdirs, all `*.csv.gz`. |
 | **Outputs** | `/Users/arif/Desktop/RESEARCH/processed_data/` |
 | **Project code** | `/Users/arif/Desktop/RESEARCH/projects/sepsis_mimic4/` (this pipeline lives in a subfolder because the wider `RESEARCH/` project "will be tremendously big in future"). |
@@ -244,8 +244,8 @@ RESEARCH/
     ├── 20_realtime_model_report.Rmd [RENDERED] → 20_realtime_model_report.pdf
     ├── 21_eicu_external_panel.py [RUN] → landmark_h6_eicu.parquet
     ├── 22_external_validation.Rmd[RENDERED] → 22_external_validation.pdf
-    ├── figure/                   report figures (all tiers + eICU calibration)
-    ├── README.md                 human-facing docs (see §9 for per-tier table)
+    ├── figure/                   report figures (all analyses + eICU calibration)
+    ├── README.md                 human-facing docs (see §9 for per-analysis table)
     ├── requirements.txt          pandas>=2.0, numpy, pyarrow, tqdm
     └── GENAI/{HANDOFF.md, plan.md, plan_phase2_statistical.md, README.md}
 ```
@@ -341,11 +341,11 @@ Cox, Fine–Gray, ACF, within-patient HMM, AUC(t) vs baselines). Best Phase-1
 number: multivariable hourly logistic **0.755** AUROC for 12h incident onset @ h6.
 
 ### 10–17  [RUN / RENDERED — Phase 2, purely statistical]
-See the **2026-07-08 update banner** at the top and **README §9** (per-tier table)
+See the **2026-07-08 update banner** at the top and **README §9** (per-analysis table)
 and **`GENAI/plan_phase2_statistical.md`** (design + results). Reuses the Phase-1
 substrate; no heavy recompute. Real-time prediction via **dynamic landmarking**
-(a landmark supermodel), not ML. Headline: Tier-1 full-feature nomogram **0.775**
-AUROC; Tier-2 supermodel AUC(s) 0.65–0.77 (hourly-updating risk).
+(a landmark supermodel), not ML. Headline: Analysis-1 full-feature nomogram **0.775**
+AUROC; Analysis-2 supermodel AUC(s) 0.65–0.77 (hourly-updating risk).
 
 ---
 
@@ -398,16 +398,16 @@ are rendered on real data. The remaining work is:
 1. **External validation on eICU — DONE (2026-07-09).** eICU-CRD v2.0 is now
    under `data/eicu-collaborative-research-database-2.0/`. Scripts `21`/`22`
    rebuild the h6 landmark on eICU (identical 02/03/07/08 definitions) and apply
-   the frozen Tier-1 nomogram with no refitting: **AUROC 0.686** (CI 0.678–0.694)
+   the frozen Analysis-1 nomogram with no refitting: **AUROC 0.686** (CI 0.678–0.694)
    vs MIMIC 0.775, internal eICU ceiling 0.712, calibration slope 0.54 corrected
    by one-line recalibration (Brier 0.052→0.040). See the top-of-file banner and
    README §6. The one adaptation — antibiotic-only suspicion trigger, because
    eICU micro capture is ~1.5% of stays — is documented in the `21` docstring
    and README §5/limitations. Nothing further is blocking a clinical claim on
-   this axis; a natural extension is to also transport the Tier-2 supermodel
+   this axis; a natural extension is to also transport the Analysis-2 supermodel
    across all landmark hours (not just h6).
 
-2. **Tier-1 landed at 0.775, below the 0.80–0.83 README projection** — honestly
+2. **Analysis-1 landed at 0.775, below the 0.80–0.83 README projection** — honestly
    so: at a 6h landmark the labs that would lift discrimination are mostly not
    yet drawn, so their imputed values add little beyond the fact of absence
    (which the missingness indicators already capture). Not a bug; documented in
@@ -415,7 +415,7 @@ are rendered on real data. The remaining work is:
 
 3. **A per-patient random-intercept GLMM is degenerate on this outcome**
    (quasi-complete separation — most patients never have an event). Phase-2
-   Tier-3 therefore uses **GEE + cluster-robust SEs** instead. Don't "fix" the
+   Analysis-3 therefore uses **GEE + cluster-robust SEs** instead. Don't "fix" the
    GLMM; the GEE route is deliberate.
 
 4. **Deliberately NOT pursued** (out of scope by the user's purely-statistical
@@ -446,7 +446,7 @@ python3 07_hourly_panel.py             # SLOW: builds 3.1M stay-hours
 python3 08_onset_label.py              # hourly SOFA, onset, landmark, baselines
 Rscript -e 'rmarkdown::render("09_temporal_report.Rmd")'
 
-# --- Real-time model tiers (fast; reuses 08 outputs) ---
+# --- Real-time model analyses (fast; reuses 08 outputs) ---
 Rscript -e 'rmarkdown::render("10_landmark_nomogram.Rmd")'  # T1 nomogram
 python3 11_landmark_stack.py           # T2 stacked landmark dataset
 Rscript -e 'rmarkdown::render("12_supermodel.Rmd")'         # T2 supermodel + AUC(s)
@@ -477,11 +477,11 @@ Rscript -e 'rmarkdown::render("22_external_validation.Rmd")'
   all 12 R packages present ✓.
 - `03` datetime bug fixed and **re-run on real data** — reproduces the cohort. ✓
 - All Python scripts `py_compile` clean (incl. `11`, `14`). ✓
-- **Phase 2 (2026-07-08):** every tier script runs to exit 0; `20_realtime_model_report`
+- **Phase 2 (2026-07-08):** every analysis script runs to exit 0; `20_realtime_model_report`
   renders to PDF with **no NA/error leakage** in inline values (knit-to-md
   checked). `11_landmark_stack.py` reproduces the h6 landmark exactly (48,829
   at-risk / 3,330 onset-in-12h, matching `landmark_h6.csv`). Supermodel CV is
-  patient-grouped on `stay_id` (each stay recurs across landmarks). Tier-4
+  patient-grouped on `stay_id` (each stay recurs across landmarks). Analysis-4
   holdout is trained on the complement of the 6,000 held-out stays (leakage-safe).
 - **Code quality pass (2026-07-10):** all 10 Python scripts verified with
   `python3 -m py_compile` after 100+ variable renames and module extraction.
@@ -526,13 +526,13 @@ Rscript -e 'rmarkdown::render("22_external_validation.Rmd")'
 14. **(2026-07-02)** User asked "what else can we do"; decided Phase 2 should be
     **purely statistical** and, at that point, **plan-only**. Wrote
     `GENAI/plan_phase2_statistical.md`.
-15. **(2026-07-08)** User: "execute phase 2." Built and ran Tiers 1–5
-    (scripts `10`–`16`) + report `17`; installed `geepack`; switched Tier-3 from
+15. **(2026-07-08)** User: "execute phase 2." Built and ran Analyses 1–5
+    (scripts `10`–`16`) + report `17`; installed `geepack`; switched Analysis-3 from
     a degenerate GLMM to GEE; deferred eICU. Then updated README + this HANDOFF.
 16. **(2026-07-09)** eICU external validation: built `21_eicu_external_panel.py`
     and `22_external_validation.Rmd`. Unified framing (dropped "Phase 1/2"),
     renamed artifacts (`phase2_tier*.csv` → `tier*.csv`), renumbered
-    `17` → `20`, added Tiers 6–7 (`18`/`19`). See the 2026-07-09 banners.
+    `17` → `20`, added Analyses 6–7 (`18`/`19`). See the 2026-07-09 banners.
 17. **(2026-07-10)** User: "add proper logs … scan for reusable code." Created
     `logging_utils.py` (structured logging) and `clinical_scores.py` (shared
     SOFA/qSOFA/SIRS). All 10 Python scripts updated to use both modules.

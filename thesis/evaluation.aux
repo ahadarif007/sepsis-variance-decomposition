@@ -1,0 +1,118 @@
+\relax 
+\providecommand\zref@newlabel[2]{}
+\providecommand\hyper@newdestlabel[2]{}
+\@writefile{toc}{\contentsline {chapter}{\numberline {5}System Evaluation}{24}{chapter.5}\protected@file@percent }
+\@writefile{lof}{\addvspace {10\p@ }}
+\@writefile{lot}{\addvspace {10\p@ }}
+\newlabel{ch:evaluation}{{5}{24}{System Evaluation}{chapter.5}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5.1}Temporal Foundation: Onset Distribution and the Landmark Design}{24}{section.5.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Prevalent versus incident sepsis.}{24}{section*.29}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Time-to-onset survival analysis.}{24}{section*.30}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {5.1}{\ignorespaces Cumulative incidence of sepsis onset from the hour-six landmark, stratified by SIRS status. Patients with $\ge 2$ SIRS criteria develop sepsis faster, confirming that inflammatory markers carry predictive signal for the incident-onset task.}}{25}{figure.5.1}\protected@file@percent }
+\newlabel{fig:km_cumulative}{{5.1}{25}{Cumulative incidence of sepsis onset from the hour-six landmark, stratified by SIRS status. Patients with $\ge 2$ SIRS criteria develop sepsis faster, confirming that inflammatory markers carry predictive signal for the incident-onset task}{figure.5.1}{}}
+\@writefile{toc}{\contentsline {paragraph}{Competing risks.}{25}{section*.31}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {5.2}{\ignorespaces Cumulative incidence functions from the hour-six landmark accounting for death without sepsis as a competing risk, stratified by SIRS status. The solid lines show onset incidence; the dashed lines show the competing risk of death without sepsis.}}{26}{figure.5.2}\protected@file@percent }
+\newlabel{fig:competing_risks}{{5.2}{26}{Cumulative incidence functions from the hour-six landmark accounting for death without sepsis as a competing risk, stratified by SIRS status. The solid lines show onset incidence; the dashed lines show the competing risk of death without sepsis}{figure.5.2}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5.2}Proportional-Hazards Testing and Time-Varying Cox (SQ1, C2)}{26}{section.5.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {5.1}{\ignorespaces Cox model for time to incident sepsis (hour-six landmark). SIRS and vital signs carry the hazard, while a single-timepoint SOFA value is \emph  {inversely} associated with incident onset.}}{26}{table.5.1}\protected@file@percent }
+\newlabel{table:cox_baseline}{{5.1}{26}{Cox model for time to incident sepsis (hour-six landmark). SIRS and vital signs carry the hazard, while a single-timepoint SOFA value is \emph {inversely} associated with incident onset}{table.5.1}{}}
+\citation{kasal2004cox}
+\@writefile{toc}{\contentsline {section}{\numberline {5.3}Temporal Structure: Trajectories and Autocorrelation}{27}{section.5.3}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {5.3}{\ignorespaces Left: mean hourly heart rate by sepsis status; septic patients run higher and diverge over time. Right: distribution of within-patient lag-1 autocorrelation of heart rate; the mean of 0.57 confirms strong hour-to-hour dependence that the static analysis discarded.}}{27}{figure.5.3}\protected@file@percent }
+\newlabel{fig:trajectories_acf}{{5.3}{27}{Left: mean hourly heart rate by sepsis status; septic patients run higher and diverge over time. Right: distribution of within-patient lag-1 autocorrelation of heart rate; the mean of 0.57 confirms strong hour-to-hour dependence that the static analysis discarded}{figure.5.3}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5.4}Benchmarking on the Incident-Onset Task (SQ3, C3)}{28}{section.5.4}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {5.2}{\ignorespaces Discrimination at the hour-six landmark (incident onset within 12\,h) on MIMIC-IV. The full-feature elastic-net nomogram is the statistical ceiling at a single landmark.}}{28}{table.5.2}\protected@file@percent }
+\newlabel{table:bench}{{5.2}{28}{Discrimination at the hour-six landmark (incident onset within 12\,h) on MIMIC-IV. The full-feature elastic-net nomogram is the statistical ceiling at a single landmark}{table.5.2}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5.5}Analysis 1: Informative Missingness and the Nomogram (C4)}{28}{section.5.5}\protected@file@percent }
+\citation{groenwold2020missingness}
+\@writefile{lot}{\contentsline {table}{\numberline {5.3}{\ignorespaces Ten largest coefficients (original scale) in the Analysis-1 elastic-net model. Features ending in \_msg are binary ``was measured'' indicators. The act of ordering a P/F ratio is the single strongest predictor (OR 5.46), confirming an informative-missingness signal.}}{29}{table.5.3}\protected@file@percent }
+\newlabel{table:coefs}{{5.3}{29}{Ten largest coefficients (original scale) in the Analysis-1 elastic-net model. Features ending in \_msg are binary ``was measured'' indicators. The act of ordering a P/F ratio is the single strongest predictor (OR 5.46), confirming an informative-missingness signal}{table.5.3}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5.4}{\ignorespaces Calibration curve (out-of-sample) for the Analysis-1 elastic-net nomogram at the hour-six landmark. Points near the diagonal indicate that predicted risks are usable as probabilities, not merely as a ranking.}}{30}{figure.5.4}\protected@file@percent }
+\newlabel{fig:calibration_h6}{{5.4}{30}{Calibration curve (out-of-sample) for the Analysis-1 elastic-net nomogram at the hour-six landmark. Points near the diagonal indicate that predicted risks are usable as probabilities, not merely as a ranking}{figure.5.4}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5.6}Analysis 2: Dynamic Landmark Supermodel (C1)}{30}{section.5.6}\protected@file@percent }
+\newlabel{sec:supermodel_results}{{5.6}{30}{Analysis 2: Dynamic Landmark Supermodel (C1)}{section.5.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.6.1}Overall Discrimination}{30}{subsection.5.6.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {5.4}{\ignorespaces Dynamic discrimination AUC($s$): one supermodel evaluated at each prediction hour, versus a separate model per landmark. The single supermodel matches the accuracy of bespoke per-landmark models while remaining one parsimonious, deployable object.}}{31}{table.5.4}\protected@file@percent }
+\newlabel{table:auc_by_landmark}{{5.4}{31}{Dynamic discrimination AUC($s$): one supermodel evaluated at each prediction hour, versus a separate model per landmark. The single supermodel matches the accuracy of bespoke per-landmark models while remaining one parsimonious, deployable object}{table.5.4}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5.5}{\ignorespaces Dynamic AUC($s$): the supermodel's out-of-sample discrimination as a function of the hour at which the prediction is made, versus separate per-landmark models. The supermodel matches or exceeds the bespoke models at most landmarks while requiring only one set of coefficients.}}{31}{figure.5.5}\protected@file@percent }
+\newlabel{fig:auc_by_landmark}{{5.5}{31}{Dynamic AUC($s$): the supermodel's out-of-sample discrimination as a function of the hour at which the prediction is made, versus separate per-landmark models. The supermodel matches or exceeds the bespoke models at most landmarks while requiring only one set of coefficients}{figure.5.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.6.2}Interpretation of the Dynamic Discrimination Pattern}{32}{subsection.5.6.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.6.3}Time-Dependent AUC Across Horizons}{32}{subsection.5.6.3}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {5.6}{\ignorespaces Time-dependent AUC for predicting sepsis onset over increasing horizons from the hour-six landmark. Discrimination remains above 0.70 across all tested horizons, demonstrating robust risk stratification over time.}}{33}{figure.5.6}\protected@file@percent }
+\newlabel{fig:timedep_auc}{{5.6}{33}{Time-dependent AUC for predicting sepsis onset over increasing horizons from the hour-six landmark. Discrimination remains above 0.70 across all tested horizons, demonstrating robust risk stratification over time}{figure.5.6}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5.7}Analysis 3: Within-Patient Correlation (GEE and Time-Varying Cox)}{33}{section.5.7}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {5.5}{\ignorespaces Pooled logistic model: naive versus cluster-robust standard errors. Ignoring within-patient correlation understates every SE by 2--4.5 times.}}{34}{table.5.5}\protected@file@percent }
+\newlabel{table:gee_se}{{5.5}{34}{Pooled logistic model: naive versus cluster-robust standard errors. Ignoring within-patient correlation understates every SE by 2--4.5 times}{table.5.5}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5.8}Analysis 4: Real-Time Evaluation (Utility and Alarm Burden)}{34}{section.5.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{PhysioNet utility.}{34}{section*.32}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Alarm burden.}{34}{section*.33}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {5.7}{\ignorespaces Alarm-burden trade-off for the real-time supermodel. High sensitivity ($\ge 90\%$) is achievable only at alarm rates (6.5 false alarms per patient-day) that would fatigue bedside staff. A practical operating point (51\% sensitivity, 0.7 false alarms per patient-day) balances detection against alarm fatigue.}}{35}{figure.5.7}\protected@file@percent }
+\newlabel{fig:alarm_tradeoff}{{5.7}{35}{Alarm-burden trade-off for the real-time supermodel. High sensitivity ($\ge 90\%$) is achievable only at alarm rates (6.5 false alarms per patient-day) that would fatigue bedside staff. A practical operating point (51\% sensitivity, 0.7 false alarms per patient-day) balances detection against alarm fatigue}{figure.5.7}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {5.6}{\ignorespaces Operating points: earlier/more-sensitive detection costs rapidly rising false-alarm burden.}}{35}{table.5.6}\protected@file@percent }
+\newlabel{table:alarm_ops}{{5.6}{35}{Operating points: earlier/more-sensitive detection costs rapidly rising false-alarm burden}{table.5.6}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5.9}Analysis 5: Subgroup Fairness}{36}{section.5.9}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {5.7}{\ignorespaces Subgroup discrimination and calibration-in-the-large. The model performs consistently across sex and age, with no evidence of systematic under- or over-prediction in any subgroup.}}{36}{table.5.7}\protected@file@percent }
+\newlabel{table:subgroups}{{5.7}{36}{Subgroup discrimination and calibration-in-the-large. The model performs consistently across sex and age, with no evidence of systematic under- or over-prediction in any subgroup}{table.5.7}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5.10}Analysis 6: Group-Based Trajectory Modelling}{36}{section.5.10}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {5.8}{\ignorespaces GBTM: three latent SOFA-trajectory classes over the first 24 ICU hours. Class 1 (mildest) is flat near zero; Class 2 (intermediate) rises to SOFA $\sim $3; Class 3 (most severe) rises steeply to SOFA $\sim $7. The trajectory \emph  {shape}, not just its endpoint, carries prognostic and predictive information.}}{37}{figure.5.8}\protected@file@percent }
+\newlabel{fig:gbtm}{{5.8}{37}{GBTM: three latent SOFA-trajectory classes over the first 24 ICU hours. Class 1 (mildest) is flat near zero; Class 2 (intermediate) rises to SOFA $\sim $3; Class 3 (most severe) rises steeply to SOFA $\sim $7. The trajectory \emph {shape}, not just its endpoint, carries prognostic and predictive information}{figure.5.8}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {5.8}{\ignorespaces Cox model: in-hospital mortality by GBTM trajectory class (reference = mildest class), adjusted for age.}}{37}{table.5.8}\protected@file@percent }
+\newlabel{table:gbtm_mortality}{{5.8}{37}{Cox model: in-hospital mortality by GBTM trajectory class (reference = mildest class), adjusted for age}{table.5.8}{}}
+\citation{yang2022gbtm}
+\@writefile{lot}{\contentsline {table}{\numberline {5.9}{\ignorespaces Logistic model: incident Sepsis-3 by GBTM trajectory class (reference = mildest class). The most-severe trajectory carries an 18-fold odds of subsequent onset.}}{38}{table.5.9}\protected@file@percent }
+\newlabel{table:gbtm_onset}{{5.9}{38}{Logistic model: incident Sepsis-3 by GBTM trajectory class (reference = mildest class). The most-severe trajectory carries an 18-fold odds of subsequent onset}{table.5.9}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5.11}Analysis 7: Confounder-Adjusted Causal Analysis}{38}{section.5.11}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {5.9}{\ignorespaces Love plot: covariate balance before (red) and after (teal) propensity-score matching. All standardised mean differences fall below 0.1 after matching, confirming adequate balance.}}{39}{figure.5.9}\protected@file@percent }
+\newlabel{fig:love_plot}{{5.9}{39}{Love plot: covariate balance before (red) and after (teal) propensity-score matching. All standardised mean differences fall below 0.1 after matching, confirming adequate balance}{figure.5.9}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {5.10}{\ignorespaces Effect of early ($\le 3$h) versus delayed antibiotics on in-hospital mortality. All four estimators agree in direction and magnitude: early antibiotics associate with approximately 10\% lower odds of death.}}{39}{table.5.10}\protected@file@percent }
+\newlabel{table:causal}{{5.10}{39}{Effect of early ($\le 3$h) versus delayed antibiotics on in-hospital mortality. All four estimators agree in direction and magnitude: early antibiotics associate with approximately 10\% lower odds of death}{table.5.10}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5.12}External Validation on eICU-CRD (SQ3, C5)}{40}{section.5.12}\protected@file@percent }
+\newlabel{sec:external_eval}{{5.12}{40}{External Validation on eICU-CRD (SQ3, C5)}{section.5.12}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {5.11}{\ignorespaces External validation of the frozen Analysis-1 nomogram on eICU-CRD. Discrimination transports with modest degradation; the gap between frozen (0.686) and internal refit (0.711) reflects population heterogeneity, not model failure.}}{40}{table.5.11}\protected@file@percent }
+\newlabel{table:external}{{5.11}{40}{External validation of the frozen Analysis-1 nomogram on eICU-CRD. Discrimination transports with modest degradation; the gap between frozen (0.686) and internal refit (0.711) reflects population heterogeneity, not model failure}{table.5.11}{}}
+\citation{wang2025srpm}
+\@writefile{lof}{\contentsline {figure}{\numberline {5.10}{\ignorespaces eICU calibration by risk decile: the frozen MIMIC model (red) over-predicts, and a single-parameter recalibration (blue) restores agreement with observed onset rates. The dashed grey line marks perfect calibration.}}{41}{figure.5.10}\protected@file@percent }
+\newlabel{fig:calibration_eicu}{{5.10}{41}{eICU calibration by risk decile: the frozen MIMIC model (red) over-predicts, and a single-parameter recalibration (blue) restores agreement with observed onset rates. The dashed grey line marks perfect calibration}{figure.5.10}{}}
+\@writefile{toc}{\contentsline {paragraph}{Interpretation.}{41}{section*.34}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5.13}Supplementary Diagnostic Evidence}{41}{section.5.13}\protected@file@percent }
+\citation{groenwold2020missingness}
+\citation{singh2021missingness}
+\@writefile{lof}{\contentsline {figure}{\numberline {5.11}{\ignorespaces GAM spline: the non-linear relationship between lactate and log-odds of sepsis onset. The effect is monotone-increasing but saturates at high lactate values, supporting the log-transformation used in the linear models.}}{42}{figure.5.11}\protected@file@percent }
+\newlabel{fig:gam_spline}{{5.11}{42}{GAM spline: the non-linear relationship between lactate and log-odds of sepsis onset. The effect is monotone-increasing but saturates at high lactate values, supporting the log-transformation used in the linear models}{figure.5.11}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5.12}{\ignorespaces Left: precision-recall curve for the Analysis-1 nomogram (PR-AUC shown). Right: decision-curve analysis demonstrating net benefit above both ``treat all'' and ``treat none'' across threshold probabilities from 0.02 to 0.20.}}{42}{figure.5.12}\protected@file@percent }
+\newlabel{fig:pr_decision}{{5.12}{42}{Left: precision-recall curve for the Analysis-1 nomogram (PR-AUC shown). Right: decision-curve analysis demonstrating net benefit above both ``treat all'' and ``treat none'' across threshold probabilities from 0.02 to 0.20}{figure.5.12}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5.14}Discussion and Threats to Validity}{42}{section.5.14}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.14.1}Central Finding}{42}{subsection.5.14.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.14.2}Strengths}{43}{subsection.5.14.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.14.3}Threats to Validity}{43}{subsection.5.14.3}\protected@file@percent }
+\@setckpt{evaluation}{
+\setcounter{page}{44}
+\setcounter{equation}{0}
+\setcounter{enumi}{4}
+\setcounter{enumii}{0}
+\setcounter{enumiii}{0}
+\setcounter{enumiv}{0}
+\setcounter{footnote}{0}
+\setcounter{mpfootnote}{0}
+\setcounter{part}{0}
+\setcounter{chapter}{5}
+\setcounter{section}{14}
+\setcounter{subsection}{3}
+\setcounter{subsubsection}{0}
+\setcounter{paragraph}{0}
+\setcounter{subparagraph}{0}
+\setcounter{figure}{12}
+\setcounter{table}{11}
+\setcounter{nlinenum}{0}
+\setcounter{parentequation}{0}
+\setcounter{mdf@globalstyle@cnt}{0}
+\setcounter{mdfcountframes}{0}
+\setcounter{mdf@env@i}{0}
+\setcounter{mdf@env@ii}{0}
+\setcounter{mdf@zref@counter}{0}
+\setcounter{section@level}{2}
+\setcounter{Item}{20}
+\setcounter{Hfootnote}{0}
+\setcounter{bookmark@seq@number}{59}
+\setcounter{float@type}{4}
+}

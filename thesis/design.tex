@@ -22,7 +22,7 @@ identifiers, antibiotic name lists, and Sepsis-3 thresholds.
     \includegraphics[width=0.95\textwidth]{images/architecture.png}
     \caption{System architecture: the Extract, Model, and Evaluate layers. The
     development data (MIMIC-IV) flows through cohort construction, hourly panel
-    assembly, and onset labelling into the seven statistical tiers; the frozen
+    assembly, and onset labelling into the seven statistical analyses; the frozen
     model coefficients are then transported to eICU-CRD for external validation.}
     \label{image:sysArchitecture}
 \end{figure}
@@ -100,15 +100,15 @@ early prediction.
 
 \section{Model Layer (Scripts 09--19)}
 
-The model layer implements the seven statistical tiers. Because Tier~2 (the
-dynamic landmark supermodel) is the central methodological contribution of this
-thesis, it receives the most detailed treatment here.
+The model layer implements the seven statistical analyses. Because Analysis~2
+(the dynamic landmark supermodel) is the central methodological contribution of
+this thesis, it receives the most detailed treatment here.
 
-\subsection{Tier 1: Full-Feature Elastic-Net Nomogram}
-The Tier-1 nomogram is an elastic-net penalised logistic regression at the
+\subsection{Analysis 1: Full-Feature Elastic-Net Nomogram}
+The Analysis-1 nomogram is an elastic-net penalised logistic regression at the
 hour-six landmark, using all 27 candidate features: vitals (6), severity
-scores (3), labs (3), six-hour trajectory slopes (4), binary ``was measured''
-indicators (7), plus age and sex. Nested five-fold cross-validation (outer
+scores (3), labs (4), six-hour trajectory slopes (4), binary ``was measured''
+indicators (8, one per lab and per slope), plus age and sex. Nested five-fold cross-validation (outer
 folds for honest evaluation, inner folds for $\lambda$ selection) yields
 out-of-sample predicted risks.
 
@@ -132,7 +132,7 @@ elastic-net-selected features, allowing point-based bedside risk estimation.
     \label{fig:nomogram_h6}
 \end{figure}
 
-\subsection{Tier 2: Dynamic Landmark Supermodel}
+\subsection{Analysis 2: Dynamic Landmark Supermodel}
 \label{sec:supermodel_design}
 
 A single landmark answers ``predict from hour 6.'' A deployed system must
@@ -157,12 +157,12 @@ The supermodel design has three important properties:
   interaction terms.
 \end{enumerate}
 
-\subsection{Tier 3: Within-Patient Correlation}
+\subsection{Analysis 3: Within-Patient Correlation}
 
 The hourly panel contains repeated measurements from the same patient, and
 these observations are strongly correlated. A naive pooled logistic model
 treats the approximately 76{,}000 at-risk stay-hours as independent, which
-produces artificially narrow confidence intervals. Tier~3 addresses this in
+produces artificially narrow confidence intervals. Analysis~3 addresses this in
 two ways:
 
 \begin{enumerate}
@@ -174,30 +174,30 @@ two ways:
   inferentially valid hazard ratios with cluster-robust variance estimation.
 \end{enumerate}
 
-\subsection{Tiers 4--7: Evaluation and Complementary Analyses}
+\subsection{Analyses 4--7: Evaluation and Complementary Studies}
 
-\paragraph{Tier 4 (Real-time evaluation).} The supermodel is trained on
+\paragraph{Analysis 4 (Real-time evaluation).} The supermodel is trained on
 44{,}389 stays and evaluated on a held-out set of 6{,}000 stays (152{,}910
 scored hours), computing the PhysioNet/CinC 2019 utility score and an
 alarm-burden sweep.
 
-\paragraph{Tier 5 (Subgroup fairness).} Discrimination and calibration-in-the-large are stratified by sex and four age bands ($<$50, 50--64, 65--79,
+\paragraph{Analysis 5 (Subgroup fairness).} Discrimination and calibration-in-the-large are stratified by sex and four age bands ($<$50, 50--64, 65--79,
 80+) to assess equitable performance.
 
-\paragraph{Tier 6 (GBTM).} A latent-class growth model
+\paragraph{Analysis 6 (GBTM).} A latent-class growth model
 \cite{yang2022gbtm} is fitted to first-24h SOFA trajectories via
 \texttt{flexmix}, selecting the number of classes by BIC. Class membership is
 linked to both mortality (Cox regression) and incident Sepsis-3 (logistic
 regression).
 
-\paragraph{Tier 7 (Causal analysis).} The confounder-adjusted effect of
+\paragraph{Analysis 7 (Causal analysis).} The confounder-adjusted effect of
 early antibiotic administration ($\le 3$ hours) on mortality is estimated
 using crude, PSM, IPW, and augmented-IPW estimators, with the adjustment set
 chosen by LASSO.
 
 \section{Evaluate Layer (Scripts 20--22)}
 
-The evaluate layer consolidates results across all tiers into a single
+The evaluate layer consolidates results across all analyses into a single
 comprehensive report and performs external validation. The frozen MIMIC
 model's coefficients are serialised and applied to eICU-CRD by assembling
 the identical feature design matrix from eICU data and computing the
@@ -205,7 +205,7 @@ linear predictor directly.
 
 \section{Implementation Notes}
 Extraction and panel assembly are implemented in Python with pandas; the
-statistical tiers and their reports are implemented in R. All intermediate
+statistical analyses and their reports are implemented in R. All intermediate
 artefacts are stored as Parquet (for large panel data) or CSV (for small
 result tables). All randomness uses a fixed seed (486649), and the entire
 pipeline is reproducible from a single driver script (\texttt{run\_pipeline.py})

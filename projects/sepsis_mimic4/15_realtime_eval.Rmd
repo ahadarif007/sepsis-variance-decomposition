@@ -1,5 +1,5 @@
 ---
-title: "Tier 4: Real-Time Evaluation of the Landmark Supermodel"
+title: "Analysis 4: Real-Time Evaluation of the Landmark Supermodel"
 subtitle: "PhysioNet Utility Score, Alarm-Burden Analysis, and Dynamic Calibration"
 author: "Abdul Ahad. Student ID: G00486649"
 date: "`r format(Sys.Date(), '%d %B %Y')`"
@@ -145,7 +145,7 @@ best_i <- which.max(norm)
 util_tab <- data.frame(threshold = grid,
                        utility_raw = round(u_raw, 1),
                        utility_norm = round(norm, 4))
-write.csv(util_tab, file.path(OUT, "15_tier4_utility.csv"), row.names=FALSE)
+write.csv(util_tab, file.path(OUT, "15_analysis4_utility.csv"), row.names=FALSE)
 cat(sprintf("\nPhysioNet utility (normalized): best %.4f at threshold %.2f\n",
             norm[best_i], grid[best_i]))
 cat(sprintf("  (never-alarm baseline utility_norm = 0; per-hour oracle = 1)\n"))
@@ -172,7 +172,7 @@ sweep <- lapply(grid, function(th) {
 })
 sweep <- do.call(rbind, sweep)
 sweep[,-1] <- round(sweep[,-1], 4)
-write.csv(sweep, file.path(OUT, "15_tier4_alarm_sweep.csv"), row.names=FALSE)
+write.csv(sweep, file.path(OUT, "15_analysis4_alarm_sweep.csv"), row.names=FALSE)
 for (target in c(0.90, 0.70, 0.50)) {
   i <- which.min(abs(sweep$sensitivity - target))
   cat(sprintf("  sens=%.2f @ thr %.2f -> %.2f false alarms/patient-day, %.0f%% of non-septic patients ever alarmed\n",

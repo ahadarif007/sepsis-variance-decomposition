@@ -1,0 +1,119 @@
+\begin{thebibliography}{10}
+
+\bibitem{singer2016sepsis3}
+Mervyn Singer, Clifford~S. Deutschman, Christopher~W. Seymour, Manu
+  Shankar-Hari, Djillali Annane, Michael Bauer, Rinaldo Bellomo, et~al.
+\newblock The third international consensus definitions for sepsis and septic
+  shock (sepsis-3).
+\newblock {\em JAMA}, 315(8):801--810, 2016.
+
+\bibitem{johnson2023mimiciv}
+Alistair E.~W. Johnson, Lucas Bulgarelli, Lu~Shen, Alvin Gayles, Ayad Shammout,
+  Steven Horng, Tom~J. Pollard, et~al.
+\newblock {MIMIC-IV}, a freely accessible electronic health record dataset.
+\newblock {\em Scientific Data}, 10(1):1, 2023.
+
+\bibitem{henry2015trewscore}
+Katharine~E. Henry, David~N. Hager, Peter~J. Pronovost, and Suchi Saria.
+\newblock A targeted real-time early warning score ({TREWScore}) for septic
+  shock.
+\newblock {\em Science Translational Medicine}, 7(299):299ra122, 2015.
+
+\bibitem{yuan2023nomogram}
+Zhen-nan Yuan, Yu-juan Xue, Hai-jun Wang, Shi-ning Qu, Chu-lin Huang, Hao Wang,
+  et~al.
+\newblock A nomogram for predicting hospital mortality of critical ill patients
+  with sepsis and cancer: a retrospective cohort study based on {MIMIC-IV} and
+  {eICU-CRD}.
+\newblock {\em BMJ Open}, 13(9):e072112, 2023.
+
+\bibitem{yang2022gbtm}
+Rui Yang, Didi Han, Luming Zhang, Tao Huang, Fengshuo Xu, Shuai Zheng, et~al.
+\newblock Analysis of the correlation between the longitudinal trajectory of
+  {SOFA} scores and prognosis in patients with sepsis at 72 hour after
+  admission based on group trajectory modeling.
+\newblock {\em Journal of Intensive Medicine}, 2(1):39--49, 2022.
+
+\bibitem{kasal2004cox}
+Jan Kasal, Zorana Jovanovic, Gilles Clermont, Lisa~A. Weissfeld, Vladimir
+  Kaplan, R.~Scott Watson, and Derek~C. Angus.
+\newblock Comparison of {Cox} and {Gray's} survival models in severe sepsis.
+\newblock {\em Critical Care Medicine}, 32(3):700--707, 2004.
+
+\bibitem{wang2025srpm}
+Zichen Wang, Wen Wang, Che Sun, Jili Li, Shuangyi Xie, Jiayue Xu, Kang Zou,
+  Yinghui Jin, et~al.
+\newblock A methodological systematic review of validation and performance of
+  sepsis real-time prediction models.
+\newblock {\em npj Digital Medicine}, 8(1):190, 2025.
+
+\bibitem{vanhouwelingen2007landmark}
+Hans~C. van Houwelingen.
+\newblock Dynamic prediction by landmarking in event history analysis.
+\newblock {\em Scandinavian Journal of Statistics}, 34(1):70--85, 2007.
+
+\bibitem{fries2023dynamiclm}
+Anya~H. Fries, Eunji Choi, Julie~T. Wu, Justin~H. Lee, Victoria~Y. Ding,
+  Robert~J. Huang, Su-Ying Liang, Heather~A. Wakelee, Lynne~R. Wilkens, Iona
+  Cheng, and Summer~S. Han.
+\newblock Software application profile: {dynamicLM}---a tool for performing
+  dynamic risk prediction using a landmark supermodel for survival data under
+  competing risks.
+\newblock {\em International Journal of Epidemiology}, 52(6):1984--1989, 2023.
+
+\bibitem{groenwold2020missingness}
+Rolf H.~H. Groenwold.
+\newblock Informative missingness in electronic health record systems: the
+  curse of knowing.
+\newblock {\em Diagnostic and Prognostic Research}, 4(1):8, 2020.
+
+\bibitem{singh2021missingness}
+Janmajay Singh, Masahiro Sato, and Tomoko Ohkuma.
+\newblock On missingness features in machine learning models for critical care:
+  Observational study.
+\newblock {\em JMIR Medical Informatics}, 9(12):e25022, 2021.
+
+\bibitem{pollard2018eicu}
+Tom~J. Pollard, Alistair E.~W. Johnson, Jesse~D. Raffa, Leo~A. Celi, Roger~G.
+  Mark, and Omar Badawi.
+\newblock The {eICU} collaborative research database, a freely available
+  multi-center database for critical care research.
+\newblock {\em Scientific Data}, 5(1):180178, 2018.
+
+\bibitem{seymour2016criteria}
+Christopher~W. Seymour, Vincent~X. Liu, Theodore~J. Iwashyna, Frank~M.
+  Brunkhorst, Thomas~D. Rea, Andr{\'e} Scherag, et~al.
+\newblock Assessment of clinical criteria for sepsis: For the third
+  international consensus definitions for sepsis and septic shock (sepsis-3).
+\newblock {\em JAMA}, 315(8):762--774, 2016.
+
+\bibitem{vincent1996sofa}
+Jean-Louis Vincent, Rui Moreno, Jukka Takala, Sheila Willatts, Arnaldo
+  De~Mendon{\c{c}}a, Hajo Bruining, C.~K. Reinhart, Peter~M. Suter, and
+  Lambertus~G. Thijs.
+\newblock The {SOFA} (sepsis-related organ failure assessment) score to
+  describe organ dysfunction/failure.
+\newblock {\em Intensive Care Medicine}, 22(7):707--710, 1996.
+
+\bibitem{liaw2019mortality}
+Patricia~C. Liaw, Alison~E. Fox-Robichaud, Kao-Lee Liaw, Ellen McDonald,
+  Dhruva~J. Dwivedi, Nasim~M. Zamir, et~al.
+\newblock Mortality risk profiles for sepsis: A novel longitudinal and
+  multivariable approach.
+\newblock {\em Critical Care Explorations}, 1(8):e0032, 2019.
+
+\bibitem{reyna2020physionet}
+Matthew~A. Reyna, Christopher~S. Josef, Russell Jeter, Supreeth~P. Shashikumar,
+  M.~Brandon Westover, Shamim Nemati, Gari~D. Clifford, and Ashish Sharma.
+\newblock Early prediction of sepsis from clinical data: The
+  {PhysioNet/Computing} in cardiology challenge 2019.
+\newblock {\em Critical Care Medicine}, 48(2):210--217, 2020.
+
+\bibitem{fleuren2020ml}
+Lucas~M. Fleuren, Thomas L.~T. Klausch, Charlotte~L. Zwager, Linda~J.
+  Schoonmade, Tingjie Guo, Luca~F. Roggeveen, et~al.
+\newblock Machine learning for the prediction of sepsis: a systematic review
+  and meta-analysis of diagnostic test accuracy.
+\newblock {\em Intensive Care Medicine}, 46(3):383--400, 2020.
+
+\end{thebibliography}

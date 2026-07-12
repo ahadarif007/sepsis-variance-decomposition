@@ -1,5 +1,5 @@
 """
-14_realtime_holdout.py - Tier 4 (data substrate)
+14_realtime_holdout.py - Analysis 4 (data substrate)
 =================================================
 Builds an all-hours feature stream for a random holdout of stays, enabling
 the landmark supermodel to emit hourly risk at every hour (not just the 6
