@@ -85,7 +85,7 @@ applied to eICU-CRD, yielding a comparable external cohort.
 \section{Outcome Definition: Sepsis-3 Onset}
 \label{sec:outcome}
 
-Sepsis-3 is defined following Seymour \emph{et al.} \cite{seymour2016criteria}
+Sepsis-3 is defined following \textcite{seymour2016criteria}
 as suspected infection accompanied by an acute rise of two or more points in
 the SOFA score. Suspected infection is operationalised as a qualifying
 antibiotic order paired with a body-fluid culture within the Sepsis-3 time
@@ -184,8 +184,10 @@ PhysioNet/CinC 2019 utility score and an alarm-burden analysis that trades
 sensitivity against false alarms per patient-day.
 
 \paragraph{Analysis 5: Subgroup fairness.}
-Discrimination and calibration are stratified by sex and age band to assess
-equitable performance across demographic subgroups.
+Performance is stratified by sex and age band along three axes: discrimination
+(AUROC), calibration-in-the-large, and error-rate parity (sensitivity and
+false-positive rate at a shared decision threshold), the last giving an
+equal-opportunity view of equitable performance across demographic subgroups.
 
 \paragraph{Analysis 6: Group-based trajectory modelling.}
 A latent-class growth model is fitted to first-24h SOFA trajectories, and

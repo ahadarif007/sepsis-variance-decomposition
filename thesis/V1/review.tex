@@ -20,9 +20,8 @@ The Sepsis-3 consensus \cite{singer2016sepsis3} defines sepsis as
 life-threatening organ dysfunction caused by a dysregulated host response to
 infection, operationalised as suspected infection accompanied by an acute
 rise of two or more points in the Sequential Organ Failure Assessment (SOFA)
-score \cite{vincent1996sofa}. Seymour \emph{et al.}
-\cite{seymour2016criteria} validated this operationalisation in large
-observational cohorts. Two features of this definition are methodologically
+score \cite{vincent1996sofa}. \textcite{seymour2016criteria} validated this
+operationalisation in large observational cohorts. Two features of this definition are methodologically
 consequential for prediction research. First, the label is \emph{retrospective}:
 it depends on the clinician ordering cultures and antibiotics, so ``onset'' partly
 reflects the moment of clinical recognition rather than the true biological
@@ -45,14 +44,14 @@ real time. However, TREWScore was developed on MIMIC-II, which has since been
 superseded by two major database revisions. It has not been revisited on
 MIMIC-IV with purely statistical, interpretable tools.
 
-Liaw \emph{et al.} \cite{liaw2019mortality} proposed a longitudinal,
+\textcite{liaw2019mortality} proposed a longitudinal,
 multivariable survival model (a complementary log-log formulation) that tracks
 evolving mortality risk from repeatedly measured indicators, demonstrating the
 value of updating covariate values over the course of a stay rather than relying
 on a baseline snapshot. This
 time-varying approach is directly relevant to the current work, which extends
-the idea from mortality modelling to onset prediction. Kasal \emph{et al.}
-\cite{kasal2004cox} compared a standard Cox model against a flexible survival
+the idea from mortality modelling to onset prediction.
+\textcite{kasal2004cox} compared a standard Cox model against a flexible survival
 model in severe sepsis and found that hazards are frequently
 \emph{non-proportional}, a methodological caution that has been largely ignored
 by subsequent MIMIC-IV studies. In the present review, no MIMIC-IV Cox study was
@@ -75,13 +74,13 @@ question, prognosis after diagnosis, rather than the early detection of
 onset itself.
 
 Group-based trajectory modelling (GBTM) of SOFA scores represents a second
-strand of MIMIC-IV research. Yang \emph{et al.} \cite{yang2022gbtm} fitted
+strand of MIMIC-IV research. \textcite{yang2022gbtm} fitted
 latent-class growth models to 72-hour SOFA trajectories and linked trajectory
 membership to mortality via Cox regression. Their approach captures the
 \emph{shape} of organ-dysfunction evolution, not merely its endpoint, and
 demonstrated a strong dose-response relationship between trajectory class and
 mortality. This trajectory-modelling thread informs the present work: however,
-Yang \emph{et al.} studied only mortality, and their analysis did not link
+\textcite{yang2022gbtm} studied only mortality, and their analysis did not link
 trajectory classes to incident sepsis onset, nor did they test whether the
 trajectory shape carries predictive signal beyond its terminal SOFA value.
 
@@ -93,7 +92,7 @@ than the statistical literature and has been the subject of multiple systematic
 reviews. Gradient-boosted trees, recurrent neural networks, and transformer
 architectures have been applied to the PhysioNet/CinC 2019 Challenge data
 \cite{reyna2020physionet} and to MIMIC-IV directly, often achieving high
-internal discrimination. However, Fleuren \emph{et al.} \cite{fleuren2020ml}
+internal discrimination. However, \textcite{fleuren2020ml}
 conducted a systematic review and meta-analysis of machine-learning sepsis
 prediction models and reported large between-study heterogeneity in design,
 inclusion criteria, and reported performance. Several observations from this
@@ -136,10 +135,10 @@ author's knowledge, this approach has not previously been applied to
 statistical Sepsis-3 onset prediction on MIMIC-IV.
 
 A separate but complementary thread concerns informative missingness in
-electronic health records. Groenwold \cite{groenwold2020missingness} formalised
+electronic health records. \textcite{groenwold2020missingness} formalised
 ``the curse of knowing'': in clinical data, the fact that a test was ordered
 is itself informative, because clinicians order tests in response to suspicion.
-Singh \emph{et al.} \cite{singh2021missingness} showed empirically that binary
+\textcite{singh2021missingness} showed empirically that binary
 ``was this lab measured'' indicators can outperform the measured values
 themselves as predictors of clinical outcomes. This phenomenon is particularly
 relevant to sepsis prediction, where laboratory tests such as lactate,
@@ -159,7 +158,7 @@ hours before onset is more valuable than one that fires at the moment of onset,
 and an alarm that fires on a non-septic patient imposes a real cost in
 clinician attention.
 
-Wang \emph{et al.} \cite{wang2025srpm} conducted the most comprehensive
+\textcite{wang2025srpm} conducted the most comprehensive
 methodological review of sepsis real-time prediction models to date, covering
 91 studies. Their central finding is that the median AUROC falls from 0.886
 under internal validation to 0.783 under full external validation. This
@@ -193,8 +192,8 @@ Synthesising the above, the three research gaps that structure this thesis are:
 
   \item \textbf{G3 (Validation asymmetry).} External validation is common in
   the prognostic nomogram literature \cite{yuan2023nomogram} but largely absent
-  from onset-prediction and trajectory studies. Wang \emph{et al.}
-  \cite{wang2025srpm} showed that this is precisely where performance degrades
+  from onset-prediction and trajectory studies.
+  \textcite{wang2025srpm} showed that this is precisely where performance degrades
   most, making external validation a necessary step rather than a desirable
   extra.
 \end{enumerate}

@@ -70,6 +70,8 @@
 \fancyhead[L]{\textcolor{ATUGreen}{\projecttitle}}
 \fancyfoot[L]{\textcolor{ATUGreen}{Atlantic Technological University (ATU), Galway.}}
 \fancyfoot[R]{\thepage}
+\setlength{\headheight}{27.5pt}% room for the two-line running header (fancyhdr)
+\addtolength{\topmargin}{-15.5pt}% keep the text block vertically centred
 
 \begin{document}
 \begin{titlepage}
@@ -109,6 +111,7 @@
 \normalsize
 Submitted in partial fulfillment for the award of \textbf{Master of Science in Computing} to the Department of Computer Science \& Applied Physics, Atlantic Technological University (ATU), Galway.
 \end{titlepage}
+\restoregeometry% undo the title-page \newgeometry so the ToC and body use normal margins
 \pagenumbering{roman}
 \tableofcontents
 \setcounter{page}{1}

@@ -13,7 +13,6 @@
 \documentclass[conference]{IEEEtran}
 \IEEEoverridecommandlockouts
 
-\usepackage{cite}
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{graphicx}
 \usepackage{booktabs}
@@ -21,6 +20,9 @@
 \usepackage{textcomp}
 \usepackage{xcolor}
 \usepackage[hidelinks]{hyperref}
+\usepackage{csquotes}
+\usepackage[style=ieee]{biblatex}
+\addbibresource{sepsis_realtime_refs.bib}
 
 \begin{document}
 
@@ -96,9 +98,9 @@ concentrated on the wrong half of the problem: most studies predict mortality
 \emph{after} sepsis is diagnosed rather than onset itself, the
 proportional-hazards assumption is rarely tested before a Cox model is fitted,
 and external validation is largely absent from the onset-prediction literature
-specifically. The single statistical real-time onset benchmark, Henry
-\emph{et al.}'s TREWScore \cite{henry2015trewscore}, was fitted on the older
-MIMIC-II database in 2015; Liaw \emph{et al.} \cite{liaw2019mortality} used an
+specifically. The single statistical real-time onset benchmark, the TREWScore
+of \textcite{henry2015trewscore}, was fitted on the older
+MIMIC-II database in 2015; \textcite{liaw2019mortality} used an
 independent prospective cohort. Neither used MIMIC-IV.
 
 This paper develops a statistical pipeline that addresses these limitations
@@ -117,9 +119,9 @@ against which machine-learning approaches can later be compared.
 TREWScore \cite{henry2015trewscore} fitted a Cox model to routinely collected
 MIMIC-II vitals and labs to anticipate septic shock, reaching AUC $0.83$ with a
 median 28-hour lead time, the foundational statistical benchmark for real-time
-sepsis prediction. Liaw \emph{et al.} \cite{liaw2019mortality} proposed a
+sepsis prediction. \textcite{liaw2019mortality} proposed a
 longitudinal, time-varying Cox extension tracking evolving mortality risk from
-repeatedly measured indicators. Kasal \emph{et al.} \cite{kasal2004cox}
+repeatedly measured indicators. \textcite{kasal2004cox}
 compared a standard Cox model against Gray's flexible survival model in severe
 sepsis and found that hazards are frequently \emph{non-proportional}, a
 methodological caution largely ignored by later MIMIC-IV work.
@@ -135,10 +137,10 @@ well validated but prognostic, not predictive of onset.
 
 \subsection{Benchmarks, validation, and reviews}
 The PhysioNet/CinC 2019 Challenge \cite{reyna2020physionet} established a shared
-early-prediction benchmark and a clinical-utility metric. Fleuren \emph{et al.}
-\cite{fleuren2020ml} reviewed machine-learning sepsis prediction and reported
-large between-study heterogeneity. Most pointedly, Wang \emph{et al.}
-\cite{wang2025srpm} reviewed 91 sepsis real-time prediction models and found
+early-prediction benchmark and a clinical-utility metric.
+\textcite{fleuren2020ml} reviewed machine-learning sepsis prediction and reported
+large between-study heterogeneity. Most pointedly,
+\textcite{wang2025srpm} reviewed 91 sepsis real-time prediction models and found
 that median AUROC falls from $0.886$ internally to $0.783$ under full external
 validation, evidence that the internal/external gap, not raw internal
 discrimination, is the field's central weakness.
@@ -164,8 +166,8 @@ Synthesizing Section \ref{sec:related}, three gaps are specific and actionable:
 predicts mortality \emph{after} diagnosis. Genuine pre-onset, real-time
 detection with purely statistical tools has not been revisited on MIMIC-IV
 since TREWScore's 2015 MIMIC-II study.
-\item \textbf{G2 (Untested proportional hazards).} Kasal \emph{et al.}
-\cite{kasal2004cox} showed sepsis hazards are frequently non-proportional, yet
+\item \textbf{G2 (Untested proportional hazards).}
+\textcite{kasal2004cox} showed sepsis hazards are frequently non-proportional, yet
 no reviewed MIMIC-IV Cox study reports testing the assumption, weakening
 confidence in the reported hazard ratios.
 \item \textbf{G3 (Validation asymmetry).} External validation is common in the
@@ -254,7 +256,7 @@ the validation asymmetry that reviews flag as decisive \cite{wang2025srpm}.
 \subsection{Cohort and labeling}
 From MIMIC-IV v3.1 we build an adult ICU cohort (age $\ge 18$, first ICU stay
 only, length of stay $\ge 4$\,h), yielding 65{,}241 stays. Suspected infection
-follows Seymour \emph{et al.} \cite{seymour2016criteria}: antibiotic orders
+follows \textcite{seymour2016criteria}: antibiotic orders
 paired with cultures within the Sepsis-3 windows, with surveillance swabs (e.g.
 MRSA screens) excluded to avoid inflating the suspicion rate. Sepsis-3 is
 suspected infection together with an acute SOFA rise $\ge 2$; prevalence is
@@ -323,7 +325,7 @@ static model (DeLong $p \approx 3\times10^{-7}$), supporting SQ2.
 The global Schoenfeld test rejects proportional hazards for the static onset
 Cox model, so the null of SQ1 is rejected and a time-varying Cox model is
 fitted in response, satisfying C2. This confirms, on MIMIC-IV, the
-non-proportionality that Kasal \emph{et al.} \cite{kasal2004cox} reported
+non-proportionality that \textcite{kasal2004cox} reported
 elsewhere.
 
 \subsection{Real-time behavior and honest ceilings}
@@ -396,7 +398,6 @@ benchmark machine-learning approaches against this interpretable baseline on
 identical splits.
 
 %------------------------------------------------------------------ BIB
-\bibliographystyle{IEEEtran}
-\bibliography{sepsis_realtime_refs}
+\printbibliography
 
 \end{document}

@@ -97,8 +97,8 @@ later. This counterintuitive result is clinically meaningful: it demonstrates
 that severity scores detect established dysfunction, not impending infection.
 
 The global Schoenfeld residual test \textbf{rejects proportional hazards}
-($p < 10^{-16}$), confirming on MIMIC-IV the non-proportionality that Kasal
-\emph{et al.} \cite{kasal2004cox} reported elsewhere (C2). In response, a
+($p < 10^{-16}$), confirming on MIMIC-IV the non-proportionality that
+\textcite{kasal2004cox} reported elsewhere (C2). In response, a
 \textbf{time-varying Cox model} is fitted on the counting-process formulation,
 updating covariates hour by hour. The time-varying model locates the hazard
 in \emph{current heart rate} (HR 1.019 per bpm), while the single SOFA value
@@ -410,32 +410,50 @@ number a deployment decision actually turns on.
 \section{Analysis 5: Subgroup Fairness}
 %==========================================================================
 
-Table~\ref{table:subgroups} reports discrimination and
-calibration-in-the-large across sex and age subgroups. The model is well
-calibrated and similarly discriminating across all subgroups, with calibration
-ratios between 0.945 and 1.056 (perfect = 1.0) and AUROCs between 0.756 and
-0.784.
+Fairness is assessed along three axes: discrimination parity (AUROC),
+calibration parity (calibration-in-the-large), and error-rate parity
+(sensitivity and false-positive rate at a single shared decision threshold).
+The threshold is fixed once on the full cohort at 50\% overall sensitivity
+(predicted risk 0.116), then applied unchanged to every subgroup, so that any
+difference in error rates reflects the model rather than a different operating
+point. Table~\ref{table:subgroups} reports all three axes.
 
 \begin{table}[H]
     \centering
-    \begin{tabular}{l|r|r|r|r|r}
+    \begin{tabular}{l|r|r|r|r|r|r}
         \hline
-        \textbf{Subgroup} & \textbf{$n$} & \textbf{Event rate} & \textbf{AUROC} & \textbf{Obs.\ rate} & \textbf{Calib.\ ratio} \\
+        \textbf{Subgroup} & \textbf{$n$} & \textbf{Event rate} & \textbf{AUROC} & \textbf{Calib.\ ratio} & \textbf{Sens.}$^\dagger$ & \textbf{FPR}$^\dagger$ \\
         \hline\hline
-        ALL      & 48{,}829 & 0.068 & 0.775 & 0.068 & 1.000 \\
-        Female   & 21{,}519 & 0.063 & 0.762 & 0.063 & 1.003 \\
-        Male     & 27{,}310 & 0.072 & 0.784 & 0.072 & 0.998 \\
-        Age $<$50 & 9{,}680  & 0.058 & 0.756 & 0.058 & 1.056 \\
-        Age 50--64 & 14{,}083 & 0.067 & 0.785 & 0.067 & 0.945 \\
-        Age 65--79 & 15{,}960 & 0.069 & 0.777 & 0.069 & 0.985 \\
-        Age 80+  & 9{,}106  & 0.079 & 0.769 & 0.079 & 1.050 \\
+        ALL      & 48{,}829 & 0.068 & 0.775 & 1.000 & 0.50 & 0.15 \\
+        Female   & 21{,}519 & 0.063 & 0.762 & 1.003 & 0.42 & 0.12 \\
+        Male     & 27{,}310 & 0.072 & 0.784 & 0.998 & 0.56 & 0.18 \\
+        Age $<$50 & 9{,}680  & 0.058 & 0.756 & 1.056 & 0.40 & 0.11 \\
+        Age 50--64 & 14{,}083 & 0.067 & 0.785 & 0.945 & 0.47 & 0.13 \\
+        Age 65--79 & 15{,}960 & 0.069 & 0.777 & 0.985 & 0.51 & 0.16 \\
+        Age 80+  & 9{,}106  & 0.079 & 0.769 & 1.050 & 0.61 & 0.22 \\
         \hline
     \end{tabular}
-    \caption{Subgroup discrimination and calibration-in-the-large. The model
-    performs consistently across sex and age, with no evidence of systematic
-    under- or over-prediction in any subgroup.}
+    \caption{Subgroup fairness across three axes. Discrimination (AUROC
+    0.756--0.785) and calibration-in-the-large (ratio 0.945--1.056, perfect
+    = 1.0) are equitable. $^\dagger$Sensitivity and false-positive rate are
+    measured at a single shared threshold (0.116); at that fixed operating
+    point the error rates track subgroup prevalence, exposing an
+    equal-opportunity gap.}
     \label{table:subgroups}
 \end{table}
+
+Two conclusions follow. On the first two axes the model is equitable:
+discrimination is stable (AUROC 0.756--0.785) and no subgroup is systematically
+over- or under-predicted (calibration ratio 0.945--1.056). On the third axis,
+however, applying one threshold to well-calibrated risks across groups with
+different base rates yields an \emph{equal-opportunity gap}: sensitivity rises
+from 0.40 in the under-50 group to 0.61 in the over-80 group, and the
+false-positive rate from 0.11 to 0.22, with the same higher-prevalence groups
+(older patients, men) receiving both more true and more false alarms. This is a
+property of thresholding calibrated probabilities under unequal prevalence, not
+of miscalibration; a deployment would address it by an accepted single-threshold
+trade-off documented in advance or by group-aware thresholds, and the choice is
+a clinical governance decision rather than a purely technical one.
 
 %==========================================================================
 \section{Analysis 6: Group-Based Trajectory Modelling}
@@ -498,7 +516,7 @@ onset (Table~\ref{table:gbtm_onset}).
     \label{table:gbtm_onset}
 \end{table}
 
-This extends the Yang \emph{et al.} \cite{yang2022gbtm} design, which linked
+This extends the \textcite{yang2022gbtm} design, which linked
 trajectory classes only to mortality, by demonstrating that the trajectory
 shape also predicts the project's own outcome of interest: incident sepsis.
 
@@ -609,39 +627,93 @@ model failure. The DeLong test between frozen and refit is significant
 ($p < 10^{-27}$), confirming a modest but real gap that could be closed by
 local recalibration. This is the expected result for any single-centre model
 transported to 200+ ICUs, and it is consistent with the validation degradation
-reported by Wang \emph{et al.} \cite{wang2025srpm} across the broader
+reported by \textcite{wang2025srpm} across the broader
 literature.
 
 %==========================================================================
-\section{Supplementary Diagnostic Evidence}
+\section{Cross-Sectional Foundational Analysis}
+\label{sec:cross_sectional}
 %==========================================================================
 
-Two additional figures provide complementary evidence for the modelling choices.
-Figure~\ref{fig:gam_spline} shows the GAM-estimated spline for lactate's
-effect on onset risk, confirming a monotone but non-linear relationship that
-justifies the log-transformation used in the pipeline.
+Before the temporal landmark models, a cross-sectional statistical study
+established whether routine physiology that is \emph{not} part of the sepsis
+definition can identify prevalent Sepsis-3, and provided the methodological
+foundation on which the later analyses build. Six deliberately non-circular
+predictors are used---lactate, white-cell count, heart rate, respiratory rate,
+temperature, and age---each lying outside the SOFA/Sepsis-3 definition, so the
+model recovers the label from independent signal rather than from the
+quantities used to construct it. After a physiological plausibility filter and
+complete-case restriction, 36{,}252 stays remain (50\% Sepsis-3, an enriched
+sample because lactate is ordered preferentially in sicker patients).
+
+Individually, each feature carries only a small effect: the standardised
+difference in maximum lactate between groups is a Cohen's $d$ of 0.21, the
+white-cell rank-biserial correlation is 0.11, and the association between
+tachypnoea ($\ge 22$/min) and sepsis has a Cram\'er's $V$ of 0.07. Two
+unsupervised two-component Gaussian mixtures fitted to log-lactate and to
+log-white-cell count recover sepsis status at only 54\% and 49\% respectively,
+close to chance, confirming that no single marker separates the groups.
+Combining the six predictors in a logistic model, however, yields fair
+discrimination. Table~\ref{table:cross_sectional} reports the cross-sectional
+prediction scores.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{p{7.5cm}|p{4.5cm}}
+        \hline
+        \textbf{Model / metric} & \textbf{Value} \\
+        \hline\hline
+        Lactate-only logistic (10-fold CV AUROC)      & 0.540 \\
+        Six-predictor logistic (10-fold CV AUROC)     & \textbf{0.665} [0.660, 0.671] \\
+        Six-predictor calibration slope               & 1.00 \\
+        Six-predictor Brier (vs.\ null)               & 0.229 / 0.250 \\
+        Six-predictor PR-AUC (prevalence baseline)    & 0.676 (0.500) \\
+        \hline
+    \end{tabular}
+    \caption{Cross-sectional discrimination of prevalent Sepsis-3 from
+    non-circular physiology. The six-predictor model is well calibrated
+    (slope 1.00) and clearly exceeds lactate alone, but its ceiling is modest
+    because the predictors exclude the severity scores and the target is
+    cross-sectional prevalent classification, not incident onset.}
+    \label{table:cross_sectional}
+\end{table}
+
+This cross-sectional ceiling (AUROC 0.665) is not directly comparable with the
+landmark nomogram of Analysis~1 (AUROC 0.775): the landmark model adds the
+severity scores and the informative-missingness indicators, and it targets the
+harder incident-onset task on a realistically imbalanced cohort. The
+comparison is instructive precisely because it shows what the temporal design
+adds. A first sign of the informative-missingness effect already appears here:
+Sepsis-3 prevalence is 49.8\% among stays with a measured lactate versus 18.7\%
+among those without ($\chi^2$ $p < 10^{-16}$), foreshadowing the
+label-recognition ceiling quantified in Analysis~1 (C4).
+
+Two diagnostic figures from this analysis support modelling choices carried
+into the pipeline. Figure~\ref{fig:gam_spline} shows the GAM-estimated spline
+for lactate's effect on prevalent Sepsis-3, confirming a monotone but
+non-linear relationship that justifies the log-transformation used throughout.
 Figure~\ref{fig:pr_decision} shows the precision-recall curve and
-decision-curve analysis for the Analysis-1 nomogram, demonstrating net clinical
-benefit above both ``treat all'' and ``treat none'' strategies across a
-clinically relevant range of threshold probabilities.
+decision-curve analysis for the six-predictor cross-sectional model,
+demonstrating net clinical benefit above both ``treat all'' and ``treat none''
+strategies across a clinically relevant range of threshold probabilities.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.65\textwidth]{images/06_gam_spline.png}
-    \caption{GAM spline: the non-linear relationship between lactate and
-    log-odds of sepsis onset. The effect is monotone-increasing but saturates
-    at high lactate values, supporting the log-transformation used in the
-    linear models.}
+    \caption{GAM spline: the non-linear relationship between lactate and the
+    log-odds of prevalent Sepsis-3. The effect is monotone-increasing but
+    saturates at high lactate values, supporting the log-transformation used in
+    the linear models.}
     \label{fig:gam_spline}
 \end{figure}
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.75\textwidth]{images/06_pr_decision_curve.png}
-    \caption{Left: precision-recall curve for the Analysis-1 nomogram
-    (PR-AUC shown). Right: decision-curve analysis demonstrating net benefit
-    above both ``treat all'' and ``treat none'' across threshold probabilities
-    from 0.02 to 0.20.}
+    \caption{Left: precision-recall curve for the six-predictor cross-sectional
+    model (PR-AUC shown). Right: decision-curve analysis demonstrating net
+    benefit above both ``treat all'' and ``treat none'' across threshold
+    probabilities from 0.02 to 0.20.}
     \label{fig:pr_decision}
 \end{figure}
 

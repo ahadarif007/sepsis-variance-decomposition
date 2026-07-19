@@ -181,8 +181,10 @@ two ways:
 scored hours), computing the PhysioNet/CinC 2019 utility score and an
 alarm-burden sweep.
 
-\paragraph{Analysis 5 (Subgroup fairness).} Discrimination and calibration-in-the-large are stratified by sex and four age bands ($<$50, 50--64, 65--79,
-80+) to assess equitable performance.
+\paragraph{Analysis 5 (Subgroup fairness).} Discrimination (AUROC),
+calibration-in-the-large, and error-rate parity (sensitivity and false-positive
+rate at a shared threshold) are stratified by sex and four age bands ($<$50,
+50--64, 65--79, 80+) to assess equitable performance.
 
 \paragraph{Analysis 6 (GBTM).} A latent-class growth model
 \cite{yang2022gbtm} is fitted to first-24h SOFA trajectories via
