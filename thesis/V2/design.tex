@@ -1,0 +1,292 @@
+\chapter{System Design and Pipeline Architecture}
+\label{ch:design}
+
+The V2 pipeline is implemented as thirteen numbered, single-purpose scripts in
+\texttt{projects/V2/}, each reading from a set of upstream artefacts and writing
+one or more downstream artefacts to \texttt{projects/V2/output/}. No script
+modifies a source table. All stochastic steps use pre-specified random seeds.
+Figure~\ref{fig:pipeline_dag} provides a directed acyclic graph of the data
+flow.
+
+\begin{figure}[H]
+\centering
+\usetikzlibrary{arrows.meta,positioning,fit,backgrounds}
+\begin{tikzpicture}[
+  node distance=0.55cm and 1.1cm,
+  box/.style={rectangle, draw=ATUGreen, thick, rounded corners=3pt,
+              fill=ATULightGreen!40, text width=3.8cm, align=center,
+              font=\small, inner sep=4pt},
+  data/.style={rectangle, draw=ATUNavy, thick, rounded corners=3pt,
+               fill=ATUTeal!20, text width=3.2cm, align=center,
+               font=\footnotesize\itshape, inner sep=3pt},
+  arr/.style={-{Latex[length=2mm]}, thick, ATUGreen},
+]
+
+%--- Raw data
+\node[data] (raw) {Raw data\\MIMIC-IV + eICU};
+
+%--- Pipeline stages (column 1)
+\node[box, below=of raw]          (s01) {\texttt{01} Setup};
+\node[box, below=of s01]          (s02) {\texttt{02} Cohort Labels};
+\node[box, below=of s02]          (s03) {\texttt{03} Person-Hours};
+\node[box, below=of s03]          (s07) {\texttt{07} Sample Size};
+\node[box, below=of s07]          (s08) {\texttt{08} Primary Model};
+\node[box, below=of s08]          (s09) {\texttt{09} Comparators};
+\node[box, below=of s09]          (s10) {\texttt{10} Metrics Suite};
+\node[box, below=of s10]          (s11) {\texttt{11} External Valid.};
+\node[box, below=of s11]          (s12) {\texttt{12} Variance Decomp.};
+\node[box, below=of s12]          (s13) {\texttt{13} Equity Analysis};
+
+%--- Output column
+\node[data, right=of s02]         (cohort)  {cohort\_\{A,B,C\}.parquet};
+\node[data, right=of s03]         (ph)      {person\_hours\_\{A,B,C\}.parquet};
+\node[data, right=of s08]         (models)  {model\_primary\_\{A,B,C\}.rds};
+\node[data, right=of s09]         (preds)   {predictions\_comparators.parquet};
+\node[data, right=of s10]         (metrics) {10\_metric\_results.csv};
+\node[data, right=of s11]         (ext)     {11\_external\_validation.csv};
+\node[data, right=of s12]         (decomp)  {12\_variance\_decomp.csv};
+
+%--- Arrows (pipeline flow)
+\draw[arr] (raw)  -- (s01);
+\draw[arr] (s01)  -- (s02);
+\draw[arr] (s02)  -- (s03);
+\draw[arr] (s03)  -- (s07);
+\draw[arr] (s07)  -- (s08);
+\draw[arr] (s08)  -- (s09);
+\draw[arr] (s09)  -- (s10);
+\draw[arr] (s10)  -- (s11);
+\draw[arr] (s11)  -- (s12);
+\draw[arr] (s12)  -- (s13);
+
+%--- Output arrows
+\draw[arr] (s02)  -- (cohort);
+\draw[arr] (s03)  -- (ph);
+\draw[arr] (s08)  -- (models);
+\draw[arr] (s09)  -- (preds);
+\draw[arr] (s10)  -- (metrics);
+\draw[arr] (s11)  -- (ext);
+\draw[arr] (s12)  -- (decomp);
+
+%--- Feed-forward arrows (ph feeds models/comparators)
+\draw[arr] (ph.south) to[out=-90,in=180] (s08.west);
+\draw[arr] (ph.south) to[out=-90,in=180] (s09.west);
+
+\end{tikzpicture}
+\caption{Directed acyclic graph of the V2 pipeline. Each box is a single
+  \texttt{.Rmd} script; italic nodes are Parquet or CSV artefacts written to
+  \texttt{projects/V2/output/}. Raw MIMIC-IV and eICU data are read-only.}
+\label{fig:pipeline_dag}
+\end{figure}
+
+%===========================================================================
+\section{Configuration and Utilities}
+%===========================================================================
+
+\texttt{config.R} is the single source of truth for all pipeline parameters:
+data paths, cohort criteria, antibiotic name lists, MIMIC-IV chart/lab/vasopressor
+item identifiers, label variant definitions, temporal split boundaries,
+prediction framing constants, equity subgroup variable names, and
+PhysioNet Utility Score parameters. No other script hard-codes a clinical
+constant or file path. This design ensures that every parameter is version-controlled
+and that the full pipeline can be reproduced on any MIMIC-IV installation by
+setting a single environment variable (\texttt{MIMIC\_RESEARCH\_ROOT}).
+
+\texttt{utils.R} provides shared helper functions: the DuckDB-backed
+streaming reader for large CSVs (\texttt{read\_large\_csv\_filtered}), the
+Parquet reader/writer wrappers, the datetime parser, the LOCF imputer, and
+the Schoenfeld test wrapper.
+
+%===========================================================================
+\section{Stage 01: Setup Validation}
+%===========================================================================
+
+\texttt{01\_setup.Rmd} verifies that all required MIMIC-IV source tables exist and
+reports their sizes (Table~\ref{tab:data_sources}). The script outputs
+\texttt{01\_setup\_file\_report.csv} and aborts the pipeline if any required
+table is missing.
+
+%===========================================================================
+\section{Stage 02: Cohort Extraction Under Three Label Variants}
+%===========================================================================
+
+\texttt{02\_cohort\_labels.Rmd} implements the full cohort extraction for all three
+label variants in a single pass over the source tables:
+
+\begin{enumerate}
+  \item \textbf{Base cohort.} Adult first ICU stays with LOS $\geq 4$\,h are
+  identified from \texttt{icustays}, \texttt{patients}, and \texttt{admissions}.
+  Equity variables (race, language, insurance) are attached from \texttt{admissions}.
+  The resulting base cohort contains 65{,}078 stays.
+
+  \item \textbf{Suspected infection.} Qualifying antibiotic orders are identified
+  from \texttt{prescriptions} by matching drug names against the pre-specified
+  antibiotic list in \texttt{config.R} (65 systemic antibiotic name patterns).
+  Qualifying cultures are identified from \texttt{microbiologyevents}, excluding
+  surveillance specimen types. For each variant, antibiotic--culture pairs within
+  the specified time windows form the suspected infection time ($T_{si}$).
+
+  \item \textbf{SOFA organ dysfunction.} SOFA components (respiratory, coagulation,
+  liver, cardiovascular, neurological, renal) are extracted from \texttt{chartevents},
+  \texttt{labevents}, \texttt{inputevents}, and \texttt{outputevents}. The acute
+  SOFA rise ($\Delta$SOFA $\geq 2$) is evaluated within the variant-specific
+  windows around $T_{si}$, using the variant-specific baseline (admission SOFA for
+  Variants A and B; rolling 24\,h minimum for Variant C).
+
+  \item \textbf{Onset time assignment.} The Sepsis-3 onset time is the hour at
+  which both criteria (suspected infection and SOFA rise) are simultaneously met.
+  Stays meeting the criteria are labelled sepsis; all others are labelled
+  non-sepsis. The first event time is used for patients with multiple episodes.
+\end{enumerate}
+
+Outputs: \texttt{cohort\_A.parquet}, \texttt{cohort\_B.parquet},
+\texttt{cohort\_C.parquet}, and \texttt{label\_variance\_table.csv}.
+
+%===========================================================================
+\section{Stage 03: Person-Hour Table Construction}
+%===========================================================================
+
+\texttt{03\_person\_hours.Rmd} expands each cohort stay into a dense
+(stay\_id, hour) table. Large source tables (\texttt{chartevents}: 3.5\,GB;
+\texttt{labevents}: 2.6\,GB) are read via DuckDB in bounded-memory streaming
+passes pre-filtered to the cohort's stay IDs, avoiding loading the full tables
+into memory. For each person-hour:
+
+\begin{itemize}
+  \item Vitals and lab values are LOCF-imputed within the stay from the most
+  recent available measurement at or before the current hour.
+  \item Six-hour rolling slopes are computed for respiratory rate, MAP, and
+  lactate.
+  \item Vasopressor and vasopressor-subtype indicators are set from
+  \texttt{inputevents} concurrent infusions.
+  \item Binary missingness indicators are set for laboratory values.
+  \item The competing-event code (0/1/2/3) is assigned based on whether the
+  hour falls before or at the labelled onset time, discharge time, or death time.
+  \item The temporal split group is assigned from the stay's
+  \texttt{anchor\_year\_group}.
+  \item Treatment anchor timestamps (first antibiotic, first culture) are
+  recorded per stay.
+\end{itemize}
+
+Outputs: \texttt{person\_hours\_A.parquet}, \texttt{person\_hours\_B.parquet},
+\texttt{person\_hours\_C.parquet}.
+
+%===========================================================================
+\section{Stage 07: Sample Size Calculation}
+%===========================================================================
+
+\texttt{07\_sample\_size.Rmd} applies the Riley et al.\ \parencite{riley2019sample}
+criteria to the training subset of each person-hour table (years 2008--2016).
+\texttt{pmsampsize::pmsampsize()} is called for a binary outcome (person-hour
+level) with the pre-specified parameters: anticipated AUC = 0.846, 25 candidate
+predictors, shrinkage target 0.9.
+
+Output: \texttt{07\_sample\_size.csv}.
+
+%===========================================================================
+\section{Stage 08: Primary Competing-Risks Hazard Model}
+%===========================================================================
+
+\texttt{08\_primary\_model.Rmd} fits the multinomial discrete-time competing-risks
+model (Equation~\ref{eq:primary_model}) for each label variant on the temporal
+training split. The baseline hazard spline uses five knots at
+$t \in \{4, 13, 24, 38, 58\}$ hours (boundary knots $\{0, 72\}$). The
+\texttt{nnet::multinom()} fitter is used; sandwich-robust SEs clustered on
+stay\_id are obtained via \texttt{sandwich::vcovCL()} and \texttt{lmtest::coeftest()}.
+
+Outputs: \texttt{model\_primary\_A/B/C.rds}, \texttt{coef\_table\_primary\_A/B/C.csv},
+\texttt{coef\_all\_variants.csv}, \texttt{predictions\_primary\_A/B/C.parquet}.
+
+%===========================================================================
+\section{Stage 09: Comparator Models}
+%===========================================================================
+
+\texttt{09\_comparators.Rmd} fits (a) the XGBoost GBT comparator,
+(b) the static Cox PH model with Schoenfeld residual testing, and
+(c) the rule-based scores NEWS2, qSOFA, SIRS.
+
+GBT feature importance (gain, cover, frequency) is exported for each variant.
+The Cox Schoenfeld test results are exported to \texttt{cox\_schoenfeld\_A/B/C.csv}.
+
+Outputs: \texttt{model\_gbt\_A/B/C.rds}, \texttt{model\_cox\_A/B/C.rds},
+\texttt{predictions\_comparators\_A/B/C.parquet},
+\texttt{gbt\_feature\_importance\_A/B/C.csv}, \texttt{cox\_schoenfeld\_A/B/C.csv},
+\texttt{coef\_cox\_A/B/C.csv}.
+
+%===========================================================================
+\section{Stage 10: Metrics Suite}
+%===========================================================================
+
+\texttt{10\_metrics\_suite.Rmd} evaluates all models on all splits
+(temporal unrestricted, treatment-anchored, random unrestricted) using the
+full metric suite:
+
+\begin{itemize}
+  \item AUROC and AUPRC.
+  \item Calibration intercept and slope (logistic recalibration).
+  \item PhysioNet Utility Score (Python module \texttt{utility\_score.py},
+  called from R via \texttt{reticulate}), using parameters from \texttt{config.R}.
+  \item Alert burden (false alerts per true alert at the utility-optimal threshold).
+  \item Lead time (median hours between alert and onset, restricted to true positives).
+  \item Decision-curve net benefit (\texttt{dca\_A/B/C.csv}).
+\end{itemize}
+
+Output: \texttt{10\_metric\_results.csv}.
+
+%===========================================================================
+\section{Stage 11: External Validation on eICU-CRD}
+%===========================================================================
+
+\texttt{11\_external\_validation.Rmd} applies the frozen MIMIC-IV models (primary
+and NEWS2) to the eICU-CRD person-hour table (\texttt{eicu\_person\_hours.parquet}).
+No refitting is performed. AUROC and AUPRC are reported for each variant and model.
+
+Output: \texttt{11\_external\_validation\_results.csv},
+\texttt{eicu\_predictions\_A/B/C.parquet}.
+
+%===========================================================================
+\section{Stage 12: Variance Decomposition}
+%===========================================================================
+
+\texttt{12\_variance\_decomposition.Rmd} computes the pre-registered variance
+decomposition by systematically varying one factor at a time while holding all
+others fixed:
+
+\begin{itemize}
+  \item \textbf{Label spread} (H1): AUROC range across Variants A/B/C, holding
+  primary model and temporal split fixed.
+  \item \textbf{Model-class spread}: AUROC range across primary, GBT, Cox, NEWS2,
+  qSOFA, SIRS, holding Variant B and temporal split fixed.
+  \item \textbf{Metric divergence} (H5): proportional AUROC vs.\ Utility Score
+  decline internal$\to$external.
+  \item \textbf{Hypothesis verdicts} H1, H2, H6: evaluated against pre-specified
+  thresholds.
+\end{itemize}
+
+Outputs: \texttt{12\_variance\_decomposition\_table.csv},
+\texttt{12\_hypothesis\_verdicts.csv}, \texttt{12\_label\_variance\_auroc.png},
+\texttt{12\_model\_class\_auroc.png}, \texttt{label\_variance\_table.csv}.
+
+%===========================================================================
+\section{Stage 13: Equity Analysis}
+%===========================================================================
+
+\texttt{13\_equity\_analysis.Rmd} evaluates model performance (AUROC, AUPRC, alert
+burden) and label sensitivity (fraction of stays labelled septic per variant)
+within each stratum of the four equity variables: race, ethnicity, primary
+language, and insurance status. The conjunction of performance disparity and
+label-sensitivity variation is reported as a novel finding.
+
+Outputs: \texttt{13\_subgroup\_performance.csv},
+\texttt{13\_subgroup\_label\_sensitivity.csv}, \texttt{13\_auroc\_by\_race.png},
+\texttt{13\_label\_sens\_vs\_auroc.png}.
+
+%===========================================================================
+\section{Reproducibility}
+%===========================================================================
+
+The full pipeline is orchestrated by \texttt{run\_pipeline.sh}, which calls each
+stage in sequence. All random seeds are fixed. All intermediate artefacts are
+Parquet (columnar, compressed) except small result tables ($<$1{,}000 rows),
+which are CSV for human-readability. The pipeline can be re-run from scratch
+in approximately six hours on a machine with 64\,GB RAM by setting the
+\texttt{MIMIC\_RESEARCH\_ROOT} environment variable.

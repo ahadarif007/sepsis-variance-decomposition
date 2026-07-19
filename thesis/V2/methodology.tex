@@ -1,0 +1,330 @@
+\chapter{Research Methodology}
+\label{ch:methodology}
+
+\section{Research Design}
+
+The study is a retrospective, observational prediction-modelling study on
+de-identified critical-care data. It follows a pre-registered protocol
+(\texttt{00\_preregistration.md}, locked before any modelling) and reports
+in conformity with TRIPOD+AI \parencite{collins2024tripodai} and PROBAST+AI
+\parencite{moons2025probastai}. The central methodological innovation is
+the elevation of label operationalisation, validation split design, and
+evaluation metric selection from nuisance parameters to primary objects of
+study.
+
+All code is implemented in R (v4.x) and Python (v3.11), with a single
+configuration module (\texttt{config.R}) as the sole source of truth for paths,
+clinical item identifiers, antibiotic name lists, and Sepsis-3 thresholds.
+
+%===========================================================================
+\section{Data Sources}
+\label{sec:data}
+%===========================================================================
+
+\subsection{Development Data: MIMIC-IV v3.1}
+
+The primary development data is MIMIC-IV v3.1 \parencite{johnson2023mimiciv},
+a large, de-identified critical-care database comprising records from Beth Israel
+Deaconess Medical Center (BIDMC), Boston. It was accessed under the required
+PhysioNet credentialing agreement. The full database spans 8 clinical tables
+used in this study (Table~\ref{tab:data_sources}).
+
+\begin{table}[H]
+  \centering
+  \begin{tabular}{lrr}
+    \toprule
+    \textbf{Table} & \textbf{Exists} & \textbf{Size (MB)} \\
+    \midrule
+    admissions       & yes & 19.9 \\
+    patients         & yes & 2.8 \\
+    icustays         & yes & 3.3 \\
+    chartevents      & yes & 3{,}502.6 \\
+    labevents        & yes & 2{,}593.0 \\
+    prescriptions    & yes & 606.7 \\
+    microbiologyevents & yes & 117.2 \\
+    inputevents      & yes & 401.3 \\
+    \bottomrule
+  \end{tabular}
+  \caption{MIMIC-IV v3.1 source tables used in the V2 pipeline.}
+  \label{tab:data_sources}
+\end{table}
+
+\subsection{External Validation Data: eICU-CRD v2.0}
+
+External validation uses the eICU Collaborative Research Database v2.0
+\parencite{pollard2018eicu}, a multi-centre collection spanning more than 200
+US ICUs. eICU-CRD is independently collected, uses different electronic health
+record systems, and represents a broader range of clinical practices and patient
+populations than the single-centre MIMIC-IV, making it a meaningful external test.
+
+%===========================================================================
+\section{Cohort Construction and Inclusion Criteria}
+%===========================================================================
+
+The base cohort is constructed by applying the following inclusion criteria
+uniformly across all three label variants:
+
+\begin{itemize}
+  \item Age $\geq 18$ years at ICU admission.
+  \item First ICU stay per patient only (to avoid within-patient correlation from
+  repeated admissions).
+  \item ICU length of stay $\geq 4$ hours (to ensure sufficient data for
+  hourly feature construction and at least one prediction opportunity).
+\end{itemize}
+
+The resulting base cohort contains \textbf{65{,}078 stays} in MIMIC-IV,
+covering all stays identifiable across the three label variants.
+
+%===========================================================================
+\section{Outcome Definition: Three Pre-registered Sepsis-3 Label Variants}
+\label{sec:label_variants}
+%===========================================================================
+
+Following Cohen et al.\ \parencite{cohen2024subtle} and Johnson et al.\
+\parencite{johnson2018comparative}, the Sepsis-3 onset label is operationalised
+as three independent but plausible readings of the consensus definition
+\parencite{singer2016sepsis3}. The variants are pre-specified and locked before
+any model fitting; they differ in the antibiotic-culture time windows and in the
+SOFA baseline reference (Table~\ref{tab:label_variants}).
+
+\begin{table}[H]
+  \centering
+  \small
+  \begin{tabularx}{\textwidth}{lXrrrrl}
+    \toprule
+    \textbf{ID} & \textbf{Name} & \textbf{ABX$\to$cx (h)} & \textbf{cx$\to$ABX (h)} &
+      \textbf{SOFA$-$ (h)} & \textbf{SOFA$+$ (h)} & \textbf{Baseline} \\
+    \midrule
+    A & Narrow          & 24 & 24 & 24 & 12 & Admission SOFA \\
+    B & Seymour-Standard & 72 & 24 & 48 & 24 & Admission SOFA \\
+    C & Liberal         & 72 & 72 & 48 & 24 & Rolling 24\,h min SOFA \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Three pre-registered Sepsis-3 label variants. ABX = antibiotic;
+  cx = culture; SOFA$-$/SOFA$+$ = hours before/after suspicion time in which
+  an acute SOFA rise of $\geq 2$ points must be observed.
+  Variant B matches the original Seymour et al.\ (2016) window specification
+  and is designated the primary analysis.}
+  \label{tab:label_variants}
+\end{table}
+
+All three variants operationalise suspected infection as a qualifying antibiotic
+order paired with a body-fluid culture within the specified windows. Surveillance
+cultures (e.g.\ MRSA screens, CRE screens) are excluded. SOFA organ-dysfunction
+components are computed from chartevents, labevents, inputevents, and
+outputevents using the standard MIMIC-IV item identifiers.
+
+Variant B (Seymour-Standard) is designated the \textbf{primary analysis}; Variants
+A and C serve as pre-specified sensitivity analyses for the variance decomposition.
+
+%===========================================================================
+\section{Prediction Framing}
+\label{sec:framing}
+%===========================================================================
+
+Following Lauritsen et al.\ \parencite{lauritsen2021framing} and Reyna et al.\
+\parencite{reyna2020utility}:
+
+\begin{itemize}
+  \item \textbf{Observation window:} expanding from ICU admission (all data up
+  to the current hour, forward-filled within each stay).
+  \item \textbf{Prediction horizon:} 6 hours (will the patient develop sepsis
+  onset within the next 6 hours?).
+  \item \textbf{Window shift:} hourly.
+  \item \textbf{Prediction trigger:} every at-risk person-hour from hour 1 of
+  ICU admission.
+  \item \textbf{Minimum observation:} 1 hour post-admission before eligibility.
+  \item \textbf{Right-censoring:} 72 hours post-ICU-admission.
+\end{itemize}
+
+This framing matches the PhysioNet/CinC 2019 Challenge \parencite{reyna2020utility}
+and the Lauritsen et al.\ design.
+
+%===========================================================================
+\section{Person-Hour Table: Competing Events}
+\label{sec:person_hours}
+%===========================================================================
+
+Each cohort stay is expanded into a dense (stay$\_$id, hour) table with one row
+per person-hour at risk. The competing-event structure follows Heyard et al.\
+\parencite{heyard2019dynamic}:
+
+\begin{itemize}
+  \item event = 0: in-progress (censored at this hour)
+  \item event = 1: sepsis onset in this hour (cause of interest)
+  \item event = 2: discharge alive without sepsis (competing event)
+  \item event = 3: death without sepsis (competing event)
+\end{itemize}
+
+Treating discharge and death as ordinary censoring overstates onset incidence
+and biases parameter estimation. The multinomial cause-specific formulation
+eliminates this bias by construction.
+
+Treatment-anchor timestamps (first antibiotic order, first culture draw) are
+extracted per stay to support treatment-anchored evaluation
+\parencite{kamran2024evaluation}.
+
+%===========================================================================
+\section{Feature Construction}
+\label{sec:features}
+%===========================================================================
+
+Features are extracted at each person-hour from the chartevents, labevents,
+inputevents, and outputevents tables using the item identifiers in
+\texttt{config.R}. The feature set comprises:
+
+\begin{enumerate}
+  \item \textbf{Vital signs} (last-observation-carried-forward per hour):
+  heart rate, respiratory rate, SpO$_2$, MAP (invasive/noninvasive), temperature
+  ($^\circ$C), GCS (eye + verbal + motor sum).
+  \item \textbf{Laboratory values} (LOCF): lactate, creatinine, total bilirubin,
+  platelet count, WBC, P/F ratio.
+  \item \textbf{Vasopressor indicators:} any vasopressor (binary); any
+  norepinephrine or epinephrine (binary).
+  \item \textbf{Six-hour rolling slopes:} respiratory rate, MAP, lactate.
+  \item \textbf{Missingness indicators:} one binary flag per laboratory value
+  indicating whether the test was ordered in the current hour
+  (lactate, creatinine, bilirubin, platelets, WBC, P/F ratio).
+\end{enumerate}
+
+Temperature recorded in Fahrenheit is converted to Celsius. FiO$_2$ values
+$> 1.0$ (percent format) are divided by 100.
+
+%===========================================================================
+\section{Model Classes}
+\label{sec:models}
+%===========================================================================
+
+\subsection{Primary: Dynamic Discrete-Time Competing-Risks Hazard Model}
+
+Following D'Agostino et al.\ \parencite{dagostino1990pooled} and Heyard et al.\
+\parencite{heyard2019dynamic}, the primary model is a multinomial pooled logistic
+regression over person-hours:
+
+\begin{equation}
+  \lambda_r(t \mid \mathbf{X}_{it}) =
+    P(T_i = t,\, R_i = r \mid T_i \geq t,\, \mathbf{X}_{it})
+  = \frac{\exp\!\bigl(\alpha_r(t) + \boldsymbol{\beta}_r^\top \mathbf{X}_{it}\bigr)}
+         {1 + \sum_{s} \exp\!\bigl(\alpha_s(t) + \boldsymbol{\beta}_s^\top \mathbf{X}_{it}\bigr)}
+  \label{eq:primary_model}
+\end{equation}
+
+where $r \in \{1=\text{sepsis},\, 2=\text{discharge},\, 3=\text{death}\}$,
+$\alpha_r(t)$ is the cause-specific baseline log-hazard modelled as a restricted
+natural cubic spline in hours-since-admission with 5 knots
+(at $t \in \{4, 13, 24, 38, 58\}$ hours, boundary knots at $\{0, 72\}$),
+and $\boldsymbol{\beta}_r$ are cause-specific covariate coefficients.
+
+Standard errors are cluster-robust sandwich estimates (R package
+\texttt{sandwich}) clustered on \texttt{stay\_id} to account for
+within-patient correlation across person-hours. The model is fitted via
+\texttt{nnet::multinom()}.
+
+\paragraph{Equivalence to Cox.} D'Agostino et al.\ prove that pooled logistic
+regression over short equal-length intervals converges to time-dependent-covariate
+Cox regression as the interval length approaches zero and the per-interval event
+probability approaches zero. Both conditions are satisfied for one-hour ICU bins
+with a per-hour onset probability below 0.5\%. The proposed model is therefore
+the Cox model implemented in the form the data actually takes, without imposing
+the proportional-hazards assumption.
+
+\subsection{Mandatory ML Comparator: Gradient-Boosted Trees}
+
+A gradient-boosted trees model (R package \texttt{xgboost}) is fitted under
+identical conditions per label variant and temporal split. Maximum depth 6,
+learning rate 0.1, early stopping on an internal validation set (15\% of
+training rows), log-loss objective, column sampling by tree 0.8. Feature
+importance is reported as gain.
+
+\subsection{Static Cox Proportional-Hazards Model}
+
+A standard Cox PH model is fitted using the first non-zero person-hour per stay
+(static, baseline-covariate formulation) as a deliberately weak baseline to
+quantify the cost of the field's conventional choice. Schoenfeld residual testing
+is applied.
+
+\subsection{Rule-Based Comparators}
+
+NEWS2, qSOFA, and SIRS are computed at each person-hour from the same extracted
+feature set. NEWS2 is the headline comparator following Evans et al.\
+\parencite{evans2021ssc}.
+
+%===========================================================================
+\section{Validation Architecture}
+\label{sec:validation}
+%===========================================================================
+
+\begin{table}[H]
+  \centering
+  \small
+  \begin{tabularx}{\textwidth}{lXl}
+    \toprule
+    \textbf{Split} & \textbf{Design} & \textbf{Purpose} \\
+    \midrule
+    Internal (primary) & Temporal: \texttt{anchor\_year\_group}
+      train = 2008--2016, test = 2017--2019
+      \parencite{guo2022temporal} & Honest internal estimate \\
+    Internal (secondary) & Random patient-level 75/25
+      (seed = 42) & Quantify split optimism (H4) \\
+    Treatment-anchored & Restricted to hours before first
+      culture or antibiotic \parencite{kamran2024evaluation} & Remove
+      clinician-suspicion leakage (H3) \\
+    External (primary) & eICU-CRD v2.0
+      \parencite{pollard2018eicu} & Generalisation (H5) \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Validation architecture. All splits are patient-level (no patient
+  appears in both training and test sets). The primary analysis uses the
+  temporal split.}
+  \label{tab:validation}
+\end{table}
+
+%===========================================================================
+\section{Evaluation Metrics}
+\label{sec:metrics}
+%===========================================================================
+
+\subsection{Primary Metrics}
+
+\textbf{PhysioNet Utility Score} \parencite{reyna2020utility} is the primary
+discriminative metric. The score rewards early true positives (alerts issued
+within 6 hours before onset), penalises late true positives and false negatives,
+and penalises false positives. The score is normalised so that perfect prediction
+scores 1.0, an optimal constant prediction scores 0.0, and a model can score
+negative. A negative utility score is categorically worse than issuing no alert
+at all. AUROC is designated \textbf{descriptive only} following Wang et al.\
+\parencite{wang2025srpm}.
+
+\textbf{Calibration} is assessed via calibration intercept, calibration slope,
+and flexible calibration curve. Cause-specific calibration for the competing-risks
+model follows Heyard et al.\ \parencite{heyard2020evaluation}.
+
+\subsection{Secondary Metrics}
+
+AUPRC (mandatory at low per-hour prevalence), alert burden (false alerts per
+true alert; benchmark: 1.4 from Moor et al.\ \parencite{moor2023review}),
+lead time relative to clinical recognition (benchmark: 3.7\,h from Moor et al.),
+and decision-curve net benefit \parencite{vickers2006dca}.
+
+%===========================================================================
+\section{Sample Size}
+\label{sec:sample_size}
+%===========================================================================
+
+Formal sample size calculation follows Riley et al.\ \parencite{riley2019sample}
+(\texttt{pmsampsize} R package), targeting shrinkage factor $\geq 0.9$ and
+apparent-vs-adjusted Nagelkerke $R^2$ difference $\leq 0.05$. The anticipated
+AUC is 0.846 from Moor et al.\ \parencite{moor2023review}. Twenty-five
+candidate predictors are specified. Sufficiency is evaluated per label variant;
+underpowered variants are a finding, not a failure.
+
+%===========================================================================
+\section{Pre-registration and Reporting Standards}
+%===========================================================================
+
+The full protocol was pre-registered as \texttt{00\_preregistration.md} before
+any data extraction. All six hypotheses (H1--H6), the three label variants, the
+model classes, the validation splits, the primary metrics, and the go/no-go gates
+are specified in that document. Post-hoc analyses are labelled as such. The
+pipeline is released under a permissive open-source licence following the
+TRIPOD+AI open-pipeline recommendation \parencite{collins2024tripodai}.

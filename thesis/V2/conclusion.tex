@@ -1,0 +1,132 @@
+\chapter{Conclusion}
+\label{ch:conclusion}
+
+\section{Summary of Findings}
+
+This thesis set out to answer one question: in real-time sepsis onset prediction
+on MIMIC-IV, how is apparent predictive performance partitioned between the model
+and the analyst's discretionary choices about label operationalisation, validation
+split design, and evaluation metric? The answer, across six pre-registered
+hypotheses and one unexpected structural finding, is: the analyst's choices matter
+as much as the model, and the label is not merely sensitive to operationalisation
+--- it contains no predictable signal that is independent of clinical action.
+
+\paragraph{H1 (Label dominance): Confirmed.}
+The spread in AUROC across the three pre-specified Sepsis-3 label variants (0.153)
+marginally exceeds the spread across model classes (0.140). Cohen et al.'s
+\parencite{cohen2024subtle} MIMIC-III finding that ``label operationalisation
+moves performance at least as much as the model'' is confirmed on MIMIC-IV using
+a survival model framework. The margin is narrow, confirming that both sources
+of variance are large relative to the 0.02 non-inferiority threshold.
+
+\paragraph{H2 (Coefficient instability): Confirmed.}
+Ten out of 25 predictors --- including MAP, temperature, bilirubin, platelet count,
+and vasopressor indicators --- change sign or change magnitude by a factor
+$\geq 2$ across label variants. Published hazard ratios and odds ratios from
+MIMIC-IV sepsis onset models are therefore not safely interpretable without
+knowing the exact label operationalisation used. A single published coefficient
+may be positive, negative, or near-zero under different plausible readings of the
+same Sepsis-3 definition.
+
+\paragraph{H3 (Treatment leakage): Structural finding supersedes hypothesis.}
+The pre-treatment evaluation window contains zero sepsis onset events across
+179{,}003 person-hours. The Sepsis-3 label on MIMIC-IV does not contain a
+physiologically observable event that precedes the clinical action that
+constitutes it. Every published MIMIC-IV real-time sepsis prediction model ---
+including both versions of this thesis --- has measured the ability to predict
+clinician suspicion, not the ability to predict physiological deterioration.
+
+\paragraph{H5 (Metric divergence): Confirmed qualitatively.}
+The PhysioNet Utility Score is negative for every model and every label variant
+in the temporal test set. The internal Utility Score collapse documented by Wang
+et al.\ \parencite{wang2025srpm} at the meta-analytic level reproduces within
+a single study under an honest temporal split. Alert burdens range from 90 to
+over 340 false alerts per true alert, against a published benchmark of 1.4
+\parencite{moor2023review}. AUROC alone would not detect this; Utility Score
+would.
+
+\paragraph{H6 (Model-class null): Rejected.}
+Under the Seymour-Standard label, the gradient-boosted comparator outperforms
+the primary discrete-time competing-risks model by 0.133 AUROC (0.740 vs.\ 0.607).
+The interpretable model is not non-inferior to GBT. However, the ordinal ranking
+on clinical utility is partly reversed: the primary model has a less negative
+Utility Score ($-1.004$ vs.\ GBT $-5.112$), meaning that while it discriminates
+worse, it generates fewer catastrophically harmful false alerts.
+
+\section{The Central Lesson}
+
+The collapse documented by Wang et al.\ \parencite{wang2025srpm} is not a model
+problem. It is a label problem. The Sepsis-3 label on MIMIC-IV is constituted by
+clinical action, is sensitive to operationalisation by a factor of two in cohort
+size across plausible readings, and produces clinically harmful alert behaviour
+under every evaluated model class when assessed by the metric that measures
+clinical utility. These three properties are independent of model complexity and
+cannot be resolved by choosing a better model. They can only be resolved by
+changing the label --- which requires either a prospective study where the event
+can be observed independently of clinical action, or a label derived from
+physiological biomarkers (e.g.\ lactate trajectory, SOFA trajectory) rather than
+from the timing of clinical interventions.
+
+\section{Contributions Revisited}
+
+\begin{enumerate}
+  \item \textbf{C1 (Label variance quantification):} First three-variant
+  label sensitivity analysis for a dynamic discrete-time competing-risks model
+  on MIMIC-IV, confirming Cohen et al.\ at scale (65{,}078 stays vs.\ 3{,}186
+  in the original study).
+  \item \textbf{C2 (Label constitutionality):} Demonstration that the
+  treatment-anchored window contains zero onset events on MIMIC-IV, providing
+  the strongest available confirmation of Kamran et al.'s
+  \parencite{kamran2024evaluation} constitutionality claim.
+  \item \textbf{C3 (Utility collapse under survival framework):} Negative
+  Utility Score across all models and variants extends Wang et al.'s
+  meta-analytic finding to a controlled within-study comparison using the
+  PhysioNet Utility Score as a primary metric.
+  \item \textbf{C4 (Coefficient instability):} Formal documentation of sign
+  reversal and magnitude instability in 10 clinical predictors across label
+  variants, validating Lauritsen et al.'s \parencite{lauritsen2021framing}
+  framing-instability claim for the MIMIC-IV hourly ICU regime.
+  \item \textbf{C5 (Equity-by-label):} First published conjunction of subgroup
+  performance disparities and subgroup label-sensitivity variation for any
+  sepsis model.
+  \item \textbf{C6 (Transparent pipeline):} Reproducible, pre-registered,
+  TRIPOD+AI-conformant pipeline released under a permissive licence.
+\end{enumerate}
+
+\section{Avenues for Further Research}
+
+\begin{enumerate}
+  \item \textbf{Biomarker-anchored label.} A Sepsis-3 operationalisation whose
+  SOFA trigger is computed from objective physiological values (lactate, organ
+  biomarkers) rather than from clinician-ordered tests would eliminate the
+  treatment-constitutionality problem and allow genuine pre-onset evaluation.
+  \item \textbf{Prospective study design.} The constitutionality finding is
+  specific to retrospective administrative data; a prospective design where
+  sepsis onset is determined by a protocol-blinded assessor would test whether
+  the label problem is solvable in principle.
+  \item \textbf{Recalibration for external use.} Under Variants A and C, the
+  primary model transports to eICU with modest AUROC degradation (0.023, 0.034).
+  A single-parameter intercept recalibration may be sufficient to restore
+  calibration without refitting, enabling a transportable baseline.
+  \item \textbf{Full utility optimisation.} Alert thresholds should be chosen to
+  maximise the PhysioNet Utility Score, not to maximise AUROC or minimise
+  cross-entropy. None of the evaluated models was calibrated for this; a
+  direct utility-maximising threshold search may recover positive utility at
+  restricted operating points.
+  \item \textbf{Prospective multi-centre Utility Score evaluation.} The alert
+  burden ($>90$ false alerts per true alert under the best model) is a deployment
+  characteristic, not a statistical one. Human-factors evaluation of whether
+  any of these models could be deployed at a practically acceptable burden
+  requires a prospective multi-centre study.
+\end{enumerate}
+
+\section{Closing Remark}
+
+Version 2.0 of this research achieves something Version 1.0 did not: it produces
+a publishable result regardless of how the performance numbers fall. The hypothesis
+framework ensures that confirmed, rejected, and uninformative hypotheses are
+equally informative about the underlying structure of the problem. The central
+finding --- that the Sepsis-3 label on MIMIC-IV is constituted by clinical action
+and contains no pre-treatment predictable signal --- is not a failure of the
+model. It is a finding about the data-generating process, and it is the most
+important contribution this study makes.

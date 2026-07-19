@@ -1,0 +1,44 @@
+\chapter*{Abstract}
+\addcontentsline{toc}{chapter}{Abstract}
+
+Real-time sepsis onset prediction in the ICU has attracted ninety-one published
+models, yet Wang et al.\ (2025) showed that the median clinical Utility Score
+collapses from $+0.381$ internally to $-0.164$ externally while AUROC falls only
+marginally. This thesis asks whether that collapse is attributable to the model,
+to how the Sepsis-3 label is operationalised, or to other analyst-level
+methodological choices --- the evaluation metric, the validation split design,
+and the temporal anchoring of predictions relative to clinical action.
+
+The study is conducted on MIMIC-IV v3.1 (65{,}078 adult ICU stays) with external
+validation on eICU-CRD v2.0 (63 labelled sepsis episodes over 7.9 million
+person-hours). Three pre-registered Sepsis-3 onset label variants (Narrow,
+Seymour-Standard, Liberal) were extracted and each was used to build a
+person-hour table with competing events. The primary model is a dynamic
+discrete-time competing-risks hazard model (multinomial pooled logistic regression
+over hourly records, equivalent to time-dependent-covariate Cox regression under
+short intervals), benchmarked against gradient-boosted trees (GBT), a static Cox
+model, and the rule-based scores NEWS2, qSOFA, and SIRS.
+
+The variance decomposition confirms that label operationalisation spreads AUROC by
+0.153 across variants, marginally exceeding the model-class spread of 0.140 (H1
+confirmed). Ten covariates --- including mean arterial pressure, temperature,
+bilirubin, and vasopressor indicators --- change sign or magnitude $\geq 2\times$
+across label variants (H2 confirmed), undermining coefficient interpretability.
+The pre-registered model-class non-inferiority hypothesis (H6: $|\Delta| \leq
+0.02$) is rejected: GBT outperforms the primary model by 0.133 AUROC under the
+Seymour-Standard label. Crucially, the treatment-anchored evaluation window
+contains \textbf{zero sepsis onset events}, confirming that the Sepsis-3 label is
+entirely constituted by clinical action and that current models predict clinician
+suspicion rather than physiological deterioration. The PhysioNet Utility Score is
+\textbf{negative for every model and every label variant}, meaning that all
+evaluated models perform worse than issuing no alert at all. Alert burden exceeds
+200 false alerts per true alert across all configurations, compared with the
+published benchmark of 1.4.
+
+The thesis concludes that the collapse documented by Wang et al.\ is not a model
+problem but a label problem: once the label's constitutive dependence on clinical
+action is acknowledged, the question of which model class to use becomes secondary.
+
+\noindent\textbf{Keywords:} sepsis; MIMIC-IV; discrete-time survival analysis;
+competing risks; label definition; variance decomposition; clinical utility;
+temporal dataset shift; treatment-anchored evaluation; TRIPOD+AI.
