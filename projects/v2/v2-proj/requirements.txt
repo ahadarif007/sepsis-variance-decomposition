@@ -1,0 +1,49 @@
+# R package requirements for v2-thesis pipeline
+# Install via: Rscript -e "install.packages(readLines('requirements.txt'), repos='https://cloud.r-project.org')"
+# Or run 01_setup.R which handles installation automatically.
+
+# Core data handling
+data.table
+arrow
+dplyr
+tidyr
+readr
+purrr
+tibble
+lubridate
+
+# Visualisation
+ggplot2
+
+# Survival and discrete-time models
+survival
+nnet
+VGAM
+rms
+discSurv
+cmprsk
+prodlim
+timeROC
+
+# Sandwich variance estimator
+sandwich
+lmtest
+
+# ML comparator
+xgboost
+
+# Metrics
+PRROC
+dcurves
+CalibrationCurves
+
+# Sample size
+pmsampsize
+
+# Splines
+splines
+
+# --- Python dependencies (for utility_score.py) ---
+# numpy >= 1.24
+# pandas >= 2.0
+# pyarrow >= 12.0

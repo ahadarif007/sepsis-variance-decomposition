@@ -1,0 +1,153 @@
+---
+title: "07 Sample Size — Riley et al. (2019) Power Calculation"
+author: "Abdul Ahad. Student ID: G00486649"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  bookdown::pdf_document2:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    fig_caption: true
+geometry: margin=2.3cm
+fontsize: 11pt
+header-includes:
+  - \usepackage{float}
+  - \usepackage{caption}
+  - \captionsetup[figure]{font=small}
+  - \captionsetup[table]{font=small}
+  - \renewcommand{\contentsname}{Table of Contents}
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+set.seed(486649)   # student ID for reproducibility
+
+knitr::opts_chunk$set(
+  echo = FALSE, message = FALSE, warning = FALSE,
+  fig.align = "center", fig.pos = "H",
+  out.width = "80%", fig.width = 6, fig.height = 3.6
+)
+```
+
+## Introduction
+
+Before fitting any prediction model, sample size adequacy must be demonstrated. The Riley et al. (2019, 2020, 2021) framework provides minimum sample size criteria for clinical prediction models that go beyond the traditional events-per-variable heuristic. The three criteria ensure that (i) the global shrinkage factor remains $\geq 0.9$ (coefficients are not over-fitted), (ii) the optimism in Nagelkerke $R^2$ stays $\leq 0.05$, and (iii) the overall event rate is estimated with adequate precision.
+
+Each label variant produces a different number of sepsis onset events, so the calculation is repeated per variant. Crucially, the effective sample size in a person-hour framework is governed by the number of independent **onset events** rather than the total number of person-hour rows, because rows within the same stay are correlated. The anticipated discrimination (C-statistic = 0.846) is drawn from Moor et al. (2023), the most comprehensive recent benchmark for hourly sepsis prediction.
+
+```{r load-deps}
+suppressPackageStartupMessages({
+  library(data.table)
+  library(pmsampsize)
+})
+
+source("config.R")
+source("utils.R")
+
+step("=== Sample Size Calculation (Riley et al., 2019) ===")
+```
+
+## Label-Variance Recap
+
+The cohort and event counts from the label-variance table (produced in 02) determine the inputs to the power calculation.
+
+```{r load-label-variance}
+lv_path <- file.path(OUTPUT_DIR, "label_variance_table.csv")
+if (!file.exists(lv_path))
+  stop("label_variance_table.csv not found. Run 02_cohort_labels.Rmd first.")
+
+lv <- data.table::fread(lv_path)
+knitr::kable(lv, caption = "Label-variance table (from 02\\_cohort\\_labels.Rmd)")
+```
+
+## Sample Size per Variant
+
+For each label variant, the training-set person-hour table is loaded, event counts extracted, and `pmsampsize` (Riley et al., 2019) called with the pre-registered anticipated C-statistic of 0.846. Events-per-variable (EPV) is reported as a secondary reference but is not the binding criterion.
+
+```{r sample-size-calc}
+results <- list()
+
+for (i in seq_len(nrow(lv))) {
+  row <- lv[i]
+  vid <- row$variant
+
+  ph_path <- file.path(OUTPUT_DIR, paste0("person_hours_", vid, ".parquet"))
+  if (!file.exists(ph_path)) {
+    v2_log(sprintf("  Variant %s: person_hours not found, skipping", vid), level = "WARN")
+    next
+  }
+
+  ph       <- arrow::read_parquet(ph_path, col_select = c("stay_id", "event", "temporal_split"))
+  ph_train <- ph[ph$temporal_split == "train", ]
+
+  n_person_hours <- nrow(ph_train)
+  n_events       <- sum(ph_train$event == 1, na.rm = TRUE)
+  n_stays        <- length(unique(ph_train$stay_id))
+  event_rate_ph  <- n_events / n_person_hours
+
+  cat(sprintf("\n--- Variant %s (%s) ---\n", vid, row$name))
+  cat(sprintf("  Training person-hours: %s\n", format(n_person_hours, big.mark = ",")))
+  cat(sprintf("  Training stays:        %s\n", format(n_stays,         big.mark = ",")))
+  cat(sprintf("  Onset events (train):  %s\n", format(n_events,        big.mark = ",")))
+  cat(sprintf("  Per-hour event rate:   %.4f%%\n", 100 * event_rate_ph))
+
+  ss_res <- tryCatch(
+    pmsampsize::pmsampsize(
+      type       = "b",
+      rsquared   = NULL,
+      parameters = P_CANDIDATE_PREDICTORS,
+      shrinkage  = 0.9,
+      prevalence = event_rate_ph,
+      cstatistic = ANTICIPATED_AUC,
+      seed       = 42
+    ),
+    error = function(e) {
+      v2_log(sprintf("  pmsampsize error: %s", e$message), level = "WARN")
+      NULL
+    }
+  )
+
+  if (!is.null(ss_res)) {
+    min_n_ph <- ss_res$sample_size
+    cat(sprintf("  Minimum person-hours (Riley): %s\n", format(min_n_ph, big.mark = ",")))
+    cat(sprintf("  Available person-hours:       %s\n", format(n_person_hours, big.mark = ",")))
+    cat(sprintf("  Sufficient (person-hours):    %s\n",
+                if (n_person_hours >= min_n_ph) "YES" else "NO — variant may be underpowered"))
+    cat(sprintf("  NOTE: effective information = onset EVENTS (%d), not person-hours.\n",
+                n_events))
+  }
+
+  epv <- if (P_CANDIDATE_PREDICTORS > 0) n_events / P_CANDIDATE_PREDICTORS else NA
+  cat(sprintf("  Events-per-variable (EPV): %.1f (reference only)\n", epv))
+
+  results[[vid]] <- data.frame(
+    variant             = vid,
+    name                = row$name,
+    n_train_person_h    = n_person_hours,
+    n_train_stays       = n_stays,
+    n_onset_events      = n_events,
+    per_hour_event_rate = round(event_rate_ph, 5),
+    min_n_riley         = if (!is.null(ss_res)) ss_res$sample_size else NA,
+    sufficient          = if (!is.null(ss_res)) n_person_hours >= ss_res$sample_size else NA,
+    epv                 = round(epv, 1),
+    anticipated_auc     = ANTICIPATED_AUC,
+    n_candidate_preds   = P_CANDIDATE_PREDICTORS
+  )
+}
+```
+
+## Summary and Interpretation
+
+The table below reports the minimum required person-hours (Riley criterion), the available training person-hours, and whether the sample is sufficient. All three variants are expected to comfortably exceed the minimum, given that MIMIC-IV contains tens of thousands of ICU stays. However, the liberal variant (C) may approach borderline adequacy if its higher event rate inflates the required sample size for precise estimation.
+
+```{r summary-table}
+if (length(results) > 0) {
+  result_df <- do.call(rbind, results)
+  knitr::kable(result_df,
+               caption = "Sample size adequacy (Riley et al., 2019) per label variant")
+  save_parquet(result_df, "07_sample_size", OUTPUT_DIR)
+  cat("\nSaved: 07_sample_size.parquet\n")
+}
+```

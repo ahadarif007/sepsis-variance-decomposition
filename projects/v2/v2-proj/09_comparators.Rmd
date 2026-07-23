@@ -1,0 +1,271 @@
+---
+title: "09 Comparators — Rule-Based, Cox, and GBT Comparator Models"
+author: "Abdul Ahad. Student ID: G00486649"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  bookdown::pdf_document2:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    fig_caption: true
+geometry: margin=2.3cm
+fontsize: 11pt
+header-includes:
+  - \usepackage{float}
+  - \usepackage{caption}
+  - \captionsetup[figure]{font=small}
+  - \captionsetup[table]{font=small}
+  - \renewcommand{\contentsname}{Table of Contents}
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+set.seed(486649)   # student ID for reproducibility
+
+knitr::opts_chunk$set(
+  echo = FALSE, message = FALSE, warning = FALSE,
+  fig.align = "center", fig.pos = "H",
+  out.width = "80%", fig.width = 6, fig.height = 3.6
+)
+```
+
+## Introduction
+
+A meaningful assessment of the primary model requires comparators that span the spectrum from simple clinical rules to flexible machine learning. Crucially, all comparators share the **identical** cohort, label definition, feature set, temporal split, and evaluation metrics as the primary model (Reyna et al., 2020), isolating model-class effects from data-handling differences.
+
+| Comparator | Rationale |
+|---|---|
+| **NEWS2** | The headline rule-based comparator recommended for sepsis screening in UK hospitals (Evans et al., 2021). Pre-computed; no fitting required. |
+| **qSOFA, SIRS** | Included for descriptive context only; neither is a prediction model in the formal sense. |
+| **Static Cox PH** | A deliberately weak baseline that treats covariates as time-fixed. The proportional-hazards assumption is expected to be violated, and the Schoenfeld residual test quantifies this. |
+| **Gradient-Boosted Trees (XGBoost)** | The mandatory ML comparator per PhysioNet challenge conventions (Reyna et al., 2020). If the interpretable primary model matches GBT within 0.02 AUROC (hypothesis H6), the complexity premium of a black-box is not justified. |
+
+Variant B (Seymour-Standard) is the primary comparison; replication on A and C feeds the variance decomposition.
+
+```{r load-deps}
+suppressPackageStartupMessages({
+  library(data.table)
+  library(survival)
+  library(xgboost)
+  library(rms)
+  library(dplyr)
+})
+
+source("config.R")
+source("utils.R")
+source("clinical_scores.R")
+
+step("=== Phase 3b: Comparator models ===")
+```
+
+## Feature Set
+
+The same feature set used by the primary model is applied to all comparators to ensure a fair comparison.
+
+```{r feature-set}
+BASE_FEATURES <- c(
+  "hr", "resp_rate", "spo2", "map", "temp_c", "gcs",
+  "lactate", "creatinine", "bilirubin_total", "platelets", "wbc",
+  "vaso_any", "norepi_epi_any",
+  "hr_slope6h", "resp_rate_slope6h", "map_slope6h",
+  "lactate_measured", "creatinine_measured", "bilirubin_total_measured",
+  "platelets_measured", "wbc_measured", "pf_ratio_measured"
+)
+```
+
+## Fit Comparators Per Variant
+
+For each variant: NEWS2/qSOFA/SIRS scores are read directly from the person-hour table (no fitting); the Cox model is fitted with time-varying covariates and Schoenfeld residual testing; XGBoost is trained with early stopping on the temporal test set, class-imbalance weighting, and AUCPR as the evaluation metric.
+
+```{r fit-comparators-fn, code_folding="hide"}
+fit_comparators <- function(vid) {
+  step(sprintf("--- Comparators for Variant %s ---", vid))
+
+  ph <- as.data.table(arrow::read_parquet(
+    file.path(OUTPUT_DIR, paste0("person_hours_", vid, ".parquet"))
+  ))
+
+  train <- ph[temporal_split == "train"]
+  test  <- ph[temporal_split == "test"]
+
+  avail_feats <- intersect(BASE_FEATURES, names(ph))
+  for (f in avail_feats) {
+    if (is.numeric(train[[f]])) train[is.na(get(f)), (f) := 0]
+    if (is.logical(train[[f]])) train[is.na(get(f)), (f) := FALSE]
+    if (is.numeric(test[[f]]))  test[is.na(get(f)),  (f) := 0]
+    if (is.logical(test[[f]]))  test[is.na(get(f)),  (f) := FALSE]
+  }
+
+  train[, event_bin := as.integer(event == 1)]
+  test[,  event_bin := as.integer(event == 1)]
+
+  results <- list()
+
+  # --- NEWS2 (pre-computed in 03_person_hours.Rmd) ---
+  if ("news2_total" %in% names(test)) {
+    step("  Comparator: NEWS2")
+    test[, pred_news2  := as.numeric(news2_total) / 20]
+    test[, alert_news2 := as.integer(news2_total >= 5)]
+    results[["news2"]] <- test[, .(stay_id, hour, event, event_bin,
+                                    pred_news2, alert_news2)]
+    cat(sprintf("    NEWS2 alert rate: %.1f%%\n",
+                100 * mean(test$alert_news2, na.rm = TRUE)))
+  }
+
+  if ("qsofa_score" %in% names(test)) {
+    test[, pred_qsofa := qsofa_score / 3]
+    results[["qsofa"]] <- test[, .(stay_id, hour, event, event_bin, pred_qsofa)]
+  }
+
+  if ("sirs_score" %in% names(test)) {
+    test[, pred_sirs := sirs_score / 4]
+    results[["sirs"]] <- test[, .(stay_id, hour, event, event_bin, pred_sirs)]
+  }
+
+  # --- Static Cox PH ---
+  step("  Comparator: Static Cox PH")
+  cox_feats   <- intersect(c("hr", "resp_rate", "spo2", "map", "temp_c", "gcs",
+                               "lactate", "creatinine", "bilirubin_total",
+                               "platelets", "wbc", "vaso_any"), names(train))
+  cox_fit <- tryCatch({
+    train_cox <- train[, .SD, .SDcols = c("stay_id", "hour", "event_bin", cox_feats)]
+    train_cox[, stop := hour + 1L]
+    cox_formula_tv <- as.formula(paste(
+      "Surv(hour, stop, event_bin) ~", paste(cox_feats, collapse = " + ")
+    ))
+    survival::coxph(cox_formula_tv, data = as.data.frame(train_cox),
+                    cluster = stay_id, ties = "efron")
+  }, error = function(e) {
+    v2_log("  Cox fit error: ", e$message, level = "WARN"); NULL
+  })
+
+  if (!is.null(cox_fit)) {
+    schoen_test <- tryCatch(survival::cox.zph(cox_fit, transform = "log"),
+                            error = function(e) NULL)
+    if (!is.null(schoen_test)) {
+      schoen_df            <- as.data.frame(schoen_test$table)
+      schoen_df$covariate  <- rownames(schoen_df)
+      schoen_df$variant    <- vid
+      save_parquet(schoen_df, paste0("cox_schoenfeld_", vid), OUTPUT_DIR)
+      cat(sprintf("  Cox PH test: global p = %.3f (p < 0.05 = PH violated, expected)\n",
+                  schoen_test$table["GLOBAL", "p"]))
+    }
+    test_cox <- test[, .SD, .SDcols = c("stay_id", "hour", "event_bin", cox_feats)]
+    test_cox[, stop := hour + 1L]
+    lp <- tryCatch(
+      predict(cox_fit, newdata = as.data.frame(test_cox), type = "lp"),
+      error = function(e) rep(NA_real_, nrow(test_cox))
+    )
+    test[, pred_cox := plogis(lp)]
+    results[["cox"]] <- test[, .(stay_id, hour, event, event_bin, pred_cox)]
+    saveRDS(cox_fit, file.path(OUTPUT_DIR, paste0("model_cox_", vid, ".rds")))
+    cox_coef           <- as.data.frame(coef(summary(cox_fit)))
+    cox_coef$covariate <- rownames(cox_coef)
+    cox_coef$variant   <- vid
+    save_parquet(cox_coef, paste0("coef_cox_", vid), OUTPUT_DIR)
+  }
+
+  # --- Gradient-Boosted Trees ---
+  step("  Comparator: Gradient-Boosted Trees (XGBoost)")
+  gbt_feats <- avail_feats
+  X_train   <- as.matrix(train[, ..gbt_feats])
+  y_train   <- train$event_bin
+  X_test    <- as.matrix(test[, ..gbt_feats])
+  y_test    <- test$event_bin
+
+  X_train[is.na(X_train)] <- 0
+  X_test[is.na(X_test)]   <- 0
+  X_train <- apply(X_train, 2, as.numeric)
+  X_test  <- apply(X_test,  2, as.numeric)
+
+  dtrain <- xgboost::xgb.DMatrix(data = X_train, label = y_train)
+  dtest  <- xgboost::xgb.DMatrix(data = X_test,  label = y_test)
+
+  n_pos      <- sum(y_train, na.rm = TRUE)
+  n_neg      <- sum(!y_train, na.rm = TRUE)
+  scale_pos  <- n_neg / max(n_pos, 1)
+
+  gbt_params <- list(
+    objective        = "binary:logistic",
+    eval_metric      = "aucpr",
+    max_depth        = 6,
+    eta              = 0.05,
+    subsample        = 0.8,
+    colsample_bytree = 0.8,
+    min_child_weight = 5,
+    scale_pos_weight = scale_pos,
+    nthread          = 4
+  )
+
+  gbt_fit <- tryCatch({
+    watchlist <- list(train = dtrain, test = dtest)
+    xgboost::xgb.train(
+      params                = gbt_params,
+      data                  = dtrain,
+      nrounds               = 300,
+      evals                 = watchlist,
+      early_stopping_rounds = 30,
+      verbose               = 0
+    )
+  }, error = function(e) {
+    v2_log("  XGBoost error: ", e$message, level = "WARN"); NULL
+  })
+
+  if (!is.null(gbt_fit)) {
+    pred_gbt <- predict(gbt_fit, dtest)
+    test[, pred_gbt := pred_gbt]
+    results[["gbt"]] <- test[, .(stay_id, hour, event, event_bin, pred_gbt)]
+    saveRDS(gbt_fit, file.path(OUTPUT_DIR, paste0("model_gbt_", vid, ".rds")))
+    feat_imp <- xgboost::xgb.importance(feature_names = gbt_feats, model = gbt_fit)
+    if (!is.null(feat_imp)) {
+      feat_imp$variant <- vid
+      save_parquet(as.data.frame(feat_imp),
+               paste0("gbt_feature_importance_", vid), OUTPUT_DIR)
+    }
+    cat(sprintf("  GBT fitted: best iteration %d\n", gbt_fit$best_iteration))
+  }
+
+  # Combine comparator predictions
+  all_preds <- test[, .(stay_id, hour, event, event_bin, onset_hour,
+                          anchor_year_group, temporal_split,
+                          first_abx_hour = if ("first_abx_hour" %in% names(test))
+                                             first_abx_hour else NA,
+                          first_culture_hour = if ("first_culture_hour" %in% names(test))
+                                                first_culture_hour else NA)]
+  for (nm in names(results)) {
+    pred_col <- grep("^pred_", names(results[[nm]]), value = TRUE)
+    if (length(pred_col) > 0)
+      all_preds <- merge(all_preds, results[[nm]][, c("stay_id", "hour", pred_col),
+                                                   with = FALSE],
+                         by = c("stay_id", "hour"), all.x = TRUE)
+  }
+  all_preds[, variant := vid]
+  save_parquet(all_preds, paste0("predictions_comparators_", vid), OUTPUT_DIR)
+  cat(sprintf("  Comparator predictions saved for Variant %s\n", vid))
+  all_preds
+}
+```
+
+```{r run-comparators}
+all_comparator_preds        <- lapply(names(LABEL_VARIANTS), fit_comparators)
+names(all_comparator_preds) <- names(LABEL_VARIANTS)
+```
+
+## Feature Importance (GBT)
+
+The GBT feature importance rankings provide a useful cross-check: if the gradient-boosted model relies on the same features that carry large coefficients in the multinomial regression, the two model classes are learning similar structure despite their different functional forms.
+
+```{r gbt-importance}
+imp_files <- list.files(OUTPUT_DIR, pattern = "^gbt_feature_importance_", full.names = TRUE)
+if (length(imp_files) > 0) {
+  imp_all <- do.call(rbind, lapply(imp_files, data.table::fread))
+  if (nrow(imp_all) > 0) {
+    top_imp <- imp_all[variant == "B"][order(-Gain)][1:min(20, .N)]
+    knitr::kable(top_imp[, .(Feature, Gain = round(Gain, 4), Cover = round(Cover, 4),
+                              Frequency = round(Frequency, 4))],
+                 caption = "Top 20 GBT features by Gain (Variant B)")
+  }
+}
+```

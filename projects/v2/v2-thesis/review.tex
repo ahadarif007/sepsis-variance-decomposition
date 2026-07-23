@@ -1,0 +1,186 @@
+\chapter{Literature Review}
+\label{ch:review}
+
+This chapter summarises the evidence base that drove the design of this study.
+A full critical review of fifty sources is provided in the companion document
+\textit{Statistical and Machine-Learning Approaches to Real-Time Sepsis Onset
+Prediction on MIMIC-IV: An Extended Critical Literature Review}; this chapter
+extracts the seven evidence strands directly load-bearing for the present study's
+design choices.
+
+%===========================================================================
+\section{The Outcome Is Not One Object: Label Sensitivity}
+%===========================================================================
+
+The premise that a model can be assessed on ``the MIMIC-IV sepsis cohort'' as
+though it were a single well-defined object --- is undermined by two studies.
+
+Johnson et al.\ \parencite{johnson2018comparative} applied five retrospective
+sepsis identification algorithms to 11{,}791 qualifying ICU admissions from
+MIMIC and found only acceptable inter-algorithm agreement (Cronbach's $\alpha$
+= 0.40--0.62). The implication is not that any single algorithm is wrong, but
+that ``the MIMIC sepsis cohort'' is a family of related but non-identical objects,
+each constructed by a specific reading of the Sepsis-3 definition.
+
+Cohen et al.\ \parencite{cohen2024subtle} made the consequence for prediction
+modelling explicit. Holding MIMIC-III fixed and varying only the reading of
+Sepsis-3 onset across three defensible interpretations, the identified cohort
+ranged from 867 to 2{,}178 admissions. Across tree-based, deep-learning, and
+survival-analysis models: holding the definition fixed, the best method gained
+1--5\% AUROC; holding the method fixed and varying the definition swung
+performance by 0--6\% AUROC. The variance attributable to the label and to the
+model class are, in Cohen et al.'s data, of comparable magnitude. This finding
+is the single most load-bearing source in the present design: it mandates that
+label operationalisation be treated as a primary object of study, not a fixed
+parameter.
+
+Dutta et al.\ \parencite{dutta2026performance} confirm that this is not a
+MIMIC artefact. A locally trained gradient-boosted model, predicting every fifteen
+minutes across nine acute-care hospitals on 198{,}494 encounters, was evaluated
+against Sepsis-3, SEP-1, and the CDC Adult Sepsis Event definition. Performance
+varied substantially by definition. The label-sensitivity finding is therefore a
+property of the problem: it reproduces prospectively, at scale, with a commercial
+model.
+
+%===========================================================================
+\section{The Label Is Constituted by Clinical Action}
+%===========================================================================
+
+The Sepsis-3 label is operationalised as the combination of a qualifying
+antibiotic order and a qualifying culture draw within specified windows, plus an
+acute SOFA rise. Kamran et al.\ \parencite{kamran2024evaluation} observed that
+clinicians frequently recognise and begin treating sepsis before the formal
+criteria are met. A model trained to predict the criteria-meeting time therefore
+partly learns to predict when the clinician will act. Kamran et al.\ evaluated
+performance restricted to the pre-treatment window and showed that apparent AUROC
+is substantially inflated without that restriction. The model had learned to
+encode clinician suspicion, not independent physiological signal.
+
+Lauritsen et al.\ \parencite{lauritsen2021framing} formalised the related
+concept of \textit{framing}: the choice of observation window, prediction horizon,
+window shift, and event trigger. They showed that framing changes discrimination
+and calibration, and can reverse the sign of an estimated covariate effect ---
+their example is SpO$_2$. This implies that a hazard ratio or odds ratio whose
+sign is an artefact of framing is not a clinically interpretable quantity.
+
+%===========================================================================
+\section{The Validation Design Must Be Temporal}
+%===========================================================================
+
+Guo et al.\ \parencite{guo2022temporal} partitioned MIMIC-IV by
+\texttt{anchor\_year\_group} and evaluated four prediction tasks under temporal
+shift. Sepsis was the worst-affected task; domain-generalisation and
+domain-adaptation algorithms did not outperform plain empirical risk minimisation.
+A random patient-level split therefore inflates apparent performance more for
+sepsis than for any neighbouring outcome. This finding mandates a temporal split
+as the primary internal validation strategy, with a random split retained only to
+quantify the optimism introduced by the conventional design.
+
+%===========================================================================
+\section{AUROC Cannot Detect the Characteristic Failure Mode}
+%===========================================================================
+
+Wang et al.\ \parencite{wang2025srpm} reviewed ninety-one real-time sepsis
+prediction models. Median internal AUROC was 0.811, external AUROC was 0.783:
+a difference of 0.028, not statistically significant. Median internal Utility
+Score was $+0.381$, external was $-0.164$: the models crossed from clinically
+useful to categorically harmful. AUROC survived the transition because it
+measures discrimination, and the relative ordering of patients by risk persisted
+even as the absolute scores became uncalibrated. The Utility Score failed because
+it measures whether the alert arrives before the clinical window --- and at external
+sites, the alert arrived too late, too often, and at unacceptable false-alert rates.
+Reporting AUROC as the primary metric is therefore not merely conservative; it
+actively conceals the failure mode.
+
+%===========================================================================
+\section{The Survival Model Is Available in a Form the Data Actually Takes}
+%===========================================================================
+
+The conventional survival approach frames sepsis prediction as a Cox
+proportional-hazards model. On MIMIC-IV, the Schoenfeld residual test rejects
+proportional hazards globally ($p < 10^{-16}$), as anticipated from Kasal et al.\
+\parencite{kasal2004cox}. The appropriate
+response to a failed PH test in an hourly, low-prevalence ICU regime is provided
+by D'Agostino et al.\ \parencite{dagostino1990pooled}: observations over multiple
+intervals are pooled and a logistic regression relates risk factors to event
+occurrence within each interval. The pooled logistic regression is asymptotically
+equivalent to time-dependent-covariate Cox regression for short intervals and small
+per-interval event probabilities. An hourly ICU regime with per-hour onset
+probability below 1\% satisfies both conditions. The dynamic discrete-time
+competing-risks hazard model fitted in the present study is therefore not an
+abandonment of the survival framework but its implementation in the form the data
+actually takes.
+
+Resche-Rigon et al.\ \parencite{rescherigon2006competing} and Heyard et al.\
+\parencite{heyard2019dynamic, heyard2020evaluation} provide the corresponding
+competing-risks extension: because discharge alive and death without sepsis are
+informationally relevant events that preclude later sepsis onset, treating them
+as ordinary censoring overstates the onset incidence and biases model estimation.
+The multinomial cause-specific formulation accommodates this without additional
+assumptions.
+
+%===========================================================================
+\section{NEWS2 Is the Appropriate Rule-Based Headline Comparator}
+%===========================================================================
+
+Most prior MIMIC-IV sepsis models benchmark against SIRS, qSOFA, and NEWS. Evans et al.\
+\parencite{evans2021ssc} issue a strong recommendation against using qSOFA as a
+sole screening tool, on grounds of poor sensitivity. Mellhammar et al.\
+\parencite{mellhammar2020news2} fitted a LASSO-derived statistical score and
+failed to beat NEWS2 on the same task. The governing clinical guideline has
+therefore already retired qSOFA as a screening comparator, and NEWS2 is the
+minimum meaningful rule-based bar. The present study retains SIRS and qSOFA for
+descriptive completeness but designates NEWS2 as the headline comparator.
+
+%===========================================================================
+\section{Equity Analysis: Subgroup Performance and Label Sensitivity Together}
+%===========================================================================
+
+Wang, Li, Naidech and Luo \parencite{wang2022equity} document significant
+variation in sepsis model performance across racial, ethnic, language, and
+insurance subgroups. Critically, they do not evaluate whether the label itself
+assigns sepsis status differentially across those groups. The present study adds
+this conjunction: for each equity subgroup, it reports both the variation in who
+is identified as septic under each label variant and the variation in model
+performance. This has not been reported for any sepsis model.
+
+%===========================================================================
+\section{Summary: Design Decisions and Their Evidence Warrants}
+%===========================================================================
+
+Table~\ref{tab:design_warrant} maps each major design decision in the present
+study to the evidence source that mandates it.
+
+\begin{table}[H]
+  \centering
+  \small
+  \begin{tabularx}{\textwidth}{p{4cm} X p{4cm}}
+    \toprule
+    \textbf{Design decision} & \textbf{Rationale} & \textbf{Source} \\
+    \midrule
+    Three pre-specified label variants & Label spread comparable to model-class
+      spread & Cohen et al.\ \parencite{cohen2024subtle} \\
+    Label sensitivity as primary result & Not a sensitivity analysis: the variance
+      is load-bearing & Cohen et al., Dutta et al.\ \parencite{dutta2026performance} \\
+    Treatment-anchored evaluation & Label constituted by clinical action &
+      Kamran et al.\ \parencite{kamran2024evaluation} \\
+    Temporal split primary & Sepsis worst-affected task under temporal shift &
+      Guo et al.\ \parencite{guo2022temporal} \\
+    Utility Score as primary metric & AUROC conceals the clinical failure mode &
+      Wang et al.\ \parencite{wang2025srpm} \\
+    Calibration as co-primary & Achilles heel of predictive analytics &
+      Van Calster et al.\ \parencite{vancalster2019calibration} \\
+    Discrete-time competing-risks model & Equivalent to Cox; no PH assumption; hourly
+      regime & D'Agostino et al.\ \parencite{dagostino1990pooled}; Heyard et al.\
+      \parencite{heyard2019dynamic} \\
+    NEWS2 as headline comparator & qSOFA not recommended as sole screener &
+      Evans et al.\ \parencite{evans2021ssc} \\
+    GBT as mandatory ML comparator & Cross-study comparison uninterpretable
+      under different labels & Cohen et al.\ \parencite{cohen2024subtle} \\
+    Subgroup label sensitivity & Novel conjunction; equity literature does
+      not evaluate label-by-subgroup & Wang et al.\ \parencite{wang2022equity} \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Mapping of design decisions to their evidence warrants.}
+  \label{tab:design_warrant}
+\end{table}

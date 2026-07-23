@@ -1,0 +1,230 @@
+---
+title: "08 Primary Model — Dynamic Discrete-Time Competing-Risks Hazard Model"
+author: "Abdul Ahad. Student ID: G00486649"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  bookdown::pdf_document2:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    fig_caption: true
+geometry: margin=2.3cm
+fontsize: 11pt
+header-includes:
+  - \usepackage{float}
+  - \usepackage{caption}
+  - \captionsetup[figure]{font=small}
+  - \captionsetup[table]{font=small}
+  - \renewcommand{\contentsname}{Table of Contents}
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+set.seed(486649)   # student ID for reproducibility
+
+knitr::opts_chunk$set(
+  echo = FALSE, message = FALSE, warning = FALSE,
+  fig.align = "center", fig.pos = "H",
+  out.width = "80%", fig.width = 6, fig.height = 3.6
+)
+```
+
+## Introduction
+
+The primary model is a **multinomial pooled logistic regression** (D'Agostino et al., 1990; Heyard et al., 2019) --- the fully interpretable, maximum-likelihood approach to discrete-time competing-risks hazard estimation. This model class was chosen deliberately: if an interpretable regression performs comparably to gradient-boosted trees (hypothesis H6), the added complexity of black-box methods is unnecessary for this prediction task.
+
+For patient $i$ at hour $t$, with competing events $r \in \{1\text{=sepsis}, 2\text{=discharge}, 3\text{=death}\}$, the cause-specific discrete hazard is:
+
+$$\lambda_r(t \mid X_{it}) = \frac{\exp\bigl(\alpha_r(t) + \boldsymbol{\beta}_r^\top \mathbf{X}_{it}\bigr)}{1 + \sum_{s} \exp\bigl(\alpha_s(t) + \boldsymbol{\beta}_s^\top \mathbf{X}_{it}\bigr)}$$
+
+where $\alpha_r(t)$ is the cause-specific baseline log-hazard modelled as a natural cubic spline in hours since ICU admission (capturing the non-linear time-dependence of event risk), and $\boldsymbol{\beta}_r$ are cause-specific covariate coefficients. Standard errors are computed using a cluster-robust sandwich estimator (clustered on `stay_id`) to account for within-stay correlation across person-hours.
+
+Models are fitted separately for each label variant: Variant B is the primary analysis; Variants A and C provide the cross-label coefficient comparisons needed for hypothesis H2.
+
+```{r load-deps}
+suppressPackageStartupMessages({
+  library(data.table)
+  library(nnet)
+  library(rms)
+  library(survival)
+  library(sandwich)
+  library(lmtest)
+  library(dplyr)
+  library(splines)
+})
+
+source("config.R")
+source("utils.R")
+
+step("=== Phase 3a: Primary discrete-time competing-risks model ===")
+```
+
+## Feature Set
+
+The predictor set comprises physiological vitals, laboratory values, vasopressor exposure, and 6-hour rolling slopes. Missingness indicators for infrequently measured labs allow the model to distinguish genuinely normal values from unmeasured ones --- an important distinction in ICU data where the absence of a test result is itself clinically informative.
+
+```{r feature-set}
+BASE_FEATURES <- c(
+  "hr", "resp_rate", "spo2", "map", "temp_c", "gcs",
+  "lactate", "creatinine", "bilirubin_total", "platelets", "wbc",
+  "vaso_any", "norepi_epi_any",
+  "hr_slope6h", "resp_rate_slope6h", "map_slope6h"
+)
+MISSINGNESS_FEATURES <- c(
+  "lactate_measured", "creatinine_measured", "bilirubin_total_measured",
+  "platelets_measured", "wbc_measured", "pf_ratio_measured"
+)
+
+cat("Base features:", paste(BASE_FEATURES, collapse = ", "), "\n")
+cat("Missingness indicators:", paste(MISSINGNESS_FEATURES, collapse = ", "), "\n")
+```
+
+## Fit Primary Model Per Variant
+
+For each variant the following pipeline is executed: (i) load training-set person-hours, (ii) impute remaining NAs to zero (after LOCF, any residual missingness reflects the start-of-stay period before the first measurement), (iii) fit the spline-augmented multinomial model via `nnet::multinom`, (iv) compute cluster-robust standard errors, (v) generate test-set predicted probabilities, and (vi) save model objects and coefficient tables. A binary logistic fallback is included in case the multinomial fit fails to converge.
+
+```{r fit-primary-model, code_folding="hide"}
+fit_primary_model <- function(vid) {
+  step(sprintf("--- Fitting primary model: Variant %s (%s) ---",
+               vid, LABEL_VARIANTS[[vid]]$name))
+
+  ph <- as.data.table(arrow::read_parquet(
+    file.path(OUTPUT_DIR, paste0("person_hours_", vid, ".parquet"))
+  ))
+
+  train <- ph[temporal_split == "train"]
+  cat(sprintf("  Training rows: %s, events (sepsis): %d\n",
+              format(nrow(train), big.mark = ","), sum(train$event == 1)))
+
+  train[, outcome := factor(event, levels = c(0, 1, 2, 3),
+                             labels = c("inprogress", "sepsis", "discharge", "death"))]
+
+  avail_base  <- intersect(BASE_FEATURES,        names(train))
+  avail_miss  <- intersect(MISSINGNESS_FEATURES, names(train))
+  all_features <- c(avail_base, avail_miss)
+
+  for (f in all_features) {
+    if (is.numeric(train[[f]])) train[is.na(get(f)), (f) := 0]
+    if (is.logical(train[[f]])) train[is.na(get(f)), (f) := FALSE]
+  }
+
+  n_knots  <- 5
+  hour_max <- max(train$hour, na.rm = TRUE)
+  knots    <- quantile(train$hour, seq(0.1, 0.9, length.out = n_knots), na.rm = TRUE)
+  cat(sprintf("  Spline knots at hours: %s\n", paste(round(knots, 1), collapse = ", ")))
+
+  feat_formula <- paste(all_features, collapse = " + ")
+  formula_str  <- sprintf(
+    "outcome ~ ns(hour, knots = c(%s), Boundary.knots = c(0, %d)) + %s",
+    paste(round(knots, 2), collapse = ", "), hour_max, feat_formula
+  )
+  mod_formula <- as.formula(formula_str)
+
+  v2_log("  Fitting multinomial logistic regression...")
+  set.seed(42)
+  fit <- tryCatch(
+    nnet::multinom(mod_formula, data = as.data.frame(train),
+                   trace = FALSE, MaxNWts = 50000, maxit = 500),
+    error = function(e) {
+      v2_log("  nnet::multinom failed: ", e$message, level = "ERROR")
+      NULL
+    }
+  )
+
+  if (is.null(fit)) {
+    v2_log("  Fallback: binary logistic for sepsis onset only")
+    train[, outcome_bin := as.integer(event == 1)]
+    formula_bin <- as.formula(sprintf(
+      "outcome_bin ~ ns(hour, knots = c(%s), Boundary.knots = c(0, %d)) + %s",
+      paste(round(knots, 2), collapse = ", "), hour_max, feat_formula
+    ))
+    fit <- glm(formula_bin, data = as.data.frame(train),
+               family = binomial(link = "logit"))
+    fit$is_binary_fallback <- TRUE
+  }
+
+  # Cluster-robust SEs
+  v2_log("  Computing cluster-robust SEs (clustered on stay_id)...")
+  vcov_robust <- tryCatch({
+    if (inherits(fit, "multinom"))
+      sandwich::vcovHC(fit, type = "HC3")
+    else
+      sandwich::vcovCL(fit, cluster = ~stay_id, data = as.data.frame(train))
+  }, error = function(e) {
+    v2_log("  vcov_robust failed: ", e$message, level = "WARN"); NULL
+  })
+
+  # Coefficient table
+  coefs_raw <- if (inherits(fit, "multinom")) coef(fit) else coef(summary(fit))
+  if (is.matrix(coefs_raw)) {
+    coef_df    <- as.data.table(as.data.frame(coefs_raw), keep.rownames = "outcome")
+    coef_table <- melt(coef_df, id.vars = "outcome",
+                       variable.name = "term", value.name = "coef")
+    setDF(coef_table)
+  } else {
+    coef_table         <- as.data.frame(coefs_raw)
+    coef_table$term    <- rownames(coef_table)
+    coef_table$outcome <- NA_character_
+  }
+  coef_table$variant <- vid
+  coef_table$model   <- "discrete_time_competing_risks"
+
+  # Test-set predictions
+  test <- ph[temporal_split == "test"]
+  for (f in all_features) {
+    if (is.numeric(test[[f]])) test[is.na(get(f)), (f) := 0]
+    if (is.logical(test[[f]])) test[is.na(get(f)), (f) := FALSE]
+  }
+  v2_log(sprintf("  Predicting on test set (%s rows)...", format(nrow(test), big.mark = ",")))
+  if (inherits(fit, "multinom")) {
+    pred_probs <- predict(fit, newdata = as.data.frame(test), type = "probs")
+    test[, pred_sepsis := if (is.matrix(pred_probs)) pred_probs[, "sepsis"]
+                           else as.numeric(pred_probs)]
+  } else {
+    test[, pred_sepsis := predict(fit, newdata = as.data.frame(test), type = "response")]
+  }
+
+  save_cols <- c("stay_id", "hour", "event", "pred_sepsis", "temporal_split",
+                 "anchor_year_group", "onset_hour",
+                 intersect(c("sofa_total", "news2_total", "qsofa_score"), names(test)))
+  save_parquet(test[, ..save_cols],
+               paste0("predictions_primary_", vid), OUTPUT_DIR)
+  save_parquet(coef_table, paste0("coef_table_primary_", vid), OUTPUT_DIR)
+  saveRDS(fit, file.path(OUTPUT_DIR, paste0("model_primary_", vid, ".rds")))
+
+  cat(sprintf("  Variant %s model saved.\n", vid))
+  list(fit = fit, coef_table = coef_table, vcov_robust = vcov_robust)
+}
+```
+
+```{r run-all-variants}
+models        <- lapply(names(LABEL_VARIANTS), fit_primary_model)
+names(models) <- names(LABEL_VARIANTS)
+```
+
+## Cross-Label Coefficient Stability
+
+The combined coefficient table across all three variants is the input for the H2 (coefficient instability) test: if at least one clinically relevant covariate changes sign across label variants, then the choice of operationalisation does not merely rescale predictions but qualitatively alters the model's clinical logic.
+
+```{r cross-label-coefs}
+step("Computing cross-label coefficient stability (→ H2)...")
+
+all_coefs <- data.table::rbindlist(
+  lapply(names(models), function(vid) as.data.table(models[[vid]]$coef_table)),
+  fill = TRUE
+)
+save_parquet(all_coefs, "coef_all_variants", OUTPUT_DIR)
+cat("Cross-label coefficient tables saved for H2 testing.\n")
+
+# Show sepsis-outcome coefficients for Variant B as a preview
+coef_b_sepsis <- all_coefs[outcome == "sepsis" & variant == "B" &
+                              !grepl("^ns\\(|^\\(Intercept\\)", as.character(term))]
+if (nrow(coef_b_sepsis) > 0) {
+  knitr::kable(head(coef_b_sepsis[order(-abs(coef)), .(term, coef, variant)], 15),
+               caption = "Top 15 sepsis-outcome coefficients (Variant B, by |coef|)")
+}
+
+cat("\nCross-label coefficient tables saved.\n")
+```

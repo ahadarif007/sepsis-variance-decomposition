@@ -1,0 +1,294 @@
+---
+title: "13 Equity Analysis — Subgroup Performance and Label Sensitivity"
+author: "Abdul Ahad. Student ID: G00486649"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  bookdown::pdf_document2:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    fig_caption: true
+geometry: margin=2.3cm
+fontsize: 11pt
+header-includes:
+  - \usepackage{float}
+  - \usepackage{caption}
+  - \captionsetup[figure]{font=small}
+  - \captionsetup[table]{font=small}
+  - \renewcommand{\contentsname}{Table of Contents}
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+set.seed(486649)   # student ID for reproducibility
+
+knitr::opts_chunk$set(
+  echo = FALSE, message = FALSE, warning = FALSE,
+  fig.align = "center", fig.pos = "H",
+  out.width = "80%", fig.width = 6, fig.height = 3.6
+)
+```
+
+## Introduction
+
+Wang, Li, Naidech, and Luo (2022) demonstrated that sepsis prediction models exhibit systematically worse performance for Asian, Hispanic, and Spanish-speaking patients. This notebook extends their analysis with two complementary investigations:
+
+1. **Subgroup performance**: Discrimination (AUROC, AUPRC), alert burden, and calibration are evaluated within each demographic subgroup defined by race/ethnicity, language, and insurance status. Disparities in these metrics indicate that a model's overall performance does not uniformly benefit all patient populations.
+
+2. **Subgroup label-sensitivity**: A novel conjunction analysis quantifies how the fraction of patients identified as septic varies across the three label variants *within each demographic subgroup*. If label-variant sensitivity is non-uniform across subgroups, the choice of Sepsis-3 operationalisation has equity implications that go beyond aggregate event-rate differences. This interaction between label choice and demographic group has not been reported for any published sepsis prediction model.
+
+```{r load-deps}
+suppressPackageStartupMessages({
+  library(data.table)
+  library(PRROC)
+  library(ggplot2)
+  library(tidyr)
+  library(dplyr)
+})
+
+source("config.R")
+source("utils.R")
+
+step("=== Phase 6b: Equity Analysis ===")
+```
+
+## Subgroup Performance
+
+### Metric Helper
+
+A reusable function computes AUROC, AUPRC, and alert burden for any subgroup slice, with minimum-sample guards to avoid unreliable estimates from small groups.
+
+```{r subgroup-helper}
+compute_subgroup_metrics <- function(dt, pred_col, subgroup_col, subgroup_val) {
+  sub <- dt[get(subgroup_col) == subgroup_val & !is.na(get(pred_col))]
+  if (nrow(sub) < 50) return(NULL)
+
+  y     <- as.integer(sub$event == 1)
+  pred  <- as.numeric(sub[[pred_col]])
+  alert <- as.integer(pred >= 0.5)
+  n_pos <- sum(y)
+  if (n_pos == 0) return(NULL)
+
+  roc_pr <- tryCatch({
+    list(
+      auroc = PRROC::roc.curve(pred, weights.class0 = y)$auc,
+      auprc = PRROC::pr.curve(pred,  weights.class0 = y)$auc.integral
+    )
+  }, error = function(e) list(auroc = NA, auprc = NA))
+
+  tp     <- sum(alert == 1 & y == 1, na.rm = TRUE)
+  fp     <- sum(alert == 1 & y == 0, na.rm = TRUE)
+  burden <- if (tp == 0) Inf else fp / tp
+
+  data.frame(
+    subgroup_col = subgroup_col,
+    subgroup_val = subgroup_val,
+    n_rows       = nrow(sub),
+    n_stays      = length(unique(sub$stay_id)),
+    n_sepsis     = n_pos,
+    auroc        = round(roc_pr$auroc, 4),
+    auprc        = round(roc_pr$auprc, 4),
+    alert_burden = round(burden, 2)
+  )
+}
+```
+
+### Performance by Subgroup (Variant B, Primary Model)
+
+For each equity-relevant variable, the top subgroup levels (by sample size) are evaluated across the primary model, GBT, and NEWS2. This three-model comparison reveals whether performance gaps are model-specific or reflect underlying data availability differences.
+
+```{r subgroup-performance}
+step("Subgroup performance analysis...")
+
+prim_path <- file.path(OUTPUT_DIR, "predictions_primary_B.parquet")
+comp_path <- file.path(OUTPUT_DIR, "predictions_comparators_B.parquet")
+
+perf_df <- NULL
+
+if (!file.exists(prim_path)) {
+  cat("Primary model predictions not found; skipping subgroup performance.\n")
+} else {
+  ph <- as.data.table(arrow::read_parquet(prim_path))
+  if (file.exists(comp_path)) {
+    comp       <- as.data.table(arrow::read_parquet(comp_path))
+    merge_cols <- c("stay_id", "hour", setdiff(names(comp), names(ph)))
+    ph <- merge(ph, comp[, ..merge_cols], by = c("stay_id", "hour"), all.x = TRUE)
+  }
+
+  ph_demo_path <- file.path(OUTPUT_DIR, "person_hours_B.parquet")
+  if (file.exists(ph_demo_path)) {
+    ph_demo <- as.data.table(arrow::read_parquet(ph_demo_path,
+                                                   col_select = c("stay_id","race",
+                                                                   "language","insurance")))
+    ph_demo <- unique(ph_demo)
+    ph <- merge(ph, ph_demo, by = "stay_id", all.x = TRUE)
+  }
+
+  perf_results <- list()
+  models_eval  <- c("pred_sepsis", "pred_gbt", "pred_news2")
+
+  for (subg_col in EQUITY_VARS) {
+    if (!subg_col %in% names(ph)) next
+    val_counts <- ph[, .N, by = subg_col][order(-N)]
+    top_vals   <- head(val_counts[[subg_col]], 8)
+    for (val in top_vals) {
+      for (mod_col in models_eval) {
+        if (!mod_col %in% names(ph)) next
+        res <- compute_subgroup_metrics(ph, mod_col, subg_col, val)
+        if (!is.null(res)) {
+          res$model   <- mod_col
+          res$variant <- "B"
+          perf_results[[paste(subg_col, val, mod_col, sep = "-")]] <- res
+        }
+      }
+    }
+  }
+
+  if (length(perf_results) > 0) {
+    perf_df <- do.call(rbind, perf_results)
+    save_parquet(perf_df, "13_subgroup_performance", OUTPUT_DIR)
+
+    knitr::kable(
+      perf_df[order(perf_df$subgroup_col, perf_df$subgroup_val), ],
+      caption = "Subgroup performance (primary model, Variant B)"
+    )
+  }
+}
+```
+
+### AUROC by Race
+
+```{r auroc-by-race, fig.cap="AUROC stratified by race/ethnicity for the primary model (Variant B). Dashed line indicates the overall mean.", fig.width=8, fig.height=5}
+if (!is.null(perf_df) && "race" %in% perf_df$subgroup_col) {
+  race_df <- perf_df[perf_df$subgroup_col == "race" & perf_df$model == "pred_sepsis", ]
+  if (nrow(race_df) > 0) {
+    tryCatch({
+      p <- ggplot(race_df, aes(x = reorder(subgroup_val, -auroc), y = auroc,
+                                fill = subgroup_val)) +
+        geom_col() +
+        geom_hline(yintercept = mean(race_df$auroc, na.rm = TRUE),
+                   linetype = "dashed", color = "gray40") +
+        labs(title    = "AUROC by race/ethnicity (primary model, Variant B)",
+             subtitle = "Wang et al. (2022): performance degraded for Asian, Hispanic, Spanish-speaking",
+             x = "Race/Ethnicity", y = "AUROC") +
+        theme_bw() +
+        theme(axis.text.x = element_text(angle = 40, hjust = 1), legend.position = "none")
+      print(p)
+      ggsave(file.path(OUTPUT_DIR, "13_auroc_by_race.png"), p, width = 8, height = 5, dpi = 150)
+    }, error = function(e) cat("Race plot failed:", e$message, "\n"))
+  }
+}
+```
+
+## Subgroup Label-Sensitivity
+
+This is the novel conjunction analysis. For each demographic subgroup, the fraction of patients identified as septic is computed under all three label variants. A large range (percentage-point spread across A, B, C) within a subgroup means that the choice of operationalisation disproportionately affects that group's labelling --- a finding with direct implications for equitable model development.
+
+```{r label-sensitivity}
+step("Subgroup label-sensitivity analysis...")
+
+label_sens_results <- list()
+
+for (subg_col in EQUITY_VARS) {
+  cohort_data <- lapply(names(LABEL_VARIANTS), function(vid) {
+    coh_path <- file.path(OUTPUT_DIR, paste0("cohort_", vid, ".parquet"))
+    if (!file.exists(coh_path)) return(NULL)
+    coh_full <- tryCatch(as.data.table(arrow::read_parquet(coh_path)),
+                         error = function(e) NULL)
+    if (is.null(coh_full)) return(NULL)
+    want_cols <- intersect(c("stay_id","subject_id", subg_col, "onset_hour",
+                              "label_variant"), names(coh_full))
+    coh <- coh_full[, ..want_cols]
+    coh[, variant   := vid]
+    coh[, has_sepsis := !is.na(onset_hour)]
+    coh
+  })
+  cohort_data <- Filter(Negate(is.null), cohort_data)
+  if (length(cohort_data) == 0) next
+
+  all_cohort <- rbindlist(cohort_data, fill = TRUE)
+  if (!subg_col %in% names(all_cohort)) next
+
+  val_counts <- all_cohort[variant == "B" & !is.na(get(subg_col)), .N, by = subg_col]
+  top_vals   <- head(val_counts[order(-N)][[subg_col]], 8)
+
+  for (val in top_vals) {
+    subg_dt <- all_cohort[get(subg_col) == val]
+    if (nrow(subg_dt) == 0) next
+
+    by_variant <- subg_dt[, .(
+      n_stays    = .N,
+      n_sepsis   = sum(has_sepsis),
+      pct_sepsis = round(100 * sum(has_sepsis) / .N, 1)
+    ), by = variant]
+
+    if (nrow(by_variant) >= 2) {
+      pct_range <- diff(range(by_variant$pct_sepsis))
+      get_pct   <- function(v) {
+        r <- by_variant[variant == v, pct_sepsis]
+        if (length(r) > 0) r[1] else NA_real_
+      }
+      label_sens_results[[paste(subg_col, val, sep = "-")]] <- data.frame(
+        subgroup_col    = subg_col,
+        subgroup_val    = as.character(val),
+        pct_A           = get_pct("A"),
+        pct_B           = get_pct("B"),
+        pct_C           = get_pct("C"),
+        label_range_pct = round(pct_range, 1)
+      )
+    }
+  }
+}
+
+if (length(label_sens_results) > 0) {
+  ls_df <- do.call(rbind, label_sens_results)
+  save_parquet(ls_df, "13_subgroup_label_sensitivity", OUTPUT_DIR)
+
+  knitr::kable(
+    ls_df[order(-abs(ls_df$label_range_pct)), ],
+    caption = "Subgroup label-sensitivity (% sepsis by variant A/B/C per demographic group)"
+  )
+
+  high_sens <- ls_df[!is.na(ls_df$label_range_pct) & ls_df$label_range_pct > 5, ]
+  if (nrow(high_sens) > 0) {
+    cat("\nSubgroups with highest label sensitivity (>5 pp range):\n")
+    knitr::kable(high_sens)
+  }
+}
+```
+
+### Label Sensitivity vs. AUROC Deficit
+
+The scatter plot below tests whether subgroups with higher label sensitivity (larger percentage-point spread across variants) also exhibit lower AUROC. A negative association would suggest that label ambiguity and prediction difficulty are correlated --- groups where the definition is most contested are also the groups where models struggle most.
+
+```{r label-sens-vs-auroc, fig.cap="Subgroup label sensitivity (x) vs. AUROC (y). Each point is a demographic subgroup; a downward trend suggests label ambiguity compounds prediction difficulty.", fig.width=8, fig.height=6}
+if (length(label_sens_results) > 0 && !is.null(perf_df)) {
+  merged_eq <- merge(ls_df,
+                     perf_df[perf_df$model == "pred_sepsis",
+                              c("subgroup_col","subgroup_val","auroc")],
+                     by = c("subgroup_col","subgroup_val"), all.x = TRUE)
+
+  if (nrow(merged_eq[!is.na(merged_eq$auroc), ]) > 0) {
+    tryCatch({
+      p_eq <- ggplot(merged_eq[!is.na(merged_eq$auroc), ],
+                     aes(x = label_range_pct, y = auroc,
+                         label = paste0(subgroup_col, ":", subgroup_val))) +
+        geom_point(aes(color = subgroup_col), size = 3) +
+        geom_smooth(method = "lm", se = TRUE, color = "gray40") +
+        geom_text(hjust = 1.1, size = 2.5) +
+        labs(title    = "Label sensitivity vs. AUROC by subgroup",
+             subtitle = "Novel conjunction: Wang et al. (2022) established each separately",
+             x = "Label sensitivity (pp range across variants A–C)",
+             y = "AUROC (primary model, Variant B)") +
+        theme_bw()
+      print(p_eq)
+      ggsave(file.path(OUTPUT_DIR, "13_label_sens_vs_auroc.png"), p_eq,
+             width = 8, height = 6, dpi = 150)
+    }, error = function(e) cat("Equity plot failed:", e$message, "\n"))
+  }
+}
+
+cat("\nEquity analysis and all V2 analyses complete.\n")
+```

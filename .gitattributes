@@ -1,0 +1,17 @@
+# Use Git LFS for large binary data files (configure and install git-lfs locally)
+*.parquet filter=lfs diff=lfs merge=lfs -text
+*.feather filter=lfs diff=lfs merge=lfs -text
+*.h5 filter=lfs diff=lfs merge=lfs -text
+*.hdf5 filter=lfs diff=lfs merge=lfs -text
+
+# Normalize text files
+*.csv text eol=lf
+*.tsv text eol=lf
+
+# Treat common binary formats as binary
+*.parquet binary
+*.feather binary
+*.h5 binary
+
+# You can extend this file to configure custom diff/merge drivers or attributes
+

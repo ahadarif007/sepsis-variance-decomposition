@@ -1,0 +1,217 @@
+---
+title: "01 Setup — Environment Setup and Data Verification"
+author: "Abdul Ahad. Student ID: G00486649"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  bookdown::pdf_document2:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    fig_caption: true
+geometry: margin=2.3cm
+fontsize: 11pt
+header-includes:
+  - \usepackage{float}
+  - \usepackage{caption}
+  - \captionsetup[figure]{font=small}
+  - \captionsetup[table]{font=small}
+  - \renewcommand{\contentsname}{Table of Contents}
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+set.seed(486649)   # student ID for reproducibility
+
+knitr::opts_chunk$set(
+  echo = FALSE, message = FALSE, warning = FALSE,
+  fig.align = "center", fig.pos = "H",
+  out.width = "80%", fig.width = 6, fig.height = 3.6
+)
+```
+
+## Introduction
+
+This notebook establishes the computational environment for the V2 sepsis prediction pipeline. Before any analytical step can proceed, every downstream dependency must be available and all data directories must resolve to the expected MIMIC-IV and eICU-CRD file structure. A formal readiness check at the outset prevents cryptic mid-pipeline failures and documents the exact software stack used for reproducibility.
+
+```{r load-config}
+source("config.R")
+source("utils.R")
+
+step("=== Phase 1: Environment Setup ===")
+```
+
+## Required Packages
+
+All packages used across the analytical pipeline are verified here. Missing packages are installed automatically from CRAN to ensure a single-command setup.
+
+```{r check-packages}
+REQUIRED_PKGS <- c(
+  "data.table", "arrow", "dplyr", "tidyr", "ggplot2", "lubridate",
+  "survival", "nnet", "VGAM", "discSurv", "rms", "cmprsk",
+  "xgboost", "pmsampsize", "dcurves", "timeROC", "CalibrationCurves",
+  "purrr", "tibble", "readr"
+)
+
+step("Checking required packages...")
+pkg_status <- vapply(REQUIRED_PKGS, requireNamespace, logical(1), quietly = TRUE)
+missing_pkgs <- names(pkg_status)[!pkg_status]
+
+if (length(missing_pkgs) > 0) {
+  v2_log("Installing missing packages: ", paste(missing_pkgs, collapse = ", "))
+  install.packages(missing_pkgs, repos = "https://cloud.r-project.org", quiet = TRUE)
+}
+
+pkg_report <- data.frame(
+  package = REQUIRED_PKGS,
+  status  = ifelse(pkg_status, "OK", "MISSING"),
+  stringsAsFactors = FALSE
+)
+knitr::kable(pkg_report, caption = "Package availability")
+```
+
+## Data Directories
+
+The pipeline reads from two critical-care databases: MIMIC-IV (Johnson et al., 2023) for model development and eICU-CRD (Pollard et al., 2018) for external validation. Both must be accessible at the paths defined in `config.R`.
+
+```{r check-dirs}
+step("Verifying data directories...")
+
+check_dir <- function(label, path) {
+  exists <- dir.exists(path)
+  v2_log(sprintf("  %-30s %s  (%s)", label,
+                 if (exists) "[OK]" else "[MISSING]", path))
+  exists
+}
+
+mimic_ok <- check_dir("MIMIC-IV root",  MIMIC_DIR)
+hosp_ok  <- check_dir("MIMIC-IV/hosp", HOSP_DIR)
+icu_ok   <- check_dir("MIMIC-IV/icu",  ICU_DIR)
+eicu_ok  <- check_dir("eICU root",      EICU_DIR)
+
+dir_report <- data.frame(
+  directory = c("MIMIC-IV root", "MIMIC-IV/hosp", "MIMIC-IV/icu", "eICU root"),
+  path      = c(MIMIC_DIR, HOSP_DIR, ICU_DIR, EICU_DIR),
+  status    = c(mimic_ok, hosp_ok, icu_ok, eicu_ok)
+)
+knitr::kable(dir_report, caption = "Data directory status")
+```
+
+## Key File Spot-Check
+
+A targeted check of the source tables required for cohort extraction, SOFA scoring, and feature engineering. File sizes serve as a sanity check against truncated or corrupted downloads.
+
+```{r check-mimic-files}
+step("Spot-checking key MIMIC-IV files...")
+
+KEY_FILES <- list(
+  admissions         = hosp_file("admissions.csv"),
+  patients           = hosp_file("patients.csv"),
+  icustays           = icu_file("icustays.csv"),
+  chartevents        = icu_file("chartevents.csv"),
+  labevents          = hosp_file("labevents.csv"),
+  prescriptions      = hosp_file("prescriptions.csv"),
+  microbiologyevents = hosp_file("microbiologyevents.csv"),
+  inputevents        = icu_file("inputevents.csv")
+)
+
+file_report <- lapply(names(KEY_FILES), function(nm) {
+  path   <- KEY_FILES[[nm]]
+  exists <- file.exists(path)
+  sz     <- if (exists) file.size(path) else 0
+  v2_log(sprintf("  %-25s %s  (%.1f MB)", nm,
+                 if (exists) "[OK]" else "[MISSING]", sz / 1e6))
+  data.frame(table = nm, exists = exists, size_mb = round(sz / 1e6, 1))
+})
+file_df <- do.call(rbind, file_report)
+knitr::kable(file_df, caption = "MIMIC-IV key files")
+```
+
+```{r check-eicu-files}
+step("Spot-checking eICU files...")
+
+EICU_KEY_FILES <- list(
+  patient       = file.path(EICU_DIR, "patient.csv.gz"),
+  lab           = file.path(EICU_DIR, "lab.csv.gz"),
+  medication    = file.path(EICU_DIR, "medication.csv.gz"),
+  vitalPeriodic = file.path(EICU_DIR, "vitalPeriodic.csv.gz"),
+  microLab      = file.path(EICU_DIR, "microLab.csv.gz"),
+  diagnosis     = file.path(EICU_DIR, "diagnosis.csv.gz")
+)
+
+eicu_report <- lapply(names(EICU_KEY_FILES), function(nm) {
+  path   <- EICU_KEY_FILES[[nm]]
+  exists <- file.exists(path)
+  sz     <- if (exists) file.size(path) else 0
+  v2_log(sprintf("  %-25s %s  (%.1f MB)", nm,
+                 if (exists) "[OK]" else "[MISSING]", sz / 1e6))
+  data.frame(table = nm, exists = exists, size_mb = round(sz / 1e6, 1))
+})
+eicu_df <- do.call(rbind, eicu_report)
+knitr::kable(eicu_df, caption = "eICU key files")
+```
+
+## Schema Verification
+
+Column-level validation guards against MIMIC-IV version mismatches. The `anchor_year_group` field in the patients table is essential for temporal splitting (Guo et al., 2022), so its presence is confirmed explicitly.
+
+```{r check-schema}
+step("Peeking at icustays to verify schema...")
+
+icustays_path <- icu_file("icustays.csv")
+if (file.exists(icustays_path)) {
+  stays_sample <- data.table::fread(icustays_path, nrows = 5, showProgress = FALSE)
+  cat("icustays columns:\n")
+  print(names(stays_sample))
+
+  patients_path <- hosp_file("patients.csv")
+  if (file.exists(patients_path)) {
+    pts_sample      <- data.table::fread(patients_path, nrows = 5, showProgress = FALSE)
+    has_anchor      <- "anchor_year_group" %in% names(pts_sample)
+    v2_log("anchor_year_group present: ", has_anchor)
+    cat(sprintf("anchor_year_group present: %s\n", has_anchor))
+  }
+} else {
+  cat("icustays.csv not found — check MIMIC_DIR path.\n")
+}
+```
+
+## Output Directory Writability
+
+All downstream outputs (Parquet tables, model objects, figures) are written to a single output directory. A write-test prevents silent failures later in the pipeline.
+
+```{r check-output-dir}
+step("Checking output directory...")
+
+test_file <- file.path(OUTPUT_DIR, ".write_test")
+tryCatch({
+  writeLines("test", test_file)
+  file.remove(test_file)
+  cat(sprintf("Output dir writable: OK\n%s\n", OUTPUT_DIR))
+}, error = function(e) {
+  cat(sprintf("Output dir NOT writable: %s\n", e$message))
+})
+```
+
+## Summary
+
+```{r summary}
+step("=== Setup Summary ===")
+
+summary_df <- data.frame(
+  item    = c("Project root", "MIMIC-IV", "eICU", "Output dir", "R version", "Label variants"),
+  value   = c(
+    PROJECT_ROOT,
+    if (hosp_ok && icu_ok) "AVAILABLE" else "MISSING",
+    if (eicu_ok) "AVAILABLE" else "MISSING",
+    OUTPUT_DIR,
+    as.character(getRversion()),
+    "A (Narrow), B (Seymour-Standard), C (Liberal)"
+  )
+)
+knitr::kable(summary_df, caption = "Setup summary")
+
+save_parquet(file_df, "01_setup_file_report", OUTPUT_DIR)
+cat("\nSaved: 01_setup_file_report.parquet\n")
+```

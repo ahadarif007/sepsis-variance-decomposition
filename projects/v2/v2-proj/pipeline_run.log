@@ -1,0 +1,591 @@
+======================================================
+  V2 Pipeline — 2026-07-20 23:13:38
+  Scripts: 01_setup.Rmd 02_cohort_labels.Rmd 03_person_hours.Rmd 07_sample_size.Rmd 08_primary_model.Rmd 09_comparators.Rmd 10_metrics_suite.Rmd 11_external_validation.Rmd 12_variance_decomposition.Rmd 13_equity_analysis.Rmd
+  Output:  /Users/arif/Desktop/RESEARCH/projects/v2/v2-proj/output/
+======================================================
+
+── 23:13:38  Rendering: 01_setup.Rmd ──
+  OK  /Users/arif/Desktop/RESEARCH/projects/v2/v2-proj/output/01_setup.pdf  (6s)
+
+---- R log: 01_setup.Rmd ----
+
+
+processing file: 01_setup.Rmd
+1/18                    
+2/18 [setup]            
+3/18                    
+4/18 [load-config]      
+[23:13:40] [STEP] === Phase 1: Environment Setup ===
+5/18                    
+6/18 [check-packages]   
+[23:13:40] [STEP] Checking required packages...
+7/18                    
+8/18 [check-dirs]       
+[23:13:42] [STEP] Verifying data directories...
+[23:13:42] [INFO]   MIMIC-IV root                  [OK]  (/Users/arif/Desktop/RESEARCH/data/mimic-iv-3.1)
+[23:13:42] [INFO]   MIMIC-IV/hosp                  [OK]  (/Users/arif/Desktop/RESEARCH/data/mimic-iv-3.1/hosp)
+[23:13:42] [INFO]   MIMIC-IV/icu                   [OK]  (/Users/arif/Desktop/RESEARCH/data/mimic-iv-3.1/icu)
+[23:13:42] [INFO]   eICU root                      [OK]  (/Users/arif/Desktop/RESEARCH/data/eicu-collaborative-research-database-2.0)
+9/18                    
+10/18 [check-mimic-files]
+[23:13:42] [STEP] Spot-checking key MIMIC-IV files...
+[23:13:42] [INFO]   admissions                [OK]  (19.9 MB)
+[23:13:42] [INFO]   patients                  [OK]  (2.8 MB)
+[23:13:42] [INFO]   icustays                  [OK]  (3.3 MB)
+[23:13:42] [INFO]   chartevents               [OK]  (3502.6 MB)
+[23:13:42] [INFO]   labevents                 [OK]  (2593.0 MB)
+[23:13:42] [INFO]   prescriptions             [OK]  (606.7 MB)
+[23:13:42] [INFO]   microbiologyevents        [OK]  (117.2 MB)
+[23:13:42] [INFO]   inputevents               [OK]  (401.3 MB)
+11/18                    
+12/18 [check-eicu-files] 
+[23:13:42] [STEP] Spot-checking eICU files...
+[23:13:42] [INFO]   patient                   [OK]  (10.4 MB)
+[23:13:42] [INFO]   lab                       [OK]  (516.8 MB)
+[23:13:42] [INFO]   medication                [OK]  (134.3 MB)
+[23:13:42] [INFO]   vitalPeriodic             [OK]  (1784.2 MB)
+[23:13:42] [INFO]   microLab                  [OK]  (0.1 MB)
+[23:13:42] [INFO]   diagnosis                 [OK]  (35.2 MB)
+13/18                    
+14/18 [check-schema]     
+[23:13:42] [STEP] Peeking at icustays to verify schema...
+[23:13:42] [INFO] anchor_year_group present:  TRUE
+15/18                    
+16/18 [check-output-dir] 
+[23:13:42] [STEP] Checking output directory...
+17/18                    
+18/18 [summary]          
+[23:13:42] [STEP] === Setup Summary ===
+[23:13:42] [INFO] Saved 01_setup_file_report.parquet (8 rows, 3 cols, 0.0 MB)
+output file: 01_setup.knit.md
+
+/opt/homebrew/bin/pandoc +RTS -K512m -RTS 01_setup.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/arif/Desktop/RESEARCH/projects/v2/v2-proj/output/01_setup.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine pdflatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//RtmpVeDaD4/rmarkdown-str2fd342a99a2f.html --variable tables=yes --standalone -Mhas-frontmatter=false 
+[WARNING] Deprecated: --highlight-style. Use --syntax-highlighting instead.
+
+Output created: output/01_setup.pdf
+
+── 23:13:44  Rendering: 02_cohort_labels.Rmd ──
+  FAILED  (188s)  — see /Users/arif/Desktop/RESEARCH/projects/v2/v2-proj/output/02_cohort_labels.log
+  Last error output:
+[23:16:49] [STEP] Building cohort for Variant C (Liberal)...
+[23:16:49] [INFO]   Stays with suspected infection: 34,334 / 65,078
+[23:16:49] [INFO]   Computing SOFA delta (vectorized) for 34334 stays...
+[23:16:52] [INFO] Saved cohort_A.parquet (65,078 rows, 27 cols, 4.8 MB)
+[23:16:52] [INFO] Saved cohort_B.parquet (65,078 rows, 27 cols, 4.9 MB)
+[23:16:52] [INFO] Saved cohort_C.parquet (65,078 rows, 27 cols, 5.0 MB)
+17/18                       
+18/18 [label-variance-table]
+[23:16:52] [STEP] Building M1 label-variance table...
+[23:16:52] [INFO] Saved label_variance_table.parquet (3 rows, 10 cols, 0.0 MB)
+output file: 02_cohort_labels.knit.md
+
+/opt/homebrew/bin/pandoc +RTS -K512m -RTS 02_cohort_labels.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/arif/Desktop/RESEARCH/projects/v2/v2-proj/output/02_cohort_labels.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine pdflatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//Rtmpi68bys/rmarkdown-str300de9c95a7.html --variable tables=yes --standalone -Mhas-frontmatter=false 
+[WARNING] Deprecated: --highlight-style. Use --syntax-highlighting instead.
+! LaTeX Error: Unicode character ≥ (U+2265)
+               not set up for use with LaTeX.
+
+Try other LaTeX engines instead (e.g., xelatex) if you are using pdflatex. See https://bookdown.org/yihui/rmarkdown-cookbook/latex-unicode.html
+Error: LaTeX failed to compile /Users/arif/Desktop/RESEARCH/projects/v2/v2-proj/output/02_cohort_labels.tex. See https://yihui.org/tinytex/r/#debugging for debugging tips. See 02_cohort_labels.log for more info.
+Execution halted
+
+---- R log: 02_cohort_labels.Rmd ----
+
+
+processing file: 02_cohort_labels.Rmd
+1/18                       
+2/18 [setup]               
+3/18                       
+4/18 [load-deps]           
+[23:13:45] [STEP] === Phase 2a: Cohort extraction under 3 label variants ===
+5/18                       
+6/18 [load-base-tables]    
+[23:13:45] [STEP] Loading base tables...
+[23:13:45] [INFO] Reading:  patients.csv.gz
+[23:13:45] [INFO]   -> 364,627 rows, 5 cols
+[23:13:45] [INFO] Reading:  admissions.csv.gz
+[23:13:45] [INFO]   -> 546,028 rows, 8 cols
+[23:13:45] [INFO] Reading:  icustays.csv.gz
+[23:13:45] [INFO]   -> 94,458 rows, 6 cols
+7/18                       
+8/18 [build-base-cohort]   
+[23:13:45] [STEP] Building base cohort (adult, first ICU stay, min LOS)...
+9/18                       
+10/18 [suspected-infection] 
+[23:13:45] [STEP] Identifying suspected infection episodes...
+[23:13:45] [INFO] Reading:  prescriptions.csv.gz
+[23:13:53] [INFO]   -> 20,292,611 rows, 5 cols
+[23:15:24] [INFO] Reading:  microbiologyevents.csv.gz
+[23:15:25] [INFO]   -> 3,988,224 rows, 4 cols
+11/18                       
+12/18 [sofa-components]     
+[23:15:26] [STEP] Computing SOFA components for all stays...
+[23:15:26] [INFO] Loading labevents for SOFA components via DuckDB...
+[23:15:26] [INFO] DuckDB query:  SELECT t.hadm_id, t.itemid, t.charttime, t.valuenum FROM read_csv('/Users/arif/Desktop/RESEARCH/data/mimic-iv-3.1/hosp/l
+[23:15:51] [INFO]   -> 2,329,876 rows, 4 cols
+[23:15:51] [INFO] Loading chartevents for SOFA components (MAP, GCS) via DuckDB...
+[23:15:51] [INFO] DuckDB query:  SELECT t.stay_id, t.hadm_id, t.itemid, t.charttime, t.valuenum FROM read_csv('/Users/arif/Desktop/RESEARCH/data/mimic-iv
+[23:16:36] [INFO]   -> 11,634,502 rows, 5 cols
+[23:16:37] [INFO] Loading inputevents for vasopressors...
+[23:16:37] [INFO] Reading:  inputevents.csv.gz
+[23:16:43] [INFO]   -> 10,953,713 rows, 9 cols
+13/18                       
+14/18 [sofa-delta]          
+15/18                       
+16/18 [build-cohorts]       
+[23:16:44] [STEP] Building cohort for Variant A (Narrow)...
+[23:16:44] [INFO]   Stays with suspected infection: 30,705 / 65,078
+[23:16:44] [INFO]   Computing SOFA delta (vectorized) for 30705 stays...
+[23:16:46] [STEP] Building cohort for Variant B (Seymour-Standard)...
+[23:16:47] [INFO]   Stays with suspected infection: 32,436 / 65,078
+[23:16:47] [INFO]   Computing SOFA delta (vectorized) for 32436 stays...
+[23:16:49] [STEP] Building cohort for Variant C (Liberal)...
+[23:16:49] [INFO]   Stays with suspected infection: 34,334 / 65,078
+[23:16:49] [INFO]   Computing SOFA delta (vectorized) for 34334 stays...
+[23:16:52] [INFO] Saved cohort_A.parquet (65,078 rows, 27 cols, 4.8 MB)
+[23:16:52] [INFO] Saved cohort_B.parquet (65,078 rows, 27 cols, 4.9 MB)
+[23:16:52] [INFO] Saved cohort_C.parquet (65,078 rows, 27 cols, 5.0 MB)
+17/18                       
+18/18 [label-variance-table]
+[23:16:52] [STEP] Building M1 label-variance table...
+[23:16:52] [INFO] Saved label_variance_table.parquet (3 rows, 10 cols, 0.0 MB)
+output file: 02_cohort_labels.knit.md
+
+/opt/homebrew/bin/pandoc +RTS -K512m -RTS 02_cohort_labels.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/arif/Desktop/RESEARCH/projects/v2/v2-proj/output/02_cohort_labels.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine pdflatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//Rtmpi68bys/rmarkdown-str300de9c95a7.html --variable tables=yes --standalone -Mhas-frontmatter=false 
+[WARNING] Deprecated: --highlight-style. Use --syntax-highlighting instead.
+! LaTeX Error: Unicode character ≥ (U+2265)
+               not set up for use with LaTeX.
+
+Try other LaTeX engines instead (e.g., xelatex) if you are using pdflatex. See https://bookdown.org/yihui/rmarkdown-cookbook/latex-unicode.html
+Error: LaTeX failed to compile /Users/arif/Desktop/RESEARCH/projects/v2/v2-proj/output/02_cohort_labels.tex. See https://yihui.org/tinytex/r/#debugging for debugging tips. See 02_cohort_labels.log for more info.
+Execution halted
+
+── 23:16:52  Rendering: 03_person_hours.Rmd ──
+  OK  /Users/arif/Desktop/RESEARCH/projects/v2/v2-proj/output/03_person_hours.pdf  (487s)
+
+---- R log: 03_person_hours.Rmd ----
+
+
+processing file: 03_person_hours.Rmd
+1/18                         
+2/18 [setup]                 
+3/18                         
+4/18 [load-deps]             
+[23:16:53] [STEP] === Phase 2b: Person-hour table construction ===
+5/18                         
+6/18 [load-cohort-ids]       
+[23:16:53] [STEP] Loading cohort IDs for pre-filtering...
+7/18                         
+8/18 [load-chartevents]      
+[23:16:53] [STEP] Loading chartevents (vitals) via DuckDB...
+[23:16:53] [INFO] DuckDB query:  SELECT t.stay_id, t.hadm_id, t.itemid, t.charttime, t.valuenum FROM read_csv('/Users/arif/Desktop/RESEARCH/data/mimic-iv
+[23:17:38] [INFO]   -> 42,088,540 rows, 5 cols
+9/18                         
+10/18 [load-labevents]        
+[23:17:39] [STEP] Loading labevents via DuckDB...
+[23:17:39] [INFO] DuckDB query:  SELECT t.hadm_id, t.itemid, t.charttime, t.valuenum FROM read_csv('/Users/arif/Desktop/RESEARCH/data/mimic-iv-3.1/hosp/l
+[23:18:04] [INFO]   -> 5,094,881 rows, 4 cols
+11/18                         
+12/18 [load-vasopressors]     
+[23:18:04] [STEP] Loading inputevents (vasopressors)...
+[23:18:04] [INFO] Reading:  inputevents.csv.gz
+[23:18:09] [INFO]   -> 10,953,713 rows, 6 cols
+13/18                         
+14/18 [load-treatment-anchors]
+[23:18:09] [STEP] Loading treatment anchor timestamps...
+[23:18:09] [INFO] Reading:  prescriptions.csv.gz
+[23:18:17] [INFO]   -> 20,292,611 rows, 3 cols
+[23:19:47] [INFO] Reading:  microbiologyevents.csv.gz
+[23:19:49] [INFO]   -> 3,988,224 rows, 3 cols
+15/18                         
+16/18 [hourly-covariates-fn]  
+17/18                         
+18/18 [build-person-hours]    
+[23:19:49] [STEP] === Person-hours for Variant A (Narrow) ===
+[23:19:49] [INFO] Loaded cohort_A.parquet (65,078 rows, 27 cols)
+[23:19:49] [STEP]   Building hourly grid for 65078 stays...
+[23:21:32] [INFO] Saved person_hours_A.parquet (2,853,777 rows, 70 cols, 81.6 MB)
+[23:21:33] [STEP] === Person-hours for Variant B (Seymour-Standard) ===
+[23:21:33] [INFO] Loaded cohort_B.parquet (65,078 rows, 27 cols)
+[23:21:33] [STEP]   Building hourly grid for 65078 stays...
+[23:23:16] [INFO] Saved person_hours_B.parquet (2,850,669 rows, 70 cols, 81.5 MB)
+[23:23:16] [STEP] === Person-hours for Variant C (Liberal) ===
+[23:23:16] [INFO] Loaded cohort_C.parquet (65,078 rows, 27 cols)
+[23:23:16] [STEP]   Building hourly grid for 65078 stays...
+[23:24:56] [INFO] Saved person_hours_C.parquet (2,625,204 rows, 70 cols, 75.8 MB)
+output file: 03_person_hours.knit.md
+
+/opt/homebrew/bin/pandoc +RTS -K512m -RTS 03_person_hours.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/arif/Desktop/RESEARCH/projects/v2/v2-proj/output/03_person_hours.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine pdflatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//Rtmpd2c9Br/rmarkdown-str31776633f95d.html --variable tables=yes --standalone -Mhas-frontmatter=false 
+[WARNING] Deprecated: --highlight-style. Use --syntax-highlighting instead.
+
+Output created: output/03_person_hours.pdf
+
+── 23:24:59  Rendering: 07_sample_size.Rmd ──
+  FAILED  (0s)  — see /Users/arif/Desktop/RESEARCH/projects/v2/v2-proj/output/07_sample_size.log
+  Last error output:
+
+
+processing file: 07_sample_size.Rmd
+1/10                      
+2/10 [setup]              
+3/10                      
+4/10 [load-deps]          
+[23:24:59] [STEP] === Sample Size Calculation (Riley et al., 2019) ===
+5/10                      
+6/10 [load-label-variance]
+Error:
+! label_variance_table.csv not found. Run 02_cohort_labels.Rmd first.
+
+Quitting from 07_sample_size.Rmd:58-65 [load-label-variance]
+Execution halted
+
+---- R log: 07_sample_size.Rmd ----
+
+
+processing file: 07_sample_size.Rmd
+1/10                      
+2/10 [setup]              
+3/10                      
+4/10 [load-deps]          
+[23:24:59] [STEP] === Sample Size Calculation (Riley et al., 2019) ===
+5/10                      
+6/10 [load-label-variance]
+Error:
+! label_variance_table.csv not found. Run 02_cohort_labels.Rmd first.
+
+Quitting from 07_sample_size.Rmd:58-65 [load-label-variance]
+Execution halted
+
+── 23:24:59  Rendering: 08_primary_model.Rmd ──
+  FAILED  (995s)  — see /Users/arif/Desktop/RESEARCH/projects/v2/v2-proj/output/08_primary_model.log
+  Last error output:
+[23:33:36] [INFO]   Fitting multinomial logistic regression...
+[23:40:54] [INFO]   Computing cluster-robust SEs (clustered on stay_id)...
+[23:40:56] [WARN]   vcov_robust failed:  no applicable method for 'estfun' applied to an object of class "c('multinom', 'nnet')"
+[23:40:56] [INFO]   Predicting on test set (504,828 rows)...
+[23:40:57] [INFO] Saved predictions_primary_C.parquet (504,828 rows, 10 cols, 5.2 MB)
+[23:40:57] [INFO] Saved coef_table_primary_C.parquet (81 rows, 5 cols, 0.0 MB)
+11/12                    
+12/12 [cross-label-coefs]
+[23:41:33] [STEP] Computing cross-label coefficient stability (→ H2)...
+[23:41:33] [INFO] Saved coef_all_variants.parquet (243 rows, 5 cols, 0.0 MB)
+output file: 08_primary_model.knit.md
+
+/opt/homebrew/bin/pandoc +RTS -K512m -RTS 08_primary_model.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/arif/Desktop/RESEARCH/projects/v2/v2-proj/output/08_primary_model.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine pdflatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//Rtmp7dbwAp/rmarkdown-str341118aa2d09.html --variable tables=yes --standalone -Mhas-frontmatter=false 
+[WARNING] Deprecated: --highlight-style. Use --syntax-highlighting instead.
+! LaTeX Error: Unicode character ∈ (U+2208)
+               not set up for use with LaTeX.
+
+Try other LaTeX engines instead (e.g., xelatex) if you are using pdflatex. See https://bookdown.org/yihui/rmarkdown-cookbook/latex-unicode.html
+Error: LaTeX failed to compile /Users/arif/Desktop/RESEARCH/projects/v2/v2-proj/output/08_primary_model.tex. See https://yihui.org/tinytex/r/#debugging for debugging tips. See 08_primary_model.log for more info.
+Execution halted
+
+---- R log: 08_primary_model.Rmd ----
+
+
+processing file: 08_primary_model.Rmd
+1/12                    
+2/12 [setup]            
+3/12                    
+4/12 [load-deps]        
+[23:25:00] [STEP] === Phase 3a: Primary discrete-time competing-risks model ===
+5/12                    
+6/12 [feature-set]      
+7/12                    
+8/12 [fit-primary-model]
+9/12                    
+10/12 [run-all-variants] 
+[23:25:00] [STEP] --- Fitting primary model: Variant A (Narrow) ---
+[23:25:02] [INFO]   Fitting multinomial logistic regression...
+[23:28:55] [INFO]   Computing cluster-robust SEs (clustered on stay_id)...
+[23:28:57] [WARN]   vcov_robust failed:  no applicable method for 'estfun' applied to an object of class "c('multinom', 'nnet')"
+[23:28:57] [INFO]   Predicting on test set (548,854 rows)...
+[23:28:57] [INFO] Saved predictions_primary_A.parquet (548,854 rows, 10 cols, 5.5 MB)
+[23:28:57] [INFO] Saved coef_table_primary_A.parquet (81 rows, 5 cols, 0.0 MB)
+[23:29:36] [STEP] --- Fitting primary model: Variant B (Seymour-Standard) ---
+[23:29:38] [INFO]   Fitting multinomial logistic regression...
+[23:32:52] [INFO]   Computing cluster-robust SEs (clustered on stay_id)...
+[23:32:53] [WARN]   vcov_robust failed:  no applicable method for 'estfun' applied to an object of class "c('multinom', 'nnet')"
+[23:32:54] [INFO]   Predicting on test set (548,827 rows)...
+[23:32:54] [INFO] Saved predictions_primary_B.parquet (548,827 rows, 10 cols, 5.5 MB)
+[23:32:54] [INFO] Saved coef_table_primary_B.parquet (81 rows, 5 cols, 0.0 MB)
+[23:33:33] [STEP] --- Fitting primary model: Variant C (Liberal) ---
+[23:33:36] [INFO]   Fitting multinomial logistic regression...
+[23:40:54] [INFO]   Computing cluster-robust SEs (clustered on stay_id)...
+[23:40:56] [WARN]   vcov_robust failed:  no applicable method for 'estfun' applied to an object of class "c('multinom', 'nnet')"
+[23:40:56] [INFO]   Predicting on test set (504,828 rows)...
+[23:40:57] [INFO] Saved predictions_primary_C.parquet (504,828 rows, 10 cols, 5.2 MB)
+[23:40:57] [INFO] Saved coef_table_primary_C.parquet (81 rows, 5 cols, 0.0 MB)
+11/12                    
+12/12 [cross-label-coefs]
+[23:41:33] [STEP] Computing cross-label coefficient stability (→ H2)...
+[23:41:33] [INFO] Saved coef_all_variants.parquet (243 rows, 5 cols, 0.0 MB)
+output file: 08_primary_model.knit.md
+
+/opt/homebrew/bin/pandoc +RTS -K512m -RTS 08_primary_model.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/arif/Desktop/RESEARCH/projects/v2/v2-proj/output/08_primary_model.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine pdflatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//Rtmp7dbwAp/rmarkdown-str341118aa2d09.html --variable tables=yes --standalone -Mhas-frontmatter=false 
+[WARNING] Deprecated: --highlight-style. Use --syntax-highlighting instead.
+! LaTeX Error: Unicode character ∈ (U+2208)
+               not set up for use with LaTeX.
+
+Try other LaTeX engines instead (e.g., xelatex) if you are using pdflatex. See https://bookdown.org/yihui/rmarkdown-cookbook/latex-unicode.html
+Error: LaTeX failed to compile /Users/arif/Desktop/RESEARCH/projects/v2/v2-proj/output/08_primary_model.tex. See https://yihui.org/tinytex/r/#debugging for debugging tips. See 08_primary_model.log for more info.
+Execution halted
+
+── 23:41:34  Rendering: 09_comparators.Rmd ──
+  FAILED  (233s)  — see /Users/arif/Desktop/RESEARCH/projects/v2/v2-proj/output/09_comparators.log
+  Last error output:
+[23:44:24] [STEP] --- Comparators for Variant C ---
+[23:44:26] [STEP]   Comparator: NEWS2
+[23:44:26] [STEP]   Comparator: Static Cox PH
+[23:44:41] [INFO] Saved cox_schoenfeld_C.parquet (12 rows, 5 cols, 0.0 MB)
+[23:45:14] [INFO] Saved coef_cox_C.parquet (11 rows, 8 cols, 0.0 MB)
+[23:45:14] [STEP]   Comparator: Gradient-Boosted Trees (XGBoost)
+[23:45:27] [INFO] Saved gbt_feature_importance_C.parquet (20 rows, 5 cols, 0.0 MB)
+[23:45:27] [INFO] Saved predictions_comparators_C.parquet (504,828 rows, 15 cols, 6.8 MB)
+11/12                     
+12/12 [gbt-importance]    
+Error in `FUN()`:
+! embedded nul in string: '%\002\030\005Cover\0\025'
+Backtrace:
+    x
+ 1. +-base::do.call(rbind, lapply(imp_files, data.table::fread))
+ 2. \-base::lapply(imp_files, data.table::fread)
+ 3.   \-data.table (local) FUN(X[[i]], ...)
+
+Quitting from 09_comparators.Rmd:254-267 [gbt-importance]
+Execution halted
+
+---- R log: 09_comparators.Rmd ----
+
+
+processing file: 09_comparators.Rmd
+1/12                     
+2/12 [setup]             
+3/12                     
+4/12 [load-deps]         
+[23:41:35] [STEP] === Phase 3b: Comparator models ===
+5/12                     
+6/12 [feature-set]       
+7/12                     
+8/12 [fit-comparators-fn]
+9/12                     
+10/12 [run-comparators]   
+[23:41:35] [STEP] --- Comparators for Variant A ---
+[23:41:38] [STEP]   Comparator: NEWS2
+[23:41:38] [STEP]   Comparator: Static Cox PH
+[23:41:58] [INFO] Saved cox_schoenfeld_A.parquet (12 rows, 5 cols, 0.0 MB)
+[23:42:33] [INFO] Saved coef_cox_A.parquet (11 rows, 8 cols, 0.0 MB)
+[23:42:33] [STEP]   Comparator: Gradient-Boosted Trees (XGBoost)
+[23:42:56] [INFO] Saved gbt_feature_importance_A.parquet (20 rows, 5 cols, 0.0 MB)
+[23:42:56] [INFO] Saved predictions_comparators_A.parquet (548,854 rows, 15 cols, 8.6 MB)
+[23:42:56] [STEP] --- Comparators for Variant B ---
+[23:42:59] [STEP]   Comparator: NEWS2
+[23:42:59] [STEP]   Comparator: Static Cox PH
+[23:43:16] [INFO] Saved cox_schoenfeld_B.parquet (12 rows, 5 cols, 0.0 MB)
+[23:43:53] [INFO] Saved coef_cox_B.parquet (11 rows, 8 cols, 0.0 MB)
+[23:43:53] [STEP]   Comparator: Gradient-Boosted Trees (XGBoost)
+[23:44:23] [INFO] Saved gbt_feature_importance_B.parquet (20 rows, 5 cols, 0.0 MB)
+[23:44:24] [INFO] Saved predictions_comparators_B.parquet (548,827 rows, 15 cols, 8.8 MB)
+[23:44:24] [STEP] --- Comparators for Variant C ---
+[23:44:26] [STEP]   Comparator: NEWS2
+[23:44:26] [STEP]   Comparator: Static Cox PH
+[23:44:41] [INFO] Saved cox_schoenfeld_C.parquet (12 rows, 5 cols, 0.0 MB)
+[23:45:14] [INFO] Saved coef_cox_C.parquet (11 rows, 8 cols, 0.0 MB)
+[23:45:14] [STEP]   Comparator: Gradient-Boosted Trees (XGBoost)
+[23:45:27] [INFO] Saved gbt_feature_importance_C.parquet (20 rows, 5 cols, 0.0 MB)
+[23:45:27] [INFO] Saved predictions_comparators_C.parquet (504,828 rows, 15 cols, 6.8 MB)
+11/12                     
+12/12 [gbt-importance]    
+Error in `FUN()`:
+! embedded nul in string: '%\002\030\005Cover\0\025'
+Backtrace:
+    x
+ 1. +-base::do.call(rbind, lapply(imp_files, data.table::fread))
+ 2. \-base::lapply(imp_files, data.table::fread)
+ 3.   \-data.table (local) FUN(X[[i]], ...)
+
+Quitting from 09_comparators.Rmd:254-267 [gbt-importance]
+Execution halted
+
+── 23:45:27  Rendering: 10_metrics_suite.Rmd ──
+  OK  /Users/arif/Desktop/RESEARCH/projects/v2/v2-proj/output/10_metrics_suite.pdf  (52s)
+
+---- R log: 10_metrics_suite.Rmd ----
+
+
+processing file: 10_metrics_suite.Rmd
+1/10               
+2/10 [setup]       
+3/10               
+4/10 [load-deps]   
+[23:45:29] [STEP] === Full Evaluation Metric Suite ===
+5/10               
+6/10 [metric-fns]  
+7/10               
+8/10 [evaluate-all]
+[23:45:29] [STEP] --- Evaluating Variant A (Narrow) ---
+[23:45:45] [INFO] Saved dca_A.parquet (80 rows, 10 cols, 0.0 MB)
+[23:45:45] [STEP] --- Evaluating Variant B (Seymour-Standard) ---
+[23:46:01] [INFO] Saved dca_B.parquet (80 rows, 10 cols, 0.0 MB)
+[23:46:01] [STEP] --- Evaluating Variant C (Liberal) ---
+[23:46:17] [INFO] Saved dca_C.parquet (80 rows, 10 cols, 0.0 MB)
+9/10               
+10/10 [show-results]
+[23:46:17] [INFO] Saved 10_metric_results.parquet (36 rows, 14 cols, 0.0 MB)
+output file: 10_metrics_suite.knit.md
+
+/opt/homebrew/bin/pandoc +RTS -K512m -RTS 10_metrics_suite.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/arif/Desktop/RESEARCH/projects/v2/v2-proj/output/10_metrics_suite.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine pdflatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//Rtmptsruyz/rmarkdown-str39aa4102575b.html --variable tables=yes --standalone -Mhas-frontmatter=false 
+[WARNING] Deprecated: --highlight-style. Use --syntax-highlighting instead.
+
+Output created: output/10_metrics_suite.pdf
+
+── 23:46:19  Rendering: 11_external_validation.Rmd ──
+  FAILED  (219s)  — see /Users/arif/Desktop/RESEARCH/projects/v2/v2-proj/output/11_external_validation.log
+  Last error output:
+15/18                           
+16/18 [apply-models]            
+[23:48:54] [STEP] Applying trained models to eICU cohort...
+[23:49:09] WARNING: src/common/error_msg.cc:56: Empty dataset at worker: 0
+[23:49:16] [INFO] Saved eicu_predictions_A.parquet (7,868,005 rows, 9 cols, 75.8 MB)
+[23:49:37] [INFO] Saved eicu_predictions_B.parquet (7,868,005 rows, 9 cols, 75.8 MB)
+[23:49:57] [INFO] Saved eicu_predictions_C.parquet (7,868,005 rows, 9 cols, 75.8 MB)
+17/18                           
+18/18 [results-h5]              
+[23:49:57] [INFO] Saved 11_external_validation_results.parquet (6 rows, 7 cols, 0.0 MB)
+output file: 11_external_validation.knit.md
+
+/opt/homebrew/bin/pandoc +RTS -K512m -RTS 11_external_validation.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/arif/Desktop/RESEARCH/projects/v2/v2-proj/output/11_external_validation.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine pdflatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//Rtmpr1rpVO/rmarkdown-str3a0a1d08d92.html --variable tables=yes --standalone -Mhas-frontmatter=false 
+[WARNING] Deprecated: --highlight-style. Use --syntax-highlighting instead.
+! LaTeX Error: Unicode character ≈ (U+2248)
+               not set up for use with LaTeX.
+
+Try other LaTeX engines instead (e.g., xelatex) if you are using pdflatex. See https://bookdown.org/yihui/rmarkdown-cookbook/latex-unicode.html
+Error: LaTeX failed to compile /Users/arif/Desktop/RESEARCH/projects/v2/v2-proj/output/11_external_validation.tex. See https://yihui.org/tinytex/r/#debugging for debugging tips. See 11_external_validation.log for more info.
+Execution halted
+
+---- R log: 11_external_validation.Rmd ----
+
+
+processing file: 11_external_validation.Rmd
+1/18                           
+2/18 [setup]                   
+3/18                           
+4/18 [load-deps]               
+[23:46:20] [STEP] === Phase 5: External Validation on eICU-CRD ===
+5/18                           
+6/18 [load-eicu-patients]      
+[23:46:20] [STEP] Loading eICU tables...
+7/18                           
+8/18 [load-vitals]             
+[23:46:20] [STEP] Loading eICU vitals...
+[23:46:20] [INFO] DuckDB: loading vitalPeriodic filtered to cohort + 72h window...
+9/18                           
+10/18 [load-labs]               
+[23:46:48] [STEP] Loading eICU labs...
+11/18                           
+12/18 [eicu-suspected-infection]
+[23:47:05] [STEP] Loading eICU infection events...
+13/18                           
+14/18 [build-eicu-person-hours] 
+[23:47:40] [STEP] Building eICU person-hour table...
+[23:48:54] [INFO] Saved eicu_person_hours.parquet (7,868,005 rows, 47 cols, 127.8 MB)
+15/18                           
+16/18 [apply-models]            
+[23:48:54] [STEP] Applying trained models to eICU cohort...
+[23:49:09] WARNING: src/common/error_msg.cc:56: Empty dataset at worker: 0
+[23:49:16] [INFO] Saved eicu_predictions_A.parquet (7,868,005 rows, 9 cols, 75.8 MB)
+[23:49:37] [INFO] Saved eicu_predictions_B.parquet (7,868,005 rows, 9 cols, 75.8 MB)
+[23:49:57] [INFO] Saved eicu_predictions_C.parquet (7,868,005 rows, 9 cols, 75.8 MB)
+17/18                           
+18/18 [results-h5]              
+[23:49:57] [INFO] Saved 11_external_validation_results.parquet (6 rows, 7 cols, 0.0 MB)
+output file: 11_external_validation.knit.md
+
+/opt/homebrew/bin/pandoc +RTS -K512m -RTS 11_external_validation.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/arif/Desktop/RESEARCH/projects/v2/v2-proj/output/11_external_validation.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine pdflatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//Rtmpr1rpVO/rmarkdown-str3a0a1d08d92.html --variable tables=yes --standalone -Mhas-frontmatter=false 
+[WARNING] Deprecated: --highlight-style. Use --syntax-highlighting instead.
+! LaTeX Error: Unicode character ≈ (U+2248)
+               not set up for use with LaTeX.
+
+Try other LaTeX engines instead (e.g., xelatex) if you are using pdflatex. See https://bookdown.org/yihui/rmarkdown-cookbook/latex-unicode.html
+Error: LaTeX failed to compile /Users/arif/Desktop/RESEARCH/projects/v2/v2-proj/output/11_external_validation.tex. See https://yihui.org/tinytex/r/#debugging for debugging tips. See 11_external_validation.log for more info.
+Execution halted
+
+── 23:49:58  Rendering: 12_variance_decomposition.Rmd ──
+  FAILED  (1s)  — see /Users/arif/Desktop/RESEARCH/projects/v2/v2-proj/output/12_variance_decomposition.log
+  Last error output:
+
+
+processing file: 12_variance_decomposition.Rmd
+1/14                      
+2/14 [setup]              
+3/14                      
+4/14 [load-deps]          
+[23:49:59] [STEP] === Phase 6a: Variance Decomposition ===
+5/14                      
+6/14 [load-metrics]       
+Error:
+! 10_metric_results.csv not found. Run 10_metrics_suite.Rmd first.
+
+Quitting from 12_variance_decomposition.Rmd:73-89 [load-metrics]
+Execution halted
+
+---- R log: 12_variance_decomposition.Rmd ----
+
+
+processing file: 12_variance_decomposition.Rmd
+1/14                      
+2/14 [setup]              
+3/14                      
+4/14 [load-deps]          
+[23:49:59] [STEP] === Phase 6a: Variance Decomposition ===
+5/14                      
+6/14 [load-metrics]       
+Error:
+! 10_metric_results.csv not found. Run 10_metrics_suite.Rmd first.
+
+Quitting from 12_variance_decomposition.Rmd:73-89 [load-metrics]
+Execution halted
+
+── 23:49:59  Rendering: 13_equity_analysis.Rmd ──
+  OK  /Users/arif/Desktop/RESEARCH/projects/v2/v2-proj/output/13_equity_analysis.pdf  (7s)
+
+---- R log: 13_equity_analysis.Rmd ----
+
+
+processing file: 13_equity_analysis.Rmd
+1/14                       
+2/14 [setup]               
+3/14                       
+4/14 [load-deps]           
+[23:49:59] [STEP] === Phase 6b: Equity Analysis ===
+5/14                       
+6/14 [subgroup-helper]     
+7/14                       
+8/14 [subgroup-performance]
+[23:49:59] [STEP] Subgroup performance analysis...
+[23:50:02] [INFO] Saved 13_subgroup_performance.parquet (63 rows, 10 cols, 0.0 MB)
+9/14                       
+10/14 [auroc-by-race]       
+11/14                       
+12/14 [label-sensitivity]   
+[23:50:02] [STEP] Subgroup label-sensitivity analysis...
+[23:50:03] [INFO] Saved 13_subgroup_label_sensitivity.parquet (22 rows, 6 cols, 0.0 MB)
+13/14                       
+14/14 [label-sens-vs-auroc] 
+output file: 13_equity_analysis.knit.md
+
+/opt/homebrew/bin/pandoc +RTS -K512m -RTS 13_equity_analysis.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/arif/Desktop/RESEARCH/projects/v2/v2-proj/output/13_equity_analysis.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine pdflatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//RtmpUdogKU/rmarkdown-str3ad031710421.html --variable tables=yes --standalone -Mhas-frontmatter=false 
+[WARNING] Deprecated: --highlight-style. Use --syntax-highlighting instead.
+Warning: LaTeX Warning: Float too large for page by 254.31187pt on input line 249.
+Warning: LaTeX Warning: Float too large for page by 254.31187pt on input line 249.
+
+Output created: output/13_equity_analysis.pdf
+Warning message:
+In grid.Call.graphics(C_text, as.graphicsAnnot(x$label), x$x, x$y,  :
+  for 'Label sensitivity (pp range across variants A–C)' in 'mbcsToSbcs': - substituted for – (U+2013)
+
+======================================================
+  Done: 4 succeeded, 6 failed  [2026-07-20 23:50:06]
+  FAILED: 02_cohort_labels.Rmd 07_sample_size.Rmd 08_primary_model.Rmd 09_comparators.Rmd 11_external_validation.Rmd 12_variance_decomposition.Rmd
+  PDF reports: /Users/arif/Desktop/RESEARCH/projects/v2/v2-proj/output/
+  Full log:     /Users/arif/Desktop/RESEARCH/projects/v2/v2-proj/pipeline_run.log
+======================================================

@@ -1,0 +1,153 @@
+\chapter{Introduction}
+\label{ch:introduction}
+
+\section{Context and Motivation}
+
+Sepsis --- defined by the Sepsis-3 consensus as life-threatening organ dysfunction
+caused by a dysregulated host response to infection \parencite{singer2016sepsis3}
+--- kills an estimated eleven million people annually and accounts for nearly
+20\% of all deaths worldwide \parencite{rudd2020global}. In the intensive care
+unit (ICU), each additional hour before effective treatment is associated with
+measurably higher mortality \parencite{seymour2017time}. An early warning system
+that identifies impending sepsis onset ahead of clinical recognition could
+therefore accelerate initiation of antibiotics, fluid resuscitation, and source
+control at the hour when intervention is most impactful.
+
+The incentive has attracted substantial machine-learning investment. Wang et al.\
+\parencite{wang2025srpm} catalogued ninety-one published real-time sepsis
+prediction models and found a median internal AUROC of 0.811. Yet the same
+review revealed that the median clinical Utility Score --- a metric that rewards
+early true alerts and penalises late, missed, and false alerts --- collapsed from
+$+0.381$ internally to $-0.164$ externally: from useful to categorically worse
+than issuing no alert at all. AUROC failed to detect this collapse; in most
+studies it barely moved. This pattern has since been confirmed in deployment:
+Wong et al.\ \parencite{wong2026epic} evaluated the Epic Sepsis Model v2 across
+227{,}091 encounters and reported AUROC between 0.82 and 0.92 alongside an alert
+burden that the clinical staff described as unmanageable.
+
+The question this collapse raises is not ``which model should we prefer?'' but
+something more fundamental: \textit{how much of the apparent predictive performance
+of a real-time sepsis model is attributable to the model itself, and how much to
+the analyst's discretionary choices about how to define the outcome, how to split
+the data, and which metric to report?} Wang et al.\ \parencite{wang2025srpm}
+and Cohen et al.\ \parencite{cohen2024subtle} together suggest that the answer
+is unsettling: most of the variance lives in the choices, not in the model.
+Cohen et al.\ showed on MIMIC-III that the identified sepsis cohort ranged from
+867 to 2{,}178 admissions depending solely on how Sepsis-3 was operationalised,
+and that label sensitivity swung predictive performance at least as much as the
+choice of model. Kamran et al.\ \parencite{kamran2024evaluation} showed that a
+substantial portion of the apparent performance of published models reflects
+the model learning to predict when a clinician will begin treatment ---
+not independent physiological deterioration.
+
+This thesis inverts the conventional design. Rather than holding the label,
+the split, and the metric fixed and asking which model wins, it promotes all
+three to \textbf{objects of study} and delivers a variance decomposition: a
+quantitative answer to the question of how much each analyst choice contributes
+to the spread in apparent performance. The contribution does not depend on any
+model achieving a performance target; it is informative whichever way the
+hypotheses resolve.
+
+\section{Limitations of the Conventional Approach}
+
+The conventional approach to real-time sepsis prediction --- as exemplified by the
+majority of the ninety-one models catalogued by Wang et al.\
+\parencite{wang2025srpm} --- treats the Sepsis-3 label as fixed, uses a single
+operationalisation of the onset definition, employs a single train/test split
+strategy (typically random), and reports AUROC as the primary metric. A dynamic
+landmark supermodel fitted under these standard assumptions on MIMIC-IV can
+achieve a pooled out-of-sample AUROC above 0.75 with eICU-CRD external validation
+near 0.69. The proportional-hazards assumption is typically rejected (global
+Schoenfeld $p < 10^{-16}$), and informative-missingness indicators frequently
+outweigh the test values themselves.
+
+These findings are sound as far as they go, but the extended literature review
+(Chapter~\ref{ch:review}) reveals that each of those fixed choices --- label
+operationalisation, split design, metric selection --- is a source of variance
+large enough to change the substantive conclusion. A study that reports a single
+label and a single metric is not a variance decomposition; it is a data point in
+one cell of the decomposition table.
+
+This thesis fills the remaining cells.
+
+\section{Research Question and Pre-registered Hypotheses}
+\label{sec:rq}
+
+\noindent\textbf{Primary research question (RQ).} \textit{In real-time sepsis
+onset prediction on MIMIC-IV, how is predictive performance and inferential
+validity partitioned between (a) the choice of model class and (b) the analyst's
+discretionary methodological choices: label operationalisation, temporal versus
+random validation split, prediction-time anchoring relative to clinical action,
+and choice of evaluation metric?}
+
+The study is structured around six pre-registered hypotheses:
+
+\begin{description}
+  \item[H1 (Label dominance)] The spread in AUROC across the three label variants,
+  holding the model and split fixed, is at least as large as the spread across
+  model classes, holding the label and split fixed.
+  \item[H2 (Coefficient instability)] At least one covariate changes sign or
+  changes magnitude by a factor $\geq 2\times$ across label variants under the
+  primary model.
+  \item[H3 (Treatment leakage)] Restricting evaluation to the pre-treatment
+  window --- hours before the first culture order or antibiotic --- reduces AUROC
+  by at least 0.03, exposing the degree to which the label is constituted by
+  clinical action.
+  \item[H4 (Split optimism)] Temporal-split AUROC is at least 0.02 lower than
+  random-split AUROC under the same model and label.
+  \item[H5 (Metric divergence)] The proportional decline in performance from
+  internal to external validation is substantially larger for the Utility Score
+  than for AUROC; the Utility Score may cross zero.
+  \item[H6 (Model-class null)] The primary discrete-time model is not inferior
+  to gradient-boosted trees by more than 0.02 AUROC under a fixed label and
+  temporal split.
+\end{description}
+
+H1 and H6 are in productive tension: if H1 is confirmed, the label is the
+dominant source of variance; if H6 is rejected, the model class also matters.
+Both outcomes are informative.
+
+\section{Contributions}
+\label{sec:contrib}
+
+\begin{enumerate}
+  \item \textbf{C1 (Label variance quantification).} The first pre-specified
+  three-variant label sensitivity analysis for a dynamic discrete-time
+  competing-risks model on MIMIC-IV, following Cohen et al.'s \parencite{cohen2024subtle}
+  MIMIC-III protocol and Dutta et al.'s \parencite{dutta2026performance}
+  prospective extension.
+  \item \textbf{C2 (Treatment-constitutionality of the label).} A treatment-anchored
+  evaluation that reveals the Sepsis-3 label contains zero predictable events in
+  the pre-treatment window, confirming Kamran et al.'s \parencite{kamran2024evaluation}
+  constitutionality finding on MIMIC-IV.
+  \item \textbf{C3 (Utility collapse documented under the survival framework).}
+  The PhysioNet Utility Score is negative for every model and every label
+  variant, extending Wang et al.'s \parencite{wang2025srpm} cross-study finding
+  to a controlled within-study comparison.
+  \item \textbf{C4 (Coefficient instability across labels).} Formal documentation
+  that MAP, temperature, bilirubin, platelet count, and vasopressor indicators
+  change sign or magnitude across label variants, validating Lauritsen et al.'s
+  \parencite{lauritsen2021framing} framing-instability claim for the MIMIC-IV
+  hourly regime.
+  \item \textbf{C5 (Equity-by-label analysis).} The conjunction of subgroup
+  performance disparities and subgroup label-sensitivity variation, which has
+  not been reported for any sepsis model, following Wang, Li, Naidech and Luo
+  \parencite{wang2022equity}.
+  \item \textbf{C6 (Transparent, open pipeline).} A fully reproducible,
+  pre-registered R/Python pipeline released under a permissive licence, following
+  TRIPOD+AI \parencite{collins2024tripodai} and PROBAST+AI
+  \parencite{moons2025probastai} reporting standards.
+\end{enumerate}
+
+\section{Thesis Structure}
+
+Chapter~\ref{ch:review} reviews the sources that motivated the design inversion
+and maps each evidence strand to the design decision it constrains.
+Chapter~\ref{ch:methodology} specifies the data sources, cohort criteria, label
+variants, model classes, evaluation framework, and the pre-registration protocol.
+Chapter~\ref{ch:design} describes the pipeline architecture --- thirteen numbered
+scripts and the data artefacts they produce.
+Chapter~\ref{ch:evaluation} presents all empirical results, organised around the
+six pre-registered hypotheses.
+Chapter~\ref{ch:conclusion} draws the substantive conclusion and maps avenues for
+further research.

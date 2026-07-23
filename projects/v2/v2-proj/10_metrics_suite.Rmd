@@ -1,0 +1,303 @@
+---
+title: "10 Metrics Suite — Full Evaluation Metric Suite"
+author: "Abdul Ahad. Student ID: G00486649"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  bookdown::pdf_document2:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    fig_caption: true
+geometry: margin=2.3cm
+fontsize: 11pt
+header-includes:
+  - \usepackage{float}
+  - \usepackage{caption}
+  - \captionsetup[figure]{font=small}
+  - \captionsetup[table]{font=small}
+  - \renewcommand{\contentsname}{Table of Contents}
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+set.seed(486649)   # student ID for reproducibility
+
+knitr::opts_chunk$set(
+  echo = FALSE, message = FALSE, warning = FALSE,
+  fig.align = "center", fig.pos = "H",
+  out.width = "80%", fig.width = 6, fig.height = 3.6
+)
+```
+
+## Introduction
+
+A single discrimination metric (AUROC) is insufficient to evaluate a real-time clinical prediction system. This notebook applies a comprehensive metric suite designed to capture the distinct failure modes that matter at the bedside, following the recommendations of Wang et al. (2025) and Van Calster et al. (2019).
+
+**Primary metrics:**
+
+- **PhysioNet Utility Score** (Reyna et al., 2020) --- the only metric that jointly rewards early detection and penalises both missed cases and false alarms. It can go negative, exposing models that alert indiscriminately.
+- **Calibration** (intercept and slope) --- assesses whether predicted probabilities match observed event rates, a prerequisite for clinical decision-making.
+
+**Secondary metrics:**
+
+- **AUPRC** --- more informative than AUROC under severe class imbalance (Davis and Goadrich, 2006).
+- **AUROC** --- included for comparability with prior literature but interpreted with caution given the low per-hour event rate.
+- **Decision-curve net benefit** --- quantifies the range of clinical threshold preferences over which the model outperforms default strategies.
+- **Alert burden** --- false alerts per true alert; benchmark $\leq 1.4$ (Moor et al., 2023).
+- **Median lead time** --- hours of advance warning before clinical recognition.
+
+All metrics are computed in two evaluation windows: **unrestricted** (all test hours) and **treatment-anchored** (only hours before first antibiotic or culture order), following Kamran et al. (2024). The treatment-anchored window removes the information leakage that occurs when a model observes physiological changes triggered by treatment initiation.
+
+```{r load-deps}
+suppressPackageStartupMessages({
+  library(data.table)
+  library(PRROC)
+  library(dcurves)
+  library(CalibrationCurves)
+  library(dplyr)
+  library(ggplot2)
+})
+
+source("config.R")
+source("utils.R")
+
+step("=== Full Evaluation Metric Suite ===")
+```
+
+## Metric Functions
+
+Each metric is implemented as a standalone function for testability and reuse across the internal, external, and subgroup evaluations.
+
+```{r metric-fns}
+# PhysioNet Utility Score
+compute_utility_score <- function(ph_pred, pred_col, threshold = 0.5) {
+  dt <- copy(as.data.table(ph_pred))
+  dt[, .alert := as.integer(get(pred_col) >= threshold)]
+
+  stay_results <- dt[, {
+    onset_h <- onset_hour[!is.na(onset_hour)]
+    onset_h <- if (length(onset_h) > 0) onset_h[1] else NA_real_
+    alert_h <- hour[.alert == 1L]
+
+    if (!is.na(onset_h)) {
+      tp_early <- alert_h[alert_h >= (onset_h + UTILITY_TP_MIN) & alert_h <= onset_h]
+      tp_late  <- alert_h[alert_h > onset_h & alert_h <= (onset_h + UTILITY_TP_MAX)]
+      fp_pre   <- alert_h[alert_h < (onset_h + UTILITY_TP_MIN)]
+      if (length(tp_early) > 0) {
+        lead <- onset_h - min(tp_early)
+        u    <- max(0, (PREDICTION_HORIZON_H - lead) / PREDICTION_HORIZON_H)
+      } else if (length(tp_late) > 0) {
+        u <- -0.05 * length(tp_late)
+      } else {
+        u <- -1.0
+      }
+      u     <- u - 0.05 * length(fp_pre)
+      u_max <- 1.0
+    } else {
+      u     <- -0.05 * length(alert_h)
+      u_max <- 0.0
+    }
+    .(u_stay = u, u_max_stay = u_max)
+  }, by = stay_id]
+
+  U_total <- sum(stay_results$u_stay)
+  U_max   <- sum(stay_results$u_max_stay)
+  list(utility_total      = U_total,
+       utility_max        = U_max,
+       utility_normalised = if (U_max > 0) U_total / U_max else NA_real_)
+}
+
+# Calibration
+compute_calibration <- function(y_true, pred_prob) {
+  df <- data.frame(y = y_true, p = pred_prob)
+  df <- df[!is.na(df$p) & !is.na(df$y), ]
+  if (nrow(df) < 10) return(list(intercept = NA, slope = NA))
+
+  calib_model <- tryCatch(
+    glm(y ~ offset(qlogis(pmax(pmin(p, 0.999), 0.001))),
+        data = df, family = binomial),
+    error = function(e) NULL
+  )
+  intercept <- if (!is.null(calib_model)) coef(calib_model)[1] else NA_real_
+  calib_slope <- tryCatch({
+    mod <- glm(y ~ qlogis(pmax(pmin(p, 0.999), 0.001)), data = df, family = binomial)
+    coef(mod)[2]
+  }, error = function(e) NA_real_)
+
+  list(intercept = intercept, slope = calib_slope)
+}
+
+# AUROC + AUPRC
+compute_roc_pr <- function(y_true, pred_prob) {
+  if (sum(y_true, na.rm = TRUE) == 0 || sum(!y_true, na.rm = TRUE) == 0)
+    return(list(auroc = NA, auprc = NA))
+  valid <- !is.na(pred_prob) & !is.na(y_true)
+  if (sum(valid) < 10) return(list(auroc = NA, auprc = NA))
+  roc_obj <- tryCatch(
+    PRROC::roc.curve(scores.class0 = pred_prob[valid], weights.class0 = y_true[valid]),
+    error = function(e) NULL
+  )
+  pr_obj <- tryCatch(
+    PRROC::pr.curve(scores.class0 = pred_prob[valid], weights.class0 = y_true[valid]),
+    error = function(e) NULL
+  )
+  list(auroc = if (!is.null(roc_obj)) roc_obj$auc else NA_real_,
+       auprc = if (!is.null(pr_obj))  pr_obj$auc.integral else NA_real_)
+}
+
+# Alert burden
+compute_alert_burden <- function(y_true, alerts) {
+  tp <- sum(alerts == 1 & y_true == 1, na.rm = TRUE)
+  fp <- sum(alerts == 1 & y_true == 0, na.rm = TRUE)
+  if (tp == 0) return(Inf)
+  fp / tp
+}
+
+# Lead time to clinical recognition
+compute_lead_time <- function(ph_pred, pred_col, threshold = 0.5) {
+  sepsis_stays <- ph_pred[!is.na(onset_hour)]
+  if (nrow(sepsis_stays) == 0) return(NA_real_)
+  lead_times <- sepsis_stays[, {
+    rows_ord    <- .SD[order(hour)]
+    first_alert <- rows_ord[get(pred_col) >= threshold, min(hour)]
+    if (is.infinite(first_alert) || is.na(first_alert)) NA_real_
+    else as.numeric(onset_hour[1]) - as.numeric(first_alert)
+  }, by = stay_id]
+  median(lead_times$V1, na.rm = TRUE)
+}
+```
+
+## Evaluation Loop
+
+The full $\text{models} \times \text{variants} \times \text{windows}$ grid is evaluated. For each cell, all metrics are computed and decision-curve analysis is run where both the primary model and GBT predictions are available.
+
+```{r evaluate-all}
+MODEL_NAMES <- c(primary = "pred_sepsis", news2 = "pred_news2",
+                  cox = "pred_cox", gbt = "pred_gbt",
+                  qsofa = "pred_qsofa", sirs = "pred_sirs")
+
+all_results <- list()
+
+for (vid in names(LABEL_VARIANTS)) {
+  step(sprintf("--- Evaluating Variant %s (%s) ---", vid, LABEL_VARIANTS[[vid]]$name))
+
+  prim_pred_path <- file.path(OUTPUT_DIR, paste0("predictions_primary_",     vid, ".parquet"))
+  comp_pred_path <- file.path(OUTPUT_DIR, paste0("predictions_comparators_", vid, ".parquet"))
+
+  if (!file.exists(prim_pred_path)) {
+    v2_log(sprintf("  Skipping Variant %s: primary predictions not found", vid))
+    next
+  }
+
+  ph_prim <- as.data.table(arrow::read_parquet(prim_pred_path))
+  ph_comp <- if (file.exists(comp_pred_path))
+               as.data.table(arrow::read_parquet(comp_pred_path)) else NULL
+
+  ph_all <- ph_prim
+  if (!is.null(ph_comp)) {
+    merge_cols <- c("stay_id", "hour", setdiff(names(ph_comp), names(ph_prim)))
+    ph_all <- merge(ph_all, ph_comp[, ..merge_cols], by = c("stay_id", "hour"), all.x = TRUE)
+  }
+
+  eval_windows <- list(
+    unrestricted = ph_all,
+    treatment_anchored = {
+      if ("first_abx_hour" %in% names(ph_all)) {
+        anchor_h <- if ("first_culture_hour" %in% names(ph_all))
+                      pmin(ph_all$first_abx_hour, ph_all$first_culture_hour, na.rm = TRUE)
+                    else ph_all$first_abx_hour
+        ph_all[is.na(anchor_h) | hour < anchor_h]
+      } else ph_all
+    }
+  )
+
+  for (win_name in names(eval_windows)) {
+    data_win <- eval_windows[[win_name]]
+    if (nrow(data_win) == 0) next
+
+    for (mod_name in names(MODEL_NAMES)) {
+      pred_col <- MODEL_NAMES[[mod_name]]
+      if (!pred_col %in% names(data_win)) next
+      valid <- !is.na(data_win[[pred_col]])
+      if (sum(valid) < 100) next
+
+      y    <- as.integer(data_win$event == 1)
+      pred <- as.numeric(data_win[[pred_col]])
+
+      roc_pr  <- compute_roc_pr(y[valid], pred[valid])
+      calib   <- compute_calibration(y[valid], pred[valid])
+      alerts  <- as.integer(pred >= 0.5)
+      burden  <- compute_alert_burden(y[valid], alerts[valid])
+      utility <- tryCatch(
+        compute_utility_score(data_win[valid], pred_col, threshold = 0.5),
+        error = function(e) list(utility_normalised = NA, utility_total = NA)
+      )
+      lead_t  <- tryCatch(
+        compute_lead_time(data_win[valid], pred_col),
+        error = function(e) NA_real_
+      )
+
+      result_row <- data.frame(
+        variant            = vid,
+        variant_name       = LABEL_VARIANTS[[vid]]$name,
+        model              = mod_name,
+        eval_window        = win_name,
+        split_type         = "temporal",
+        n_rows             = sum(valid),
+        n_sepsis_events    = sum(y[valid]),
+        auroc              = round(roc_pr$auroc, 4),
+        auprc              = round(roc_pr$auprc, 4),
+        calib_intercept    = round(calib$intercept, 4),
+        calib_slope        = round(calib$slope, 4),
+        utility_normalised = round(utility$utility_normalised, 4),
+        alert_burden       = round(burden, 2),
+        lead_time_h        = round(lead_t, 2)
+      )
+      all_results[[paste(vid, mod_name, win_name, sep = "-")]] <- result_row
+    }
+  }
+
+  # Decision-curve analysis
+  ph_test_for_dca <- ph_all[!is.na(pred_sepsis)]
+  if (nrow(ph_test_for_dca) > 0 && "pred_gbt" %in% names(ph_test_for_dca)) {
+    ph_test_for_dca[, outcome := as.integer(event == 1)]
+    dca_result <- tryCatch(
+      dcurves::dca(outcome ~ pred_sepsis + pred_gbt,
+                   data       = as.data.frame(ph_test_for_dca),
+                   thresholds = seq(0.01, 0.20, 0.01)),
+      error = function(e) NULL
+    )
+    if (!is.null(dca_result)) {
+      dca_df <- tryCatch(dca_result$dca, error = function(e) as.data.frame(dca_result))
+      if (!is.null(dca_df) && nrow(dca_df) > 0) {
+        dca_df$variant <- vid
+        save_parquet(as.data.frame(dca_df), paste0("dca_", vid), OUTPUT_DIR)
+      }
+    }
+  }
+}
+```
+
+## Results and Interpretation
+
+The results table below is the central performance comparison. Key patterns to look for: (i) whether the primary model's Utility Score is competitive with GBT (H6), (ii) whether treatment-anchored metrics are materially lower than unrestricted (H3, indicating leakage), and (iii) whether calibration slopes deviate substantially from 1.0 (indicating miscalibration).
+
+```{r show-results}
+if (length(all_results) > 0) {
+  results_df <- do.call(rbind, all_results)
+  save_parquet(results_df, "10_metric_results", OUTPUT_DIR)
+
+  display_cols <- c("variant", "model", "eval_window", "auroc", "auprc",
+                    "utility_normalised", "alert_burden", "lead_time_h")
+  knitr::kable(
+    results_df[order(results_df$variant, results_df$eval_window, results_df$model),
+               display_cols],
+    caption = "Evaluation results --- all models $\\times$ variants $\\times$ windows (temporal split)"
+  )
+  cat("\nSaved: 10_metric_results.parquet\n")
+} else {
+  cat("No results to display --- check that 08 and 09 have been run.\n")
+}
+```

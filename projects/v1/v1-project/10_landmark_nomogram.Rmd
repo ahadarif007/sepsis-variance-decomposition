@@ -1,0 +1,215 @@
+---
+title: "Analysis 1: Full-Feature Elastic-Net Nomogram at the Hour-6 Landmark"
+author: "Abdul Ahad. Student ID: G00486649"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  bookdown::pdf_document2:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    fig_caption: true
+geometry: margin=2.3cm
+fontsize: 11pt
+header-includes:
+  - \usepackage{float}
+  - \usepackage{caption}
+  - \captionsetup[figure]{font=small}
+  - \captionsetup[table]{font=small}
+  - \renewcommand{\contentsname}{Table of Contents}
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE, fig.width=8, fig.height=5)
+```
+
+## Overview
+
+This report builds a full-feature penalised-logistic nomogram at the hour-6 landmark, establishing the statistical upper bound for predicting incident Sepsis-3 within 12 hours. Heavily-missing labs are incorporated via an informative-missingness design (median-impute plus "was it measured" indicators). Evaluation uses nested cross-validation with DeLong testing against the earlier baseline model.
+
+## Load Libraries
+
+```{r load-libraries, message=FALSE, warning=FALSE}
+suppressPackageStartupMessages({
+  library(glmnet); library(pROC); library(PRROC); library(rms)
+})
+set.seed(486649)
+```
+
+## Locate Data and Set Output Directories
+
+```{r locate-data}
+find_data <- function(f) {
+  cands <- c(file.path("../../../processed_data", f),
+             file.path("processed_data", f), f)
+  hit <- cands[file.exists(cands)][1]
+  if (is.na(hit)) stop("cannot find ", f)
+  hit
+}
+OUT <- dirname(find_data("08_landmark_h6.parquet"))
+FIG <- if (dir.exists("figure")) "figure" else { dir.create("figure"); "figure" }
+```
+
+## Load Landmark Data
+
+```{r load-data}
+lm6 <- as.data.frame(arrow::read_parquet(find_data("08_landmark_h6.parquet")))
+cat(sprintf("Loaded landmark_h6: %d stays, onset-within-12h rate %.3f\n",
+            nrow(lm6), mean(lm6$onset_within_h)))
+```
+
+## Feature Design
+
+The feature matrix combines vitals (near-complete after forward-fill), severity scores (SOFA, qSOFA, SIRS), labs with informative-missingness indicators, and 6-hour trajectory slopes. Labs (70-88% missing at hour 6) and slopes (~30% missing) use median/zero imputation with a binary "measured" flag, preserving the informative nature of missingness: a drawn lactate itself marks a sicker or suspected patient.
+
+```{r feature-design}
+vitals <- c("hr","resp_rate","map","spo2","temp_c","gcs")
+scores <- c("sofa_total","qsofa","sirs")
+labs   <- c("lactate","creatinine","wbc","pf_ratio")
+slopes <- c("hr_slope6","resp_rate_slope6","map_slope6","spo2_slope6")
+
+df <- data.frame(row.names = seq_len(nrow(lm6)))
+for (v in c(vitals, scores)) {
+  x <- lm6[[v]]; x[is.na(x)] <- median(x, na.rm = TRUE); df[[v]] <- x
+}
+for (v in labs) {
+  x <- lm6[[v]]; df[[paste0(v, "_msg")]] <- as.integer(is.na(x))
+  x[is.na(x)] <- median(x, na.rm = TRUE); df[[v]] <- x
+}
+for (v in slopes) {
+  x <- lm6[[v]]; df[[paste0(v, "_msg")]] <- as.integer(is.na(x))
+  x[is.na(x)] <- 0; df[[v]] <- x
+}
+df$age    <- lm6$age
+df$female <- as.integer(lm6$gender == "F")
+y <- lm6$onset_within_h
+X <- as.matrix(df)
+cat(sprintf("Design matrix: %d features\n", ncol(X)))
+```
+
+## Outer 5-Fold CV with Inner Lambda Selection
+
+Nested cross-validation provides honest evaluation: the outer loop splits stays into 5 folds and the inner loop (inside `cv.glmnet`) selects the optimal regularisation parameter on each training fold.
+
+```{r outer-cv}
+folds <- sample(rep(1:5, length.out = nrow(X)))
+oos_en <- numeric(nrow(X))
+ALPHA  <- 0.5
+for (k in 1:5) {
+  tr <- folds != k
+  cvfit <- cv.glmnet(X[tr, ], y[tr], family = "binomial",
+                     alpha = ALPHA, nfolds = 5, standardize = TRUE)
+  oos_en[!tr] <- as.numeric(predict(cvfit, X[!tr, ],
+                                    s = "lambda.min", type = "response"))
+}
+```
+
+## Reconstruct Baseline Models
+
+The baseline GLMs from script 09 are re-fit on the same outer folds for a fair DeLong comparison, using the imputed matrix so all models share identical rows.
+
+```{r baseline-models}
+gdat <- cbind(df, y = y)
+cvauc_glm <- function(form, data) {
+  p <- numeric(nrow(data))
+  for (k in 1:5) { tr <- folds != k
+    m <- glm(form, data[tr, ], family = binomial)
+    p[!tr] <- predict(m, data[!tr, ], type = "response") }
+  p
+}
+p_static <- cvauc_glm(y ~ age + sofa_total + qsofa + sirs +
+                        hr + resp_rate + map + spo2 + temp_c, gdat)
+p_traj   <- cvauc_glm(y ~ age + sofa_total + qsofa + sirs +
+                        hr + resp_rate + map + spo2 + temp_c +
+                        hr_slope6 + resp_rate_slope6 + map_slope6 + spo2_slope6,
+                      gdat)
+```
+
+## Compute Metrics
+
+```{r metrics}
+auc_of <- function(p) as.numeric(auc(roc(y, p, quiet = TRUE, direction = "<")))
+prauc_of <- function(p) pr.curve(scores.class0 = p[y==1],
+                                 scores.class1 = p[y==0])$auc.integral
+brier <- function(p) mean((p - y)^2)
+
+roc_en  <- roc(y, oos_en,   quiet = TRUE, direction = "<")
+roc_trj <- roc(y, p_traj,   quiet = TRUE, direction = "<")
+dl_vs_traj   <- roc.test(roc_en, roc_trj, method = "delong")$p.value
+
+metrics <- data.frame(
+  model = c("Baseline static (glm)", "Baseline + trajectory slopes (glm, 0.755 AUROC)",
+            "Analysis1 full-feature elastic net"),
+  auroc = c(auc_of(p_static), auc_of(p_traj), auc_of(oos_en)),
+  prauc = c(prauc_of(p_static), prauc_of(p_traj), prauc_of(oos_en)),
+  brier = c(brier(p_static), brier(p_traj), brier(oos_en)))
+metrics$delong_p_vs_baseline_traj <- c(NA, NA, dl_vs_traj)
+metrics[ ,-1] <- round(metrics[ ,-1], 4)
+print(metrics, row.names = FALSE)
+write.csv(metrics, file.path(OUT, "10_analysis1_metrics.csv"), row.names = FALSE)
+```
+
+## Final Model Coefficients
+
+The elastic-net model is fit on all data to extract penalised coefficients and odds ratios. Only features with non-zero coefficients are retained.
+
+```{r final-model-coefs}
+cvfull <- cv.glmnet(X, y, family = "binomial", alpha = ALPHA,
+                    nfolds = 5, standardize = TRUE)
+co <- as.matrix(coef(cvfull, s = "lambda.min"))
+coefs <- data.frame(term = rownames(co), coef = as.numeric(co))
+coefs$odds_ratio <- exp(coefs$coef)
+coefs <- coefs[coefs$coef != 0, ]
+coefs[ ,c("coef","odds_ratio")] <- round(coefs[ ,c("coef","odds_ratio")], 4)
+write.csv(coefs, file.path(OUT, "10_analysis1_coefs.csv"), row.names = FALSE)
+cat(sprintf("\nSelected features (non-zero at lambda.min): %d / %d\n",
+            nrow(coefs) - 1, ncol(X)))
+```
+
+## Export Out-of-Sample Predictions
+
+Per-stay out-of-sample risk estimates feed into the Analysis 4 alarm/utility analysis downstream.
+
+```{r export-oos-predictions}
+arrow::write_parquet(data.frame(stay_id = lm6$stay_id, onset_within_h = y,
+                     risk_en = oos_en, risk_baseline_traj = p_traj),
+          file.path(OUT, "10_analysis1_oos_pred.parquet"))
+```
+
+## Calibration Curve
+
+```{r calibration-curve, fig.width=6, fig.height=6}
+png(file.path(FIG, "10_calibration_h6.png"), width = 1000, height = 1000, res = 200)
+bins <- cut(oos_en, quantile(oos_en, seq(0, 1, 0.1)), include.lowest = TRUE)
+cal <- aggregate(cbind(pred = oos_en, obs = y), list(bin = bins), mean)
+plot(cal$pred, cal$obs, pch = 19, xlab = "Predicted risk",
+     ylab = "Observed onset rate", main = "Calibration (out-of-sample, h6)",
+     xlim = range(cal$pred, cal$obs), ylim = range(cal$pred, cal$obs))
+abline(0, 1, lty = 2, col = "grey50"); lines(cal$pred, cal$obs, col = "steelblue")
+dev.off()
+```
+
+## Nomogram
+
+An unpenalised logistic regression (`lrm`) is refit on the features selected by elastic net, producing a clinician-facing nomogram.
+
+```{r nomogram, fig.width=10, fig.height=8}
+sel <- setdiff(coefs$term, "(Intercept)")
+nomo_df <- df[, intersect(sel, names(df)), drop = FALSE]; nomo_df$y <- y
+dd <- datadist(nomo_df); options(datadist = "dd")
+frm <- as.formula(paste("y ~", paste(names(nomo_df)[names(nomo_df) != "y"],
+                                     collapse = " + ")))
+fit_lrm <- lrm(frm, data = nomo_df, maxit = 1000)
+png(file.path(FIG, "10_nomogram_h6.png"), width = 1800, height = 1400, res = 180)
+plot(nomogram(fit_lrm, fun = plogis, funlabel = "Risk of sepsis within 12h"),
+     cex.axis = 0.6, cex.var = 0.7)
+dev.off()
+```
+
+## Done
+
+```{r done}
+cat("\nAnalysis 1 complete. Outputs in", OUT, "and", FIG, "\n")
+```

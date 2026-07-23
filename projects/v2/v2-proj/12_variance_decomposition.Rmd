@@ -1,0 +1,309 @@
+---
+title: "12 Variance Decomposition — Attribution of Performance Variation"
+author: "Abdul Ahad. Student ID: G00486649"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  bookdown::pdf_document2:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    fig_caption: true
+geometry: margin=2.3cm
+fontsize: 11pt
+header-includes:
+  - \usepackage{float}
+  - \usepackage{caption}
+  - \captionsetup[figure]{font=small}
+  - \captionsetup[table]{font=small}
+  - \renewcommand{\contentsname}{Table of Contents}
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+set.seed(486649)   # student ID for reproducibility
+
+knitr::opts_chunk$set(
+  echo = FALSE, message = FALSE, warning = FALSE,
+  fig.align = "center", fig.pos = "H",
+  out.width = "80%", fig.width = 6, fig.height = 3.6
+)
+```
+
+## Introduction
+
+This is the central analytical output of V2: a structured variance decomposition that attributes observed variation in reported performance to each analytical decision, with all others held fixed. The motivation is Cohen et al.'s (2024) observation that published sepsis prediction studies vary simultaneously across label definition, model class, evaluation metric, and validation strategy --- making it impossible to determine which factor drives reported differences. By systematically varying one factor at a time, this analysis isolates each source of variation.
+
+The five factors and their levels are:
+
+| Factor | Levels |
+|--------|--------|
+| Model class | Discrete-time hazard, Cox PH, GBT, NEWS2 |
+| Label operationalisation | Variant A (Narrow), B (Seymour-Standard), C (Liberal) |
+| Validation split | Temporal, random |
+| Prediction-time anchoring | Treatment-anchored, unrestricted |
+| Evaluation metric | Utility Score, calibration, AUROC, AUPRC |
+
+Six pre-registered hypotheses structure the interpretation:
+
+| \# | Claim | Threshold |
+|----|-------|-----------|
+| H1 | Label-variant spread $\geq$ model-class spread in AUROC | label spread $\geq$ model spread |
+| H2 | Coefficient instability across labels | $\geq$ 1 covariate changes sign |
+| H3 | Treatment-anchored AUROC $<$ unrestricted | $\Delta \geq 0.03$ |
+| H4 | Temporal-split AUROC $<$ random-split | $\Delta \geq 0.02$ |
+| H5 | Utility degradation $>$ AUROC degradation (internal $\to$ external) | ratio comparison |
+| H6 | $|\text{primary} - \text{GBT}| \leq 0.02$ AUROC | $|\Delta| \leq 0.02$ |
+
+```{r load-deps}
+suppressPackageStartupMessages({
+  library(data.table)
+  library(dplyr)
+  library(ggplot2)
+  library(tidyr)
+})
+
+source("config.R")
+source("utils.R")
+
+step("=== Phase 6a: Variance Decomposition ===")
+```
+
+## Load Metric Results
+
+The metric results from the internal evaluation (10), external validation (11), and cross-label coefficient table (08) are loaded as inputs to the decomposition.
+
+```{r load-metrics}
+metric_path <- file.path(OUTPUT_DIR, "10_metric_results.csv")
+ext_path    <- file.path(OUTPUT_DIR, "11_external_validation_results.csv")
+coef_path   <- file.path(OUTPUT_DIR, "coef_all_variants.csv")
+
+if (!file.exists(metric_path))
+  stop("10_metric_results.csv not found. Run 10_metrics_suite.Rmd first.")
+
+metrics    <- as.data.table(data.table::fread(metric_path))
+ext_res    <- if (file.exists(ext_path))  as.data.table(data.table::fread(ext_path))  else NULL
+coef_table <- if (file.exists(coef_path)) as.data.table(data.table::fread(coef_path)) else NULL
+
+cat(sprintf("Metric results loaded: %d rows\n", nrow(metrics)))
+knitr::kable(metrics[, .(variant, model, eval_window, auroc, auprc,
+                           utility_normalised, alert_burden, lead_time_h)],
+             caption = "All evaluation results (from 10_metrics_suite.Rmd)")
+```
+
+## Variance by Factor
+
+Each factor's spread is computed as the range of AUROC (or Utility Score) across that factor's levels, with all other factors held at their reference values: Variant B, primary model, temporal split, unrestricted evaluation window.
+
+```{r variance-by-factor}
+# Factor 1: MODEL CLASS — label=B, temporal, unrestricted
+model_class_rows   <- metrics[variant == "B" & eval_window == "unrestricted"]
+model_spread_auroc   <- if (nrow(model_class_rows) > 0) diff(range(model_class_rows$auroc, na.rm = TRUE)) else NA
+model_spread_utility <- if (nrow(model_class_rows) > 0) diff(range(model_class_rows$utility_normalised, na.rm = TRUE)) else NA
+
+# Factor 2: LABEL VARIANT — model=primary, temporal, unrestricted
+label_rows         <- metrics[model == "primary" & eval_window == "unrestricted"]
+label_spread_auroc   <- if (nrow(label_rows) > 0) diff(range(label_rows$auroc, na.rm = TRUE)) else NA
+label_spread_utility <- if (nrow(label_rows) > 0) diff(range(label_rows$utility_normalised, na.rm = TRUE)) else NA
+
+# Factor 3: PREDICTION-TIME ANCHORING — model=primary, variant=B, temporal
+anchor_rows_B  <- metrics[model == "primary" & variant == "B"]
+anchor_unrestr <- anchor_rows_B[eval_window == "unrestricted",         auroc]
+anchor_treatm  <- anchor_rows_B[eval_window == "treatment_anchored",   auroc]
+h3_delta_auroc <- if (length(anchor_unrestr) > 0 && length(anchor_treatm) > 0)
+                    anchor_unrestr - anchor_treatm else NA
+
+# Factor 4: VALIDATION SPLIT (temporal vs random)
+random_path <- file.path(OUTPUT_DIR, "10_metric_results_random.csv")
+if (file.exists(random_path)) {
+  metrics_random <- as.data.table(data.table::fread(random_path))
+  temporal_auroc <- metrics[model == "primary" & variant == "B" &
+                               eval_window == "unrestricted", auroc]
+  random_auroc   <- metrics_random[model == "primary" & variant == "B" &
+                                    eval_window == "unrestricted", auroc]
+  h4_delta_auroc <- if (length(random_auroc) > 0 && length(temporal_auroc) > 0)
+                      random_auroc - temporal_auroc else NA
+} else {
+  h4_delta_auroc <- NA
+  cat("Random split results not found; H4 cannot be tested.\n")
+}
+
+# Factor 5: METRIC
+internal_primary_B <- metrics[model == "primary" & variant == "B" & eval_window == "unrestricted"]
+h5_internal_auroc  <- if (nrow(internal_primary_B) > 0) internal_primary_B$auroc else NA
+h5_internal_util   <- if (nrow(internal_primary_B) > 0) internal_primary_B$utility_normalised else NA
+if (!is.null(ext_res)) {
+  ext_primary_B <- ext_res[variant == "B" & model == "pred_sepsis"]
+  h5_ext_auroc  <- if (nrow(ext_primary_B) > 0) ext_primary_B$auroc else NA
+} else { h5_ext_auroc <- NA }
+
+# Factor 6: MODEL CLASS NULL (H6)
+if (nrow(model_class_rows) > 0) {
+  prim_auroc <- model_class_rows[model == "primary", auroc]
+  gbt_auroc  <- model_class_rows[model == "gbt",     auroc]
+  h6_delta   <- if (length(prim_auroc) > 0 && length(gbt_auroc) > 0)
+                  abs(prim_auroc - gbt_auroc) else NA
+} else { h6_delta <- NA }
+```
+
+## The Variance Decomposition Table
+
+This table is the thesis's primary deliverable. Each row quantifies how much a single analytical decision shifts reported performance, providing empirical evidence for the claim that methodological heterogeneity --- not genuine model superiority --- explains much of the published variation in sepsis prediction benchmarks.
+
+```{r decomp-table}
+decomp_table <- data.frame(
+  factor = c(
+    "Model class (label=B, temporal, unrestricted)",
+    "Label operationalisation (model=primary, temporal, unrestricted)",
+    "Prediction-time anchoring (model=primary, variant=B, temporal)",
+    "Validation split (temporal vs random, model=primary, variant=B)",
+    "Metric (AUROC vs Utility, internal→external, model=primary, variant=B)",
+    "Model-class null |primary − GBT| (variant=B, temporal, unrestricted)"
+  ),
+  spread_auroc = round(c(model_spread_auroc, label_spread_auroc,
+                          h3_delta_auroc, h4_delta_auroc,
+                          if (!is.na(h5_internal_auroc) && !is.na(h5_ext_auroc))
+                            h5_internal_auroc - h5_ext_auroc else NA,
+                          h6_delta), 4),
+  spread_utility = round(c(model_spread_utility, label_spread_utility,
+                             NA, NA, NA, NA), 4),
+  hypothesis  = c("—", "H1", "H3", "H4", "H5", "H6"),
+  h_threshold = c("—", "label ≥ model", "Δ ≥ 0.03", "Δ ≥ 0.02",
+                   "utility drop > AUROC drop", "|Δ| ≤ 0.02")
+)
+
+knitr::kable(decomp_table, caption = "THE VARIANCE DECOMPOSITION TABLE")
+save_parquet(decomp_table, "12_variance_decomposition_table", OUTPUT_DIR)
+```
+
+## Hypothesis Test Verdicts
+
+Each pre-registered hypothesis is evaluated against its specified threshold. "CONFIRMED" means the observed effect meets or exceeds the threshold; "NOT confirmed" means it falls short. These are descriptive verdicts, not formal statistical tests with $p$-values --- the thresholds were chosen to represent clinically meaningful effect sizes.
+
+```{r hypothesis-verdicts}
+step("Hypothesis test verdicts...")
+verdicts <- list()
+
+# H1
+if (!is.na(label_spread_auroc) && !is.na(model_spread_auroc)) {
+  h1_result <- label_spread_auroc >= model_spread_auroc
+  cat(sprintf("H1 (Label dominance): label_spread=%.3f, model_spread=%.3f → %s\n",
+              label_spread_auroc, model_spread_auroc,
+              if (h1_result) "CONFIRMED" else "NOT confirmed"))
+  verdicts[["H1"]] <- data.frame(hypothesis = "H1", finding = "Label dominance",
+                                  threshold = "label >= model",
+                                  observed  = sprintf("label=%.3f, model=%.3f",
+                                                      label_spread_auroc, model_spread_auroc),
+                                  confirmed = h1_result)
+}
+
+# H2
+if (!is.null(coef_table) && "term" %in% names(coef_table)) {
+  coef_sep <- coef_table[outcome == "sepsis" &
+                           !grepl("^ns\\(|^\\(Intercept\\)", as.character(term))]
+  if (nrow(coef_sep) > 0) {
+    common_terms <- Reduce(intersect, lapply(c("A","B","C"), function(v)
+      unique(as.character(coef_sep[variant == v, term]))))
+    sign_changes <- character(0)
+    for (tm in common_terms) {
+      vals  <- sapply(c("A","B","C"), function(v) {
+        r <- coef_sep[variant == v & as.character(term) == tm, coef]
+        if (length(r) == 0) NA_real_ else as.numeric(r[1])
+      })
+      signs <- sign(vals[!is.na(vals)])
+      if (length(signs) >= 2 && diff(range(signs)) != 0)
+        sign_changes <- c(sign_changes, tm)
+    }
+    h2_result <- length(sign_changes) >= 1
+    cat(sprintf("H2 (Coefficient instability): %d sign-changes: %s → %s\n",
+                length(sign_changes), paste(head(sign_changes, 3), collapse = ", "),
+                if (h2_result) "CONFIRMED" else "NOT confirmed"))
+    verdicts[["H2"]] <- data.frame(hypothesis = "H2", finding = "Coefficient instability",
+                                    threshold = ">=1 covariate changes sign",
+                                    observed  = paste(sign_changes, collapse = "; "),
+                                    confirmed = h2_result)
+  }
+}
+
+# H3
+if (!is.na(h3_delta_auroc)) {
+  h3_result <- h3_delta_auroc >= 0.03
+  cat(sprintf("H3 (Leakage): unrestricted − anchored AUROC Δ=%.3f → %s\n",
+              h3_delta_auroc, if (h3_result) "CONFIRMED" else "NOT confirmed (< 0.03)"))
+  verdicts[["H3"]] <- data.frame(hypothesis = "H3", finding = "Leakage via treatment anchoring",
+                                  threshold = "Δ ≥ 0.03",
+                                  observed  = sprintf("Δ=%.3f", h3_delta_auroc),
+                                  confirmed = h3_result)
+}
+
+# H4
+if (!is.na(h4_delta_auroc)) {
+  h4_result <- h4_delta_auroc >= 0.02
+  cat(sprintf("H4 (Split optimism): random − temporal AUROC Δ=%.3f → %s\n",
+              h4_delta_auroc, if (h4_result) "CONFIRMED" else "NOT confirmed (< 0.02)"))
+  verdicts[["H4"]] <- data.frame(hypothesis = "H4", finding = "Split optimism",
+                                  threshold = "Δ ≥ 0.02",
+                                  observed  = sprintf("Δ=%.3f", h4_delta_auroc),
+                                  confirmed = h4_result)
+}
+
+# H6
+if (!is.na(h6_delta)) {
+  h6_result <- h6_delta <= 0.02
+  cat(sprintf("H6 (Model-class null): |primary − GBT| AUROC=%.3f → %s\n",
+              h6_delta, if (h6_result) "NOT rejected (interpretable ≈ GBT)"
+                        else "REJECTED (GBT wins by > 0.02)"))
+  verdicts[["H6"]] <- data.frame(hypothesis = "H6", finding = "Model-class null",
+                                  threshold = "|Δ| ≤ 0.02",
+                                  observed  = sprintf("Δ=%.3f", h6_delta),
+                                  confirmed = h6_result)
+}
+
+if (length(verdicts) > 0) {
+  verdicts_df <- do.call(rbind, verdicts)
+  knitr::kable(verdicts_df, caption = "Hypothesis test verdicts")
+  save_parquet(verdicts_df, "12_hypothesis_verdicts", OUTPUT_DIR)
+}
+```
+
+## Variance Decomposition Plots
+
+Two complementary visualisations summarise the decomposition: the label-variant effect on AUROC (holding model class fixed) and the model-class effect (holding the label fixed). If H1 is confirmed, the first plot's bar spread exceeds the second's.
+
+```{r variance-plots, fig.cap="Variance decomposition: label-variant and model-class effects on AUROC.", fig.width=6, fig.height=4}
+if (nrow(metrics[!is.na(auroc)]) > 0) {
+  # Label-variant effect
+  tryCatch({
+    p_label <- ggplot(metrics[model == "primary" & eval_window == "unrestricted"],
+                       aes(x = variant, y = auroc, fill = variant)) +
+      geom_col() +
+      geom_hline(yintercept = if (!is.na(h5_internal_auroc)) h5_internal_auroc else 0.75,
+                 linetype = "dashed") +
+      labs(title    = "Label-variant effect on AUROC (primary model, temporal split)",
+           subtitle = "H1: label spread should be ≥ model-class spread",
+           x = "Label Variant", y = "AUROC") +
+      theme_bw() + theme(legend.position = "none")
+    print(p_label)
+    ggsave(file.path(OUTPUT_DIR, "12_label_variance_auroc.png"), p_label,
+           width = 6, height = 4, dpi = 150)
+  }, error = function(e) cat("Label plot failed:", e$message, "\n"))
+
+  # Model-class effect
+  tryCatch({
+    p_model <- ggplot(metrics[variant == "B" & eval_window == "unrestricted" & !is.na(auroc)],
+                       aes(x = model, y = auroc, fill = model)) +
+      geom_col() +
+      labs(title    = "Model-class effect on AUROC (Variant B, temporal split)",
+           subtitle = "H6: |primary − GBT| ≤ 0.02",
+           x = "Model", y = "AUROC") +
+      theme_bw() + theme(axis.text.x = element_text(angle = 30, hjust = 1),
+                         legend.position = "none")
+    print(p_model)
+    ggsave(file.path(OUTPUT_DIR, "12_model_class_auroc.png"), p_model,
+           width = 6, height = 4, dpi = 150)
+  }, error = function(e) cat("Model plot failed:", e$message, "\n"))
+}
+
+cat("\nVariance decomposition complete.\n")
+```

@@ -1,0 +1,439 @@
+---
+title: "11 External Validation — eICU-CRD External Validation"
+author: "Abdul Ahad. Student ID: G00486649"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  bookdown::pdf_document2:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    fig_caption: true
+geometry: margin=2.3cm
+fontsize: 11pt
+header-includes:
+  - \usepackage{float}
+  - \usepackage{caption}
+  - \captionsetup[figure]{font=small}
+  - \captionsetup[table]{font=small}
+  - \renewcommand{\contentsname}{Table of Contents}
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+set.seed(486649)   # student ID for reproducibility
+
+knitr::opts_chunk$set(
+  echo = FALSE, message = FALSE, warning = FALSE,
+  fig.align = "center", fig.pos = "H",
+  out.width = "80%", fig.width = 6, fig.height = 3.6
+)
+```
+
+## Introduction
+
+External validation on a geographically and temporally distinct dataset is the minimum standard for claiming generalisability of a clinical prediction model (Collins et al., 2024, TRIPOD+AI). The eICU Collaborative Research Database (Pollard et al., 2018) provides multi-centre US ICU data that differs from MIMIC-IV in patient demographics, clinical protocols, and data collection infrastructure --- making it a meaningful external test.
+
+The pre-registered expected AUC degradation is approximately 0.085 (Moor et al., 2023). A materially **smaller** drop would suggest the external cohort is insufficiently distant to constitute a genuine transportability test. Conversely, this analysis tests hypothesis **H5**: that the proportional decline in Utility Score exceeds the proportional decline in AUROC, reflecting the Utility Score's greater sensitivity to distributional shift.
+
+The procedure is:
+
+1. Build an eICU person-hour table with variables harmonised to the MIMIC-IV naming convention (following ricu conventions; Bennett et al., 2023)
+2. Apply the Sepsis-3 Variant B onset definition
+3. Load the MIMIC-IV trained models --- **no retraining or recalibration**
+4. Evaluate using the same metric suite as the internal analysis
+5. Compare internal vs. external performance to quantify transportability
+
+```{r load-deps}
+suppressPackageStartupMessages({
+  library(data.table)
+  library(lubridate)
+  library(nnet)
+  library(splines)
+  library(xgboost)
+  library(PRROC)
+  library(dplyr)
+})
+
+source("config.R")
+source("utils.R")
+source("clinical_scores.R")
+
+step("=== Phase 5: External Validation on eICU-CRD ===")
+cat(sprintf("Pre-registered expected degradation: %.3f AUC\n",
+            EXPECTED_EXTERNAL_DEGRADATION))
+```
+
+## Load eICU Patient Table
+
+The eICU patient table provides demographics and ICU-level outcomes. The same age ($\geq$ 18) and length-of-stay ($\geq$ 4 hours) filters used for MIMIC-IV are applied to maintain cohort comparability.
+
+```{r load-eicu-patients}
+step("Loading eICU tables...")
+
+eicu_patient <- data.table::fread(file.path(EICU_DIR, "patient.csv.gz"),
+                                   showProgress = FALSE)
+cat(sprintf("eICU patients (raw): %s\n", format(nrow(eicu_patient), big.mark = ",")))
+
+eicu_patient[, age_num := suppressWarnings(as.numeric(age))]
+eicu_patient[age == ">89", age_num := 90]
+eicu_patient[, los_hours := unitdischargeoffset / 60]
+eicu_patient <- eicu_patient[!is.na(age_num) & age_num >= MIN_AGE &
+                               los_hours >= MIN_ICU_LOS_HOURS]
+cat(sprintf("eICU cohort after exclusions: %s\n",
+            format(nrow(eicu_patient), big.mark = ",")))
+```
+
+## Vital Signs (vitalPeriodic)
+
+The vitalPeriodic table ($\sim$1.7 GB compressed) is loaded via DuckDB with pushdown filters on cohort membership and the observation time window, avoiding full materialisation in R memory.
+
+```{r load-vitals}
+step("Loading eICU vitals...")
+
+vp_path <- file.path(EICU_DIR, "vitalPeriodic.csv.gz")
+if (file.exists(vp_path)) {
+  suppressPackageStartupMessages(library(duckdb))
+  .vp_con <- dbConnect(duckdb(), dbdir = ":memory:")
+  dbWriteTable(.vp_con, "cohort_stays",
+               data.frame(patientunitstayid = as.integer(eicu_patient$patientunitstayid)))
+  sql_vp <- sprintf(
+    "SELECT t.patientunitstayid, t.observationoffset,
+            t.heartrate, t.respiration, t.sao2,
+            t.systemicsystolic, t.systemicmean, t.temperature
+     FROM read_csv('%s', header=true, compression='gzip') t
+     INNER JOIN cohort_stays c ON t.patientunitstayid = c.patientunitstayid
+     WHERE t.observationoffset >= 0 AND t.observationoffset <= %d",
+    vp_path, MAX_PANEL_HOURS * 60L
+  )
+  v2_log("DuckDB: loading vitalPeriodic filtered to cohort + 72h window...")
+  vp <- as.data.table(dbGetQuery(.vp_con, sql_vp))
+  dbDisconnect(.vp_con, shutdown = TRUE)
+  cat(sprintf("vitalPeriodic (cohort-filtered): %s rows\n", format(nrow(vp), big.mark = ",")))
+
+  setnames(vp, c("patientunitstayid","observationoffset","heartrate","respiration",
+                  "sao2","systemicsystolic","systemicmean","temperature"),
+               c("stay_id","obs_offset_m","hr","resp_rate","spo2","sbp","map","temp_c"))
+  vp[, obs_hour := floor(obs_offset_m / 60)]
+  vp[!is.na(temp_c) & (temp_c < 30 | temp_c > 45), temp_c := NA]
+  vp_hr <- vp[, .(hr        = mean(hr,        na.rm = TRUE),
+                   resp_rate = mean(resp_rate, na.rm = TRUE),
+                   spo2      = mean(spo2,      na.rm = TRUE),
+                   sbp       = mean(sbp,       na.rm = TRUE),
+                   map       = mean(map,       na.rm = TRUE),
+                   temp_c    = mean(temp_c,    na.rm = TRUE)),
+               by = .(stay_id, obs_hour)]
+  rm(vp); gc()
+} else {
+  vp_hr <- data.table()
+  v2_log("vitalPeriodic not found", level = "WARN")
+}
+```
+
+## Lab Values
+
+Laboratory values are mapped from eICU naming conventions to the MIMIC-IV variable names used during model training. PaO$_2$/FiO$_2$ ratios are computed where both components are available.
+
+```{r load-labs}
+step("Loading eICU labs...")
+
+lab_path <- file.path(EICU_DIR, "lab.csv.gz")
+if (file.exists(lab_path)) {
+  eicu_lab <- data.table::fread(lab_path, showProgress = FALSE,
+                                 select = c("patientunitstayid", "labresultoffset",
+                                            "labname", "labresult"))
+  setnames(eicu_lab, c("patientunitstayid","labresultoffset","labname","labresult"),
+                     c("stay_id","obs_offset_m","labname","value"))
+  eicu_lab[, obs_hour := floor(obs_offset_m / 60)]
+  eicu_lab <- eicu_lab[obs_hour >= 0 & obs_hour <= MAX_PANEL_HOURS & !is.na(value)]
+  eicu_lab[, value := as.numeric(value)]
+
+  lab_map <- c("lactate" = "lactate", "creatinine" = "creatinine",
+               "total bilirubin" = "bilirubin_total", "platelets x 1000" = "platelets",
+               "WBC x 1000" = "wbc", "paO2" = "pao2", "FiO2" = "fio2_lab",
+               "sodium" = "sodium", "potassium" = "potassium")
+  eicu_lab <- eicu_lab[labname %in% names(lab_map)]
+  eicu_lab[, var_name := lab_map[labname]]
+
+  lab_hr <- dcast(
+    eicu_lab[, .(value = mean(value, na.rm = TRUE)),
+              by = .(stay_id, obs_hour, var_name)],
+    stay_id + obs_hour ~ var_name, value.var = "value", fun.aggregate = mean
+  )
+  if ("pao2" %in% names(lab_hr) && "fio2_lab" %in% names(lab_hr)) {
+    lab_hr[, fio2_frac := ifelse(fio2_lab > 1, fio2_lab / 100, fio2_lab)]
+    lab_hr[, pf_ratio  := ifelse(!is.na(pao2) & !is.na(fio2_frac) & fio2_frac > 0,
+                                  pao2 / fio2_frac, NA_real_)]
+    lab_hr[, c("fio2_lab", "fio2_frac") := NULL]
+  }
+} else {
+  lab_hr <- data.table()
+  v2_log("lab.csv not found", level = "WARN")
+}
+```
+
+## Suspected Infection (eICU)
+
+The same Variant B antibiotic--culture window logic is applied to eICU medication and microbiology tables, with offsets converted from minutes to hours. eICU records drug administration times as minute offsets from ICU admission rather than absolute timestamps.
+
+```{r eicu-suspected-infection}
+step("Loading eICU infection events...")
+
+micro_path <- file.path(EICU_DIR, "microLab.csv.gz")
+med_path   <- file.path(EICU_DIR, "medication.csv.gz")
+eicu_abx   <- data.table()
+eicu_culture <- data.table()
+
+if (file.exists(med_path)) {
+  meds <- data.table::fread(med_path, showProgress = FALSE,
+                              select = c("patientunitstayid","drugstartoffset","drugname"))
+  meds[, is_abx := match_antibiotics(drugname, ANTIBIOTICS)]
+  eicu_abx <- meds[is_abx == TRUE & !is.na(drugstartoffset),
+                    .(stay_id = patientunitstayid,
+                      abx_hour = floor(drugstartoffset / 60))]
+}
+
+if (file.exists(micro_path)) {
+  micro <- data.table::fread(micro_path, showProgress = FALSE,
+                               select = c("patientunitstayid","culturetakenoffset","culturesite"))
+  eicu_culture <- micro[!is.na(culturetakenoffset),
+                         .(stay_id = patientunitstayid,
+                           culture_hour = floor(culturetakenoffset / 60))]
+}
+
+v <- LABEL_VARIANTS[["B"]]
+eicu_susp <- data.table()
+if (nrow(eicu_abx) > 0 && nrow(eicu_culture) > 0) {
+  susp_raw <- merge(eicu_abx, eicu_culture, by = "stay_id", allow.cartesian = TRUE)
+  susp_raw[, dt_abx_before := culture_hour - abx_hour]
+  susp_raw[, dt_cul_before := abx_hour - culture_hour]
+  susp_raw <- susp_raw[
+    (dt_abx_before >= 0 & dt_abx_before <= v$abx_before_culture_h) |
+    (dt_cul_before >= 0 & dt_cul_before <= v$culture_before_abx_h)
+  ]
+  if (nrow(susp_raw) > 0) {
+    susp_raw[, t_susp_h := pmax(abx_hour, culture_hour)]
+    setorderv(susp_raw, c("stay_id", "t_susp_h"))
+    eicu_susp <- susp_raw[, .SD[1], by = stay_id][, .(stay_id, t_susp_h)]
+  }
+}
+cat(sprintf("eICU suspected infection stays: %d\n", nrow(eicu_susp)))
+```
+
+## Build eICU Person-Hour Table
+
+The eICU person-hour table follows the same construction as MIMIC-IV (dense hourly grid, LOCF, missingness indicators, rolling slopes, clinical scores). GCS is unavailable in eICU vitalPeriodic and is set to NA --- this is a known limitation that may attenuate neurological-component scoring.
+
+```{r build-eicu-person-hours}
+step("Building eICU person-hour table...")
+
+eicu_stays <- eicu_patient[, .(stay_id = patientunitstayid, los_hours,
+                                age = age_num, gender, ethnicity,
+                                hospital_expire = unitdischargestatus == "Expired")]
+grid <- build_person_hour_grid(eicu_stays, max_hours = MAX_PANEL_HOURS)
+
+if (nrow(vp_hr) > 0) {
+  if ("obs_hour" %in% names(vp_hr)) setnames(vp_hr, "obs_hour", "hour")
+  grid <- merge(grid, vp_hr, by = c("stay_id", "hour"), all.x = TRUE)
+}
+if (nrow(lab_hr) > 0) {
+  if (!"hour" %in% names(lab_hr) && "obs_hour" %in% names(lab_hr))
+    setnames(lab_hr, "obs_hour", "hour")
+  grid <- merge(grid, lab_hr, by = c("stay_id", "hour"), all.x = TRUE)
+}
+
+fill_cols <- intersect(c("hr","resp_rate","spo2","map","sbp","temp_c",
+                          "lactate","creatinine","bilirubin_total","platelets",
+                          "wbc","pf_ratio"), names(grid))
+grid <- ffill_by_stay(grid, fill_cols)
+
+for (mc in c("lactate","creatinine","bilirubin_total","platelets","wbc","pf_ratio")) {
+  if (mc %in% names(grid))
+    grid[[paste0(mc, "_measured")]] <- as.integer(!is.na(grid[[mc]]))
+}
+for (col in intersect(c("hr","resp_rate","map","temp_c"), names(grid)))
+  grid <- rolling_mean_by_stay(grid, col, n_h = SLOPE_WINDOW_H,
+                                col_out = paste0(col, "_slope6h"))
+
+if (nrow(eicu_susp) > 0) {
+  grid <- merge(grid, eicu_susp, by = "stay_id", all.x = TRUE)
+  grid[, onset_hour := t_susp_h]
+  grid[, vaso_any       := FALSE]
+  grid[, norepi_epi_any := FALSE]
+  if (!"bilirubin" %in% names(grid) && "bilirubin_total" %in% names(grid))
+    grid[, bilirubin := bilirubin_total]
+  if (!"gcs" %in% names(grid)) grid[, gcs := NA_real_]
+  sofa_scores <- score_sofa(as.data.frame(grid))
+  grid[, sofa_total := sofa_scores$sofa_total]
+  grid[!is.na(onset_hour) & (is.na(sofa_total) | sofa_total < SOFA_INCREASE_THRESHOLD),
+       onset_hour := NA_integer_]
+}
+
+grid <- merge(grid, eicu_stays[, .(stay_id, hospital_expire)], by = "stay_id", all.x = TRUE)
+grid_last <- grid[, .(max_h = max(hour)), by = stay_id]
+grid <- merge(grid, grid_last, by = "stay_id", all.x = TRUE)
+grid[, event := 0L]
+grid[!is.na(onset_hour) & hour == onset_hour,                     event := 1L]
+grid[hour == max_h & is.na(onset_hour) & hospital_expire == TRUE,  event := 3L]
+grid[hour == max_h & is.na(onset_hour) & hospital_expire == FALSE, event := 2L]
+grid[, at_risk := is.na(onset_hour) | hour <= onset_hour]
+grid <- grid[at_risk == TRUE]
+
+nr_grid  <- nrow(grid)
+fio2_v   <- grid$fio2;  if (is.null(fio2_v)) fio2_v  <- rep(NA_real_, nr_grid)
+gcs_v    <- grid$gcs;   if (is.null(gcs_v))  gcs_v   <- rep(NA_real_, nr_grid)
+spo2_v   <- grid$spo2;  if (is.null(spo2_v)) spo2_v  <- rep(NA_real_, nr_grid)
+suppl_o2   <- !is.na(fio2_v) & fio2_v > 0.21
+avpu_alert <- !is.na(gcs_v)  & gcs_v  >= 14
+news2_scores <- news2(grid$resp_rate, spo2_v, suppl_o2, grid$sbp, grid$hr,
+                       grid$temp_c, avpu_alert)
+grid[, names(news2_scores) := news2_scores]
+grid[, qsofa_score := qsofa(resp_rate, gcs, map)]
+
+save_parquet(grid, "eicu_person_hours", OUTPUT_DIR)
+cat(sprintf("eICU person-hours: %s rows, %d events\n",
+            format(nrow(grid), big.mark = ","), sum(grid$event == 1)))
+```
+
+## Apply MIMIC-IV Trained Models
+
+Trained model objects are loaded from disk and applied to the eICU data without any parameter updates. Missing features in the eICU data are zero-filled, matching the imputation strategy used during training. Predictions are generated in chunks to manage memory.
+
+```{r apply-models}
+step("Applying trained models to eICU cohort...")
+
+BASE_FEATURES <- c(
+  "hr","resp_rate","spo2","map","temp_c","gcs",
+  "lactate","creatinine","bilirubin_total","platelets","wbc",
+  "vaso_any","norepi_epi_any",
+  "hr_slope6h","resp_rate_slope6h","map_slope6h",
+  "lactate_measured","creatinine_measured","bilirubin_total_measured",
+  "platelets_measured","wbc_measured","pf_ratio_measured"
+)
+
+eval_results <- list()
+
+for (vid in names(LABEL_VARIANTS)) {
+  prim_model_path <- file.path(OUTPUT_DIR, paste0("model_primary_", vid, ".rds"))
+  gbt_model_path  <- file.path(OUTPUT_DIR, paste0("model_gbt_",     vid, ".rds"))
+  if (!file.exists(prim_model_path)) next
+
+  eicu_pred   <- copy(grid)
+  avail_feats <- intersect(BASE_FEATURES, names(eicu_pred))
+  for (f in avail_feats) {
+    if (is.numeric(eicu_pred[[f]])) eicu_pred[is.na(get(f)), (f) := 0]
+    if (is.logical(eicu_pred[[f]])) eicu_pred[is.na(get(f)), (f) := FALSE]
+  }
+
+  prim_mod       <- readRDS(prim_model_path)
+  PRED_CHUNK     <- 500000L
+  n_ep           <- nrow(eicu_pred)
+  pred_sepsis_vec <- numeric(n_ep)
+  for (ch_start in seq(1L, n_ep, by = PRED_CHUNK)) {
+    ch_idx   <- ch_start:min(ch_start + PRED_CHUNK - 1L, n_ep)
+    chunk_df <- as.data.frame(eicu_pred[ch_idx])
+    if (inherits(prim_mod, "multinom")) {
+      pr <- predict(prim_mod, newdata = chunk_df, type = "probs")
+      pred_sepsis_vec[ch_idx] <- if (is.matrix(pr)) pr[, "sepsis"] else as.numeric(pr)
+    } else {
+      pred_sepsis_vec[ch_idx] <- predict(prim_mod, newdata = chunk_df, type = "response")
+    }
+    rm(chunk_df)
+  }
+  eicu_pred[, pred_sepsis := pred_sepsis_vec]
+  rm(pred_sepsis_vec); gc()
+
+  if (file.exists(gbt_model_path)) {
+    gbt_mod  <- readRDS(gbt_model_path)
+    gbt_feats <- gbt_mod$feature_names
+    nr_ep     <- nrow(eicu_pred)
+    gbt_cols  <- lapply(gbt_feats, function(f) {
+      v <- if (f %in% names(eicu_pred)) as.numeric(eicu_pred[[f]]) else rep(0.0, nr_ep)
+      v[is.na(v)] <- 0.0; v
+    })
+    names(gbt_cols) <- gbt_feats
+    X_eicu <- as.matrix(as.data.table(gbt_cols))
+    storage.mode(X_eicu) <- "double"
+    eicu_pred[, pred_gbt := predict(gbt_mod, xgboost::xgb.DMatrix(X_eicu))]
+    rm(X_eicu, gbt_cols); gc()
+  }
+
+  eicu_pred[, pred_news2 := news2_total / 20]
+
+  y <- as.integer(eicu_pred$event == 1)
+  for (mod_nm in c("pred_sepsis","pred_gbt","pred_news2")) {
+    if (!mod_nm %in% names(eicu_pred)) next
+    pr    <- as.numeric(eicu_pred[[mod_nm]])
+    valid <- !is.na(pr)
+    if (sum(valid) < 50) next
+
+    roc_pr <- tryCatch({
+      list(
+        auroc = PRROC::roc.curve(pr[valid], weights.class0 = y[valid])$auc,
+        auprc = PRROC::pr.curve(pr[valid],  weights.class0 = y[valid])$auc.integral
+      )
+    }, error = function(e) list(auroc = NA, auprc = NA))
+
+    eval_results[[paste(vid, mod_nm, "eicu", sep = "-")]] <- data.frame(
+      variant  = vid,
+      model    = mod_nm,
+      cohort   = "eicu",
+      n_rows   = sum(valid),
+      n_events = sum(y[valid]),
+      auroc    = round(roc_pr$auroc, 4),
+      auprc    = round(roc_pr$auprc, 4)
+    )
+  }
+
+  save_cols_eicu <- c("stay_id","hour","event","pred_sepsis","onset_hour",
+                      intersect(c("pred_gbt","pred_news2","news2_total","qsofa_score"),
+                                names(eicu_pred)))
+  save_parquet(eicu_pred[, ..save_cols_eicu],
+               paste0("eicu_predictions_", vid), OUTPUT_DIR)
+  rm(eicu_pred, prim_mod); if (exists("gbt_mod")) rm(gbt_mod); gc()
+}
+```
+
+## Results and H5 Test
+
+External validation results are compared against the internal (temporal-split) performance. The H5 test checks whether the Utility Score degrades proportionally more than AUROC when moving from MIMIC-IV to eICU --- a finding that would indicate the Utility Score captures distributional sensitivity that AUROC misses. An AUROC drop substantially below the expected 0.085 warrants scrutiny: it may indicate that the eICU cohort, despite institutional differences, is not sufficiently distant in its underlying case mix.
+
+```{r results-h5}
+if (length(eval_results) > 0) {
+  ext_df <- do.call(rbind, eval_results)
+  knitr::kable(ext_df, caption = "External validation results (eICU-CRD)")
+  save_parquet(ext_df, "11_external_validation_results", OUTPUT_DIR)
+
+  internal_path <- file.path(OUTPUT_DIR, "10_metric_results.csv")
+  if (file.exists(internal_path)) {
+    internal_res <- data.table::fread(internal_path)
+    cat("\n--- H5 test: AUROC vs Utility Score degradation ---\n")
+    h5_rows <- list()
+    for (vid in names(LABEL_VARIANTS)) {
+      int_row <- internal_res[variant == vid & model == "primary" &
+                                eval_window == "unrestricted"]
+      ext_row <- ext_df[ext_df$variant == vid & ext_df$model == "pred_sepsis", ]
+      if (nrow(int_row) > 0 && nrow(ext_row) > 0) {
+        auroc_drop <- int_row$auroc - ext_row$auroc
+        cat(sprintf("  V%s: Internal AUROC=%.3f, External AUROC=%.3f, drop=%.3f\n",
+                    vid, int_row$auroc, ext_row$auroc, auroc_drop))
+        cat(sprintf("  V%s: Expected drop ≈ %.3f (Moor et al., 2023)\n",
+                    vid, EXPECTED_EXTERNAL_DEGRADATION))
+        if (auroc_drop < 0.02)
+          cat("  ** WARNING: Very small drop — external cohort may be insufficiently distant **\n")
+        h5_rows[[vid]] <- data.frame(variant = vid,
+                                      internal_auroc = int_row$auroc,
+                                      external_auroc = ext_row$auroc,
+                                      auroc_drop     = round(auroc_drop, 4),
+                                      expected_drop  = EXPECTED_EXTERNAL_DEGRADATION)
+      }
+    }
+    if (length(h5_rows) > 0)
+      knitr::kable(do.call(rbind, h5_rows),
+                   caption = "H5: Internal vs external AUROC")
+  }
+}
+
+cat("\nExternal validation complete.\n")
+```

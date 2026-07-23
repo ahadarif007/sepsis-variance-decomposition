@@ -1,0 +1,402 @@
+---
+title: "02 Cohort Labels — Cohort Extraction Under 3 Label Variants"
+author: "Abdul Ahad. Student ID: G00486649"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  bookdown::pdf_document2:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    fig_caption: true
+geometry: margin=2.3cm
+fontsize: 11pt
+header-includes:
+  - \usepackage{float}
+  - \usepackage{caption}
+  - \captionsetup[figure]{font=small}
+  - \captionsetup[table]{font=small}
+  - \renewcommand{\contentsname}{Table of Contents}
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+set.seed(486649)   # student ID for reproducibility
+
+knitr::opts_chunk$set(
+  echo = FALSE, message = FALSE, warning = FALSE,
+  fig.align = "center", fig.pos = "H",
+  out.width = "80%", fig.width = 6, fig.height = 3.6
+)
+```
+
+## Introduction
+
+A central claim of this thesis is that the choice of Sepsis-3 operationalisation materially changes who is labelled septic and, downstream, how well any prediction model appears to perform. This notebook operationalises that claim by applying three pre-specified label variants to the same adult ICU cohort from MIMIC-IV. The variants follow the taxonomy of Cohen et al. (2024), who demonstrated that published sepsis studies use divergent antibiotic-culture windows and SOFA evaluation periods, creating cohorts that differ in size, event rate, and onset timing.
+
+All three cohorts share identical inclusion criteria (adults $\geq$ 18 years, first ICU stay, LOS $\geq$ 4 hours) so that label-variant effects are isolated from cohort-selection effects. The label-variance summary table produced here (M1 deliverable) quantifies these differences before any modelling takes place.
+
+```{r load-deps}
+suppressPackageStartupMessages({
+  library(data.table)
+  library(lubridate)
+  library(dplyr)
+})
+
+source("config.R")
+source("utils.R")
+
+step("=== Phase 2a: Cohort extraction under 3 label variants ===")
+```
+
+## Base Tables
+
+The three source tables --- patients, admissions, and ICU stays --- provide demographics, hospital-level outcomes, and the time spine for each ICU episode.
+
+```{r load-base-tables}
+step("Loading base tables...")
+
+patients <- read_mimic(hosp_file("patients.csv"),
+                       cols = c("subject_id", "gender", "anchor_age",
+                                "anchor_year", "anchor_year_group"))
+
+admissions <- read_mimic(hosp_file("admissions.csv"),
+                         cols = c("subject_id", "hadm_id", "admittime",
+                                  "dischtime", "race", "language",
+                                  "insurance", "hospital_expire_flag"))
+admissions[, admittime := parse_dt(admittime)]
+admissions[, dischtime := parse_dt(dischtime)]
+
+icustays <- read_mimic(icu_file("icustays.csv"),
+                       cols = c("subject_id", "hadm_id", "stay_id",
+                                "intime", "outtime", "los"))
+icustays[, intime    := parse_dt(intime)]
+icustays[, outtime   := parse_dt(outtime)]
+icustays[, los_hours := hours_diff(intime, outtime)]
+```
+
+## Base Cohort Criteria
+
+Standard inclusion filters are applied: adults ($\geq$ 18 years), first ICU stay per patient (to avoid within-patient correlation), and minimum ICU length of stay $\geq$ 4 hours (to exclude rapid transfers with insufficient observation time for meaningful prediction).
+
+```{r build-base-cohort}
+step("Building base cohort (adult, first ICU stay, min LOS)...")
+
+stays <- merge(icustays, patients, by = "subject_id", all.x = TRUE)
+stays <- merge(stays, admissions[, .(hadm_id, race, language, insurance,
+                                      hospital_expire_flag)],
+               by = "hadm_id", all.x = TRUE)
+
+stays <- stays[anchor_age >= MIN_AGE]
+
+setorderv(stays, c("subject_id", "intime"))
+stays[, icu_rank := seq_len(.N), by = subject_id]
+if (FIRST_ICU_STAY_ONLY) stays <- stays[icu_rank == 1]
+
+stays <- stays[los_hours >= MIN_ICU_LOS_HOURS]
+
+cat(sprintf("Base cohort: %s stays, %s unique patients\n",
+            format(nrow(stays), big.mark = ","),
+            format(stays[, uniqueN(subject_id)], big.mark = ",")))
+```
+
+## Suspected Infection
+
+Under Sepsis-3 (Singer et al., 2016), suspected infection requires temporal co-occurrence of an antibiotic order and a microbiology culture. The Cartesian product of antibiotic--culture pairs within each hospital admission is generated here; variant-specific time-window filters are applied in the cohort-building step below. Surveillance cultures are excluded following established practice.
+
+```{r suspected-infection}
+step("Identifying suspected infection episodes...")
+
+prescriptions <- read_mimic(hosp_file("prescriptions.csv"),
+                             cols = c("hadm_id", "starttime", "stoptime",
+                                      "drug", "route"))
+prescriptions[, starttime := parse_dt(starttime)]
+prescriptions[, is_abx := match_antibiotics(drug, ANTIBIOTICS)]
+abx <- prescriptions[is_abx == TRUE & !is.na(starttime),
+                     .(hadm_id, abx_time = starttime)]
+abx <- unique(abx)
+cat(sprintf("Antibiotic orders: %s\n", format(nrow(abx), big.mark = ",")))
+
+microbio <- read_mimic(hosp_file("microbiologyevents.csv"),
+                       cols = c("hadm_id", "charttime", "chartdate",
+                                "spec_type_desc"))
+microbio[, charttime := parse_dt(charttime)]
+if (nrow(microbio) > 0)
+  microbio <- microbio[!(spec_type_desc %in% SURVEILLANCE_SPEC_TYPES)]
+microbio[is.na(charttime) & !is.na(chartdate),
+         charttime := as.POSIXct(chartdate, format = "%Y-%m-%d", tz = "UTC")]
+cultures <- microbio[!is.na(charttime), .(hadm_id, culture_time = charttime)]
+cultures <- unique(cultures)
+cat(sprintf("Culture samples: %s\n", format(nrow(cultures), big.mark = ",")))
+
+abx[, abx_id := .I]
+cultures[, cul_id := .I]
+
+suspicion_raw <- merge(abx, cultures, by = "hadm_id", allow.cartesian = TRUE)
+suspicion_raw[, dt_abx_before_cul := hours_diff(abx_time, culture_time)]
+suspicion_raw[, dt_cul_before_abx := hours_diff(culture_time, abx_time)]
+cat(sprintf("ABX-culture pairs (raw): %s\n",
+            format(nrow(suspicion_raw), big.mark = ",")))
+```
+
+## SOFA Components
+
+The Sequential Organ Failure Assessment (SOFA; Vincent et al., 1996) score quantifies organ dysfunction across six systems. Lab values (platelets, bilirubin, creatinine, PaO$_2$/FiO$_2$ ratio), chart-derived vitals (MAP, GCS), and vasopressor infusion records are loaded and pre-filtered to the cohort for memory efficiency.
+
+```{r sofa-components}
+step("Computing SOFA components for all stays...")
+
+cohort_hadm_ids <- stays[, unique(hadm_id)]
+cat(sprintf("Pre-filtering large tables to %d cohort hadm_ids...\n",
+            length(cohort_hadm_ids)))
+
+lab_sofa_items <- c(LAB_ITEMIDS$platelets, LAB_ITEMIDS$bilirubin_total,
+                    LAB_ITEMIDS$creatinine, LAB_ITEMIDS$pao2, LAB_ITEMIDS$fio2_lab)
+
+v2_log("Loading labevents for SOFA components via DuckDB...")
+labevents <- read_large_csv_filtered(
+  path     = hosp_file("labevents.csv"),
+  cols     = c("hadm_id", "itemid", "charttime", "valuenum"),
+  itemids  = lab_sofa_items,
+  hadm_ids = cohort_hadm_ids
+)
+labevents[, charttime := parse_dt(charttime)]
+setkeyv(labevents, c("hadm_id", "charttime"))
+
+chart_sofa_items <- c(CHART_ITEMIDS$map_invasive, CHART_ITEMIDS$map_noninvasive,
+                      CHART_ITEMIDS$gcs_eye, CHART_ITEMIDS$gcs_verbal,
+                      CHART_ITEMIDS$gcs_motor)
+
+v2_log("Loading chartevents for SOFA components (MAP, GCS) via DuckDB...")
+chartevents_sofa <- read_large_csv_filtered(
+  path     = icu_file("chartevents.csv"),
+  cols     = c("stay_id", "hadm_id", "itemid", "charttime", "valuenum"),
+  itemids  = chart_sofa_items,
+  hadm_ids = cohort_hadm_ids
+)
+chartevents_sofa[, charttime := parse_dt(charttime)]
+setkeyv(chartevents_sofa, c("hadm_id", "charttime"))
+
+v2_log("Loading inputevents for vasopressors...")
+inputevents <- read_mimic(icu_file("inputevents.csv"),
+                          cols = c("stay_id", "hadm_id", "itemid",
+                                   "starttime", "endtime", "amount",
+                                   "amountuom", "rate", "rateuom"))
+inputevents <- inputevents[itemid %in% unlist(VASOPRESSOR_ITEMIDS) &
+                             hadm_id %in% cohort_hadm_ids]
+inputevents[, starttime := parse_dt(starttime)]
+inputevents[, endtime   := parse_dt(endtime)]
+setkeyv(inputevents, c("hadm_id", "starttime"))
+```
+
+## Vectorised SOFA Delta
+
+Sepsis-3 requires a SOFA increase $\geq$ 2 points relative to a baseline. Computing this for tens of thousands of stays demands an efficient strategy: `data.table::foverlaps` performs interval joins to aggregate measurements within evaluation and baseline windows without any per-row loop, keeping runtime tractable even on large cohorts.
+
+```{r sofa-delta, code_folding="hide"}
+source("clinical_scores.R")
+
+lab_pt <- labevents[, .(hadm_id, t_start = charttime, t_end = charttime,
+                         itemid, valuenum)]
+setkeyv(lab_pt, c("hadm_id", "t_start", "t_end"))
+
+chart_pt <- chartevents_sofa[, .(hadm_id, t_start = charttime, t_end = charttime,
+                                  itemid, valuenum)]
+setkeyv(chart_pt, c("hadm_id", "t_start", "t_end"))
+
+vaso_iv <- inputevents[, .(hadm_id, t_start = starttime,
+                             t_end = fifelse(is.na(endtime), starttime + 3600, endtime))]
+setkeyv(vaso_iv, c("hadm_id", "t_start", "t_end"))
+
+sofa_from_agg <- function(agg_dt) {
+  w   <- dcast(agg_dt, stay_id ~ itemid, value.var = "valuenum",
+               fun.aggregate = mean, na.rm = TRUE)
+  ids <- names(w)[names(w) != "stay_id"]
+
+  get_v <- function(iids) {
+    cs <- intersect(as.character(as.integer(iids)), ids)
+    if (length(cs) == 0) return(rep(NA_real_, nrow(w)))
+    if (length(cs) == 1) return(as.numeric(w[[cs]]))
+    rowMeans(w[, ..cs], na.rm = TRUE)
+  }
+
+  pao2_v <- get_v(LAB_ITEMIDS$pao2)
+  fio2_v <- get_v(LAB_ITEMIDS$fio2_lab)
+  fio2_f <- ifelse(!is.na(fio2_v) & fio2_v > 1, fio2_v / 100, fio2_v)
+  pf     <- ifelse(!is.na(pao2_v) & !is.na(fio2_f) & fio2_f > 0,
+                   pao2_v / fio2_f, NA_real_)
+
+  panel <- data.frame(
+    pf_ratio   = pf,
+    platelets  = get_v(LAB_ITEMIDS$platelets),
+    bilirubin  = get_v(LAB_ITEMIDS$bilirubin_total),
+    creatinine = get_v(LAB_ITEMIDS$creatinine),
+    map = {
+      mi <- get_v(CHART_ITEMIDS$map_invasive)
+      mn <- get_v(CHART_ITEMIDS$map_noninvasive)
+      pmin(mi, mn, na.rm = TRUE)
+    },
+    gcs = {
+      e  <- get_v(CHART_ITEMIDS$gcs_eye)
+      v2 <- get_v(CHART_ITEMIDS$gcs_verbal)
+      m  <- get_v(CHART_ITEMIDS$gcs_motor)
+      rowSums(cbind(e, v2, m), na.rm = TRUE)
+    },
+    vaso_any       = FALSE,
+    norepi_epi_any = FALSE
+  )
+  s <- score_sofa(panel)
+  data.table(stay_id = w$stay_id, sofa_total = s$sofa_total)
+}
+
+compute_sofa_delta_vectorized <- function(rows, v) {
+  if (nrow(rows) == 0) return(list(sofa_window = numeric(0), sofa_base = numeric(0)))
+
+  eval_wins <- rows[, .(hadm_id, stay_id,
+                         t_start = sofa_window_start, t_end = sofa_window_end,
+                         wtype = "eval")]
+  if (v$sofa_baseline == "admission") {
+    base_wins <- rows[, .(hadm_id, stay_id,
+                           t_start = intime, t_end = intime + 3600 * 4,
+                           wtype = "base")]
+  } else {
+    base_wins <- rows[, .(hadm_id, stay_id,
+                           t_start = sofa_window_start - 3600 * 24,
+                           t_end   = sofa_window_start,
+                           wtype = "base")]
+  }
+  all_wins <- rbindlist(list(eval_wins, base_wins))
+  all_wins <- all_wins[!is.na(t_start) & !is.na(t_end) & t_end >= t_start]
+  setkeyv(all_wins, c("hadm_id", "t_start", "t_end"))
+
+  lab_m   <- foverlaps(lab_pt,   all_wins, type = "within", nomatch = 0L)
+  chart_m <- foverlaps(chart_pt, all_wins, type = "within", nomatch = 0L)
+  vaso_m  <- foverlaps(vaso_iv,  all_wins, type = "any",    nomatch = 0L)
+
+  all_m <- rbindlist(list(
+    lab_m[,   .(stay_id, wtype, itemid, valuenum)],
+    chart_m[, .(stay_id, wtype, itemid, valuenum)]
+  ))
+  if (nrow(all_m) == 0) {
+    zeros <- data.table(stay_id = rows$stay_id, sofa_total = 0)
+    return(list(sofa_window = zeros$sofa_total, sofa_base = zeros$sofa_total))
+  }
+
+  agg <- all_m[, .(valuenum = mean(valuenum, na.rm = TRUE)),
+               by = .(stay_id, wtype, itemid)]
+  agg[, itemid := as.character(itemid)]
+
+  if (nrow(vaso_m) > 0)
+    vaso_flag <- unique(vaso_m[, .(stay_id, wtype)])[, vaso_any := TRUE]
+
+  compute_for_type <- function(wt) {
+    sub <- agg[wtype == wt]
+    if (nrow(sub) == 0) return(data.table(stay_id = rows$stay_id, sofa_total = 0))
+    res   <- sofa_from_agg(sub)
+    all_s <- data.table(stay_id = rows$stay_id)
+    res   <- merge(all_s, res, by = "stay_id", all.x = TRUE)
+    res[is.na(sofa_total), sofa_total := 0]
+    res
+  }
+
+  eval_sofa <- compute_for_type("eval")
+  base_sofa <- compute_for_type("base")
+  list(sofa_window = eval_sofa$sofa_total, sofa_base = base_sofa$sofa_total)
+}
+```
+
+## Build Cohort Per Variant
+
+Each variant applies its own antibiotic--culture time window and SOFA evaluation period, producing a distinct set of labelled onsets from the shared base cohort. Onset events that fall outside the ICU stay or within the first hour (insufficient lead time for prediction) are excluded.
+
+```{r build-cohorts}
+build_cohort_for_variant <- function(variant_id) {
+  v    <- LABEL_VARIANTS[[variant_id]]
+  step(sprintf("Building cohort for Variant %s (%s)...", variant_id, v$name))
+
+  susp <- suspicion_raw[
+    (dt_abx_before_cul >= 0 & dt_abx_before_cul <= v$abx_before_culture_h) |
+    (dt_cul_before_abx >= 0 & dt_cul_before_abx <= v$culture_before_abx_h)
+  ]
+  susp[dt_abx_before_cul >= 0,                         t_susp := pmax(abx_time, culture_time)]
+  susp[dt_cul_before_abx >= 0 & is.na(t_susp),         t_susp := pmax(abx_time, culture_time)]
+  susp <- susp[!is.na(t_susp)]
+  setorderv(susp, c("hadm_id", "t_susp"))
+  susp_first <- susp[, .SD[1], by = hadm_id]
+
+  cohort <- merge(stays, susp_first[, .(hadm_id, t_susp)],
+                  by = "hadm_id", all.x = TRUE)
+  cohort[, sofa_window_start := t_susp - lubridate::hours(v$sofa_window_before_h)]
+  cohort[, sofa_window_end   := t_susp + lubridate::hours(v$sofa_window_after_h)]
+
+  v2_log(sprintf("  Stays with suspected infection: %s / %s",
+                 format(cohort[!is.na(t_susp), .N], big.mark = ","),
+                 format(nrow(cohort), big.mark = ",")))
+
+  susp_idx <- which(!is.na(cohort$t_susp))
+  if (length(susp_idx) > 0) {
+    v2_log(sprintf("  Computing SOFA delta (vectorized) for %d stays...",
+                   length(susp_idx)))
+    sofa_res <- compute_sofa_delta_vectorized(cohort[susp_idx], v)
+    cohort[susp_idx, sofa_in_window := sofa_res$sofa_window]
+    cohort[susp_idx, sofa_baseline  := sofa_res$sofa_base]
+    cohort[susp_idx, sofa_delta     := sofa_in_window - sofa_baseline]
+    cohort[susp_idx,
+           onset_time := fifelse(sofa_delta >= SOFA_INCREASE_THRESHOLD,
+                                 t_susp, as.POSIXct(NA))]
+  }
+
+  cohort[!is.na(onset_time) & (onset_time < intime | onset_time > outtime),
+         onset_time := NA_real_]
+  cohort[!is.na(onset_time),
+         onset_hour := as.integer(hours_diff(intime, onset_time))]
+  cohort[!is.na(onset_hour) & onset_hour <= 1, onset_time := NA_real_]
+  cohort[!is.na(onset_hour) & onset_hour <= 1, onset_hour := NA_integer_]
+
+  cohort[, died_in_hosp   := hospital_expire_flag == 1L]
+  cohort[, label_variant  := variant_id]
+  cohort[, label_name     := v$name]
+
+  n_events <- cohort[!is.na(onset_time), .N]
+  cat(sprintf("Variant %s: %d total stays, %d sepsis onsets (%.1f%%)\n",
+              variant_id, nrow(cohort), n_events,
+              100 * n_events / nrow(cohort)))
+  cohort
+}
+
+cohorts       <- lapply(names(LABEL_VARIANTS), build_cohort_for_variant)
+names(cohorts) <- names(LABEL_VARIANTS)
+
+for (vid in names(cohorts))
+  save_parquet(cohorts[[vid]], paste0("cohort_", vid), OUTPUT_DIR)
+```
+
+## Label-Variance Table (M1 Deliverable)
+
+The label-variance table is the first pre-registered deliverable. It summarises cohort size, event count, event rate, and onset-time distribution for each variant, providing the empirical foundation for the label-dominance hypothesis (H1) tested in the variance decomposition analysis.
+
+```{r label-variance-table}
+step("Building M1 label-variance table...")
+
+label_variance <- do.call(rbind, lapply(names(cohorts), function(vid) {
+  c_dt <- cohorts[[vid]]
+  data.frame(
+    variant         = vid,
+    name            = LABEL_VARIANTS[[vid]]$name,
+    n_stays         = nrow(c_dt),
+    n_sepsis_onsets = c_dt[!is.na(onset_time), .N],
+    pct_sepsis      = round(100 * c_dt[!is.na(onset_time), .N] / nrow(c_dt), 1),
+    n_non_sepsis    = c_dt[is.na(onset_time), .N],
+    n_deaths_no_sep = c_dt[is.na(onset_time) & died_in_hosp == TRUE, .N],
+    median_onset_h  = round(median(c_dt[!is.na(onset_hour), onset_hour], na.rm = TRUE), 1),
+    iqr_onset_h_lo  = round(quantile(c_dt[!is.na(onset_hour), onset_hour], 0.25, na.rm = TRUE), 1),
+    iqr_onset_h_hi  = round(quantile(c_dt[!is.na(onset_hour), onset_hour], 0.75, na.rm = TRUE), 1)
+  )
+}))
+
+knitr::kable(label_variance, caption = "M1 Label-Variance Table (cohort size × event count × onset timing)")
+
+save_parquet(label_variance, "label_variance_table", OUTPUT_DIR)
+cat("\nSaved: label_variance_table.parquet\n")
+```
