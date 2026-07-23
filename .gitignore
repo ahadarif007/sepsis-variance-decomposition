@@ -1,10 +1,84 @@
-# Ignore data folders
+# ----------------------------
+# Repository-level .gitignore
+# ----------------------------
+
+# Large project data (raw and processed) - typically not stored in Git
 data/
 processed_data/
 
-# Ignore JetBrains IDE config
+# Project-specific outputs
+projects/v2/v2-proj/output/
+projects/v1/v1-project/figure/
+projects/v1/v1-project/*.log
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+pip-wheel-metadata/
+
+# Virtualenvs / environment files
+.env
+.envrc
+.venv/
+venv/
+env/
+ENV/
+Pipfile.lock
+
+# IDE/editor configs
 .idea/
+.vscode/
 .claude/
 
+# Jupyter
+.ipynb_checkpoints/
 
-/projects/V2/output/
+# Testing / coverage
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Logs and runtime files
+*.log
+logs/
+*.out
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Database / local storage
+*.sqlite3
+*.db
+*.db-journal
+
+# Sensitive / secret files
+*.key
+*.pem
+*.secret
+secrets.json
+
+# Large binary data (consider using Git LFS instead of committing these)
+*.parquet
+*.feather
+*.h5
+*.hdf5
+*.nc
+*.sav
+
+# Misc
+*.swp
+*.swo
+
+# If you need to keep specific files inside ignored directories, add
+# explicit negation rules after the ignored pattern. Example:
+#   data/
+#   !data/eicu-collaborative-research-database-2.0/LICENSE.txt
