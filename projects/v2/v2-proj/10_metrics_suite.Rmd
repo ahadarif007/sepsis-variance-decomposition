@@ -292,3 +292,104 @@ if (length(all_results) > 0) {
   cat("No results to display. Check that 08 and 09 have been run.\n")
 }
 ```
+
+## Random-Split Evaluation (H4: Split Optimism)
+
+The same metric suite is applied to random-split predictions (Variant B only). The output `10_metric_results_random.parquet` feeds the variance decomposition for H4 (Guo et al., 2022).
+
+```{r evaluate-random-split}
+step("--- Random-split evaluation for H4 ---")
+
+random_results <- list()
+vid <- "B"
+
+prim_random_path <- file.path(OUTPUT_DIR, paste0("08_predictions_primary_random_", vid, ".parquet"))
+comp_random_path <- file.path(OUTPUT_DIR, paste0("09_predictions_comparators_random_", vid, ".parquet"))
+
+if (file.exists(prim_random_path)) {
+  ph_prim_r <- as.data.table(arrow::read_parquet(prim_random_path))
+  ph_comp_r <- if (file.exists(comp_random_path))
+                 as.data.table(arrow::read_parquet(comp_random_path)) else NULL
+
+  ph_all_r <- ph_prim_r
+  if (!is.null(ph_comp_r)) {
+    merge_cols_r <- c("stay_id", "hour", setdiff(names(ph_comp_r), names(ph_prim_r)))
+    ph_all_r <- merge(ph_all_r, ph_comp_r[, ..merge_cols_r],
+                      by = c("stay_id", "hour"), all.x = TRUE)
+  }
+
+  eval_windows_r <- list(
+    unrestricted = ph_all_r,
+    treatment_anchored = {
+      if ("first_abx_hour" %in% names(ph_all_r)) {
+        anchor_h_r <- if ("first_culture_hour" %in% names(ph_all_r))
+                        pmin(ph_all_r$first_abx_hour, ph_all_r$first_culture_hour, na.rm = TRUE)
+                      else ph_all_r$first_abx_hour
+        ph_all_r[is.na(anchor_h_r) | hour < anchor_h_r]
+      } else ph_all_r
+    }
+  )
+
+  for (win_name in names(eval_windows_r)) {
+    data_win_r <- eval_windows_r[[win_name]]
+    if (nrow(data_win_r) == 0) next
+
+    for (mod_name in names(MODEL_NAMES)) {
+      pred_col <- MODEL_NAMES[[mod_name]]
+      if (!pred_col %in% names(data_win_r)) next
+      valid <- !is.na(data_win_r[[pred_col]])
+      if (sum(valid) < 100) next
+
+      y    <- as.integer(data_win_r$event == 1)
+      pred <- as.numeric(data_win_r[[pred_col]])
+
+      roc_pr  <- compute_roc_pr(y[valid], pred[valid])
+      calib   <- compute_calibration(y[valid], pred[valid])
+      alerts  <- as.integer(pred >= 0.5)
+      burden  <- compute_alert_burden(y[valid], alerts[valid])
+      utility <- tryCatch(
+        compute_utility_score(data_win_r[valid], pred_col, threshold = 0.5),
+        error = function(e) list(utility_normalised = NA, utility_total = NA)
+      )
+      lead_t  <- tryCatch(
+        compute_lead_time(data_win_r[valid], pred_col),
+        error = function(e) NA_real_
+      )
+
+      result_row <- data.frame(
+        variant            = vid,
+        variant_name       = LABEL_VARIANTS[[vid]]$name,
+        model              = mod_name,
+        eval_window        = win_name,
+        split_type         = "random",
+        n_rows             = sum(valid),
+        n_sepsis_events    = sum(y[valid]),
+        auroc              = round(roc_pr$auroc, 4),
+        auprc              = round(roc_pr$auprc, 4),
+        calib_intercept    = round(calib$intercept, 4),
+        calib_slope        = round(calib$slope, 4),
+        utility_normalised = round(utility$utility_normalised, 4),
+        alert_burden       = round(burden, 2),
+        lead_time_h        = round(lead_t, 2)
+      )
+      random_results[[paste(vid, mod_name, win_name, "random", sep = "-")]] <- result_row
+    }
+  }
+
+  if (length(random_results) > 0) {
+    random_results_df <- do.call(rbind, random_results)
+    save_parquet(random_results_df, "10_metric_results_random", OUTPUT_DIR)
+
+    knitr::kable(
+      random_results_df[order(random_results_df$eval_window, random_results_df$model),
+                        c("variant", "model", "eval_window", "auroc", "auprc",
+                          "utility_normalised", "alert_burden", "lead_time_h")],
+      caption = "Evaluation results: random split (Variant B only, H4)"
+    )
+    cat("\nSaved: 10_metric_results_random.parquet\n")
+  }
+} else {
+  cat("Random-split primary predictions not found; skipping H4 evaluation.\n")
+  cat("Run 08_primary_model.Rmd first to generate random-split predictions.\n")
+}
+```

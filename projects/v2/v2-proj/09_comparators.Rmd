@@ -253,6 +253,139 @@ all_comparator_preds        <- lapply(names(LABEL_VARIANTS), fit_comparators)
 names(all_comparator_preds) <- names(LABEL_VARIANTS)
 ```
 
+## Random-Split Comparators (H4)
+
+GBT and rule-based comparators are re-fitted on the random patient-level split for Variant B, so H4 can compare temporal vs. random AUROC across all models.
+
+```{r fit-random-comparators}
+step("--- Random-split comparators for Variant B (H4) ---")
+
+vid <- "B"
+ph <- as.data.table(arrow::read_parquet(
+  file.path(OUTPUT_DIR, paste0("03_person_hours_", vid, ".parquet"))
+))
+
+if ("random_split" %in% names(ph)) {
+  train_r <- ph[random_split == "train"]
+  test_r  <- ph[random_split == "test"]
+
+  avail_feats <- intersect(BASE_FEATURES, names(ph))
+  for (f in avail_feats) {
+    if (is.numeric(train_r[[f]])) train_r[is.na(get(f)), (f) := 0]
+    if (is.logical(train_r[[f]])) train_r[is.na(get(f)), (f) := FALSE]
+    if (is.numeric(test_r[[f]]))  test_r[is.na(get(f)),  (f) := 0]
+    if (is.logical(test_r[[f]]))  test_r[is.na(get(f)),  (f) := FALSE]
+  }
+  train_r[, event_bin := as.integer(event == 1)]
+  test_r[,  event_bin := as.integer(event == 1)]
+
+  results_r <- list()
+
+  # NEWS2/qSOFA/SIRS (no re-fit needed)
+  if ("news2_total" %in% names(test_r)) {
+    test_r[, pred_news2 := as.numeric(news2_total) / 20]
+    results_r[["news2"]] <- test_r[, .(stay_id, hour, event, event_bin, pred_news2)]
+  }
+  if ("qsofa_score" %in% names(test_r))
+    test_r[, pred_qsofa := qsofa_score / 3]
+  if ("sirs_score" %in% names(test_r))
+    test_r[, pred_sirs := sirs_score / 4]
+
+  # Cox PH on random split
+  cox_feats_r <- intersect(c("hr", "resp_rate", "spo2", "map", "temp_c", "gcs",
+                              "lactate", "creatinine", "bilirubin_total",
+                              "platelets", "wbc", "vaso_any"), names(train_r))
+  cox_fit_r <- tryCatch({
+    train_cox_r <- train_r[, .SD, .SDcols = c("stay_id", "hour", "event_bin", cox_feats_r)]
+    train_cox_r[, stop := hour + 1L]
+    cox_formula_r <- as.formula(paste(
+      "Surv(hour, stop, event_bin) ~", paste(cox_feats_r, collapse = " + ")
+    ))
+    survival::coxph(cox_formula_r, data = as.data.frame(train_cox_r),
+                    cluster = stay_id, ties = "efron")
+  }, error = function(e) { v2_log("  Random Cox error: ", e$message, level = "WARN"); NULL })
+
+  if (!is.null(cox_fit_r)) {
+    test_cox_r <- test_r[, .SD, .SDcols = c("stay_id", "hour", "event_bin", cox_feats_r)]
+    test_cox_r[, stop := hour + 1L]
+    lp_r <- tryCatch(
+      predict(cox_fit_r, newdata = as.data.frame(test_cox_r), type = "lp"),
+      error = function(e) rep(NA_real_, nrow(test_cox_r))
+    )
+    test_r[, pred_cox := plogis(lp_r)]
+    results_r[["cox"]] <- test_r[, .(stay_id, hour, event, event_bin, pred_cox)]
+  }
+
+  # GBT on random split
+  gbt_feats_r <- avail_feats
+  X_train_r   <- as.matrix(train_r[, ..gbt_feats_r])
+  y_train_r   <- train_r$event_bin
+  X_test_r    <- as.matrix(test_r[, ..gbt_feats_r])
+  y_test_r    <- test_r$event_bin
+  X_train_r[is.na(X_train_r)] <- 0
+  X_test_r[is.na(X_test_r)]   <- 0
+  X_train_r <- apply(X_train_r, 2, as.numeric)
+  X_test_r  <- apply(X_test_r,  2, as.numeric)
+
+  dtrain_r <- xgboost::xgb.DMatrix(data = X_train_r, label = y_train_r)
+  dtest_r  <- xgboost::xgb.DMatrix(data = X_test_r,  label = y_test_r)
+
+  n_pos_r     <- sum(y_train_r, na.rm = TRUE)
+  n_neg_r     <- sum(!y_train_r, na.rm = TRUE)
+  scale_pos_r <- n_neg_r / max(n_pos_r, 1)
+
+  gbt_params_r <- list(
+    objective        = "binary:logistic",
+    eval_metric      = "aucpr",
+    max_depth        = 6,
+    eta              = 0.05,
+    subsample        = 0.8,
+    colsample_bytree = 0.8,
+    min_child_weight = 5,
+    scale_pos_weight = scale_pos_r,
+    nthread          = 4
+  )
+
+  gbt_fit_r <- tryCatch({
+    watchlist_r <- list(train = dtrain_r, test = dtest_r)
+    xgboost::xgb.train(
+      params                = gbt_params_r,
+      data                  = dtrain_r,
+      nrounds               = 300,
+      evals                 = watchlist_r,
+      early_stopping_rounds = 30,
+      verbose               = 0
+    )
+  }, error = function(e) { v2_log("  Random GBT error: ", e$message, level = "WARN"); NULL })
+
+  if (!is.null(gbt_fit_r)) {
+    test_r[, pred_gbt := predict(gbt_fit_r, dtest_r)]
+    results_r[["gbt"]] <- test_r[, .(stay_id, hour, event, event_bin, pred_gbt)]
+    cat(sprintf("  Random-split GBT: best iteration %d\n", gbt_fit_r$best_iteration))
+  }
+
+  # Combine random-split comparator predictions
+  all_preds_r <- test_r[, .(stay_id, hour, event, event_bin, onset_hour,
+                             anchor_year_group, random_split,
+                             first_abx_hour = if ("first_abx_hour" %in% names(test_r))
+                                                first_abx_hour else NA,
+                             first_culture_hour = if ("first_culture_hour" %in% names(test_r))
+                                                   first_culture_hour else NA)]
+  for (nm in names(results_r)) {
+    pred_col <- grep("^pred_", names(results_r[[nm]]), value = TRUE)
+    if (length(pred_col) > 0)
+      all_preds_r <- merge(all_preds_r, results_r[[nm]][, c("stay_id", "hour", pred_col),
+                                                         with = FALSE],
+                           by = c("stay_id", "hour"), all.x = TRUE)
+  }
+  all_preds_r[, variant := vid]
+  save_parquet(all_preds_r, paste0("09_predictions_comparators_random_", vid), OUTPUT_DIR)
+  cat(sprintf("  Random-split comparator predictions saved for Variant %s\n", vid))
+} else {
+  cat("random_split column not found in person-hours; skipping H4 comparators.\n")
+}
+```
+
 ## Feature Importance (GBT)
 
 GBT feature importance provides a cross-check: if GBT relies on the same features as the multinomial regression, both model classes are learning similar structure.

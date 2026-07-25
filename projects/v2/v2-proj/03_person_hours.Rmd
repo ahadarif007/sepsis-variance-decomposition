@@ -348,6 +348,15 @@ for (vid in names(LABEL_VARIANTS)) {
   panel[, temporal_split := ifelse(anchor_year_group %in% TEMPORAL_TEST_GROUPS,
                                     "test", "train")]
 
+  # Random split (patient-level, for H4 split-optimism quantification; Guo et al., 2022)
+  unique_stays <- unique(panel$stay_id)
+  set.seed(RANDOM_SPLIT_SEED)
+  test_stays <- sample(unique_stays, size = round(length(unique_stays) * RANDOM_SPLIT_TEST_FRAC))
+  panel[, random_split := ifelse(stay_id %in% test_stays, "test", "train")]
+  cat(sprintf("Random split: %d train stays, %d test stays (seed=%d, frac=%.2f)\n",
+              length(unique_stays) - length(test_stays), length(test_stays),
+              RANDOM_SPLIT_SEED, RANDOM_SPLIT_TEST_FRAC))
+
   drop_cols <- intersect(c("max_hour", "intime.x", "intime.y"), names(panel))
   if (length(drop_cols) > 0) panel[, (drop_cols) := NULL]
 

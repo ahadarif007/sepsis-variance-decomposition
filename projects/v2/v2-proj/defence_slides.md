@@ -441,12 +441,13 @@ These limits are documented rather than hidden.
 
 ## Future Work
 
-1. **Biomarker-anchored label** — define onset from objective physiological values (lactate/organ trajectories) rather
-   than clinician-ordered tests. Eliminates constitutionality.
-2. **Prospective study** — protocol-blinded onset assessment to test whether the label problem is solvable in principle.
-3. **Utility-maximising threshold search** — optimise alert threshold directly for Utility Score rather than
-   cross-entropy.
-4. **Multi-centre deployment study** — human-factors evaluation of acceptable alert burden in practice.
+1. **Better sepsis labels:** Define sepsis using objective patient measurements (such as lactate levels and organ
+   function) instead of treatment decisions.
+2. **Prospective study:** Test the new label in real clinical settings using future patient data.
+3. **Better alert threshold:** Choose the alert threshold that maximises clinical benefit (Utility Score) instead of
+   only improving prediction accuracy.
+4. **Multi-hospital evaluation:** Test the model in different hospitals and identify an acceptable number of false
+   alerts for clinical use.
 
 ---
 

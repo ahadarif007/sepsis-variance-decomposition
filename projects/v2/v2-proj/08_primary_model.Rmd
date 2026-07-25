@@ -186,7 +186,7 @@ fit_primary_model <- function(vid) {
     test[, pred_sepsis := predict(fit, newdata = as.data.frame(test), type = "response")]
   }
 
-  save_cols <- c("stay_id", "hour", "event", "pred_sepsis", "temporal_split",
+  save_cols <- c("stay_id", "hour", "event", "pred_sepsis", "temporal_split", "random_split",
                  "anchor_year_group", "onset_hour",
                  intersect(c("sofa_total", "news2_total", "qsofa_score"), names(test)))
   save_parquet(test[, ..save_cols],
@@ -202,6 +202,100 @@ fit_primary_model <- function(vid) {
 ```{r run-all-variants}
 models        <- lapply(names(LABEL_VARIANTS), fit_primary_model)
 names(models) <- names(LABEL_VARIANTS)
+```
+
+## Random-Split Re-Fit (H4: Split Optimism)
+
+The same primary model is re-fitted on a random patient-level split (Guo et al., 2022). Only Variant B is needed — H4 compares temporal vs. random AUROC under a fixed label and model class.
+
+```{r fit-random-split}
+step("--- Re-fitting primary model on random split (H4) ---")
+
+fit_primary_random <- function(vid = "B") {
+  ph <- as.data.table(arrow::read_parquet(
+    file.path(OUTPUT_DIR, paste0("03_person_hours_", vid, ".parquet"))
+  ))
+
+  if (!"random_split" %in% names(ph)) {
+    v2_log("  random_split column not found — skipping H4 re-fit.", level = "WARN")
+    return(NULL)
+  }
+
+  train <- ph[random_split == "train"]
+  cat(sprintf("  Random-split training rows: %s, events (sepsis): %d\n",
+              format(nrow(train), big.mark = ","), sum(train$event == 1)))
+
+  train[, outcome := factor(event, levels = c(0, 1, 2, 3),
+                             labels = c("inprogress", "sepsis", "discharge", "death"))]
+
+  avail_base  <- intersect(BASE_FEATURES,        names(train))
+  avail_miss  <- intersect(MISSINGNESS_FEATURES, names(train))
+  all_features <- c(avail_base, avail_miss)
+
+  for (f in all_features) {
+    if (is.numeric(train[[f]])) train[is.na(get(f)), (f) := 0]
+    if (is.logical(train[[f]])) train[is.na(get(f)), (f) := FALSE]
+  }
+
+  n_knots  <- 5
+  hour_max <- max(train$hour, na.rm = TRUE)
+  knots    <- quantile(train$hour, seq(0.1, 0.9, length.out = n_knots), na.rm = TRUE)
+
+  feat_formula <- paste(all_features, collapse = " + ")
+  formula_str  <- sprintf(
+    "outcome ~ ns(hour, knots = c(%s), Boundary.knots = c(0, %d)) + %s",
+    paste(round(knots, 2), collapse = ", "), hour_max, feat_formula
+  )
+  mod_formula <- as.formula(formula_str)
+
+  set.seed(42)
+  fit <- tryCatch(
+    nnet::multinom(mod_formula, data = as.data.frame(train),
+                   trace = FALSE, MaxNWts = 50000, maxit = 500),
+    error = function(e) {
+      v2_log("  Random-split multinom failed: ", e$message, level = "ERROR")
+      NULL
+    }
+  )
+
+  if (is.null(fit)) {
+    v2_log("  Fallback: binary logistic for random split")
+    train[, outcome_bin := as.integer(event == 1)]
+    formula_bin <- as.formula(sprintf(
+      "outcome_bin ~ ns(hour, knots = c(%s), Boundary.knots = c(0, %d)) + %s",
+      paste(round(knots, 2), collapse = ", "), hour_max, feat_formula
+    ))
+    fit <- glm(formula_bin, data = as.data.frame(train),
+               family = binomial(link = "logit"))
+    fit$is_binary_fallback <- TRUE
+  }
+
+  test <- ph[random_split == "test"]
+  for (f in all_features) {
+    if (is.numeric(test[[f]])) test[is.na(get(f)), (f) := 0]
+    if (is.logical(test[[f]])) test[is.na(get(f)), (f) := FALSE]
+  }
+  v2_log(sprintf("  Predicting on random-split test set (%s rows)...",
+                 format(nrow(test), big.mark = ",")))
+  if (inherits(fit, "multinom")) {
+    pred_probs <- predict(fit, newdata = as.data.frame(test), type = "probs")
+    test[, pred_sepsis := if (is.matrix(pred_probs)) pred_probs[, "sepsis"]
+                           else as.numeric(pred_probs)]
+  } else {
+    test[, pred_sepsis := predict(fit, newdata = as.data.frame(test), type = "response")]
+  }
+
+  save_cols <- c("stay_id", "hour", "event", "pred_sepsis", "random_split",
+                 "anchor_year_group", "onset_hour",
+                 intersect(c("sofa_total", "news2_total", "qsofa_score"), names(test)))
+  save_parquet(test[, ..save_cols],
+               paste0("08_predictions_primary_random_", vid), OUTPUT_DIR)
+  saveRDS(fit, file.path(OUTPUT_DIR, paste0("08_model_primary_random_", vid, ".rds")))
+  cat(sprintf("  Random-split model for Variant %s saved.\n", vid))
+  fit
+}
+
+random_model_B <- fit_primary_random("B")
 ```
 
 ## Cross-Label Coefficient Stability
