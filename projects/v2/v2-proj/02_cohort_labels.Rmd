@@ -1,5 +1,5 @@
 ---
-title: "02 Cohort Labels — Cohort Extraction Under 3 Label Variants"
+title: "02 Cohort Labels - Cohort Extraction Under 3 Label Variants"
 author: "Abdul Ahad. Student ID: G00486649"
 date: "`r format(Sys.Date(), '%d %B %Y')`"
 output:
@@ -33,9 +33,9 @@ knitr::opts_chunk$set(
 
 ## Introduction
 
-A central claim of this thesis is that the choice of Sepsis-3 operationalisation materially changes who is labelled septic and, downstream, how well any prediction model appears to perform. This notebook operationalises that claim by applying three pre-specified label variants to the same adult ICU cohort from MIMIC-IV. The variants follow the taxonomy of Cohen et al. (2024), who demonstrated that published sepsis studies use divergent antibiotic-culture windows and SOFA evaluation periods, creating cohorts that differ in size, event rate, and onset timing.
+This notebook applies three Sepsis-3 label variants to the same adult ICU cohort from MIMIC-IV. Following Cohen et al. (2024), the variants use different antibiotic-culture windows and SOFA evaluation periods, producing cohorts that differ in size, event rate, and onset timing.
 
-All three cohorts share identical inclusion criteria (adults $\geq$ 18 years, first ICU stay, LOS $\geq$ 4 hours) so that label-variant effects are isolated from cohort-selection effects. The label-variance summary table produced here (M1 deliverable) quantifies these differences before any modelling takes place.
+All three cohorts share the same inclusion criteria (adults $\geq$ 18, first ICU stay, LOS $\geq$ 4 h). The label-variance summary table produced here (M1 deliverable) quantifies these differences before any modelling.
 
 ```{r load-deps}
 suppressPackageStartupMessages({
@@ -52,7 +52,7 @@ step("=== Phase 2a: Cohort extraction under 3 label variants ===")
 
 ## Base Tables
 
-The three source tables --- patients, admissions, and ICU stays --- provide demographics, hospital-level outcomes, and the time spine for each ICU episode.
+The three source tables (patients, admissions, and ICU stays) provide demographics, hospital-level outcomes, and the time spine for each ICU episode.
 
 ```{r load-base-tables}
 step("Loading base tables...")
@@ -78,7 +78,7 @@ icustays[, los_hours := hours_diff(intime, outtime)]
 
 ## Base Cohort Criteria
 
-Standard inclusion filters are applied: adults ($\geq$ 18 years), first ICU stay per patient (to avoid within-patient correlation), and minimum ICU length of stay $\geq$ 4 hours (to exclude rapid transfers with insufficient observation time for meaningful prediction).
+Standard inclusion filters: adults ($\geq$ 18), first ICU stay per patient, and minimum ICU LOS $\geq$ 4 hours.
 
 ```{r build-base-cohort}
 step("Building base cohort (adult, first ICU stay, min LOS)...")
@@ -103,7 +103,7 @@ cat(sprintf("Base cohort: %s stays, %s unique patients\n",
 
 ## Suspected Infection
 
-Under Sepsis-3 (Singer et al., 2016), suspected infection requires temporal co-occurrence of an antibiotic order and a microbiology culture. The Cartesian product of antibiotic--culture pairs within each hospital admission is generated here; variant-specific time-window filters are applied in the cohort-building step below. Surveillance cultures are excluded following established practice.
+Sepsis-3 (Singer et al., 2016) requires temporal co-occurrence of an antibiotic order and a microbiology culture. All antibiotic-culture pairs within each admission are generated here; variant-specific time-window filters are applied in the cohort-building step. Surveillance cultures are excluded.
 
 ```{r suspected-infection}
 step("Identifying suspected infection episodes...")
@@ -142,7 +142,7 @@ cat(sprintf("ABX-culture pairs (raw): %s\n",
 
 ## SOFA Components
 
-The Sequential Organ Failure Assessment (SOFA; Vincent et al., 1996) score quantifies organ dysfunction across six systems. Lab values (platelets, bilirubin, creatinine, PaO$_2$/FiO$_2$ ratio), chart-derived vitals (MAP, GCS), and vasopressor infusion records are loaded and pre-filtered to the cohort for memory efficiency.
+The SOFA score (Vincent et al., 1996) quantifies organ dysfunction across six systems. Lab values (platelets, bilirubin, creatinine, PaO$_2$/FiO$_2$), vitals (MAP, GCS), and vasopressor records are loaded and filtered to the cohort.
 
 ```{r sofa-components}
 step("Computing SOFA components for all stays...")
@@ -192,7 +192,7 @@ setkeyv(inputevents, c("hadm_id", "starttime"))
 
 ## Vectorised SOFA Delta
 
-Sepsis-3 requires a SOFA increase $\geq$ 2 points relative to a baseline. Computing this for tens of thousands of stays demands an efficient strategy: `data.table::foverlaps` performs interval joins to aggregate measurements within evaluation and baseline windows without any per-row loop, keeping runtime tractable even on large cohorts.
+Sepsis-3 requires a SOFA increase $\geq$ 2 points relative to baseline. `data.table::foverlaps` performs interval joins to aggregate measurements within evaluation and baseline windows without per-row loops.
 
 ```{r sofa-delta, code_folding="hide"}
 source("clinical_scores.R")
@@ -308,7 +308,7 @@ compute_sofa_delta_vectorized <- function(rows, v) {
 
 ## Build Cohort Per Variant
 
-Each variant applies its own antibiotic--culture time window and SOFA evaluation period, producing a distinct set of labelled onsets from the shared base cohort. Onset events that fall outside the ICU stay or within the first hour (insufficient lead time for prediction) are excluded.
+Each variant applies its own antibiotic-culture time window and SOFA evaluation period, producing a distinct set of labelled onsets. Onsets outside the ICU stay or within the first hour are excluded.
 
 ```{r build-cohorts}
 build_cohort_for_variant <- function(variant_id) {
@@ -369,12 +369,12 @@ cohorts       <- lapply(names(LABEL_VARIANTS), build_cohort_for_variant)
 names(cohorts) <- names(LABEL_VARIANTS)
 
 for (vid in names(cohorts))
-  save_parquet(cohorts[[vid]], paste0("cohort_", vid), OUTPUT_DIR)
+  save_parquet(cohorts[[vid]], paste0("02_cohort_", vid), OUTPUT_DIR)
 ```
 
 ## Label-Variance Table (M1 Deliverable)
 
-The label-variance table is the first pre-registered deliverable. It summarises cohort size, event count, event rate, and onset-time distribution for each variant, providing the empirical foundation for the label-dominance hypothesis (H1) tested in the variance decomposition analysis.
+The label-variance table summarises cohort size, event count, event rate, and onset-time distribution for each variant. This is the empirical foundation for the label-dominance hypothesis (H1).
 
 ```{r label-variance-table}
 step("Building M1 label-variance table...")
@@ -397,6 +397,6 @@ label_variance <- do.call(rbind, lapply(names(cohorts), function(vid) {
 
 knitr::kable(label_variance, caption = "M1 Label-Variance Table (cohort size × event count × onset timing)")
 
-save_parquet(label_variance, "label_variance_table", OUTPUT_DIR)
-cat("\nSaved: label_variance_table.parquet\n")
+save_parquet(label_variance, "02_label_variance_table", OUTPUT_DIR)
+cat("\nSaved: 02_label_variance_table.parquet\n")
 ```

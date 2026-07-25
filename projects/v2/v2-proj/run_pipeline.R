@@ -117,6 +117,21 @@ if (length(html_files) > 0) {
   file.remove(html_files)
   v2_log(sprintf("Cleaned up %d stale .html files from output/", length(html_files)))
 }
+tex_files <- list.files(script_dir, pattern = "\\.tex$", full.names = TRUE)
+if (length(tex_files) > 0) {
+  file.remove(tex_files)
+  v2_log(sprintf("Cleaned up %d stray .tex files from project root", length(tex_files)))
+}
+tex_out <- list.files(OUTPUT_DIR, pattern = "\\.tex$", full.names = TRUE)
+if (length(tex_out) > 0) {
+  file.remove(tex_out)
+  v2_log(sprintf("Cleaned up %d stray .tex files from output/", length(tex_out)))
+}
+stray_logs <- list.files(script_dir, pattern = "\\.log$", full.names = TRUE)
+if (length(stray_logs) > 0) {
+  file.remove(stray_logs)
+  v2_log(sprintf("Cleaned up %d stray .log files from project root", length(stray_logs)))
+}
 
 v2_log("\n======================================================")
 v2_log("  Pipeline complete.")

@@ -1,5 +1,5 @@
 ---
-title: "07 Sample Size — Riley et al. (2019) Power Calculation"
+title: "07 Sample Size - Riley et al. (2019) Power Calculation"
 author: "Abdul Ahad. Student ID: G00486649"
 date: "`r format(Sys.Date(), '%d %B %Y')`"
 output:
@@ -33,9 +33,9 @@ knitr::opts_chunk$set(
 
 ## Introduction
 
-Before fitting any prediction model, sample size adequacy must be demonstrated. The Riley et al. (2019, 2020, 2021) framework provides minimum sample size criteria for clinical prediction models that go beyond the traditional events-per-variable heuristic. The three criteria ensure that (i) the global shrinkage factor remains $\geq 0.9$ (coefficients are not over-fitted), (ii) the optimism in Nagelkerke $R^2$ stays $\leq 0.05$, and (iii) the overall event rate is estimated with adequate precision.
+Riley et al. (2019) provide minimum sample size criteria for prediction models: (i) shrinkage $\geq 0.9$, (ii) Nagelkerke $R^2$ optimism $\leq 0.05$, and (iii) adequate event-rate precision.
 
-Each label variant produces a different number of sepsis onset events, so the calculation is repeated per variant. Crucially, the effective sample size in a person-hour framework is governed by the number of independent **onset events** rather than the total number of person-hour rows, because rows within the same stay are correlated. The anticipated discrimination (C-statistic = 0.846) is drawn from Moor et al. (2023), the most comprehensive recent benchmark for hourly sepsis prediction.
+The calculation is repeated per label variant. The effective sample size depends on independent **onset events**, not total person-hour rows, because rows within a stay are correlated. Anticipated C-statistic = 0.846 (Moor et al., 2023).
 
 ```{r load-deps}
 suppressPackageStartupMessages({
@@ -51,20 +51,20 @@ step("=== Sample Size Calculation (Riley et al., 2019) ===")
 
 ## Label-Variance Recap
 
-The cohort and event counts from the label-variance table (produced in 02) determine the inputs to the power calculation.
+Cohort and event counts from the label-variance table (produced in 02) are the inputs.
 
 ```{r load-label-variance}
-lv_path <- file.path(OUTPUT_DIR, "label_variance_table.csv")
+lv_path <- file.path(OUTPUT_DIR, "02_label_variance_table.parquet")
 if (!file.exists(lv_path))
-  stop("label_variance_table.csv not found. Run 02_cohort_labels.Rmd first.")
+  stop("02_label_variance_table.parquet not found. Run 02_cohort_labels.Rmd first.")
 
-lv <- data.table::fread(lv_path)
+lv <- as.data.table(arrow::read_parquet(lv_path))
 knitr::kable(lv, caption = "Label-variance table (from 02\\_cohort\\_labels.Rmd)")
 ```
 
 ## Sample Size per Variant
 
-For each label variant, the training-set person-hour table is loaded, event counts extracted, and `pmsampsize` (Riley et al., 2019) called with the pre-registered anticipated C-statistic of 0.846. Events-per-variable (EPV) is reported as a secondary reference but is not the binding criterion.
+For each variant, the training-set person-hour table is loaded and `pmsampsize` called with the anticipated C-statistic of 0.846. Events-per-variable (EPV) is reported as a secondary reference.
 
 ```{r sample-size-calc}
 results <- list()
@@ -73,7 +73,7 @@ for (i in seq_len(nrow(lv))) {
   row <- lv[i]
   vid <- row$variant
 
-  ph_path <- file.path(OUTPUT_DIR, paste0("person_hours_", vid, ".parquet"))
+  ph_path <- file.path(OUTPUT_DIR, paste0("03_person_hours_", vid, ".parquet"))
   if (!file.exists(ph_path)) {
     v2_log(sprintf("  Variant %s: person_hours not found, skipping", vid), level = "WARN")
     next
@@ -114,7 +114,7 @@ for (i in seq_len(nrow(lv))) {
     cat(sprintf("  Minimum person-hours (Riley): %s\n", format(min_n_ph, big.mark = ",")))
     cat(sprintf("  Available person-hours:       %s\n", format(n_person_hours, big.mark = ",")))
     cat(sprintf("  Sufficient (person-hours):    %s\n",
-                if (n_person_hours >= min_n_ph) "YES" else "NO — variant may be underpowered"))
+                if (n_person_hours >= min_n_ph) "YES" else "NO - variant may be underpowered"))
     cat(sprintf("  NOTE: effective information = onset EVENTS (%d), not person-hours.\n",
                 n_events))
   }
@@ -140,7 +140,7 @@ for (i in seq_len(nrow(lv))) {
 
 ## Summary and Interpretation
 
-The table below reports the minimum required person-hours (Riley criterion), the available training person-hours, and whether the sample is sufficient. All three variants are expected to comfortably exceed the minimum, given that MIMIC-IV contains tens of thousands of ICU stays. However, the liberal variant (C) may approach borderline adequacy if its higher event rate inflates the required sample size for precise estimation.
+The table below reports minimum required person-hours (Riley criterion), available training person-hours, and whether the sample is sufficient.
 
 ```{r summary-table}
 if (length(results) > 0) {

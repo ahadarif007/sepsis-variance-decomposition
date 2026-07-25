@@ -1,5 +1,5 @@
 ---
-title: "01 Setup — Environment Setup and Data Verification"
+title: "01 Setup - Environment Setup and Data Verification"
 author: "Abdul Ahad. Student ID: G00486649"
 date: "`r format(Sys.Date(), '%d %B %Y')`"
 output:
@@ -33,7 +33,7 @@ knitr::opts_chunk$set(
 
 ## Introduction
 
-This notebook establishes the computational environment for the V2 sepsis prediction pipeline. Before any analytical step can proceed, every downstream dependency must be available and all data directories must resolve to the expected MIMIC-IV and eICU-CRD file structure. A formal readiness check at the outset prevents cryptic mid-pipeline failures and documents the exact software stack used for reproducibility.
+This notebook checks that all required packages, data directories, and file schemas are in place before the pipeline runs.
 
 ```{r load-config}
 source("config.R")
@@ -44,7 +44,7 @@ step("=== Phase 1: Environment Setup ===")
 
 ## Required Packages
 
-All packages used across the analytical pipeline are verified here. Missing packages are installed automatically from CRAN to ensure a single-command setup.
+All required packages are checked and missing ones are installed automatically.
 
 ```{r check-packages}
 REQUIRED_PKGS <- c(
@@ -73,7 +73,7 @@ knitr::kable(pkg_report, caption = "Package availability")
 
 ## Data Directories
 
-The pipeline reads from two critical-care databases: MIMIC-IV (Johnson et al., 2023) for model development and eICU-CRD (Pollard et al., 2018) for external validation. Both must be accessible at the paths defined in `config.R`.
+MIMIC-IV (Johnson et al., 2023) and eICU-CRD (Pollard et al., 2018) must be accessible at the paths defined in `config.R`.
 
 ```{r check-dirs}
 step("Verifying data directories...")
@@ -100,7 +100,7 @@ knitr::kable(dir_report, caption = "Data directory status")
 
 ## Key File Spot-Check
 
-A targeted check of the source tables required for cohort extraction, SOFA scoring, and feature engineering. File sizes serve as a sanity check against truncated or corrupted downloads.
+Checks that key source tables exist and reports their file sizes.
 
 ```{r check-mimic-files}
 step("Spot-checking key MIMIC-IV files...")
@@ -154,7 +154,7 @@ knitr::kable(eicu_df, caption = "eICU key files")
 
 ## Schema Verification
 
-Column-level validation guards against MIMIC-IV version mismatches. The `anchor_year_group` field in the patients table is essential for temporal splitting (Guo et al., 2022), so its presence is confirmed explicitly.
+Confirms that key columns exist and that `anchor_year_group` (needed for temporal splitting) is present.
 
 ```{r check-schema}
 step("Peeking at icustays to verify schema...")
@@ -173,13 +173,13 @@ if (file.exists(icustays_path)) {
     cat(sprintf("anchor_year_group present: %s\n", has_anchor))
   }
 } else {
-  cat("icustays.csv not found — check MIMIC_DIR path.\n")
+  cat("icustays.csv not found - check MIMIC_DIR path.\n")
 }
 ```
 
 ## Output Directory Writability
 
-All downstream outputs (Parquet tables, model objects, figures) are written to a single output directory. A write-test prevents silent failures later in the pipeline.
+Verifies the output directory is writable.
 
 ```{r check-output-dir}
 step("Checking output directory...")

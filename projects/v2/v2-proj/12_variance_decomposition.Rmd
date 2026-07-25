@@ -1,5 +1,5 @@
 ---
-title: "12 Variance Decomposition — Attribution of Performance Variation"
+title: "12 Variance Decomposition - Attribution of Performance Variation"
 author: "Abdul Ahad. Student ID: G00486649"
 date: "`r format(Sys.Date(), '%d %B %Y')`"
 output:
@@ -33,9 +33,9 @@ knitr::opts_chunk$set(
 
 ## Introduction
 
-This is the central analytical output of V2: a structured variance decomposition that attributes observed variation in reported performance to each analytical decision, with all others held fixed. The motivation is Cohen et al.'s (2024) observation that published sepsis prediction studies vary simultaneously across label definition, model class, evaluation metric, and validation strategy --- making it impossible to determine which factor drives reported differences. By systematically varying one factor at a time, this analysis isolates each source of variation.
+Central output of V2: a variance decomposition attributing performance variation to each analytical decision. Published sepsis studies vary across multiple factors simultaneously (Cohen et al., 2024); this analysis varies one factor at a time.
 
-The five factors and their levels are:
+Five factors:
 
 | Factor | Levels |
 |--------|--------|
@@ -72,19 +72,19 @@ step("=== Phase 6a: Variance Decomposition ===")
 
 ## Load Metric Results
 
-The metric results from the internal evaluation (10), external validation (11), and cross-label coefficient table (08) are loaded as inputs to the decomposition.
+Metric results from 10, external validation from 11, and coefficient table from 08 are loaded.
 
 ```{r load-metrics}
-metric_path <- file.path(OUTPUT_DIR, "10_metric_results.csv")
-ext_path    <- file.path(OUTPUT_DIR, "11_external_validation_results.csv")
-coef_path   <- file.path(OUTPUT_DIR, "coef_all_variants.csv")
+metric_path <- file.path(OUTPUT_DIR, "10_metric_results.parquet")
+ext_path    <- file.path(OUTPUT_DIR, "11_external_validation_results.parquet")
+coef_path   <- file.path(OUTPUT_DIR, "08_coef_all_variants.parquet")
 
 if (!file.exists(metric_path))
-  stop("10_metric_results.csv not found. Run 10_metrics_suite.Rmd first.")
+  stop("10_metric_results.parquet not found. Run 10_metrics_suite.Rmd first.")
 
-metrics    <- as.data.table(data.table::fread(metric_path))
-ext_res    <- if (file.exists(ext_path))  as.data.table(data.table::fread(ext_path))  else NULL
-coef_table <- if (file.exists(coef_path)) as.data.table(data.table::fread(coef_path)) else NULL
+metrics    <- as.data.table(arrow::read_parquet(metric_path))
+ext_res    <- if (file.exists(ext_path))  as.data.table(arrow::read_parquet(ext_path))  else NULL
+coef_table <- if (file.exists(coef_path)) as.data.table(arrow::read_parquet(coef_path)) else NULL
 
 cat(sprintf("Metric results loaded: %d rows\n", nrow(metrics)))
 knitr::kable(metrics[, .(variant, model, eval_window, auroc, auprc,
@@ -94,20 +94,20 @@ knitr::kable(metrics[, .(variant, model, eval_window, auroc, auprc,
 
 ## Variance by Factor
 
-Each factor's spread is computed as the range of AUROC (or Utility Score) across that factor's levels, with all other factors held at their reference values: Variant B, primary model, temporal split, unrestricted evaluation window.
+Each factor's spread is the range of AUROC (or Utility Score) across that factor's levels, with others held at reference values (Variant B, primary model, temporal split, unrestricted).
 
 ```{r variance-by-factor}
-# Factor 1: MODEL CLASS — label=B, temporal, unrestricted
+# Factor 1: MODEL CLASS - label=B, temporal, unrestricted
 model_class_rows   <- metrics[variant == "B" & eval_window == "unrestricted"]
 model_spread_auroc   <- if (nrow(model_class_rows) > 0) diff(range(model_class_rows$auroc, na.rm = TRUE)) else NA
 model_spread_utility <- if (nrow(model_class_rows) > 0) diff(range(model_class_rows$utility_normalised, na.rm = TRUE)) else NA
 
-# Factor 2: LABEL VARIANT — model=primary, temporal, unrestricted
+# Factor 2: LABEL VARIANT - model=primary, temporal, unrestricted
 label_rows         <- metrics[model == "primary" & eval_window == "unrestricted"]
 label_spread_auroc   <- if (nrow(label_rows) > 0) diff(range(label_rows$auroc, na.rm = TRUE)) else NA
 label_spread_utility <- if (nrow(label_rows) > 0) diff(range(label_rows$utility_normalised, na.rm = TRUE)) else NA
 
-# Factor 3: PREDICTION-TIME ANCHORING — model=primary, variant=B, temporal
+# Factor 3: PREDICTION-TIME ANCHORING - model=primary, variant=B, temporal
 anchor_rows_B  <- metrics[model == "primary" & variant == "B"]
 anchor_unrestr <- anchor_rows_B[eval_window == "unrestricted",         auroc]
 anchor_treatm  <- anchor_rows_B[eval_window == "treatment_anchored",   auroc]
@@ -115,9 +115,9 @@ h3_delta_auroc <- if (length(anchor_unrestr) > 0 && length(anchor_treatm) > 0)
                     anchor_unrestr - anchor_treatm else NA
 
 # Factor 4: VALIDATION SPLIT (temporal vs random)
-random_path <- file.path(OUTPUT_DIR, "10_metric_results_random.csv")
+random_path <- file.path(OUTPUT_DIR, "10_metric_results_random.parquet")
 if (file.exists(random_path)) {
-  metrics_random <- as.data.table(data.table::fread(random_path))
+  metrics_random <- as.data.table(arrow::read_parquet(random_path))
   temporal_auroc <- metrics[model == "primary" & variant == "B" &
                                eval_window == "unrestricted", auroc]
   random_auroc   <- metrics_random[model == "primary" & variant == "B" &
@@ -149,7 +149,7 @@ if (nrow(model_class_rows) > 0) {
 
 ## The Variance Decomposition Table
 
-This table is the thesis's primary deliverable. Each row quantifies how much a single analytical decision shifts reported performance, providing empirical evidence for the claim that methodological heterogeneity --- not genuine model superiority --- explains much of the published variation in sepsis prediction benchmarks.
+Primary deliverable. Each row quantifies how much a single analytical decision shifts reported performance.
 
 ```{r decomp-table}
 decomp_table <- data.frame(
@@ -168,8 +168,8 @@ decomp_table <- data.frame(
                           h6_delta), 4),
   spread_utility = round(c(model_spread_utility, label_spread_utility,
                              NA, NA, NA, NA), 4),
-  hypothesis  = c("—", "H1", "H3", "H4", "H5", "H6"),
-  h_threshold = c("—", "label ≥ model", "Δ ≥ 0.03", "Δ ≥ 0.02",
+  hypothesis  = c("-", "H1", "H3", "H4", "H5", "H6"),
+  h_threshold = c("-", "label ≥ model", "Δ ≥ 0.03", "Δ ≥ 0.02",
                    "utility drop > AUROC drop", "|Δ| ≤ 0.02")
 )
 
@@ -179,7 +179,7 @@ save_parquet(decomp_table, "12_variance_decomposition_table", OUTPUT_DIR)
 
 ## Hypothesis Test Verdicts
 
-Each pre-registered hypothesis is evaluated against its specified threshold. "CONFIRMED" means the observed effect meets or exceeds the threshold; "NOT confirmed" means it falls short. These are descriptive verdicts, not formal statistical tests with $p$-values --- the thresholds were chosen to represent clinically meaningful effect sizes.
+Each hypothesis is evaluated against its threshold. "CONFIRMED" = effect meets/exceeds threshold; "NOT confirmed" = falls short. These are descriptive verdicts, not formal statistical tests.
 
 ```{r hypothesis-verdicts}
 step("Hypothesis test verdicts...")
@@ -269,7 +269,7 @@ if (length(verdicts) > 0) {
 
 ## Variance Decomposition Plots
 
-Two complementary visualisations summarise the decomposition: the label-variant effect on AUROC (holding model class fixed) and the model-class effect (holding the label fixed). If H1 is confirmed, the first plot's bar spread exceeds the second's.
+Label-variant effect vs. model-class effect on AUROC. If H1 is confirmed, the label-variant spread exceeds the model-class spread.
 
 ```{r variance-plots, fig.cap="Variance decomposition: label-variant and model-class effects on AUROC.", fig.width=6, fig.height=4}
 if (nrow(metrics[!is.na(auroc)]) > 0) {

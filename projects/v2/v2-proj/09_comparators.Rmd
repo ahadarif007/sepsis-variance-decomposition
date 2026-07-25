@@ -1,5 +1,5 @@
 ---
-title: "09 Comparators — Rule-Based, Cox, and GBT Comparator Models"
+title: "09 Comparators - Rule-Based, Cox, and GBT Comparator Models"
 author: "Abdul Ahad. Student ID: G00486649"
 date: "`r format(Sys.Date(), '%d %B %Y')`"
 output:
@@ -33,16 +33,16 @@ knitr::opts_chunk$set(
 
 ## Introduction
 
-A meaningful assessment of the primary model requires comparators that span the spectrum from simple clinical rules to flexible machine learning. Crucially, all comparators share the **identical** cohort, label definition, feature set, temporal split, and evaluation metrics as the primary model (Reyna et al., 2020), isolating model-class effects from data-handling differences.
+All comparators share the same cohort, labels, features, temporal split, and metrics as the primary model (Reyna et al., 2020).
 
 | Comparator | Rationale |
 |---|---|
-| **NEWS2** | The headline rule-based comparator recommended for sepsis screening in UK hospitals (Evans et al., 2021). Pre-computed; no fitting required. |
-| **qSOFA, SIRS** | Included for descriptive context only; neither is a prediction model in the formal sense. |
-| **Static Cox PH** | A deliberately weak baseline that treats covariates as time-fixed. The proportional-hazards assumption is expected to be violated, and the Schoenfeld residual test quantifies this. |
-| **Gradient-Boosted Trees (XGBoost)** | The mandatory ML comparator per PhysioNet challenge conventions (Reyna et al., 2020). If the interpretable primary model matches GBT within 0.02 AUROC (hypothesis H6), the complexity premium of a black-box is not justified. |
+| **NEWS2** | Rule-based sepsis screening score (Evans et al., 2021). Pre-computed. |
+| **qSOFA, SIRS** | Descriptive context only. |
+| **Static Cox PH** | Weak baseline with time-fixed covariates. PH assumption expected to be violated. |
+| **XGBoost** | ML comparator per PhysioNet conventions (Reyna et al., 2020). Tests H6. |
 
-Variant B (Seymour-Standard) is the primary comparison; replication on A and C feeds the variance decomposition.
+Variant B is the primary comparison; A and C feed the variance decomposition.
 
 ```{r load-deps}
 suppressPackageStartupMessages({
@@ -62,7 +62,7 @@ step("=== Phase 3b: Comparator models ===")
 
 ## Feature Set
 
-The same feature set used by the primary model is applied to all comparators to ensure a fair comparison.
+Same feature set as the primary model.
 
 ```{r feature-set}
 BASE_FEATURES <- c(
@@ -77,14 +77,14 @@ BASE_FEATURES <- c(
 
 ## Fit Comparators Per Variant
 
-For each variant: NEWS2/qSOFA/SIRS scores are read directly from the person-hour table (no fitting); the Cox model is fitted with time-varying covariates and Schoenfeld residual testing; XGBoost is trained with early stopping on the temporal test set, class-imbalance weighting, and AUCPR as the evaluation metric.
+Per variant: NEWS2/qSOFA/SIRS scores are read from the person-hour table (no fitting); Cox is fitted with Schoenfeld testing; XGBoost uses early stopping, class-imbalance weighting, and AUCPR.
 
 ```{r fit-comparators-fn, code_folding="hide"}
 fit_comparators <- function(vid) {
   step(sprintf("--- Comparators for Variant %s ---", vid))
 
   ph <- as.data.table(arrow::read_parquet(
-    file.path(OUTPUT_DIR, paste0("person_hours_", vid, ".parquet"))
+    file.path(OUTPUT_DIR, paste0("03_person_hours_", vid, ".parquet"))
   ))
 
   train <- ph[temporal_split == "train"]
@@ -148,7 +148,7 @@ fit_comparators <- function(vid) {
       schoen_df            <- as.data.frame(schoen_test$table)
       schoen_df$covariate  <- rownames(schoen_df)
       schoen_df$variant    <- vid
-      save_parquet(schoen_df, paste0("cox_schoenfeld_", vid), OUTPUT_DIR)
+      save_parquet(schoen_df, paste0("09_cox_schoenfeld_", vid), OUTPUT_DIR)
       cat(sprintf("  Cox PH test: global p = %.3f (p < 0.05 = PH violated, expected)\n",
                   schoen_test$table["GLOBAL", "p"]))
     }
@@ -160,11 +160,11 @@ fit_comparators <- function(vid) {
     )
     test[, pred_cox := plogis(lp)]
     results[["cox"]] <- test[, .(stay_id, hour, event, event_bin, pred_cox)]
-    saveRDS(cox_fit, file.path(OUTPUT_DIR, paste0("model_cox_", vid, ".rds")))
+    saveRDS(cox_fit, file.path(OUTPUT_DIR, paste0("09_model_cox_", vid, ".rds")))
     cox_coef           <- as.data.frame(coef(summary(cox_fit)))
     cox_coef$covariate <- rownames(cox_coef)
     cox_coef$variant   <- vid
-    save_parquet(cox_coef, paste0("coef_cox_", vid), OUTPUT_DIR)
+    save_parquet(cox_coef, paste0("09_coef_cox_", vid), OUTPUT_DIR)
   }
 
   # --- Gradient-Boosted Trees ---
@@ -217,12 +217,12 @@ fit_comparators <- function(vid) {
     pred_gbt <- predict(gbt_fit, dtest)
     test[, pred_gbt := pred_gbt]
     results[["gbt"]] <- test[, .(stay_id, hour, event, event_bin, pred_gbt)]
-    saveRDS(gbt_fit, file.path(OUTPUT_DIR, paste0("model_gbt_", vid, ".rds")))
+    saveRDS(gbt_fit, file.path(OUTPUT_DIR, paste0("09_model_gbt_", vid, ".rds")))
     feat_imp <- xgboost::xgb.importance(feature_names = gbt_feats, model = gbt_fit)
     if (!is.null(feat_imp)) {
       feat_imp$variant <- vid
       save_parquet(as.data.frame(feat_imp),
-               paste0("gbt_feature_importance_", vid), OUTPUT_DIR)
+               paste0("09_gbt_feature_importance_", vid), OUTPUT_DIR)
     }
     cat(sprintf("  GBT fitted: best iteration %d\n", gbt_fit$best_iteration))
   }
@@ -242,7 +242,7 @@ fit_comparators <- function(vid) {
                          by = c("stay_id", "hour"), all.x = TRUE)
   }
   all_preds[, variant := vid]
-  save_parquet(all_preds, paste0("predictions_comparators_", vid), OUTPUT_DIR)
+  save_parquet(all_preds, paste0("09_predictions_comparators_", vid), OUTPUT_DIR)
   cat(sprintf("  Comparator predictions saved for Variant %s\n", vid))
   all_preds
 }
@@ -255,12 +255,12 @@ names(all_comparator_preds) <- names(LABEL_VARIANTS)
 
 ## Feature Importance (GBT)
 
-The GBT feature importance rankings provide a useful cross-check: if the gradient-boosted model relies on the same features that carry large coefficients in the multinomial regression, the two model classes are learning similar structure despite their different functional forms.
+GBT feature importance provides a cross-check: if GBT relies on the same features as the multinomial regression, both model classes are learning similar structure.
 
 ```{r gbt-importance}
-imp_files <- list.files(OUTPUT_DIR, pattern = "^gbt_feature_importance_", full.names = TRUE)
+imp_files <- list.files(OUTPUT_DIR, pattern = "^09_gbt_feature_importance_.*\\.parquet$", full.names = TRUE)
 if (length(imp_files) > 0) {
-  imp_all <- do.call(rbind, lapply(imp_files, data.table::fread))
+  imp_all <- rbindlist(lapply(imp_files, function(f) as.data.table(arrow::read_parquet(f))))
   if (nrow(imp_all) > 0) {
     top_imp <- imp_all[variant == "B"][order(-Gain)][1:min(20, .N)]
     knitr::kable(top_imp[, .(Feature, Gain = round(Gain, 4), Cover = round(Cover, 4),

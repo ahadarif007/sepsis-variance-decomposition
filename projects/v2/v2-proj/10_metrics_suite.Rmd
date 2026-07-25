@@ -1,5 +1,5 @@
 ---
-title: "10 Metrics Suite — Full Evaluation Metric Suite"
+title: "10 Metrics Suite - Full Evaluation Metric Suite"
 author: "Abdul Ahad. Student ID: G00486649"
 date: "`r format(Sys.Date(), '%d %B %Y')`"
 output:
@@ -33,22 +33,13 @@ knitr::opts_chunk$set(
 
 ## Introduction
 
-A single discrimination metric (AUROC) is insufficient to evaluate a real-time clinical prediction system. This notebook applies a comprehensive metric suite designed to capture the distinct failure modes that matter at the bedside, following the recommendations of Wang et al. (2025) and Van Calster et al. (2019).
+This notebook applies a comprehensive metric suite following Wang et al. (2025) and Van Calster et al. (2019).
 
-**Primary metrics:**
+**Primary:** PhysioNet Utility Score (Reyna et al., 2020), calibration (intercept + slope).
 
-- **PhysioNet Utility Score** (Reyna et al., 2020) --- the only metric that jointly rewards early detection and penalises both missed cases and false alarms. It can go negative, exposing models that alert indiscriminately.
-- **Calibration** (intercept and slope) --- assesses whether predicted probabilities match observed event rates, a prerequisite for clinical decision-making.
+**Secondary:** AUPRC, AUROC, decision-curve net benefit, alert burden ($\leq 1.4$ benchmark; Moor et al., 2023), median lead time.
 
-**Secondary metrics:**
-
-- **AUPRC** --- more informative than AUROC under severe class imbalance (Davis and Goadrich, 2006).
-- **AUROC** --- included for comparability with prior literature but interpreted with caution given the low per-hour event rate.
-- **Decision-curve net benefit** --- quantifies the range of clinical threshold preferences over which the model outperforms default strategies.
-- **Alert burden** --- false alerts per true alert; benchmark $\leq 1.4$ (Moor et al., 2023).
-- **Median lead time** --- hours of advance warning before clinical recognition.
-
-All metrics are computed in two evaluation windows: **unrestricted** (all test hours) and **treatment-anchored** (only hours before first antibiotic or culture order), following Kamran et al. (2024). The treatment-anchored window removes the information leakage that occurs when a model observes physiological changes triggered by treatment initiation.
+All metrics are computed in two windows: **unrestricted** (all test hours) and **treatment-anchored** (pre-treatment hours only; Kamran et al., 2024).
 
 ```{r load-deps}
 suppressPackageStartupMessages({
@@ -68,7 +59,7 @@ step("=== Full Evaluation Metric Suite ===")
 
 ## Metric Functions
 
-Each metric is implemented as a standalone function for testability and reuse across the internal, external, and subgroup evaluations.
+Standalone metric functions, reused across internal, external, and subgroup evaluations.
 
 ```{r metric-fns}
 # PhysioNet Utility Score
@@ -171,7 +162,7 @@ compute_lead_time <- function(ph_pred, pred_col, threshold = 0.5) {
 
 ## Evaluation Loop
 
-The full $\text{models} \times \text{variants} \times \text{windows}$ grid is evaluated. For each cell, all metrics are computed and decision-curve analysis is run where both the primary model and GBT predictions are available.
+The full models x variants x windows grid is evaluated. Decision-curve analysis runs where both primary and GBT predictions are available.
 
 ```{r evaluate-all}
 MODEL_NAMES <- c(primary = "pred_sepsis", news2 = "pred_news2",
@@ -183,8 +174,8 @@ all_results <- list()
 for (vid in names(LABEL_VARIANTS)) {
   step(sprintf("--- Evaluating Variant %s (%s) ---", vid, LABEL_VARIANTS[[vid]]$name))
 
-  prim_pred_path <- file.path(OUTPUT_DIR, paste0("predictions_primary_",     vid, ".parquet"))
-  comp_pred_path <- file.path(OUTPUT_DIR, paste0("predictions_comparators_", vid, ".parquet"))
+  prim_pred_path <- file.path(OUTPUT_DIR, paste0("08_predictions_primary_",     vid, ".parquet"))
+  comp_pred_path <- file.path(OUTPUT_DIR, paste0("09_predictions_comparators_", vid, ".parquet"))
 
   if (!file.exists(prim_pred_path)) {
     v2_log(sprintf("  Skipping Variant %s: primary predictions not found", vid))
@@ -273,7 +264,7 @@ for (vid in names(LABEL_VARIANTS)) {
       dca_df <- tryCatch(dca_result$dca, error = function(e) as.data.frame(dca_result))
       if (!is.null(dca_df) && nrow(dca_df) > 0) {
         dca_df$variant <- vid
-        save_parquet(as.data.frame(dca_df), paste0("dca_", vid), OUTPUT_DIR)
+        save_parquet(as.data.frame(dca_df), paste0("10_dca_", vid), OUTPUT_DIR)
       }
     }
   }
@@ -282,7 +273,7 @@ for (vid in names(LABEL_VARIANTS)) {
 
 ## Results and Interpretation
 
-The results table below is the central performance comparison. Key patterns to look for: (i) whether the primary model's Utility Score is competitive with GBT (H6), (ii) whether treatment-anchored metrics are materially lower than unrestricted (H3, indicating leakage), and (iii) whether calibration slopes deviate substantially from 1.0 (indicating miscalibration).
+Central performance comparison. Key checks: (i) primary vs. GBT Utility Score (H6), (ii) treatment-anchored vs. unrestricted (H3, leakage), (iii) calibration slope near 1.0.
 
 ```{r show-results}
 if (length(all_results) > 0) {
@@ -294,10 +285,10 @@ if (length(all_results) > 0) {
   knitr::kable(
     results_df[order(results_df$variant, results_df$eval_window, results_df$model),
                display_cols],
-    caption = "Evaluation results --- all models $\\times$ variants $\\times$ windows (temporal split)"
+    caption = "Evaluation results: all models x variants x windows (temporal split)"
   )
   cat("\nSaved: 10_metric_results.parquet\n")
 } else {
-  cat("No results to display --- check that 08 and 09 have been run.\n")
+  cat("No results to display. Check that 08 and 09 have been run.\n")
 }
 ```

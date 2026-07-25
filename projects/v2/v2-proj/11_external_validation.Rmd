@@ -1,5 +1,5 @@
 ---
-title: "11 External Validation — eICU-CRD External Validation"
+title: "11 External Validation - eICU-CRD External Validation"
 author: "Abdul Ahad. Student ID: G00486649"
 date: "`r format(Sys.Date(), '%d %B %Y')`"
 output:
@@ -33,17 +33,17 @@ knitr::opts_chunk$set(
 
 ## Introduction
 
-External validation on a geographically and temporally distinct dataset is the minimum standard for claiming generalisability of a clinical prediction model (Collins et al., 2024, TRIPOD+AI). The eICU Collaborative Research Database (Pollard et al., 2018) provides multi-centre US ICU data that differs from MIMIC-IV in patient demographics, clinical protocols, and data collection infrastructure --- making it a meaningful external test.
+External validation on a distinct dataset is the minimum standard for generalisability (Collins et al., 2024, TRIPOD+AI). The eICU-CRD (Pollard et al., 2018) provides multi-centre US ICU data with different demographics, protocols, and data infrastructure.
 
-The pre-registered expected AUC degradation is approximately 0.085 (Moor et al., 2023). A materially **smaller** drop would suggest the external cohort is insufficiently distant to constitute a genuine transportability test. Conversely, this analysis tests hypothesis **H5**: that the proportional decline in Utility Score exceeds the proportional decline in AUROC, reflecting the Utility Score's greater sensitivity to distributional shift.
+Expected AUC degradation: ~0.085 (Moor et al., 2023). This analysis tests **H5**: Utility Score degrades proportionally more than AUROC on external data.
 
-The procedure is:
+Steps:
 
-1. Build an eICU person-hour table with variables harmonised to the MIMIC-IV naming convention (following ricu conventions; Bennett et al., 2023)
-2. Apply the Sepsis-3 Variant B onset definition
-3. Load the MIMIC-IV trained models --- **no retraining or recalibration**
-4. Evaluate using the same metric suite as the internal analysis
-5. Compare internal vs. external performance to quantify transportability
+1. Build eICU person-hour table harmonised to MIMIC-IV naming
+2. Apply Sepsis-3 Variant B onset definition
+3. Load MIMIC-IV trained models (no retraining)
+4. Evaluate with the same metric suite
+5. Compare internal vs. external performance
 
 ```{r load-deps}
 suppressPackageStartupMessages({
@@ -67,7 +67,7 @@ cat(sprintf("Pre-registered expected degradation: %.3f AUC\n",
 
 ## Load eICU Patient Table
 
-The eICU patient table provides demographics and ICU-level outcomes. The same age ($\geq$ 18) and length-of-stay ($\geq$ 4 hours) filters used for MIMIC-IV are applied to maintain cohort comparability.
+Same inclusion filters as MIMIC-IV: age $\geq$ 18, LOS $\geq$ 4 hours.
 
 ```{r load-eicu-patients}
 step("Loading eICU tables...")
@@ -87,7 +87,7 @@ cat(sprintf("eICU cohort after exclusions: %s\n",
 
 ## Vital Signs (vitalPeriodic)
 
-The vitalPeriodic table ($\sim$1.7 GB compressed) is loaded via DuckDB with pushdown filters on cohort membership and the observation time window, avoiding full materialisation in R memory.
+Loaded via DuckDB with pushdown filters on cohort membership and time window.
 
 ```{r load-vitals}
 step("Loading eICU vitals...")
@@ -133,7 +133,7 @@ if (file.exists(vp_path)) {
 
 ## Lab Values
 
-Laboratory values are mapped from eICU naming conventions to the MIMIC-IV variable names used during model training. PaO$_2$/FiO$_2$ ratios are computed where both components are available.
+Lab values are mapped from eICU names to MIMIC-IV conventions. PaO$_2$/FiO$_2$ ratios computed where both components exist.
 
 ```{r load-labs}
 step("Loading eICU labs...")
@@ -175,7 +175,7 @@ if (file.exists(lab_path)) {
 
 ## Suspected Infection (eICU)
 
-The same Variant B antibiotic--culture window logic is applied to eICU medication and microbiology tables, with offsets converted from minutes to hours. eICU records drug administration times as minute offsets from ICU admission rather than absolute timestamps.
+Variant B antibiotic-culture window logic applied to eICU medication and microbiology tables. eICU offsets are in minutes from ICU admission.
 
 ```{r eicu-suspected-infection}
 step("Loading eICU infection events...")
@@ -223,7 +223,7 @@ cat(sprintf("eICU suspected infection stays: %d\n", nrow(eicu_susp)))
 
 ## Build eICU Person-Hour Table
 
-The eICU person-hour table follows the same construction as MIMIC-IV (dense hourly grid, LOCF, missingness indicators, rolling slopes, clinical scores). GCS is unavailable in eICU vitalPeriodic and is set to NA --- this is a known limitation that may attenuate neurological-component scoring.
+Same construction as MIMIC-IV (hourly grid, LOCF, missingness indicators, rolling slopes, clinical scores). GCS is unavailable in eICU vitalPeriodic and set to NA.
 
 ```{r build-eicu-person-hours}
 step("Building eICU person-hour table...")
@@ -291,14 +291,14 @@ news2_scores <- news2(grid$resp_rate, spo2_v, suppl_o2, grid$sbp, grid$hr,
 grid[, names(news2_scores) := news2_scores]
 grid[, qsofa_score := qsofa(resp_rate, gcs, map)]
 
-save_parquet(grid, "eicu_person_hours", OUTPUT_DIR)
+save_parquet(grid, "11_eicu_person_hours", OUTPUT_DIR)
 cat(sprintf("eICU person-hours: %s rows, %d events\n",
             format(nrow(grid), big.mark = ","), sum(grid$event == 1)))
 ```
 
 ## Apply MIMIC-IV Trained Models
 
-Trained model objects are loaded from disk and applied to the eICU data without any parameter updates. Missing features in the eICU data are zero-filled, matching the imputation strategy used during training. Predictions are generated in chunks to manage memory.
+Trained models applied to eICU data without retraining. Missing features are zero-filled (same as training). Predictions generated in chunks for memory.
 
 ```{r apply-models}
 step("Applying trained models to eICU cohort...")
@@ -315,8 +315,8 @@ BASE_FEATURES <- c(
 eval_results <- list()
 
 for (vid in names(LABEL_VARIANTS)) {
-  prim_model_path <- file.path(OUTPUT_DIR, paste0("model_primary_", vid, ".rds"))
-  gbt_model_path  <- file.path(OUTPUT_DIR, paste0("model_gbt_",     vid, ".rds"))
+  prim_model_path <- file.path(OUTPUT_DIR, paste0("08_model_primary_", vid, ".rds"))
+  gbt_model_path  <- file.path(OUTPUT_DIR, paste0("09_model_gbt_",     vid, ".rds"))
   if (!file.exists(prim_model_path)) next
 
   eicu_pred   <- copy(grid)
@@ -390,14 +390,14 @@ for (vid in names(LABEL_VARIANTS)) {
                       intersect(c("pred_gbt","pred_news2","news2_total","qsofa_score"),
                                 names(eicu_pred)))
   save_parquet(eicu_pred[, ..save_cols_eicu],
-               paste0("eicu_predictions_", vid), OUTPUT_DIR)
+               paste0("11_eicu_predictions_", vid), OUTPUT_DIR)
   rm(eicu_pred, prim_mod); if (exists("gbt_mod")) rm(gbt_mod); gc()
 }
 ```
 
 ## Results and H5 Test
 
-External validation results are compared against the internal (temporal-split) performance. The H5 test checks whether the Utility Score degrades proportionally more than AUROC when moving from MIMIC-IV to eICU --- a finding that would indicate the Utility Score captures distributional sensitivity that AUROC misses. An AUROC drop substantially below the expected 0.085 warrants scrutiny: it may indicate that the eICU cohort, despite institutional differences, is not sufficiently distant in its underlying case mix.
+External vs. internal performance comparison. H5 tests whether Utility Score degrades proportionally more than AUROC on external data.
 
 ```{r results-h5}
 if (length(eval_results) > 0) {
@@ -405,10 +405,10 @@ if (length(eval_results) > 0) {
   knitr::kable(ext_df, caption = "External validation results (eICU-CRD)")
   save_parquet(ext_df, "11_external_validation_results", OUTPUT_DIR)
 
-  internal_path <- file.path(OUTPUT_DIR, "10_metric_results.csv")
+  internal_path <- file.path(OUTPUT_DIR, "10_metric_results.parquet")
   if (file.exists(internal_path)) {
-    internal_res <- data.table::fread(internal_path)
-    cat("\n--- H5 test: AUROC vs Utility Score degradation ---\n")
+    internal_res <- as.data.table(arrow::read_parquet(internal_path))
+    cat("\nH5 test: AUROC vs Utility Score degradation\n")
     h5_rows <- list()
     for (vid in names(LABEL_VARIANTS)) {
       int_row <- internal_res[variant == vid & model == "primary" &
@@ -421,7 +421,7 @@ if (length(eval_results) > 0) {
         cat(sprintf("  V%s: Expected drop ≈ %.3f (Moor et al., 2023)\n",
                     vid, EXPECTED_EXTERNAL_DEGRADATION))
         if (auroc_drop < 0.02)
-          cat("  ** WARNING: Very small drop — external cohort may be insufficiently distant **\n")
+          cat("  ** WARNING: Very small drop - external cohort may be insufficiently distant **\n")
         h5_rows[[vid]] <- data.frame(variant = vid,
                                       internal_auroc = int_row$auroc,
                                       external_auroc = ext_row$auroc,

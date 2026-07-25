@@ -1,5 +1,5 @@
 ---
-title: "13 Equity Analysis — Subgroup Performance and Label Sensitivity"
+title: "13 Equity Analysis - Subgroup Performance and Label Sensitivity"
 author: "Abdul Ahad. Student ID: G00486649"
 date: "`r format(Sys.Date(), '%d %B %Y')`"
 output:
@@ -33,11 +33,11 @@ knitr::opts_chunk$set(
 
 ## Introduction
 
-Wang, Li, Naidech, and Luo (2022) demonstrated that sepsis prediction models exhibit systematically worse performance for Asian, Hispanic, and Spanish-speaking patients. This notebook extends their analysis with two complementary investigations:
+Wang et al. (2022) showed that sepsis prediction models perform worse for Asian, Hispanic, and Spanish-speaking patients. This notebook extends their work with:
 
-1. **Subgroup performance**: Discrimination (AUROC, AUPRC), alert burden, and calibration are evaluated within each demographic subgroup defined by race/ethnicity, language, and insurance status. Disparities in these metrics indicate that a model's overall performance does not uniformly benefit all patient populations.
+1. **Subgroup performance**: AUROC, AUPRC, and alert burden evaluated per demographic subgroup (race/ethnicity, language, insurance).
 
-2. **Subgroup label-sensitivity**: A novel conjunction analysis quantifies how the fraction of patients identified as septic varies across the three label variants *within each demographic subgroup*. If label-variant sensitivity is non-uniform across subgroups, the choice of Sepsis-3 operationalisation has equity implications that go beyond aggregate event-rate differences. This interaction between label choice and demographic group has not been reported for any published sepsis prediction model.
+2. **Subgroup label-sensitivity**: How the fraction labelled septic varies across the three label variants *within each subgroup*. Non-uniform sensitivity means label choice has equity implications beyond aggregate event-rate differences.
 
 ```{r load-deps}
 suppressPackageStartupMessages({
@@ -58,7 +58,7 @@ step("=== Phase 6b: Equity Analysis ===")
 
 ### Metric Helper
 
-A reusable function computes AUROC, AUPRC, and alert burden for any subgroup slice, with minimum-sample guards to avoid unreliable estimates from small groups.
+Computes AUROC, AUPRC, and alert burden for any subgroup slice with minimum-sample guards.
 
 ```{r subgroup-helper}
 compute_subgroup_metrics <- function(dt, pred_col, subgroup_col, subgroup_val) {
@@ -97,13 +97,13 @@ compute_subgroup_metrics <- function(dt, pred_col, subgroup_col, subgroup_val) {
 
 ### Performance by Subgroup (Variant B, Primary Model)
 
-For each equity-relevant variable, the top subgroup levels (by sample size) are evaluated across the primary model, GBT, and NEWS2. This three-model comparison reveals whether performance gaps are model-specific or reflect underlying data availability differences.
+Top subgroup levels (by sample size) are evaluated across primary, GBT, and NEWS2.
 
 ```{r subgroup-performance}
 step("Subgroup performance analysis...")
 
-prim_path <- file.path(OUTPUT_DIR, "predictions_primary_B.parquet")
-comp_path <- file.path(OUTPUT_DIR, "predictions_comparators_B.parquet")
+prim_path <- file.path(OUTPUT_DIR, "08_predictions_primary_B.parquet")
+comp_path <- file.path(OUTPUT_DIR, "09_predictions_comparators_B.parquet")
 
 perf_df <- NULL
 
@@ -117,7 +117,7 @@ if (!file.exists(prim_path)) {
     ph <- merge(ph, comp[, ..merge_cols], by = c("stay_id", "hour"), all.x = TRUE)
   }
 
-  ph_demo_path <- file.path(OUTPUT_DIR, "person_hours_B.parquet")
+  ph_demo_path <- file.path(OUTPUT_DIR, "03_person_hours_B.parquet")
   if (file.exists(ph_demo_path)) {
     ph_demo <- as.data.table(arrow::read_parquet(ph_demo_path,
                                                    col_select = c("stay_id","race",
@@ -184,7 +184,7 @@ if (!is.null(perf_df) && "race" %in% perf_df$subgroup_col) {
 
 ## Subgroup Label-Sensitivity
 
-This is the novel conjunction analysis. For each demographic subgroup, the fraction of patients identified as septic is computed under all three label variants. A large range (percentage-point spread across A, B, C) within a subgroup means that the choice of operationalisation disproportionately affects that group's labelling --- a finding with direct implications for equitable model development.
+For each subgroup, the fraction labelled septic is computed under all three label variants. A large spread (pp range across A, B, C) means the label choice disproportionately affects that group.
 
 ```{r label-sensitivity}
 step("Subgroup label-sensitivity analysis...")
@@ -193,7 +193,7 @@ label_sens_results <- list()
 
 for (subg_col in EQUITY_VARS) {
   cohort_data <- lapply(names(LABEL_VARIANTS), function(vid) {
-    coh_path <- file.path(OUTPUT_DIR, paste0("cohort_", vid, ".parquet"))
+    coh_path <- file.path(OUTPUT_DIR, paste0("02_cohort_", vid, ".parquet"))
     if (!file.exists(coh_path)) return(NULL)
     coh_full <- tryCatch(as.data.table(arrow::read_parquet(coh_path)),
                          error = function(e) NULL)
@@ -261,7 +261,7 @@ if (length(label_sens_results) > 0) {
 
 ### Label Sensitivity vs. AUROC Deficit
 
-The scatter plot below tests whether subgroups with higher label sensitivity (larger percentage-point spread across variants) also exhibit lower AUROC. A negative association would suggest that label ambiguity and prediction difficulty are correlated --- groups where the definition is most contested are also the groups where models struggle most.
+Tests whether subgroups with higher label sensitivity also have lower AUROC. A negative trend would suggest label ambiguity compounds prediction difficulty.
 
 ```{r label-sens-vs-auroc, fig.cap="Subgroup label sensitivity (x) vs. AUROC (y). Each point is a demographic subgroup; a downward trend suggests label ambiguity compounds prediction difficulty.", fig.width=8, fig.height=6}
 if (length(label_sens_results) > 0 && !is.null(perf_df)) {

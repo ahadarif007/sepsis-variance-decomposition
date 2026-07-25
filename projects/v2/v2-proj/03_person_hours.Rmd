@@ -1,5 +1,5 @@
 ---
-title: "03 Person-Hours — Person-Hour Table Construction"
+title: "03 Person-Hours - Person-Hour Table Construction"
 author: "Abdul Ahad. Student ID: G00486649"
 date: "`r format(Sys.Date(), '%d %B %Y')`"
 output:
@@ -33,9 +33,9 @@ knitr::opts_chunk$set(
 
 ## Introduction
 
-The discrete-time competing-risks framework (D'Agostino et al., 1990; Heyard et al., 2019) requires the data to be structured as a person-period table: one row per patient per discrete time unit at risk. This notebook expands each ICU stay into an hourly grid, attaches time-varying vital signs and laboratory values via last-observation-carried-forward (LOCF), and codes each row with its competing-event status.
+This notebook expands each ICU stay into an hourly grid, attaches time-varying vitals and labs via LOCF (last-observation-carried-forward), and codes each row with its competing-event status (D'Agostino et al., 1990; Heyard et al., 2019).
 
-The competing-event coding distinguishes four mutually exclusive states at each hour:
+Four mutually exclusive states at each hour:
 
 | Code | Event | Interpretation |
 |------|-------|----------------|
@@ -44,7 +44,7 @@ The competing-event coding distinguishes four mutually exclusive states at each 
 | 2 | Discharge alive | ICU discharge without developing sepsis |
 | 3 | Death without sepsis | In-ICU mortality without prior sepsis onset |
 
-Treatment anchor timestamps (first antibiotic order, first culture) are also recorded to support the treatment-anchored evaluation window recommended by Kamran et al. (2024), which restricts metrics to hours before clinical suspicion to mitigate information leakage from treatment initiation.
+Treatment anchor timestamps (first antibiotic, first culture) are recorded for the treatment-anchored evaluation window (Kamran et al., 2024).
 
 ```{r load-deps}
 suppressPackageStartupMessages({
@@ -62,19 +62,19 @@ step("=== Phase 2b: Person-hour table construction ===")
 
 ## Load Cohort IDs
 
-Stay and admission identifiers from all three variant cohorts are collected up front so that the large source tables (chartevents, labevents) can be filtered in a single DuckDB pass rather than loaded repeatedly.
+Cohort stay and admission IDs are collected so the large source tables can be filtered in a single DuckDB pass.
 
 ```{r load-cohort-ids}
 step("Loading cohort IDs for pre-filtering...")
 
 all_stay_ids <- unique(unlist(lapply(names(LABEL_VARIANTS), function(vid) {
-  p <- file.path(OUTPUT_DIR, paste0("cohort_", vid, ".parquet"))
+  p <- file.path(OUTPUT_DIR, paste0("02_cohort_", vid, ".parquet"))
   if (!file.exists(p)) return(integer(0))
   as.integer(arrow::read_parquet(p, col_select = "stay_id")$stay_id)
 })))
 
 all_hadm_ids <- unique(unlist(lapply(names(LABEL_VARIANTS), function(vid) {
-  p <- file.path(OUTPUT_DIR, paste0("cohort_", vid, ".parquet"))
+  p <- file.path(OUTPUT_DIR, paste0("02_cohort_", vid, ".parquet"))
   if (!file.exists(p)) return(integer(0))
   as.integer(arrow::read_parquet(p, col_select = "hadm_id")$hadm_id)
 })))
@@ -85,7 +85,7 @@ cat(sprintf("Cohort: %d stays, %d hadm_ids\n",
 
 ## Load and Pre-Filter Large Tables
 
-Chartevents (~30 GB uncompressed) and labevents (~5 GB) are loaded via DuckDB with pushdown filters on item IDs and cohort membership. Temperature values recorded in Fahrenheit are converted to Celsius, and FiO$_2$ values expressed as percentages are rescaled to fractions. Vasopressor infusion records are loaded for SOFA cardiovascular scoring.
+Chartevents and labevents are loaded via DuckDB with pushdown filters on item IDs and cohort membership. Temperature F is converted to C, and FiO$_2$ percentages are rescaled to fractions.
 
 ```{r load-chartevents}
 step("Loading chartevents (vitals) via DuckDB...")
@@ -158,7 +158,7 @@ first_culture <- microbio[, .(first_culture_time = min(charttime, na.rm = TRUE))
 
 ## Per-Hour Covariate Extraction
 
-For each stay, a dense hourly grid is constructed from ICU admission to the earlier of discharge or the maximum observation window. Vital signs and laboratory values are aggregated to hourly means, then forward-filled within each stay using LOCF. Missingness indicators flag hours where no laboratory measurement was available (important for models to distinguish "normal" from "unmeasured"). Six-hour rolling slopes capture the trajectory of key vitals, providing the model with trend information beyond instantaneous values.
+A dense hourly grid is built for each stay. Vitals and labs are aggregated to hourly means, then forward-filled (LOCF). Missingness indicators flag unmeasured hours. Six-hour rolling slopes capture vital-sign trends.
 
 ```{r hourly-covariates-fn, code_folding="hide"}
 build_hourly_covariates <- function(stays_dt) {
@@ -283,14 +283,14 @@ build_hourly_covariates <- function(stays_dt) {
 
 ## Build Person-Hour Tables Per Variant
 
-For each label variant, the hourly panel is assembled, treatment anchors merged, competing events coded, and clinical scores (SOFA, NEWS2, qSOFA, SIRS) computed row-wise. Post-outcome rows are dropped so that every row in the final table represents a genuine at-risk person-hour. A temporal train/test split based on `anchor_year_group` follows the recommendation of Guo et al. (2022) to avoid optimistic within-era evaluation.
+For each label variant, the hourly panel is assembled, treatment anchors merged, competing events coded, and clinical scores (SOFA, NEWS2, qSOFA, SIRS) computed. Post-outcome rows are dropped. A temporal train/test split based on `anchor_year_group` follows Guo et al. (2022).
 
 ```{r build-person-hours}
 for (vid in names(LABEL_VARIANTS)) {
   step(sprintf("=== Person-hours for Variant %s (%s) ===",
                vid, LABEL_VARIANTS[[vid]]$name))
 
-  cohort <- load_parquet(paste0("cohort_", vid), OUTPUT_DIR)
+  cohort <- load_parquet(paste0("02_cohort_", vid), OUTPUT_DIR)
   panel  <- build_hourly_covariates(cohort)
 
   panel <- merge(panel,
@@ -357,7 +357,7 @@ for (vid in names(LABEL_VARIANTS)) {
               panel[event == 1, .N], panel[event == 2, .N],
               panel[event == 3, .N], panel[event == 0, .N]))
 
-  save_parquet(panel, paste0("person_hours_", vid), OUTPUT_DIR)
+  save_parquet(panel, paste0("03_person_hours_", vid), OUTPUT_DIR)
   rm(panel, cohort); gc()
 }
 ```

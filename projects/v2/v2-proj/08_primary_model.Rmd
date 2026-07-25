@@ -1,5 +1,5 @@
 ---
-title: "08 Primary Model — Dynamic Discrete-Time Competing-Risks Hazard Model"
+title: "08 Primary Model - Dynamic Discrete-Time Competing-Risks Hazard Model"
 author: "Abdul Ahad. Student ID: G00486649"
 date: "`r format(Sys.Date(), '%d %B %Y')`"
 output:
@@ -33,15 +33,15 @@ knitr::opts_chunk$set(
 
 ## Introduction
 
-The primary model is a **multinomial pooled logistic regression** (D'Agostino et al., 1990; Heyard et al., 2019) --- the fully interpretable, maximum-likelihood approach to discrete-time competing-risks hazard estimation. This model class was chosen deliberately: if an interpretable regression performs comparably to gradient-boosted trees (hypothesis H6), the added complexity of black-box methods is unnecessary for this prediction task.
+The primary model is a **multinomial pooled logistic regression** (D'Agostino et al., 1990; Heyard et al., 2019). If this interpretable regression matches gradient-boosted trees (H6), black-box complexity is unnecessary.
 
-For patient $i$ at hour $t$, with competing events $r \in \{1\text{=sepsis}, 2\text{=discharge}, 3\text{=death}\}$, the cause-specific discrete hazard is:
+For patient $i$ at hour $t$, with competing events $r \in \{1\text{=sepsis}, 2\text{=discharge}, 3\text{=death}\}$:
 
 $$\lambda_r(t \mid X_{it}) = \frac{\exp\bigl(\alpha_r(t) + \boldsymbol{\beta}_r^\top \mathbf{X}_{it}\bigr)}{1 + \sum_{s} \exp\bigl(\alpha_s(t) + \boldsymbol{\beta}_s^\top \mathbf{X}_{it}\bigr)}$$
 
-where $\alpha_r(t)$ is the cause-specific baseline log-hazard modelled as a natural cubic spline in hours since ICU admission (capturing the non-linear time-dependence of event risk), and $\boldsymbol{\beta}_r$ are cause-specific covariate coefficients. Standard errors are computed using a cluster-robust sandwich estimator (clustered on `stay_id`) to account for within-stay correlation across person-hours.
+$\alpha_r(t)$ is the baseline log-hazard (natural cubic spline in hours since admission) and $\boldsymbol{\beta}_r$ are cause-specific covariate coefficients. Standard errors use a cluster-robust sandwich estimator (clustered on `stay_id`).
 
-Models are fitted separately for each label variant: Variant B is the primary analysis; Variants A and C provide the cross-label coefficient comparisons needed for hypothesis H2.
+Models are fitted per label variant: Variant B is primary; A and C support the cross-label coefficient comparison (H2).
 
 ```{r load-deps}
 suppressPackageStartupMessages({
@@ -63,7 +63,7 @@ step("=== Phase 3a: Primary discrete-time competing-risks model ===")
 
 ## Feature Set
 
-The predictor set comprises physiological vitals, laboratory values, vasopressor exposure, and 6-hour rolling slopes. Missingness indicators for infrequently measured labs allow the model to distinguish genuinely normal values from unmeasured ones --- an important distinction in ICU data where the absence of a test result is itself clinically informative.
+Predictors include vitals, lab values, vasopressor exposure, and 6-hour rolling slopes. Missingness indicators let the model distinguish normal values from unmeasured ones.
 
 ```{r feature-set}
 BASE_FEATURES <- c(
@@ -83,7 +83,7 @@ cat("Missingness indicators:", paste(MISSINGNESS_FEATURES, collapse = ", "), "\n
 
 ## Fit Primary Model Per Variant
 
-For each variant the following pipeline is executed: (i) load training-set person-hours, (ii) impute remaining NAs to zero (after LOCF, any residual missingness reflects the start-of-stay period before the first measurement), (iii) fit the spline-augmented multinomial model via `nnet::multinom`, (iv) compute cluster-robust standard errors, (v) generate test-set predicted probabilities, and (vi) save model objects and coefficient tables. A binary logistic fallback is included in case the multinomial fit fails to converge.
+Per variant: load training person-hours, impute remaining NAs to zero, fit the multinomial model via `nnet::multinom`, compute cluster-robust SEs, predict on the test set, and save outputs. A binary logistic fallback handles non-convergence.
 
 ```{r fit-primary-model, code_folding="hide"}
 fit_primary_model <- function(vid) {
@@ -91,7 +91,7 @@ fit_primary_model <- function(vid) {
                vid, LABEL_VARIANTS[[vid]]$name))
 
   ph <- as.data.table(arrow::read_parquet(
-    file.path(OUTPUT_DIR, paste0("person_hours_", vid, ".parquet"))
+    file.path(OUTPUT_DIR, paste0("03_person_hours_", vid, ".parquet"))
   ))
 
   train <- ph[temporal_split == "train"]
@@ -190,9 +190,9 @@ fit_primary_model <- function(vid) {
                  "anchor_year_group", "onset_hour",
                  intersect(c("sofa_total", "news2_total", "qsofa_score"), names(test)))
   save_parquet(test[, ..save_cols],
-               paste0("predictions_primary_", vid), OUTPUT_DIR)
-  save_parquet(coef_table, paste0("coef_table_primary_", vid), OUTPUT_DIR)
-  saveRDS(fit, file.path(OUTPUT_DIR, paste0("model_primary_", vid, ".rds")))
+               paste0("08_predictions_primary_", vid), OUTPUT_DIR)
+  save_parquet(coef_table, paste0("08_coef_table_primary_", vid), OUTPUT_DIR)
+  saveRDS(fit, file.path(OUTPUT_DIR, paste0("08_model_primary_", vid, ".rds")))
 
   cat(sprintf("  Variant %s model saved.\n", vid))
   list(fit = fit, coef_table = coef_table, vcov_robust = vcov_robust)
@@ -206,7 +206,7 @@ names(models) <- names(LABEL_VARIANTS)
 
 ## Cross-Label Coefficient Stability
 
-The combined coefficient table across all three variants is the input for the H2 (coefficient instability) test: if at least one clinically relevant covariate changes sign across label variants, then the choice of operationalisation does not merely rescale predictions but qualitatively alters the model's clinical logic.
+The combined coefficient table across variants feeds the H2 (coefficient instability) test: if a covariate changes sign across label variants, the label choice qualitatively alters the model's clinical logic.
 
 ```{r cross-label-coefs}
 step("Computing cross-label coefficient stability (→ H2)...")
@@ -215,7 +215,7 @@ all_coefs <- data.table::rbindlist(
   lapply(names(models), function(vid) as.data.table(models[[vid]]$coef_table)),
   fill = TRUE
 )
-save_parquet(all_coefs, "coef_all_variants", OUTPUT_DIR)
+save_parquet(all_coefs, "08_coef_all_variants", OUTPUT_DIR)
 cat("Cross-label coefficient tables saved for H2 testing.\n")
 
 # Show sepsis-outcome coefficients for Variant B as a preview
