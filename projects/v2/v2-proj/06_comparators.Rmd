@@ -1,9 +1,10 @@
 ---
-title: "09 Comparators - Rule-Based, Cox, and GBT Comparator Models"
+title: "06 Comparators - Rule-Based, Cox, and GBT Comparator Models"
 author: "Abdul Ahad. Student ID: G00486649"
 date: "`r format(Sys.Date(), '%d %B %Y')`"
 output:
   bookdown::pdf_document2:
+    latex_engine: xelatex
     toc: true
     toc_depth: 3
     number_sections: true
@@ -84,7 +85,7 @@ fit_comparators <- function(vid) {
   step(sprintf("--- Comparators for Variant %s ---", vid))
 
   ph <- as.data.table(arrow::read_parquet(
-    file.path(OUTPUT_DIR, paste0("03_person_hours_", vid, ".parquet"))
+    file.path(DATA_DIR, paste0("03_person_hours_", vid, ".parquet"))
   ))
 
   train <- ph[temporal_split == "train"]
@@ -148,7 +149,7 @@ fit_comparators <- function(vid) {
       schoen_df            <- as.data.frame(schoen_test$table)
       schoen_df$covariate  <- rownames(schoen_df)
       schoen_df$variant    <- vid
-      save_parquet(schoen_df, paste0("09_cox_schoenfeld_", vid), OUTPUT_DIR)
+      save_parquet(schoen_df, paste0("06_cox_schoenfeld_", vid), DATA_DIR)
       cat(sprintf("  Cox PH test: global p = %.3f (p < 0.05 = PH violated, expected)\n",
                   schoen_test$table["GLOBAL", "p"]))
     }
@@ -160,11 +161,11 @@ fit_comparators <- function(vid) {
     )
     test[, pred_cox := plogis(lp)]
     results[["cox"]] <- test[, .(stay_id, hour, event, event_bin, pred_cox)]
-    saveRDS(cox_fit, file.path(OUTPUT_DIR, paste0("09_model_cox_", vid, ".rds")))
+    saveRDS(cox_fit, file.path(DATA_DIR, paste0("06_model_cox_", vid, ".rds")))
     cox_coef           <- as.data.frame(coef(summary(cox_fit)))
     cox_coef$covariate <- rownames(cox_coef)
     cox_coef$variant   <- vid
-    save_parquet(cox_coef, paste0("09_coef_cox_", vid), OUTPUT_DIR)
+    save_parquet(cox_coef, paste0("06_coef_cox_", vid), DATA_DIR)
   }
 
   # --- Gradient-Boosted Trees ---
@@ -217,12 +218,12 @@ fit_comparators <- function(vid) {
     pred_gbt <- predict(gbt_fit, dtest)
     test[, pred_gbt := pred_gbt]
     results[["gbt"]] <- test[, .(stay_id, hour, event, event_bin, pred_gbt)]
-    saveRDS(gbt_fit, file.path(OUTPUT_DIR, paste0("09_model_gbt_", vid, ".rds")))
+    saveRDS(gbt_fit, file.path(DATA_DIR, paste0("06_model_gbt_", vid, ".rds")))
     feat_imp <- xgboost::xgb.importance(feature_names = gbt_feats, model = gbt_fit)
     if (!is.null(feat_imp)) {
       feat_imp$variant <- vid
       save_parquet(as.data.frame(feat_imp),
-               paste0("09_gbt_feature_importance_", vid), OUTPUT_DIR)
+               paste0("06_gbt_feature_importance_", vid), DATA_DIR)
     }
     cat(sprintf("  GBT fitted: best iteration %d\n", gbt_fit$best_iteration))
   }
@@ -242,7 +243,7 @@ fit_comparators <- function(vid) {
                          by = c("stay_id", "hour"), all.x = TRUE)
   }
   all_preds[, variant := vid]
-  save_parquet(all_preds, paste0("09_predictions_comparators_", vid), OUTPUT_DIR)
+  save_parquet(all_preds, paste0("06_predictions_comparators_", vid), DATA_DIR)
   cat(sprintf("  Comparator predictions saved for Variant %s\n", vid))
   all_preds
 }
@@ -262,7 +263,7 @@ step("--- Random-split comparators for Variant B (H4) ---")
 
 vid <- "B"
 ph <- as.data.table(arrow::read_parquet(
-  file.path(OUTPUT_DIR, paste0("03_person_hours_", vid, ".parquet"))
+  file.path(DATA_DIR, paste0("03_person_hours_", vid, ".parquet"))
 ))
 
 if ("random_split" %in% names(ph)) {
@@ -379,7 +380,7 @@ if ("random_split" %in% names(ph)) {
                            by = c("stay_id", "hour"), all.x = TRUE)
   }
   all_preds_r[, variant := vid]
-  save_parquet(all_preds_r, paste0("09_predictions_comparators_random_", vid), OUTPUT_DIR)
+  save_parquet(all_preds_r, paste0("06_predictions_comparators_random_", vid), DATA_DIR)
   cat(sprintf("  Random-split comparator predictions saved for Variant %s\n", vid))
 } else {
   cat("random_split column not found in person-hours; skipping H4 comparators.\n")
@@ -391,7 +392,7 @@ if ("random_split" %in% names(ph)) {
 GBT feature importance provides a cross-check: if GBT relies on the same features as the multinomial regression, both model classes are learning similar structure.
 
 ```{r gbt-importance}
-imp_files <- list.files(OUTPUT_DIR, pattern = "^09_gbt_feature_importance_.*\\.parquet$", full.names = TRUE)
+imp_files <- list.files(DATA_DIR, pattern = "^06_gbt_feature_importance_.*\\.parquet$", full.names = TRUE)
 if (length(imp_files) > 0) {
   imp_all <- rbindlist(lapply(imp_files, function(f) as.data.table(arrow::read_parquet(f))))
   if (nrow(imp_all) > 0) {

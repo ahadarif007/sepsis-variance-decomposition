@@ -16,8 +16,10 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 OUTPUT_DIR="${SCRIPT_DIR}/output"
-LOG_FILE="${SCRIPT_DIR}/pipeline_run.log"
-mkdir -p "$OUTPUT_DIR"
+LOG_DIR="${OUTPUT_DIR}/logs"
+PDF_DIR="${OUTPUT_DIR}/pdf"
+LOG_FILE="${LOG_DIR}/pipeline_run.log"
+mkdir -p "$LOG_DIR" "$PDF_DIR" "${OUTPUT_DIR}/figures" "${OUTPUT_DIR}/processed_data"
 
 # ---------------------------------------------------------------------------
 # Phase groupings (mirrors run_pipeline.R phases)
@@ -26,11 +28,11 @@ phase_scripts() {
   case "$1" in
     1) echo "01" ;;
     2) echo "02 03" ;;
-    3) echo "07" ;;
-    4) echo "08 09" ;;
-    5) echo "10" ;;
-    6) echo "11" ;;
-    7) echo "12 13" ;;
+    3) echo "04" ;;
+    4) echo "05 06" ;;
+    5) echo "07" ;;
+    6) echo "08" ;;
+    7) echo "09 10" ;;
     *) echo "Unknown phase: $1" >&2; exit 1 ;;
   esac
 }
@@ -109,8 +111,8 @@ FAILED_LIST=()
 
 for rmd in "${RMD_FILES[@]}"; do
   base="${rmd%.Rmd}"
-  pdf_out="${OUTPUT_DIR}/${base}.pdf"
-  step_log="${OUTPUT_DIR}/${base}.log"
+  pdf_out="${PDF_DIR}/${base}.pdf"
+  step_log="${LOG_DIR}/${base}.log"
 
   echo "" | tee -a "$LOG_FILE"
   echo "── $(date '+%H:%M:%S')  Rendering: ${rmd} ──" | tee -a "$LOG_FILE"
@@ -121,7 +123,7 @@ for rmd in "${RMD_FILES[@]}"; do
     setwd('${SCRIPT_DIR}')
     rmarkdown::render(
       input      = '${rmd}',
-      output_dir = '${OUTPUT_DIR}',
+      output_dir = '${PDF_DIR}',
       output_file = '${base}.pdf',
       quiet      = FALSE,
       envir      = new.env(parent = globalenv())
@@ -152,7 +154,7 @@ done
 # Cleanup temporary / stale files
 # ---------------------------------------------------------------------------
 find "$SCRIPT_DIR" -maxdepth 1 -name '*.Rmd.tmp' -delete 2>/dev/null
-find "$OUTPUT_DIR" -maxdepth 1 -name '*.html' -delete 2>/dev/null
+find "$PDF_DIR" -maxdepth 1 -name '*.html' -delete 2>/dev/null
 
 # ---------------------------------------------------------------------------
 # Summary
@@ -164,7 +166,7 @@ echo "  Done: ${SUCCESS} succeeded, ${FAILED} failed  [${END_TS}]" | tee -a "$LO
 if [ ${#FAILED_LIST[@]} -gt 0 ]; then
   echo "  FAILED: ${FAILED_LIST[*]}" | tee -a "$LOG_FILE"
 fi
-echo "  PDF reports: ${OUTPUT_DIR}/" | tee -a "$LOG_FILE"
+echo "  PDF reports: ${PDF_DIR}/" | tee -a "$LOG_FILE"
 echo "  Full log:     ${LOG_FILE}" | tee -a "$LOG_FILE"
 echo "======================================================" | tee -a "$LOG_FILE"
 

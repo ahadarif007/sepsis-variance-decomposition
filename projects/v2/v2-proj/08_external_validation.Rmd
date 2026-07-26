@@ -1,9 +1,10 @@
 ---
-title: "11 External Validation - eICU-CRD External Validation"
+title: "08 External Validation - eICU-CRD External Validation"
 author: "Abdul Ahad. Student ID: G00486649"
 date: "`r format(Sys.Date(), '%d %B %Y')`"
 output:
   bookdown::pdf_document2:
+    latex_engine: xelatex
     toc: true
     toc_depth: 3
     number_sections: true
@@ -291,7 +292,7 @@ news2_scores <- news2(grid$resp_rate, spo2_v, suppl_o2, grid$sbp, grid$hr,
 grid[, names(news2_scores) := news2_scores]
 grid[, qsofa_score := qsofa(resp_rate, gcs, map)]
 
-save_parquet(grid, "11_eicu_person_hours", OUTPUT_DIR)
+save_parquet(grid, "08_eicu_person_hours", DATA_DIR)
 cat(sprintf("eICU person-hours: %s rows, %d events\n",
             format(nrow(grid), big.mark = ","), sum(grid$event == 1)))
 ```
@@ -315,8 +316,8 @@ BASE_FEATURES <- c(
 eval_results <- list()
 
 for (vid in names(LABEL_VARIANTS)) {
-  prim_model_path <- file.path(OUTPUT_DIR, paste0("08_model_primary_", vid, ".rds"))
-  gbt_model_path  <- file.path(OUTPUT_DIR, paste0("09_model_gbt_",     vid, ".rds"))
+  prim_model_path <- file.path(DATA_DIR, paste0("05_model_primary_", vid, ".rds"))
+  gbt_model_path  <- file.path(DATA_DIR, paste0("06_model_gbt_",     vid, ".rds"))
   if (!file.exists(prim_model_path)) next
 
   eicu_pred   <- copy(grid)
@@ -390,7 +391,7 @@ for (vid in names(LABEL_VARIANTS)) {
                       intersect(c("pred_gbt","pred_news2","news2_total","qsofa_score"),
                                 names(eicu_pred)))
   save_parquet(eicu_pred[, ..save_cols_eicu],
-               paste0("11_eicu_predictions_", vid), OUTPUT_DIR)
+               paste0("08_eicu_predictions_", vid), DATA_DIR)
   rm(eicu_pred, prim_mod); if (exists("gbt_mod")) rm(gbt_mod); gc()
 }
 ```
@@ -403,9 +404,9 @@ External vs. internal performance comparison. H5 tests whether Utility Score deg
 if (length(eval_results) > 0) {
   ext_df <- do.call(rbind, eval_results)
   knitr::kable(ext_df, caption = "External validation results (eICU-CRD)")
-  save_parquet(ext_df, "11_external_validation_results", OUTPUT_DIR)
+  save_parquet(ext_df, "08_external_validation_results", DATA_DIR)
 
-  internal_path <- file.path(OUTPUT_DIR, "10_metric_results.parquet")
+  internal_path <- file.path(DATA_DIR, "07_metric_results.parquet")
   if (file.exists(internal_path)) {
     internal_res <- as.data.table(arrow::read_parquet(internal_path))
     cat("\nH5 test: AUROC vs Utility Score degradation\n")
@@ -418,7 +419,7 @@ if (length(eval_results) > 0) {
         auroc_drop <- int_row$auroc - ext_row$auroc
         cat(sprintf("  V%s: Internal AUROC=%.3f, External AUROC=%.3f, drop=%.3f\n",
                     vid, int_row$auroc, ext_row$auroc, auroc_drop))
-        cat(sprintf("  V%s: Expected drop ≈ %.3f (Moor et al., 2023)\n",
+        cat(sprintf("  V%s: Expected drop ~ %.3f (Moor et al., 2023)\n",
                     vid, EXPECTED_EXTERNAL_DEGRADATION))
         if (auroc_drop < 0.02)
           cat("  ** WARNING: Very small drop - external cohort may be insufficiently distant **\n")

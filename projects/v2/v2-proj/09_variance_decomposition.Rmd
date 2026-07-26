@@ -1,9 +1,10 @@
 ---
-title: "12 Variance Decomposition - Attribution of Performance Variation"
+title: "09 Variance Decomposition - Attribution of Performance Variation"
 author: "Abdul Ahad. Student ID: G00486649"
 date: "`r format(Sys.Date(), '%d %B %Y')`"
 output:
   bookdown::pdf_document2:
+    latex_engine: xelatex
     toc: true
     toc_depth: 3
     number_sections: true
@@ -75,12 +76,12 @@ step("=== Phase 6a: Variance Decomposition ===")
 Metric results from 10, external validation from 11, and coefficient table from 08 are loaded.
 
 ```{r load-metrics}
-metric_path <- file.path(OUTPUT_DIR, "10_metric_results.parquet")
-ext_path    <- file.path(OUTPUT_DIR, "11_external_validation_results.parquet")
-coef_path   <- file.path(OUTPUT_DIR, "08_coef_all_variants.parquet")
+metric_path <- file.path(DATA_DIR, "07_metric_results.parquet")
+ext_path    <- file.path(DATA_DIR, "08_external_validation_results.parquet")
+coef_path   <- file.path(DATA_DIR, "05_coef_all_variants.parquet")
 
 if (!file.exists(metric_path))
-  stop("10_metric_results.parquet not found. Run 10_metrics_suite.Rmd first.")
+  stop("07_metric_results.parquet not found. Run 07_metrics_suite.Rmd first.")
 
 metrics    <- as.data.table(arrow::read_parquet(metric_path))
 ext_res    <- if (file.exists(ext_path))  as.data.table(arrow::read_parquet(ext_path))  else NULL
@@ -89,7 +90,7 @@ coef_table <- if (file.exists(coef_path)) as.data.table(arrow::read_parquet(coef
 cat(sprintf("Metric results loaded: %d rows\n", nrow(metrics)))
 knitr::kable(metrics[, .(variant, model, eval_window, auroc, auprc,
                            utility_normalised, alert_burden, lead_time_h)],
-             caption = "All evaluation results (from 10_metrics_suite.Rmd)")
+             caption = "All evaluation results (from 07\\_metrics\\_suite.Rmd)")
 ```
 
 ## Variance by Factor
@@ -115,7 +116,7 @@ h3_delta_auroc <- if (length(anchor_unrestr) > 0 && length(anchor_treatm) > 0)
                     anchor_unrestr - anchor_treatm else NA
 
 # Factor 4: VALIDATION SPLIT (temporal vs random)
-random_path <- file.path(OUTPUT_DIR, "10_metric_results_random.parquet")
+random_path <- file.path(DATA_DIR, "07_metric_results_random.parquet")
 if (file.exists(random_path)) {
   metrics_random <- as.data.table(arrow::read_parquet(random_path))
   temporal_auroc <- metrics[model == "primary" & variant == "B" &
@@ -174,7 +175,7 @@ decomp_table <- data.frame(
 )
 
 knitr::kable(decomp_table, caption = "THE VARIANCE DECOMPOSITION TABLE")
-save_parquet(decomp_table, "12_variance_decomposition_table", OUTPUT_DIR)
+save_parquet(decomp_table, "09_variance_decomposition_table", DATA_DIR)
 ```
 
 ## Hypothesis Test Verdicts
@@ -263,7 +264,7 @@ if (!is.na(h6_delta)) {
 if (length(verdicts) > 0) {
   verdicts_df <- do.call(rbind, verdicts)
   knitr::kable(verdicts_df, caption = "Hypothesis test verdicts")
-  save_parquet(verdicts_df, "12_hypothesis_verdicts", OUTPUT_DIR)
+  save_parquet(verdicts_df, "09_hypothesis_verdicts", DATA_DIR)
 }
 ```
 
@@ -285,7 +286,7 @@ if (nrow(metrics[!is.na(auroc)]) > 0) {
            x = "Label Variant", y = "AUROC") +
       theme_bw() + theme(legend.position = "none")
     print(p_label)
-    ggsave(file.path(OUTPUT_DIR, "12_label_variance_auroc.png"), p_label,
+    ggsave(file.path(FIGURES_DIR, "09_label_variance_auroc.png"), p_label,
            width = 6, height = 4, dpi = 150)
   }, error = function(e) cat("Label plot failed:", e$message, "\n"))
 
@@ -300,7 +301,7 @@ if (nrow(metrics[!is.na(auroc)]) > 0) {
       theme_bw() + theme(axis.text.x = element_text(angle = 30, hjust = 1),
                          legend.position = "none")
     print(p_model)
-    ggsave(file.path(OUTPUT_DIR, "12_model_class_auroc.png"), p_model,
+    ggsave(file.path(FIGURES_DIR, "09_model_class_auroc.png"), p_model,
            width = 6, height = 4, dpi = 150)
   }, error = function(e) cat("Model plot failed:", e$message, "\n"))
 }

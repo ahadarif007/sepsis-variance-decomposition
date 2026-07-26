@@ -1,9 +1,10 @@
 ---
-title: "08 Primary Model - Dynamic Discrete-Time Competing-Risks Hazard Model"
+title: "05 Primary Model - Dynamic Discrete-Time Competing-Risks Hazard Model"
 author: "Abdul Ahad. Student ID: G00486649"
 date: "`r format(Sys.Date(), '%d %B %Y')`"
 output:
   bookdown::pdf_document2:
+    latex_engine: xelatex
     toc: true
     toc_depth: 3
     number_sections: true
@@ -91,7 +92,7 @@ fit_primary_model <- function(vid) {
                vid, LABEL_VARIANTS[[vid]]$name))
 
   ph <- as.data.table(arrow::read_parquet(
-    file.path(OUTPUT_DIR, paste0("03_person_hours_", vid, ".parquet"))
+    file.path(DATA_DIR, paste0("03_person_hours_", vid, ".parquet"))
   ))
 
   train <- ph[temporal_split == "train"]
@@ -190,9 +191,9 @@ fit_primary_model <- function(vid) {
                  "anchor_year_group", "onset_hour",
                  intersect(c("sofa_total", "news2_total", "qsofa_score"), names(test)))
   save_parquet(test[, ..save_cols],
-               paste0("08_predictions_primary_", vid), OUTPUT_DIR)
-  save_parquet(coef_table, paste0("08_coef_table_primary_", vid), OUTPUT_DIR)
-  saveRDS(fit, file.path(OUTPUT_DIR, paste0("08_model_primary_", vid, ".rds")))
+               paste0("05_predictions_primary_", vid), DATA_DIR)
+  save_parquet(coef_table, paste0("05_coef_table_primary_", vid), DATA_DIR)
+  saveRDS(fit, file.path(DATA_DIR, paste0("05_model_primary_", vid, ".rds")))
 
   cat(sprintf("  Variant %s model saved.\n", vid))
   list(fit = fit, coef_table = coef_table, vcov_robust = vcov_robust)
@@ -213,7 +214,7 @@ step("--- Re-fitting primary model on random split (H4) ---")
 
 fit_primary_random <- function(vid = "B") {
   ph <- as.data.table(arrow::read_parquet(
-    file.path(OUTPUT_DIR, paste0("03_person_hours_", vid, ".parquet"))
+    file.path(DATA_DIR, paste0("03_person_hours_", vid, ".parquet"))
   ))
 
   if (!"random_split" %in% names(ph)) {
@@ -289,8 +290,8 @@ fit_primary_random <- function(vid = "B") {
                  "anchor_year_group", "onset_hour",
                  intersect(c("sofa_total", "news2_total", "qsofa_score"), names(test)))
   save_parquet(test[, ..save_cols],
-               paste0("08_predictions_primary_random_", vid), OUTPUT_DIR)
-  saveRDS(fit, file.path(OUTPUT_DIR, paste0("08_model_primary_random_", vid, ".rds")))
+               paste0("05_predictions_primary_random_", vid), DATA_DIR)
+  saveRDS(fit, file.path(DATA_DIR, paste0("05_model_primary_random_", vid, ".rds")))
   cat(sprintf("  Random-split model for Variant %s saved.\n", vid))
   fit
 }
@@ -309,7 +310,7 @@ all_coefs <- data.table::rbindlist(
   lapply(names(models), function(vid) as.data.table(models[[vid]]$coef_table)),
   fill = TRUE
 )
-save_parquet(all_coefs, "08_coef_all_variants", OUTPUT_DIR)
+save_parquet(all_coefs, "05_coef_all_variants", DATA_DIR)
 cat("Cross-label coefficient tables saved for H2 testing.\n")
 
 # Show sepsis-outcome coefficients for Variant B as a preview

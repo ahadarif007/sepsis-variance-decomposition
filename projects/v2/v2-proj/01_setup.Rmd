@@ -4,6 +4,7 @@ author: "Abdul Ahad. Student ID: G00486649"
 date: "`r format(Sys.Date(), '%d %B %Y')`"
 output:
   bookdown::pdf_document2:
+    latex_engine: xelatex
     toc: true
     toc_depth: 3
     number_sections: true
@@ -212,6 +213,6 @@ summary_df <- data.frame(
 )
 knitr::kable(summary_df, caption = "Setup summary")
 
-save_parquet(file_df, "01_setup_file_report", OUTPUT_DIR)
+save_parquet(file_df, "01_setup_file_report", DATA_DIR)
 cat("\nSaved: 01_setup_file_report.parquet\n")
 ```

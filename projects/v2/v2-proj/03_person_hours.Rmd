@@ -4,6 +4,7 @@ author: "Abdul Ahad. Student ID: G00486649"
 date: "`r format(Sys.Date(), '%d %B %Y')`"
 output:
   bookdown::pdf_document2:
+    latex_engine: xelatex
     toc: true
     toc_depth: 3
     number_sections: true
@@ -68,13 +69,13 @@ Cohort stay and admission IDs are collected so the large source tables can be fi
 step("Loading cohort IDs for pre-filtering...")
 
 all_stay_ids <- unique(unlist(lapply(names(LABEL_VARIANTS), function(vid) {
-  p <- file.path(OUTPUT_DIR, paste0("02_cohort_", vid, ".parquet"))
+  p <- file.path(DATA_DIR, paste0("02_cohort_", vid, ".parquet"))
   if (!file.exists(p)) return(integer(0))
   as.integer(arrow::read_parquet(p, col_select = "stay_id")$stay_id)
 })))
 
 all_hadm_ids <- unique(unlist(lapply(names(LABEL_VARIANTS), function(vid) {
-  p <- file.path(OUTPUT_DIR, paste0("02_cohort_", vid, ".parquet"))
+  p <- file.path(DATA_DIR, paste0("02_cohort_", vid, ".parquet"))
   if (!file.exists(p)) return(integer(0))
   as.integer(arrow::read_parquet(p, col_select = "hadm_id")$hadm_id)
 })))
@@ -290,7 +291,7 @@ for (vid in names(LABEL_VARIANTS)) {
   step(sprintf("=== Person-hours for Variant %s (%s) ===",
                vid, LABEL_VARIANTS[[vid]]$name))
 
-  cohort <- load_parquet(paste0("02_cohort_", vid), OUTPUT_DIR)
+  cohort <- load_parquet(paste0("02_cohort_", vid), DATA_DIR)
   panel  <- build_hourly_covariates(cohort)
 
   panel <- merge(panel,
@@ -366,7 +367,7 @@ for (vid in names(LABEL_VARIANTS)) {
               panel[event == 1, .N], panel[event == 2, .N],
               panel[event == 3, .N], panel[event == 0, .N]))
 
-  save_parquet(panel, paste0("03_person_hours_", vid), OUTPUT_DIR)
+  save_parquet(panel, paste0("03_person_hours_", vid), DATA_DIR)
   rm(panel, cohort); gc()
 }
 ```

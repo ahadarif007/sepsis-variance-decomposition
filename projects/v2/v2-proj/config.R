@@ -61,8 +61,13 @@ ICU_DIR    <- file.path(MIMIC_DIR, "icu")
 EICU_DIR   <- file.path(PROJECT_ROOT, "data", "eicu-collaborative-research-database-2.0")
 
 # V2-specific output directory (co-located with scripts)
-OUTPUT_DIR <- file.path(SCRIPT_DIR, "output")
-dir.create(OUTPUT_DIR, recursive = TRUE, showWarnings = FALSE)
+OUTPUT_DIR   <- file.path(SCRIPT_DIR, "output")
+LOG_DIR      <- file.path(OUTPUT_DIR, "logs")
+FIGURES_DIR  <- file.path(OUTPUT_DIR, "figures")
+PDF_DIR      <- file.path(OUTPUT_DIR, "pdf")
+DATA_DIR     <- file.path(OUTPUT_DIR, "processed_data")
+for (.d in c(OUTPUT_DIR, LOG_DIR, FIGURES_DIR, PDF_DIR, DATA_DIR))
+  dir.create(.d, recursive = TRUE, showWarnings = FALSE)
 
 # Helper to resolve .gz or plain CSV
 resolve_file <- function(dir, name) {

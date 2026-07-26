@@ -1,9 +1,10 @@
 ---
-title: "10 Metrics Suite - Full Evaluation Metric Suite"
+title: "07 Metrics Suite - Full Evaluation Metric Suite"
 author: "Abdul Ahad. Student ID: G00486649"
 date: "`r format(Sys.Date(), '%d %B %Y')`"
 output:
   bookdown::pdf_document2:
+    latex_engine: xelatex
     toc: true
     toc_depth: 3
     number_sections: true
@@ -174,8 +175,8 @@ all_results <- list()
 for (vid in names(LABEL_VARIANTS)) {
   step(sprintf("--- Evaluating Variant %s (%s) ---", vid, LABEL_VARIANTS[[vid]]$name))
 
-  prim_pred_path <- file.path(OUTPUT_DIR, paste0("08_predictions_primary_",     vid, ".parquet"))
-  comp_pred_path <- file.path(OUTPUT_DIR, paste0("09_predictions_comparators_", vid, ".parquet"))
+  prim_pred_path <- file.path(DATA_DIR, paste0("05_predictions_primary_",     vid, ".parquet"))
+  comp_pred_path <- file.path(DATA_DIR, paste0("06_predictions_comparators_", vid, ".parquet"))
 
   if (!file.exists(prim_pred_path)) {
     v2_log(sprintf("  Skipping Variant %s: primary predictions not found", vid))
@@ -264,7 +265,7 @@ for (vid in names(LABEL_VARIANTS)) {
       dca_df <- tryCatch(dca_result$dca, error = function(e) as.data.frame(dca_result))
       if (!is.null(dca_df) && nrow(dca_df) > 0) {
         dca_df$variant <- vid
-        save_parquet(as.data.frame(dca_df), paste0("10_dca_", vid), OUTPUT_DIR)
+        save_parquet(as.data.frame(dca_df), paste0("07_dca_", vid), DATA_DIR)
       }
     }
   }
@@ -278,7 +279,7 @@ Central performance comparison. Key checks: (i) primary vs. GBT Utility Score (H
 ```{r show-results}
 if (length(all_results) > 0) {
   results_df <- do.call(rbind, all_results)
-  save_parquet(results_df, "10_metric_results", OUTPUT_DIR)
+  save_parquet(results_df, "07_metric_results", DATA_DIR)
 
   display_cols <- c("variant", "model", "eval_window", "auroc", "auprc",
                     "utility_normalised", "alert_burden", "lead_time_h")
@@ -287,15 +288,15 @@ if (length(all_results) > 0) {
                display_cols],
     caption = "Evaluation results: all models x variants x windows (temporal split)"
   )
-  cat("\nSaved: 10_metric_results.parquet\n")
+  cat("\nSaved: 07_metric_results.parquet\n")
 } else {
-  cat("No results to display. Check that 08 and 09 have been run.\n")
+  cat("No results to display. Check that 05 and 06 have been run.\n")
 }
 ```
 
 ## Random-Split Evaluation (H4: Split Optimism)
 
-The same metric suite is applied to random-split predictions (Variant B only). The output `10_metric_results_random.parquet` feeds the variance decomposition for H4 (Guo et al., 2022).
+The same metric suite is applied to random-split predictions (Variant B only). The output `07_metric_results_random.parquet` feeds the variance decomposition for H4 (Guo et al., 2022).
 
 ```{r evaluate-random-split}
 step("--- Random-split evaluation for H4 ---")
@@ -303,8 +304,8 @@ step("--- Random-split evaluation for H4 ---")
 random_results <- list()
 vid <- "B"
 
-prim_random_path <- file.path(OUTPUT_DIR, paste0("08_predictions_primary_random_", vid, ".parquet"))
-comp_random_path <- file.path(OUTPUT_DIR, paste0("09_predictions_comparators_random_", vid, ".parquet"))
+prim_random_path <- file.path(DATA_DIR, paste0("05_predictions_primary_random_", vid, ".parquet"))
+comp_random_path <- file.path(DATA_DIR, paste0("06_predictions_comparators_random_", vid, ".parquet"))
 
 if (file.exists(prim_random_path)) {
   ph_prim_r <- as.data.table(arrow::read_parquet(prim_random_path))
@@ -378,7 +379,7 @@ if (file.exists(prim_random_path)) {
 
   if (length(random_results) > 0) {
     random_results_df <- do.call(rbind, random_results)
-    save_parquet(random_results_df, "10_metric_results_random", OUTPUT_DIR)
+    save_parquet(random_results_df, "07_metric_results_random", DATA_DIR)
 
     knitr::kable(
       random_results_df[order(random_results_df$eval_window, random_results_df$model),
@@ -386,10 +387,10 @@ if (file.exists(prim_random_path)) {
                           "utility_normalised", "alert_burden", "lead_time_h")],
       caption = "Evaluation results: random split (Variant B only, H4)"
     )
-    cat("\nSaved: 10_metric_results_random.parquet\n")
+    cat("\nSaved: 07_metric_results_random.parquet\n")
   }
 } else {
   cat("Random-split primary predictions not found; skipping H4 evaluation.\n")
-  cat("Run 08_primary_model.Rmd first to generate random-split predictions.\n")
+  cat("Run 05_primary_model.Rmd first to generate random-split predictions.\n")
 }
 ```

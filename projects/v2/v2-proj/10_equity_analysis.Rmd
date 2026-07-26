@@ -1,9 +1,10 @@
 ---
-title: "13 Equity Analysis - Subgroup Performance and Label Sensitivity"
+title: "10 Equity Analysis - Subgroup Performance and Label Sensitivity"
 author: "Abdul Ahad. Student ID: G00486649"
 date: "`r format(Sys.Date(), '%d %B %Y')`"
 output:
   bookdown::pdf_document2:
+    latex_engine: xelatex
     toc: true
     toc_depth: 3
     number_sections: true
@@ -102,8 +103,8 @@ Top subgroup levels (by sample size) are evaluated across primary, GBT, and NEWS
 ```{r subgroup-performance}
 step("Subgroup performance analysis...")
 
-prim_path <- file.path(OUTPUT_DIR, "08_predictions_primary_B.parquet")
-comp_path <- file.path(OUTPUT_DIR, "09_predictions_comparators_B.parquet")
+prim_path <- file.path(DATA_DIR, "05_predictions_primary_B.parquet")
+comp_path <- file.path(DATA_DIR, "06_predictions_comparators_B.parquet")
 
 perf_df <- NULL
 
@@ -117,7 +118,7 @@ if (!file.exists(prim_path)) {
     ph <- merge(ph, comp[, ..merge_cols], by = c("stay_id", "hour"), all.x = TRUE)
   }
 
-  ph_demo_path <- file.path(OUTPUT_DIR, "03_person_hours_B.parquet")
+  ph_demo_path <- file.path(DATA_DIR, "03_person_hours_B.parquet")
   if (file.exists(ph_demo_path)) {
     ph_demo <- as.data.table(arrow::read_parquet(ph_demo_path,
                                                    col_select = c("stay_id","race",
@@ -148,7 +149,7 @@ if (!file.exists(prim_path)) {
 
   if (length(perf_results) > 0) {
     perf_df <- do.call(rbind, perf_results)
-    save_parquet(perf_df, "13_subgroup_performance", OUTPUT_DIR)
+    save_parquet(perf_df, "10_subgroup_performance", DATA_DIR)
 
     knitr::kable(
       perf_df[order(perf_df$subgroup_col, perf_df$subgroup_val), ],
@@ -176,7 +177,7 @@ if (!is.null(perf_df) && "race" %in% perf_df$subgroup_col) {
         theme_bw() +
         theme(axis.text.x = element_text(angle = 40, hjust = 1), legend.position = "none")
       print(p)
-      ggsave(file.path(OUTPUT_DIR, "13_auroc_by_race.png"), p, width = 8, height = 5, dpi = 150)
+      ggsave(file.path(FIGURES_DIR, "10_auroc_by_race.png"), p, width = 8, height = 5, dpi = 150)
     }, error = function(e) cat("Race plot failed:", e$message, "\n"))
   }
 }
@@ -193,7 +194,7 @@ label_sens_results <- list()
 
 for (subg_col in EQUITY_VARS) {
   cohort_data <- lapply(names(LABEL_VARIANTS), function(vid) {
-    coh_path <- file.path(OUTPUT_DIR, paste0("02_cohort_", vid, ".parquet"))
+    coh_path <- file.path(DATA_DIR, paste0("02_cohort_", vid, ".parquet"))
     if (!file.exists(coh_path)) return(NULL)
     coh_full <- tryCatch(as.data.table(arrow::read_parquet(coh_path)),
                          error = function(e) NULL)
@@ -244,7 +245,7 @@ for (subg_col in EQUITY_VARS) {
 
 if (length(label_sens_results) > 0) {
   ls_df <- do.call(rbind, label_sens_results)
-  save_parquet(ls_df, "13_subgroup_label_sensitivity", OUTPUT_DIR)
+  save_parquet(ls_df, "10_subgroup_label_sensitivity", DATA_DIR)
 
   knitr::kable(
     ls_df[order(-abs(ls_df$label_range_pct)), ],
@@ -284,7 +285,7 @@ if (length(label_sens_results) > 0 && !is.null(perf_df)) {
              y = "AUROC (primary model, Variant B)") +
         theme_bw()
       print(p_eq)
-      ggsave(file.path(OUTPUT_DIR, "13_label_sens_vs_auroc.png"), p_eq,
+      ggsave(file.path(FIGURES_DIR, "10_label_sens_vs_auroc.png"), p_eq,
              width = 8, height = 6, dpi = 150)
     }, error = function(e) cat("Equity plot failed:", e$message, "\n"))
   }

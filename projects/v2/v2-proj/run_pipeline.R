@@ -8,11 +8,11 @@
 #   0: Pre-registration check (00_preregistration.md)
 #   1: Setup verification       (01_setup.Rmd)
 #   2: Cohort + person-hours    (02_cohort_labels.Rmd + 03_person_hours.Rmd)
-#   3: Sample size              (07_sample_size.Rmd)
-#   4: Models                   (08_primary_model.Rmd + 09_comparators.Rmd)
-#   5: Evaluation               (10_metrics_suite.Rmd)
-#   6: External validation      (11_external_validation.Rmd)
-#   7: Variance decomp + equity (12_variance_decomposition.Rmd + 13_equity_analysis.Rmd)
+#   3: Sample size              (04_sample_size.Rmd)
+#   4: Models                   (05_primary_model.Rmd + 06_comparators.Rmd)
+#   5: Evaluation               (07_metrics_suite.Rmd)
+#   6: External validation      (08_external_validation.Rmd)
+#   7: Variance decomp + equity (09_variance_decomposition.Rmd + 10_equity_analysis.Rmd)
 #   all: run all phases sequentially
 
 suppressPackageStartupMessages({
@@ -42,7 +42,7 @@ v2_log(sprintf("Output dir:   %s", OUTPUT_DIR))
 v2_log(sprintf("Requested phase: %s", requested_phase))
 v2_log("Label variants: A (Narrow), B (Seymour-Standard), C (Liberal)")
 
-render_rmd <- function(script, out_dir = OUTPUT_DIR) {
+render_rmd <- function(script, out_dir = PDF_DIR) {
   path <- file.path(script_dir, script)
   if (!file.exists(path)) {
     v2_log(sprintf("Script not found: %s", path), level = "ERROR")
@@ -72,11 +72,11 @@ run_phase <- function(phase_num) {
   phase_scripts <- list(
     `1` = "01_setup.Rmd",
     `2` = c("02_cohort_labels.Rmd", "03_person_hours.Rmd"),
-    `3` = "07_sample_size.Rmd",
-    `4` = c("08_primary_model.Rmd", "09_comparators.Rmd"),
-    `5` = "10_metrics_suite.Rmd",
-    `6` = "11_external_validation.Rmd",
-    `7` = c("12_variance_decomposition.Rmd", "13_equity_analysis.Rmd")
+    `3` = "04_sample_size.Rmd",
+    `4` = c("05_primary_model.Rmd", "06_comparators.Rmd"),
+    `5` = "07_metrics_suite.Rmd",
+    `6` = "08_external_validation.Rmd",
+    `7` = c("09_variance_decomposition.Rmd", "10_equity_analysis.Rmd")
   )
 
   scripts <- phase_scripts[[as.character(phase_num)]]
@@ -112,20 +112,20 @@ if (length(tmp_files) > 0) {
   file.remove(tmp_files)
   v2_log(sprintf("Cleaned up %d .Rmd.tmp files", length(tmp_files)))
 }
-html_files <- list.files(OUTPUT_DIR, pattern = "\\.html$", full.names = TRUE)
+html_files <- list.files(PDF_DIR, pattern = "\\.html$", full.names = TRUE)
 if (length(html_files) > 0) {
   file.remove(html_files)
-  v2_log(sprintf("Cleaned up %d stale .html files from output/", length(html_files)))
+  v2_log(sprintf("Cleaned up %d stale .html files from output/pdf/", length(html_files)))
 }
 tex_files <- list.files(script_dir, pattern = "\\.tex$", full.names = TRUE)
 if (length(tex_files) > 0) {
   file.remove(tex_files)
   v2_log(sprintf("Cleaned up %d stray .tex files from project root", length(tex_files)))
 }
-tex_out <- list.files(OUTPUT_DIR, pattern = "\\.tex$", full.names = TRUE)
+tex_out <- list.files(PDF_DIR, pattern = "\\.tex$", full.names = TRUE)
 if (length(tex_out) > 0) {
   file.remove(tex_out)
-  v2_log(sprintf("Cleaned up %d stray .tex files from output/", length(tex_out)))
+  v2_log(sprintf("Cleaned up %d stray .tex files from output/pdf/", length(tex_out)))
 }
 stray_logs <- list.files(script_dir, pattern = "\\.log$", full.names = TRUE)
 if (length(stray_logs) > 0) {

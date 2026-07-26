@@ -35,20 +35,24 @@ Atlantic Technological University (ATU), Galway
 
 ---
 
-## WHAT — The Clinical Problem
+## The Clinical Problem
 
-- Sepsis: life-threatening organ dysfunction from a dysregulated host response to infection (Sepsis-3 consensus) [1].
-- **11 million deaths** annually, ~20% of all deaths worldwide [2].
-- Each additional hour before treatment is associated with **higher mortality** [3].
-- An early warning system that detects impending sepsis *before* clinical recognition could save lives.
+- **Sepsis** is a life-threatening condition caused by the body's extreme response to an infection [1].
+- It causes **about 11 million deaths every year**, nearly **1 in 5 deaths worldwide** [2].
+- Delaying treatment by even a few hours increases the risk of death [3].
+- Early warning systems aim to detect sepsis before doctors recognise it, allowing earlier treatment.
 
-**91 published models** already exist for this task [4].
+**More than 90 AI models** have already been developed to predict sepsis [4].
 
-So why another study?
+**Existing models have improved prediction, but important methodological questions remain unanswered.**
+
+---
+RQ: In real-time sepsis onset prediction on MIMIC-IV, how much of the observed performance variation is explained by the
+choice of model, the sepsis label definition, and the analyst's methodological decisions?
 
 ---
 
-## The Hidden Decline in Clinical Utility
+## The Gap Between Predictive Performance and Clinical Utility
 
 Wang et al. [4] reviewed 91 real-time sepsis prediction models and found:
 
@@ -64,7 +68,9 @@ Wang et al. [4] reviewed 91 real-time sepsis prediction models and found:
 
 **The field has a failure it cannot see with its standard metrics.**
 
-* AUROC (Area Under the Receiver Operating Characteristic Curve) measures how well a model can separate positive cases
+>[NOTES]
+
+> AUROC (Area Under the Receiver Operating Characteristic Curve) measures how well a model can separate positive cases
   from negative cases.
 
 ---
@@ -119,14 +125,12 @@ This study measures how much performance variation comes from the model, the lab
 
 ### Pre-Registered Hypotheses
 
-| ID | Hypothesis                                                                             |
-|----|----------------------------------------------------------------------------------------|
-| H1 | Label choice affects AUROC as much as or more than model choice [5].                   |
-| H2 | Feature importance changes across different label definitions [11].                    |
-| H3 | Removing post-treatment information lowers AUROC by ≥0.03 [7].                         |
-| H4 | Temporal testing gives lower AUROC than random testing by ≥0.02 [6].                   |
-| H5 | Utility Score drops more than AUROC under realistic testing [4].                       |
-| H6 | Statistical models perform close to gradient boosting models (within 0.02 AUROC) [13]. |
+- **H1:** Label choice affects AUROC as much as or more than model choice [5].
+- **H2:** Feature importance changes across different label definitions [11].
+- **H3:** Removing post-treatment information lowers AUROC by ≥0.03 [7].
+- **H4:** Temporal testing gives lower AUROC than random testing by ≥0.02 [6].
+- **H5:** Utility Score drops more than AUROC under realistic testing [4].
+- **H6:** Statistical models perform close to gradient boosting models (within 0.02 AUROC) [13].
 
 ---
 
@@ -155,6 +159,7 @@ This study measures how much performance variation comes from the model, the lab
 | Validation        | What was done                                                                      | Why?                                                                                              |
 |-------------------|------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------|
 | **Internal**      | Trained on patients from **2008–2016** and tested on **2017–2019** data [6].       | To evaluate the model on newer, unseen patients.                                                  |
+| **Random split**  | Trained on 75% of patients and tested on 25%, chosen randomly [6].                 | To quantify how much the data split inflates reported performance (H4).                           |
 | **Pre-treatment** | Used only data collected **before the first antibiotic or blood culture** [7].     | To check whether the model is predicting sepsis or simply detecting when doctors start treatment. |
 | **External**      | Tested the same trained model on the **eICU-CRD** [15] dataset without retraining. | To see whether the model works in other hospitals.                                                |
 
@@ -241,58 +246,58 @@ The patient data and database were the same. Only the way sepsis was defined was
 > Liberal: More flexible rules → more patients are labeled as sepsis.
 ---
 
+## Results : H1 — Label Has More Impact Than Model (CONFIRMED)
+
+![w:600](output/09_label_variance_auroc.png)
+
+- **Label variation:** AUROC changed by **0.153** when the sepsis definition changed while using the same model.
+- **Model variation:** AUROC changed by **0.145** when the model changed while using the same label.
+- This confirms Cohen et al.'s [5] finding that sepsis label definition can strongly influence model performance.
+
+**The way sepsis is defined can affect performance as much as, or more than, the AI model itself.**
+
+---
+
 ## Results : Internal Performance (Temporal Test)
 
 | Variant | Model   | AUROC     | Utility Score | Alert Burden |
 |---------|---------|-----------|---------------|--------------|
 | A       | Primary | 0.760     | **-1.000**    | ∞            |
-| A       | GBT     | 0.747     | -4.819        | 204          |
+| A       | GBT     | 0.742     | -4.667        | 203          |
 | B       | Primary | 0.607     | -1.004        | ∞            |
-| B       | **GBT** | **0.740** | -5.112        | 207          |
+| B       | **GBT** | **0.746** | -4.849        | 194          |
 | C       | Primary | 0.759     | -1.000        | ∞            |
-| C       | GBT     | 0.754     | -2.458        | 91           |
-| —       | NEWS2   | 0.63–0.64 | -1.1 to -1.6  | 97–221       |
+| C       | GBT     | 0.752     | -2.475        | 93           |
+| —       | NEWS2   | 0.63–0.64 | -1.1 to -1.6  | 97–223       |
 
-**Main finding:**
-
-All models had a **negative Utility Score**, meaning they did not provide clinical benefit and performed worse than
+**All models had a negative Utility Score**, meaning they did not provide clinical benefit and performed worse than
 giving no alerts.
 
 Although AUROC values look reasonable, the models produced too many false alarms.
 
-**Alert burden:** For every real sepsis alert, the system generated **91–340 false alerts** (benchmark: 1.4 false alerts
-per true alert [10]).
+**Alert burden:** For every real sepsis alert, the system generated **93–359 false alerts** (benchmark: 1.4 [10]).
 
-### Notes
-
-> **AUROC:** Measures how well a model can separate patients with sepsis from patients without sepsis. Higher values
-> mean better ranking ability.
-
-> **Utility Score:** Measures whether the model provides real clinical benefit. A negative score means the model is not
-> useful in practice.
-
-> **Alert Burden:** Shows how many false alerts are generated for each correct alert. Lower is better.
-
-> **Primary Model:** The main proposed model developed in this study.
-
-> **GBT (Gradient-Boosted Trees):** A machine learning model that combines many decision trees to improve prediction
-> accuracy.
-
-> **NEWS2 (National Early Warning Score 2):** A standard clinical scoring system used by healthcare professionals to
-> detect patient deterioration.
 ---
 
-## Results : H1: Label Has More Impact Than Model (CONFIRMED)
+## Results : H4 — Split Optimism (CONFIRMED)
 
-- **Label variation:** AUROC changed by **0.153** when the sepsis definition changed while using the same model.
-- **Model variation:** AUROC changed by **0.140** when the model changed while using the same label.
-- The effect of choosing a different label was slightly larger than choosing a different model.
-- This confirms Cohen et al.'s [5] finding that sepsis label definition can strongly influence model performance, now
-  demonstrated on a larger MIMIC-IV dataset.
+| Split    | Model   | AUROC | Utility Score |
+|----------|---------|-------|---------------|
+| Temporal | Primary | 0.607 | -1.004        |
+| Random   | Primary | 0.730 | -1.000        |
+| Temporal | GBT     | 0.746 | -4.849        |
+| Random   | GBT     | 0.720 | -5.167        |
 
-**Conclusion:** The way sepsis is defined can affect performance as much as, or more than, the AI model itself.
+- **Primary model:** Random-split AUROC was **0.123 higher** than temporal-split AUROC (threshold: ≥ 0.02).
+- The random split lets future patient patterns leak into training, inflating reported performance.
+- This confirms Guo et al.'s [6] finding: **studies using random splits may overestimate real-world performance.**
 
-## Results : H2: Coefficient Instability (CONFIRMED)
+> The GBT model showed a smaller but reversed split effect (temporal > random by 0.026), suggesting that the tree
+> ensemble was robust to temporal shift but the linear model was not.
+
+---
+
+## Results : H2 — Coefficient Instability (CONFIRMED)
 
 - **10 out of 25 features** changed their effect or strength significantly across different sepsis label definitions.
 - Affected features include: MAP (**Mean Arterial Pressure**), temperature, bilirubin, platelets, vasopressors,
@@ -303,13 +308,13 @@ almost no association with sepsis risk depending only on how the antibiotic-cult
 
 Feature effects cannot be reliably interpreted without knowing which sepsis label definition was used.
 
-## Notes
+> [NOTES]
 
 > **Hazard Ratio:** Shows how a feature changes the risk of an event happening over time. A value above 1 means higher
 > risk, below 1 means lower risk, and around 1 means little effect.
 ---
 
-## Results : H3: Treatment Leakage and Label Construction
+## Results : H3 — Treatment Leakage and Label Construction
 
 The treatment-anchored window [7] uses only information available **before the first antibiotic or blood culture**.
 
@@ -326,24 +331,19 @@ detecting when a patient's health is starting to get worse.**
 
 ---
 
-## Results : H6: Model-Class Difference (REJECTED)
+## Results : H6 — Model-Class Difference (REJECTED)
 
-![w:750](../v2-thesis/images/12_model_class_auroc.png)
+![w:600](output/09_model_class_auroc.png)
 
-- **GBT AUROC:** 0.740
-- **Primary Model AUROC:** 0.607
-- Difference: **0.133** (larger than the 0.02 threshold)
-
-GBT looks better based on AUROC.
+- **GBT AUROC:** 0.746 — **Primary Model AUROC:** 0.607 — Difference: **0.139**
+- GBT looks better based on AUROC alone.
 
 However:
 
-- **GBT Utility Score:** -5.112
-- **Primary Model Utility Score:** -1.004
+- **GBT Utility Score:** -4.849 — **Primary Model Utility Score:** -1.004
+- The GBT model has better AUROC but **worse clinical usefulness**.
 
-The GBT model has better AUROC but worse clinical usefulness.
-
-This shows that the model ranking changes depending on the evaluation metric. A model that looks better by AUROC may
+The model ranking changes depending on the evaluation metric. A model that looks better by AUROC may
 perform worse in real clinical use.
 
 ---
@@ -352,10 +352,10 @@ perform worse in real clinical use.
 
 | Variant | Model   | AUROC (eICU) | AUROC (MIMIC) | Drop      |
 |---------|---------|--------------|---------------|-----------|
-| A       | Primary | 0.736        | 0.760         | 0.023     |
+| A       | Primary | 0.736        | 0.760         | 0.024     |
 | B       | Primary | **0.437**    | 0.607         | **0.170** |
 | C       | Primary | 0.725        | 0.759         | 0.034     |
-| —       | NEWS2   | 0.605        | 0.63          | 0.023     |
+| —       | NEWS2   | 0.605        | 0.63          | 0.025     |
 
 - Variants A and C showed similar performance on both datasets, with only small drops.
 - **Variant B (Seymour-Standard) showed a large performance drop of 0.170 AUROC when tested on eICU-CRD.**
@@ -365,34 +365,44 @@ perform worse in real clinical use.
 
 ## Results — Performance Variation by Source
 
-| Factor                                     | AUROC Change | Related Hypothesis |
-|--------------------------------------------|--------------|--------------------|
-| Model choice                               | 0.140        | H6                 |
-| Sepsis label definition                    | 0.153        | H1                 |
-| Evaluation metric (AUROC vs Utility Score) | 0.170        | H5                 |
+| Factor                                     | AUROC Change | Related Hypothesis | Status    |
+|--------------------------------------------|--------------|--------------------|-----------|
+| Sepsis label definition                    | 0.153        | H1                 | CONFIRMED |
+| Model choice                               | 0.145        | H6                 | REJECTED  |
+| Split method (temporal vs random)          | 0.123        | H4                 | CONFIRMED |
+| Evaluation metric (AUROC vs Utility Score) | 0.170        | H5                 | —         |
 
-Different choices create large changes in reported performance.
+**All four analyst decisions create AUROC changes of 0.12–0.17.**
 
 The choice of **model** and the choice of **sepsis label definition** have a similar impact on results. Changing only
 one while keeping the other fixed can significantly change the evaluation.
 
-Most studies fix one sepsis label and compare models. This measures only one source of variation while ignoring another
-source of similar importance.
+Most studies fix one sepsis label and compare models. This measures only one source of variation while ignoring three
+other sources of similar importance.
 
 ---
 
 ## Results — Equity Analysis (Novel Finding)
 
-The percentage of patients labelled as septic changed by **8.7–12.8 percentage points** across different label
-definitions within racial subgroups.
+![w:650](output/10_auroc_by_race.png)
 
-- The **Unknown/Unable-to-obtain** groups showed the largest changes (12.3–12.8 percentage points).
-- This is the first study to examine both:
-    - differences in model performance between patient groups, and
-    - differences in how often patient groups are labelled as septic due to label choice [13].
+AUROC varied by up to **0.15** across racial subgroups (primary model, Variant B), from 0.56 (Other) to 0.71
+(Asian-Chinese).
 
-The patients identified as septic can change depending on how the label is defined. This creates a potential fairness
-issue because the label itself may affect different groups differently.
+---
+
+## Results — Label Sensitivity by Subgroup
+
+![w:650](output/10_label_sens_vs_auroc.png)
+
+The percentage of patients labelled as septic changed by **7.4–14.2 percentage points** across different label
+definitions within demographic subgroups.
+
+- The **Unknown/Unable-to-obtain** race groups showed the largest changes (12.3–12.8 pp).
+- This is the first study to examine both model performance disparities and label sensitivity across subgroups [13].
+
+**The patients identified as septic can change depending on how the label is defined. This creates a potential fairness
+issue because the label itself may affect different groups differently.**
 
 ---
 
@@ -421,8 +431,9 @@ required.
 | C2 | Showed that no sepsis cases exist before antibiotics or culture tests, highlighting that the label depends on clinical actions [7]. |
 | C3 | Confirmed that all models had negative Utility Scores, extending the findings of Wang et al. [4].                                   |
 | C4 | Found that 10 clinical features changed their effects across different label definitions, supporting Lauritsen et al. [11].         |
-| C5 | First study to examine how different sepsis label definitions affect racial subgroup analysis [13].                                 |
-| C6 | Used a pre-registered, TRIPOD+AI-compliant, fully reproducible research pipeline [9].                                               |
+| C5 | Quantified split optimism: random splits inflated AUROC by 0.123 compared to temporal splits, confirming Guo et al. [6].           |
+| C6 | First study to examine how different sepsis label definitions affect racial subgroup analysis [13].                                 |
+| C7 | Used a pre-registered, TRIPOD+AI-compliant, fully reproducible research pipeline [9].                                               |
 
 ---
 
@@ -430,7 +441,6 @@ required.
 
 - **Small external event count:** The eICU dataset had only **63 sepsis cases**, making some evaluation metrics less
   reliable.
-- **H4 was not fully tested:** The planned random-split comparison was not included in the main analysis.
 - **Deep learning comparison:** A deep survival model was planned but not implemented.
 - **Limited features:** Clinical notes, procedure codes, and ventilator settings were not included.
 - **Specific to Sepsis-3:** These findings apply to the Sepsis-3 label and may not apply to other sepsis definitions.

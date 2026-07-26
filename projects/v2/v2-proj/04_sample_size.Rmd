@@ -1,9 +1,10 @@
 ---
-title: "07 Sample Size - Riley et al. (2019) Power Calculation"
+title: "04 Sample Size - Riley et al. (2019) Power Calculation"
 author: "Abdul Ahad. Student ID: G00486649"
 date: "`r format(Sys.Date(), '%d %B %Y')`"
 output:
   bookdown::pdf_document2:
+    latex_engine: xelatex
     toc: true
     toc_depth: 3
     number_sections: true
@@ -54,7 +55,7 @@ step("=== Sample Size Calculation (Riley et al., 2019) ===")
 Cohort and event counts from the label-variance table (produced in 02) are the inputs.
 
 ```{r load-label-variance}
-lv_path <- file.path(OUTPUT_DIR, "02_label_variance_table.parquet")
+lv_path <- file.path(DATA_DIR, "02_label_variance_table.parquet")
 if (!file.exists(lv_path))
   stop("02_label_variance_table.parquet not found. Run 02_cohort_labels.Rmd first.")
 
@@ -73,7 +74,7 @@ for (i in seq_len(nrow(lv))) {
   row <- lv[i]
   vid <- row$variant
 
-  ph_path <- file.path(OUTPUT_DIR, paste0("03_person_hours_", vid, ".parquet"))
+  ph_path <- file.path(DATA_DIR, paste0("03_person_hours_", vid, ".parquet"))
   if (!file.exists(ph_path)) {
     v2_log(sprintf("  Variant %s: person_hours not found, skipping", vid), level = "WARN")
     next
@@ -147,7 +148,7 @@ if (length(results) > 0) {
   result_df <- do.call(rbind, results)
   knitr::kable(result_df,
                caption = "Sample size adequacy (Riley et al., 2019) per label variant")
-  save_parquet(result_df, "07_sample_size", OUTPUT_DIR)
-  cat("\nSaved: 07_sample_size.parquet\n")
+  save_parquet(result_df, "04_sample_size", DATA_DIR)
+  cat("\nSaved: 04_sample_size.parquet\n")
 }
 ```

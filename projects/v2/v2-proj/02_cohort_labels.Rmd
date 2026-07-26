@@ -4,6 +4,7 @@ author: "Abdul Ahad. Student ID: G00486649"
 date: "`r format(Sys.Date(), '%d %B %Y')`"
 output:
   bookdown::pdf_document2:
+    latex_engine: xelatex
     toc: true
     toc_depth: 3
     number_sections: true
@@ -369,7 +370,7 @@ cohorts       <- lapply(names(LABEL_VARIANTS), build_cohort_for_variant)
 names(cohorts) <- names(LABEL_VARIANTS)
 
 for (vid in names(cohorts))
-  save_parquet(cohorts[[vid]], paste0("02_cohort_", vid), OUTPUT_DIR)
+  save_parquet(cohorts[[vid]], paste0("02_cohort_", vid), DATA_DIR)
 ```
 
 ## Label-Variance Table (M1 Deliverable)
@@ -397,6 +398,6 @@ label_variance <- do.call(rbind, lapply(names(cohorts), function(vid) {
 
 knitr::kable(label_variance, caption = "M1 Label-Variance Table (cohort size × event count × onset timing)")
 
-save_parquet(label_variance, "02_label_variance_table", OUTPUT_DIR)
+save_parquet(label_variance, "02_label_variance_table", DATA_DIR)
 cat("\nSaved: 02_label_variance_table.parquet\n")
 ```
