@@ -1,7 +1,7 @@
 % =============================================================================
-%  VI. RESULTS — COHORT AND LABEL VARIANCE
+%  VI. RESULTS: COHORT AND LABEL VARIANCE
 % =============================================================================
-\begin{frame}{VI. Results --- Cohort and Label Variance}
+\begin{frame}{VI. Results: Cohort and Label Variance}
 \begin{center}\tablestyle
 \begin{tabular}{clccc}
 \toprule
@@ -26,9 +26,9 @@ was different.
 
 
 % =============================================================================
-%  VI. RESULTS — H1: LABEL vs MODEL
+%  VI. RESULTS: H1: LABEL vs MODEL
 % =============================================================================
-\begin{frame}{VI. Results --- H1: Label Has More Impact Than Model \confirmed}
+\begin{frame}{VI. Results: H1 Label Impact $>$ Model Impact \confirmed}
 \begin{atucols}[c]
 
 \begin{column}{0.46\textwidth}
@@ -57,9 +57,9 @@ was different.
 
 
 % =============================================================================
-%  VI. RESULTS — H2: COEFFICIENT INSTABILITY
+%  VI. RESULTS: H2: COEFFICIENT INSTABILITY
 % =============================================================================
-\begin{frame}{VI. Results --- H2: Coefficient Instability \confirmed}
+\begin{frame}{VI. Results: H2 Coefficient Instability \confirmed}
 \begin{itemize}
   \item \textbf{10 out of 25 features} changed their effect or strength
         significantly across different sepsis label definitions.
@@ -82,9 +82,9 @@ sepsis label definition was used.}
 
 
 % =============================================================================
-%  VI. RESULTS — H3: TREATMENT LEAKAGE
+%  VI. RESULTS: H3: TREATMENT LEAKAGE
 % =============================================================================
-\begin{frame}{VI. Results --- H3: Treatment Leakage \confirmed}
+\begin{frame}{VI. Results: H3 Treatment Leakage \confirmed}
 The treatment-anchored window~\cite{kamran2024evaluation} uses only
 information available \textbf{before the first antibiotic or blood culture}.
 
@@ -126,9 +126,9 @@ health is starting to get worse.}
 
 
 % =============================================================================
-%  VI. RESULTS — H4: SPLIT OPTIMISM
+%  VI. RESULTS: H4: SPLIT OPTIMISM
 % =============================================================================
-\begin{frame}{VI. Results --- H4: Split Optimism \confirmed}
+\begin{frame}{VI. Results: H4 Split Optimism \confirmed}
 \begin{center}\tablestyle
 \begin{tabular}{llcc}
 \toprule
@@ -156,9 +156,9 @@ Random   & GBT     & 0.720 & --5.167 \\
 
 
 % =============================================================================
-%  VI. RESULTS — H5: EXTERNAL VALIDATION
+%  VI. RESULTS: H5: EXTERNAL VALIDATION
 % =============================================================================
-\begin{frame}{VI. Results --- H5: External Validation on
+\begin{frame}{VI. Results: H5 External Validation on
               eICU-CRD~\cite{pollard2018eicu}}
 \begin{center}\tablestyle
 \begin{tabular}{llccc}
@@ -169,7 +169,7 @@ Random   & GBT     & 0.720 & --5.167 \\
 A   & Primary & 0.736          & 0.760 & 0.024 \\
 B   & Primary & \textbf{0.437} & 0.607 & \textbf{0.170} \\
 C   & Primary & 0.725          & 0.759 & 0.034 \\
---- & NEWS2   & 0.605          & 0.63  & 0.025 \\
+n/a & NEWS2   & 0.605          & 0.63  & 0.025 \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -187,9 +187,9 @@ C   & Primary & 0.725          & 0.759 & 0.034 \\
 
 
 % =============================================================================
-%  VI. RESULTS — H6: MODEL-CLASS DIFFERENCE
+%  VI. RESULTS: H6: MODEL-CLASS DIFFERENCE
 % =============================================================================
-\begin{frame}{VI. Results --- H6: Model-Class Difference \rejected}
+\begin{frame}{VI. Results: H6 Model-Class Difference \rejected}
 \begin{atucols}[c]
 
 \begin{column}{0.46\textwidth}
@@ -220,9 +220,9 @@ C   & Primary & 0.725          & 0.759 & 0.034 \\
 
 
 % =============================================================================
-%  VI. RESULTS — INTERNAL PERFORMANCE
+%  VI. RESULTS: INTERNAL PERFORMANCE
 % =============================================================================
-\begin{frame}{VI. Results --- Internal Performance (Temporal Test)}
+\begin{frame}{VI. Results: Internal Performance (Temporal Test)}
 \begin{center}\tablestyle\footnotesize
 \begin{tabular}{llccc}
 \toprule
@@ -235,7 +235,7 @@ B   & Primary & 0.607 & --1.004           & $\infty$ \\
 B   & \textbf{GBT} & \textbf{0.746} & --4.849 & 194 \\
 C   & Primary & 0.759 & --1.000           & $\infty$ \\
 C   & GBT     & 0.752 & --2.475           & 93 \\
---- & NEWS2   & 0.63--0.64 & --1.1 to --1.6 & 97--223 \\
+n/a & NEWS2   & 0.63--0.64 & --1.1 to --1.6 & 97--223 \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -251,9 +251,9 @@ provide clinical benefit and performed worse than giving no alerts.
 
 
 % =============================================================================
-%  VI. RESULTS — EQUITY ANALYSIS
+%  VI. RESULTS: EQUITY ANALYSIS
 % =============================================================================
-\begin{frame}{VI. Results --- Equity Analysis \novelfinding}
+\begin{frame}{VI. Results: Equity Analysis \novelfinding}
 \begin{atucols}[c]
 
 \begin{column}{0.44\textwidth}
@@ -282,9 +282,9 @@ provide clinical benefit and performed worse than giving no alerts.
 
 
 % =============================================================================
-%  VI. RESULTS — VARIANCE DECOMPOSITION SUMMARY
+%  VI. RESULTS: VARIANCE DECOMPOSITION SUMMARY
 % =============================================================================
-\begin{frame}{VI. Results --- Variance Decomposition Summary}
+\begin{frame}{VI. Results: Variance Decomposition Summary}
 \begin{center}\tablestyle
 \begin{tabular}{lccc}
 \toprule
@@ -292,13 +292,13 @@ provide clinical benefit and performed worse than giving no alerts.
   & \textbf{Related Hypothesis} & \textbf{Status} \\
 \midrule
 Sepsis label definition
-  & 0.153 & H1 & \textcolor{BabyMint!60!green}{\textbf{CONFIRMED}} \\
+  & 0.153 & H1 & \tagconfirmed \\
 Model choice
-  & 0.145 & H6 & \textcolor{BabyPink!70!red}{\textbf{REJECTED}} \\
+  & 0.145 & H6 & \tagrejected \\
 Split method (temporal vs random)
-  & 0.123 & H4 & \textcolor{BabyMint!60!green}{\textbf{CONFIRMED}} \\
+  & 0.123 & H4 & \tagconfirmed \\
 Evaluation metric (AUROC vs Utility Score)
-  & 0.170 & H5 & --- \\
+  & 0.170 & H5 & n/a \\
 \bottomrule
 \end{tabular}
 \end{center}
