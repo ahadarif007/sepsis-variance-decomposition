@@ -1,0 +1,43 @@
+% =============================================================================
+%  IV. MATERIALS
+% =============================================================================
+\begin{frame}{IV. Materials}
+\begin{atucols}[T]
+
+\begin{column}{0.46\textwidth}
+\textbf{Datasets:}
+\begin{itemize}
+  \item \textbf{Development:} MIMIC-IV v3.1~\cite{johnson2023mimiciv}\\
+        (65,078 adult ICU stays)
+  \item \textbf{External validation:} eICU-CRD
+        v2.0~\cite{pollard2018eicu}\\
+        (200+ US ICUs, 7.9M person-hours)
+\end{itemize}
+\end{column}
+
+\begin{column}{0.52\textwidth}
+\textbf{Three Sepsis-3 label variants~\cite{singer2016sepsis3}:}
+\vspace{2pt}
+\tablestyle
+\begin{tabular}{cp{6.5cm}}
+\toprule
+\textbf{Var.} & \textbf{Infection Window} \\
+\midrule
+A & Antibiotics and blood culture within \textbf{24\,h} of each other.
+    SOFA baseline at ICU admission. \\
+B & Antibiotics up to \textbf{72\,h before} culture, or \textbf{24\,h
+    after}. SOFA baseline at ICU admission. \\
+C & Antibiotics and blood culture within \textbf{72\,h} of each other.
+    Lowest SOFA in previous 24\,h. \\
+\bottomrule
+\end{tabular}
+\end{column}
+
+\end{atucols}
+
+\vspace{6pt}
+\begin{alertblock}{}
+  \centering In all three definitions,
+  sepsis = suspected infection + SOFA score increase $\geq$ 2 points.
+\end{alertblock}
+\end{frame}

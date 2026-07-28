@@ -1,0 +1,175 @@
+% =============================================================================
+%  ATU PRESENTATION THEME — single source of truth for all visual styling
+%
+%  Everything below derives from the geometry block in section 2.
+%  Change a length there and the sidebar, margins, title box, and every
+%  decoration on the title / thank-you slides all follow automatically.
+% =============================================================================
+
+
+% =============================================================================
+%  1. COLOUR PALETTE
+% =============================================================================
+\definecolor{BabyBlue}{RGB}{137,207,240}
+\definecolor{BabyPink}{RGB}{244,194,194}
+\definecolor{BabyMint}{RGB}{170,225,200}
+\definecolor{BabyLavender}{RGB}{200,180,220}
+\definecolor{BabyPeach}{RGB}{255,218,185}
+\definecolor{SoftTeal}{RGB}{90,170,175}
+\definecolor{DeepTeal}{RGB}{0,91,94}
+\definecolor{DarkText}{RGB}{40,40,50}
+\definecolor{MidGrey}{RGB}{120,120,130}
+
+
+% =============================================================================
+%  2. GEOMETRY  — the only numbers you should ever need to edit
+% =============================================================================
+\newlength{\atuBar}        \setlength{\atuBar}{0.85cm}   % teal sidebar
+\newlength{\atuStripe}     \setlength{\atuStripe}{0.06cm}% accent stripe
+\newlength{\atuGutter}     \setlength{\atuGutter}{0.55cm}% bar -> content gap
+\newlength{\atuMarginR}    \setlength{\atuMarginR}{0.6cm}
+
+% --- Derived (do not edit) ---------------------------------------------------
+\newlength{\atuBarTotal}   % sidebar incl. stripe — the "no-go" zone
+\setlength{\atuBarTotal}{\dimexpr\atuBar+\atuStripe\relax}
+
+\newlength{\atuTextLeft}   % left text margin
+\setlength{\atuTextLeft}{\dimexpr\atuBarTotal+\atuGutter\relax}
+
+\newlength{\atuContentWidth}  % usable width for ALL content incl. title box
+\setlength{\atuContentWidth}{%
+  \dimexpr\paperwidth-\atuTextLeft-\atuMarginR\relax}
+
+\setbeamersize{text margin left=\atuTextLeft, text margin right=\atuMarginR}
+\setlength{\parskip}{2pt}
+
+
+% =============================================================================
+%  3. BEAMER BASE THEME
+% =============================================================================
+\usetheme{default}
+\usecolortheme{default}
+\usefonttheme{professionalfonts}
+
+\setbeamercolor{background canvas}{bg=white}
+\setbeamercolor{normal text}{fg=DarkText}
+\setbeamercolor{frametitle}{fg=DeepTeal,bg=white}
+\setbeamercolor{title}{fg=DeepTeal}
+\setbeamercolor{subtitle}{fg=SoftTeal}
+\setbeamercolor{author}{fg=DarkText}
+\setbeamercolor{institute}{fg=MidGrey}
+\setbeamercolor{date}{fg=MidGrey}
+\setbeamercolor{structure}{fg=DeepTeal}
+\setbeamercolor{itemize item}{fg=SoftTeal}
+\setbeamercolor{itemize subitem}{fg=BabyLavender}
+\setbeamercolor{enumerate item}{fg=SoftTeal}
+\setbeamercolor{block title}{fg=white,bg=SoftTeal}
+\setbeamercolor{block body}{fg=DarkText,bg=BabyBlue!12}
+\setbeamercolor{block title alerted}{fg=white,bg=BabyPink!70!red}
+\setbeamercolor{block body alerted}{fg=DarkText,bg=BabyPink!10}
+\setbeamercolor{block title example}{fg=white,bg=BabyMint!70!green}
+\setbeamercolor{block body example}{fg=DarkText,bg=BabyMint!10}
+
+\setbeamerfont{frametitle}{size=\large,series=\bfseries}
+
+\setbeamertemplate{itemize item}{%
+  \small\raise1pt\hbox{\textcolor{SoftTeal}{\textbullet}}}
+\setbeamertemplate{itemize subitem}{%
+  \scriptsize\raise1pt\hbox{\textcolor{BabyLavender}{--}}}
+
+
+% =============================================================================
+%  4. SIDEBAR  — drawn on every content slide
+% =============================================================================
+% Reusable sidebar drawing, so content slides and special slides stay in sync.
+\newcommand{\atudrawsidebar}{%
+  \fill[DeepTeal]
+    (current page.north west) rectangle
+    ([xshift=\atuBar]current page.south west);
+  \fill[BabyBlue]
+    ([xshift=\atuBar]current page.north west) rectangle
+    ([xshift=\atuBarTotal]current page.south west);%
+}
+
+\setbeamertemplate{background}{%
+  \begin{tikzpicture}[remember picture,overlay]
+    \atudrawsidebar
+    \node[anchor=south, font=\scriptsize\bfseries, text=white]
+      at ([xshift=0.5\atuBar, yshift=7pt]current page.south west)
+      {\insertframenumber\,/\,\inserttotalframenumber};
+  \end{tikzpicture}%
+}
+
+
+% =============================================================================
+%  5. FRAME TITLE  — boxed, with full content-width underline
+%     Width is exactly \atuContentWidth, so the right edge always lands on
+%     the right margin and can never be clipped by the page edge.
+% =============================================================================
+\setbeamertemplate{frametitle}{%
+  \vskip5pt%
+  \begin{tcolorbox}[
+    enhanced, colback=white, colframe=DeepTeal,
+    boxrule=0.7pt, arc=2pt,
+    left=8pt, right=8pt, top=3.5pt, bottom=3.5pt,
+    width=\atuContentWidth,
+    borderline south={2pt}{-2.4pt}{BabyBlue}]%
+    {\usebeamerfont{frametitle}\color{DeepTeal}\insertframetitle}%
+  \end{tcolorbox}%
+  \vskip6pt%
+}
+
+
+% =============================================================================
+%  6. FOOTER
+% =============================================================================
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{headline}{}
+\setbeamertemplate{footline}{%
+  \begin{tikzpicture}[remember picture,overlay]
+    \node[anchor=south east]
+      at ([xshift=-\atuMarginR, yshift=5pt]current page.south east)
+      {\includegraphics[height=0.32cm]{images/atu-logo-teal.png}};
+  \end{tikzpicture}%
+}
+
+
+% =============================================================================
+%  7. HELPER COMMANDS
+% =============================================================================
+\newcommand{\tablestyle}{\renewcommand{\arraystretch}{1.2}\small}
+
+\newcommand{\confirmed}{{\small\color{BabyMint!60!green}(CONFIRMED)}}
+\newcommand{\rejected}{{\small\color{BabyPink!70!red}(REJECTED)}}
+\newcommand{\novelfinding}{{\small\color{BabyLavender!70!blue}(Novel Finding)}}
+
+% --- Columns that respect the text margins ----------------------------------
+% Plain \begin{columns} centres its block on the PAGE, ignoring the asymmetric
+% margins, which pushes content left into the sidebar. Always use this instead.
+\newenvironment{atucols}[1][c]
+  {\begin{columns}[#1,onlytextwidth]}
+  {\end{columns}}
+
+% --- Full-bleed background for title / thank-you slides ---------------------
+% #1 = extra TikZ decorations. Decorations must start at \atuBarTotal so they
+% never paint over the sidebar.
+\newcommand{\atuspecialbg}[1]{%
+  \setbeamertemplate{headline}{}%
+  \setbeamertemplate{footline}{}%
+  \setbeamertemplate{background}{%
+    \begin{tikzpicture}[remember picture,overlay]
+      \fill[BabyBlue!8]
+        (current page.north west) rectangle (current page.south east);
+      #1
+      \atudrawsidebar
+    \end{tikzpicture}%
+  }%
+}
+
+% --- Accent rule spanning content width, at a given y-offset from an anchor --
+% \aturule{<anchor>}{<yshift>}{<colour>}{<width>}
+\newcommand{\aturule}[4]{%
+  \draw[#3, line width=#4]
+    ([xshift=\atuBarTotal, yshift=#2]current page.#1 west) --
+    ([yshift=#2]current page.#1 east);%
+}
