@@ -166,6 +166,7 @@ This study measures how much performance variation comes from the model, the lab
 **Main evaluation metrics:** **Utility Score** [12] and **Calibration**.
 
 **AUROC was reported only for comparison because it may not detect clinically important performance failures [4].**
+
 ---
 
 ## Primary Prediction Model
