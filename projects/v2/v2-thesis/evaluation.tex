@@ -16,18 +16,17 @@ identifies 65,078 adult first ICU stays. The database and patients are the
 same across all three variants; only the sepsis definition differs.
 
 \begin{table}[H]
-  \centering
-  \begin{tabularx}{\textwidth}{lXrrrrrr}
+  \centering\small
+  \begin{tabular}{llrrrrr}
     \toprule
-    \textbf{Variant} & \textbf{Name} & \textbf{Stays} & \textbf{Onsets}
-      & \textbf{\%} & \textbf{Deaths (no sep)} & \textbf{Median onset h}
-      & \textbf{IQR} \\
+    \textbf{Var} & \textbf{Name} & \textbf{Stays} & \textbf{Onsets}
+      & \textbf{\%} & \textbf{Deaths} & \textbf{Onset h (IQR)} \\
     \midrule
-    A & Narrow           & 65{,}078 & 6{,}252  & 9.6  & 5{,}934 & 10 & [4--26] \\
-    B & Seymour-Standard & 65{,}078 & 6{,}447  & 9.9  & 5{,}892 & 11 & [4--30] \\
-    C & Liberal          & 65{,}078 & 12{,}581 & 19.3 & 4{,}956 & 10 & [4--30] \\
+    A & Narrow           & 65{,}078 & 6{,}252  & 9.6  & 5{,}934 & 10 [4--26] \\
+    B & Seymour-Std      & 65{,}078 & 6{,}447  & 9.9  & 5{,}892 & 11 [4--30] \\
+    C & Liberal          & 65{,}078 & 12{,}581 & 19.3 & 4{,}956 & 10 [4--30] \\
     \bottomrule
-  \end{tabularx}
+  \end{tabular}
   \caption{Cohort description by label variant. The Liberal variant identifies
   about twice as many sepsis cases as the Narrow or Seymour-Standard variants,
   mainly because it accepts wider antibiotic-culture windows and uses a rolling
@@ -45,25 +44,20 @@ Variant C (19.3\%) confirms the label-sensitivity finding from Johnson et al.\
 %===========================================================================
 
 \begin{table}[H]
-  \centering
-  \begin{tabular}{llrrrrrr}
+  \centering\small
+  \begin{tabular}{llrrrrr}
     \toprule
-    \textbf{Var} & \textbf{Name} & \textbf{Train h} & \textbf{Stays}
-      & \textbf{Events} & \textbf{EPH rate} & \textbf{Min-N (Riley)}
-      & \textbf{EPV} \\
+    \textbf{Var} & \textbf{Name} & \textbf{Train h} & \textbf{Events}
+      & \textbf{EPH rate} & \textbf{Min-N} & \textbf{EPV} \\
     \midrule
-    A & Narrow           & 2{,}304{,}923 & 52{,}946 & 4{,}647 & 0.00202
-      & 52{,}201 & 185.9 \\
-    B & Seymour-Standard & 2{,}301{,}842 & 52{,}946 & 4{,}847 & 0.00211
-      & 51{,}012 & 193.9 \\
-    C & Liberal          & 2{,}120{,}376 & 52{,}946 & 9{,}403 & 0.00443
-      & 24{,}069 & 376.1 \\
+    A & Narrow      & 2{,}304{,}923 & 4{,}647 & 0.00202 & 52{,}201 & 185.9 \\
+    B & Seymour-Std & 2{,}301{,}842 & 4{,}847 & 0.00211 & 51{,}012 & 193.9 \\
+    C & Liberal     & 2{,}120{,}376 & 9{,}403 & 0.00443 & 24{,}069 & 376.1 \\
     \bottomrule
   \end{tabular}
   \caption{Sample size results (Riley et al., 2019). EPV: events per candidate
-  predictor variable (25 predictors). All three variants are well above the
-  minimum required, with EPV ranging from 186 to 376. Sample size is not the
-  bottleneck.}
+  predictor variable (25 predictors). All three variants exceed the minimum
+  required (52{,}946 stays each). Sample size is not the bottleneck.}
   \label{tab:sample_size}
 \end{table}
 
@@ -75,60 +69,42 @@ Variant C (19.3\%) confirms the label-sensitivity finding from Johnson et al.\
 Table~\ref{tab:internal_results} reports performance on the temporal test set
 (2017--2019) under the unrestricted evaluation window.
 
-\begin{landscape}
-\begin{longtable}{llllrrrrrl}
-  \toprule
-  \textbf{Var} & \textbf{Label} & \textbf{Model} & \textbf{Split}
-    & \textbf{N rows} & \textbf{N sep}
-    & \textbf{AUROC} & \textbf{AUPRC}
-    & \textbf{Utility} & \textbf{Alert burden} \\
-  \midrule
-  \endhead
-  A & Narrow & Primary & temporal & 548{,}854 & 1{,}015
-    & 0.760 & 0.0093 & $-1.000$ & $\infty$ \\
-  A & Narrow & GBT     & temporal & 548{,}854 & 1{,}015
-    & 0.747 & 0.0090 & $-4.819$ & 205 \\
-  A & Narrow & NEWS2   & temporal & 548{,}854 & 1{,}015
-    & 0.629 & 0.0030 & $-1.647$ & 221 \\
-  A & Narrow & Cox     & temporal & 548{,}854 & 1{,}015
-    & 0.642 & 0.0033 & $-10.056$ & 340 \\
-  A & Narrow & qSOFA   & temporal & 548{,}854 & 1{,}015
-    & 0.601 & 0.0027 & $-5.720$ & 344 \\
-  A & Narrow & SIRS    & temporal & 548{,}854 & 1{,}015
-    & 0.599 & 0.0029 & $-4.454$ & 299 \\
-  \midrule
-  B & Seymour-Std & Primary & temporal & 548{,}827 & 1{,}040
-    & 0.607 & 0.0030 & $-1.004$ & $\infty$ \\
-  B & Seymour-Std & GBT     & temporal & 548{,}827 & 1{,}040
-    & 0.740 & 0.0086 & $-5.112$ & 207 \\
-  B & Seymour-Std & NEWS2   & temporal & 548{,}827 & 1{,}040
-    & 0.635 & 0.0032 & $-1.616$ & 223 \\
-  B & Seymour-Std & Cox     & temporal & 548{,}827 & 1{,}040
-    & 0.623 & 0.0031 & $-10.014$ & 359 \\
-  B & Seymour-Std & qSOFA   & temporal & 548{,}827 & 1{,}040
-    & 0.609 & 0.0028 & $-5.503$ & 318 \\
-  B & Seymour-Std & SIRS    & temporal & 548{,}827 & 1{,}040
-    & 0.600 & 0.0031 & $-4.332$ & 299 \\
-  \midrule
-  C & Liberal & Primary & temporal & 504{,}828 & 2{,}128
-    & 0.759 & 0.0196 & $-1.000$ & $\infty$ \\
-  C & Liberal & GBT     & temporal & 504{,}828 & 2{,}128
-    & 0.754 & 0.0189 & $-2.458$ & 91 \\
-  C & Liberal & NEWS2   & temporal & 504{,}828 & 2{,}128
-    & 0.641 & 0.0072 & $-1.121$ & 97 \\
-  C & Liberal & Cox     & temporal & 504{,}828 & 2{,}128
-    & 0.661 & 0.0083 & $-4.406$ & 146 \\
-  C & Liberal & qSOFA   & temporal & 504{,}828 & 2{,}128
-    & 0.601 & 0.0060 & $-2.526$ & 151 \\
-  C & Liberal & SIRS    & temporal & 504{,}828 & 2{,}128
-    & 0.613 & 0.0068 & $-2.089$ & 128 \\
-  \bottomrule
-  \caption{Internal temporal test performance (2017--2019). Utility: PhysioNet
-  Utility Score; $\infty$ alert burden = no true alerts issued at the default
-  threshold. Benchmark alert burden: 1.4 (Moor et al., 2023).}
+\begin{table}[H]
+  \centering\small
+  \begin{tabular}{llrrrr}
+    \toprule
+    \textbf{Var} & \textbf{Model}
+      & \textbf{AUROC} & \textbf{AUPRC}
+      & \textbf{Utility} & \textbf{Alert burden} \\
+    \midrule
+    A & Primary & 0.760 & 0.0093 & $-1.000$ & $\infty$ \\
+    A & GBT     & 0.747 & 0.0090 & $-4.819$ & 205 \\
+    A & NEWS2   & 0.629 & 0.0030 & $-1.647$ & 221 \\
+    A & Cox     & 0.642 & 0.0033 & $-10.056$ & 340 \\
+    A & qSOFA   & 0.601 & 0.0027 & $-5.720$ & 344 \\
+    A & SIRS    & 0.599 & 0.0029 & $-4.454$ & 299 \\
+    \midrule
+    B & Primary & 0.607 & 0.0030 & $-1.004$ & $\infty$ \\
+    B & GBT     & 0.740 & 0.0086 & $-5.112$ & 207 \\
+    B & NEWS2   & 0.635 & 0.0032 & $-1.616$ & 223 \\
+    B & Cox     & 0.623 & 0.0031 & $-10.014$ & 359 \\
+    B & qSOFA   & 0.609 & 0.0028 & $-5.503$ & 318 \\
+    B & SIRS    & 0.600 & 0.0031 & $-4.332$ & 299 \\
+    \midrule
+    C & Primary & 0.759 & 0.0196 & $-1.000$ & $\infty$ \\
+    C & GBT     & 0.754 & 0.0189 & $-2.458$ & 91 \\
+    C & NEWS2   & 0.641 & 0.0072 & $-1.121$ & 97 \\
+    C & Cox     & 0.661 & 0.0083 & $-4.406$ & 146 \\
+    C & qSOFA   & 0.601 & 0.0060 & $-2.526$ & 151 \\
+    C & SIRS    & 0.613 & 0.0068 & $-2.089$ & 128 \\
+    \bottomrule
+  \end{tabular}
+  \caption{Internal temporal test performance (2017--2019, all variants use
+  temporal split). N test rows: 548{,}854 (A/B), 504{,}828 (C). Utility:
+  PhysioNet Utility Score; $\infty$ alert burden = no true alerts at default
+  threshold. Benchmark: 1.4 (Moor et al., 2023).}
   \label{tab:internal_results}
-\end{longtable}
-\end{landscape}
+\end{table}
 
 \subsection{Key Finding: Every Model Fails Clinically}
 
@@ -176,22 +152,17 @@ AUROC alone would hide it.
 \subsection{The Decomposition Table}
 
 \begin{table}[H]
-  \centering
-  \begin{tabularx}{\textwidth}{Xrrl}
+  \centering\small
+  \begin{tabular}{p{5.5cm}ccl}
     \toprule
-    \textbf{Factor (all others held fixed)} & \textbf{AUROC spread}
-      & \textbf{Utility spread} & \textbf{Hypothesis} \\
+    \textbf{Factor (others fixed)} & \textbf{AUROC} & \textbf{Utility} & \textbf{H} \\
     \midrule
-    Model class (label = B, temporal)
-      & 0.140 & 9.01 & H6 \\
-    Label definition (model = primary, temporal)
-      & 0.153 & 0.004 & H1 \\
-    Split method (primary model, label B)
-      & 0.123 & -- & H4 \\
-    Metric (AUROC vs.\ Utility, internal$\to$external, B)
-      & 0.170 & -- & H5 \\
+    Model class (label B, temporal)         & 0.140 & 9.01 & H6 \\
+    Label definition (primary, temporal)    & 0.153 & 0.004 & H1 \\
+    Split method (primary, label B)         & 0.123 & --   & H4 \\
+    Metric (AUROC vs Utility, int$\to$ext)  & 0.170 & --   & H5 \\
     \bottomrule
-  \end{tabularx}
+  \end{tabular}
   \caption{Variance decomposition. All four factors produce AUROC changes of
   0.12--0.17. The label spread (0.153) slightly exceeds the model-class spread
   (0.140). Most studies fix three of these factors and compare only models.}
@@ -222,7 +193,7 @@ sources are comparable, not that one clearly dominates.
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.85\textwidth]{images/12_label_variance_auroc.png}
+  \includegraphics[width=0.85\textwidth]{images/09_label_variance_auroc.png}
   \caption{AUROC by label variant for each model (temporal split). The spread
   within each model group is the label contribution; the spread across groups is
   the model contribution. Both are of similar size.}
@@ -367,7 +338,7 @@ which metric is used.
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.85\textwidth]{images/12_model_class_auroc.png}
+  \includegraphics[width=0.85\textwidth]{images/09_model_class_auroc.png}
   \caption{AUROC by model class (Variant B, temporal split). GBT substantially
   outperforms all other models by AUROC, but has the worst Utility Score. The
   model-class spread of 0.140 is comparable to the label spread of 0.153.}
@@ -473,26 +444,25 @@ on the length of the history window used for feature construction.
 \subsection{Performance Disparities by Subgroup}
 
 \begin{table}[H]
-  \centering
-  \begin{tabular}{lrrrr}
+  \centering\small
+  \begin{tabular}{lrrcc}
     \toprule
-    \textbf{Racial group} & \textbf{N rows} & \textbf{N sep} & \textbf{GBT AUROC}
-      & \textbf{Primary AUROC} \\
+    \textbf{Racial group} & \textbf{N rows} & \textbf{N sep}
+      & \textbf{GBT} & \textbf{Primary} \\
     \midrule
-    White                       & 317{,}688 & 597 & 0.736 & 0.614 \\
-    Unknown                     & 107{,}158 & 235 & 0.774 & 0.587 \\
-    Black / African American    & 31{,}716  & 58  & 0.716 & 0.627 \\
-    Other                       & 22{,}825  & 35  & 0.681 & 0.562 \\
-    White -- Other European     & 11{,}768  & 18  & 0.649 & 0.664 \\
-    Asian                       & 6{,}543   & 16  & 0.784 & 0.628 \\
-    Hispanic / Latino (PR)      & 6{,}462   & 16  & 0.631 & 0.571 \\
-    Asian -- Chinese            & 5{,}386   & 13  & 0.593 & 0.710 \\
+    White                    & 317{,}688 & 597 & 0.736 & 0.614 \\
+    Unknown                  & 107{,}158 & 235 & 0.774 & 0.587 \\
+    Black / African American & 31{,}716  & 58  & 0.716 & 0.627 \\
+    Other                    & 22{,}825  & 35  & 0.681 & 0.562 \\
+    White -- Other European  & 11{,}768  & 18  & 0.649 & 0.664 \\
+    Asian                    & 6{,}543   & 16  & 0.784 & 0.628 \\
+    Hispanic / Latino (PR)   & 6{,}462   & 16  & 0.631 & 0.571 \\
+    Asian -- Chinese         & 5{,}386   & 13  & 0.593 & 0.710 \\
     \bottomrule
   \end{tabular}
   \caption{AUROC by racial subgroup (Variant B, temporal test). The GBT AUROC
-  range across subgroups (0.593--0.784) is 0.191, wider than both the
-  model-class spread (0.140) and the label spread (0.153). Small event counts
-  in non-White groups limit statistical precision.}
+  range (0.593--0.784, spread 0.191) exceeds both the model-class spread (0.140)
+  and the label spread (0.153). Small event counts limit precision.}
   \label{tab:equity_performance}
 \end{table}
 
@@ -502,7 +472,7 @@ limit the reliability of these comparisons.
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.85\textwidth]{images/13_auroc_by_race.png}
+  \includegraphics[width=0.85\textwidth]{images/10_auroc_by_race.png}
   \caption{AUROC by racial subgroup (Variant B, temporal split). The spread
   across subgroups exceeds the model-class spread, suggesting that the choice
   of evaluation subgroup introduces at least as much variance as the model.}
@@ -512,18 +482,18 @@ limit the reliability of these comparisons.
 \subsection{Label Sensitivity by Subgroup (Novel Finding)}
 
 \begin{table}[H]
-  \centering
-  \begin{tabular}{lrrrr}
+  \centering\small
+  \begin{tabular}{lcccc}
     \toprule
-    \textbf{Racial group} & \textbf{Pct\ A (\%)} & \textbf{Pct\ B (\%)}
-      & \textbf{Pct\ C (\%)} & \textbf{Range (pp)} \\
+    \textbf{Racial group} & \textbf{A (\%)} & \textbf{B (\%)}
+      & \textbf{C (\%)} & \textbf{Range (pp)} \\
     \midrule
-    White                    & 9.4 & 9.6 & 18.6 & 9.2 \\
+    White                    & 9.4  & 9.6  & 18.6 & 9.2 \\
     Unknown                  & 11.6 & 12.8 & 23.9 & 12.3 \\
-    Black / African American & 9.3 & 9.1 & 19.0 & 9.9 \\
-    Other                    & 8.8 & 9.8 & 17.5 & 8.7 \\
-    Unable to obtain         & 9.7 & 11.1 & 22.5 & 12.8 \\
-    White -- Other European  & 9.4 & 7.7 & 16.6 & 8.9 \\
+    Black / African American & 9.3  & 9.1  & 19.0 & 9.9 \\
+    Other                    & 8.8  & 9.8  & 17.5 & 8.7 \\
+    Unable to obtain         & 9.7  & 11.1 & 22.5 & 12.8 \\
+    White -- Other European  & 9.4  & 7.7  & 16.6 & 8.9 \\
     Asian                    & 10.5 & 11.5 & 21.3 & 10.8 \\
     Asian -- Chinese         & 10.1 & 11.1 & 19.0 & 8.9 \\
     \bottomrule
@@ -542,7 +512,7 @@ independent of the model.
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.85\textwidth]{images/13_label_sens_vs_auroc.png}
+  \includegraphics[width=0.85\textwidth]{images/10_label_sens_vs_auroc.png}
   \caption{Label sensitivity (fraction labelled septic) vs.\ AUROC by racial
   subgroup, across all three label variants. Horizontal spread = label
   sensitivity; vertical spread = performance variation. The two effects appear

@@ -20,6 +20,7 @@
 \usepackage{multirow}
 \usepackage{multicol}
 \usepackage{tikz}
+\usetikzlibrary{decorations.pathreplacing}
 \usepackage{graphicx}
 \usepackage[absolute]{textpos}
 \usepackage{colortbl}
@@ -32,9 +33,11 @@
 \usepackage{booktabs}
 \usepackage{float}
 \usepackage{rotating}
-\usepackage{longtable}
-\usepackage{pdflscape}
+\setlength{\textfloatsep}{8pt plus 2pt minus 2pt}
+\setlength{\floatsep}{8pt plus 2pt minus 2pt}
+\setlength{\intextsep}{8pt plus 2pt minus 2pt}
 \pagestyle{fancy}
+\raggedbottom
 \renewcommand\headrulewidth{1pt}
 
 %------------------------------------------------------------------------------------------------------
@@ -115,18 +118,18 @@ Submitted in partial fulfillment for the award of \textbf{Master of Science in C
 \listoffigures
 \listoftables
 
-\include{abstract}
-\include{acknowledgments}
+\input{abstract}
+\input{acknowledgments}
 
 \pagenumbering{arabic}
 \setcounter{page}{1}
 
-\include{introduction}
-\include{review}
-\include{methodology}
-\include{design}
-\include{evaluation}
-\include{conclusion}
+\input{introduction}
+\input{review}
+\input{methodology}
+\input{design}
+\input{evaluation}
+\input{conclusion}
 
 \printbibliography[heading=bibintoc, title={References}]
 

@@ -77,21 +77,20 @@ antibiotic-culture time windows and the SOFA baseline
 (Table~\ref{tab:label_variants}).
 
 \begin{table}[H]
-  \centering
-  \small
-  \begin{tabularx}{\textwidth}{lXrrrrl}
+  \centering\small
+  \begin{tabular}{llccccc}
     \toprule
-    \textbf{ID} & \textbf{Name} & \textbf{ABX$\to$cx (h)} & \textbf{cx$\to$ABX (h)} &
-      \textbf{SOFA$-$ (h)} & \textbf{SOFA$+$ (h)} & \textbf{Baseline} \\
+    \textbf{ID} & \textbf{Name} & \textbf{ABX$\to$cx} & \textbf{cx$\to$ABX}
+      & \textbf{SOFA$-$} & \textbf{SOFA$+$} & \textbf{Baseline} \\
     \midrule
-    A & Narrow          & 24 & 24 & 24 & 12 & Admission SOFA \\
-    B & Seymour-Standard & 72 & 24 & 48 & 24 & Admission SOFA \\
-    C & Liberal         & 72 & 72 & 48 & 24 & Rolling 24\,h min SOFA \\
+    A & Narrow      & 24\,h & 24\,h & 24\,h & 12\,h & Admission \\
+    B & Seymour-Std & 72\,h & 24\,h & 48\,h & 24\,h & Admission \\
+    C & Liberal     & 72\,h & 72\,h & 48\,h & 24\,h & Rolling 24\,h \\
     \bottomrule
-  \end{tabularx}
+  \end{tabular}
   \caption{Three pre-registered Sepsis-3 label variants. ABX = antibiotic;
   cx = culture; SOFA$-$/SOFA$+$ = hours before/after suspicion time in which
-  a SOFA rise of $\geq 2$ must be observed.}
+  a SOFA rise of $\geq 2$ must be observed. Baseline = SOFA reference value.}
   \label{tab:label_variants}
 \end{table}
 
@@ -213,9 +212,8 @@ NEWS2 is the headline comparator following Evans et al.\
 \label{sec:validation}
 
 \begin{table}[H]
-  \centering
-  \small
-  \begin{tabularx}{\textwidth}{lXl}
+  \centering\small
+  \begin{tabular}{p{2.8cm}p{6.5cm}p{3.5cm}}
     \toprule
     \textbf{Split} & \textbf{How} & \textbf{Why} \\
     \midrule
@@ -224,11 +222,11 @@ NEWS2 is the headline comparator following Evans et al.\
     Internal (secondary) & Random 75/25 patient-level split (seed = 42)
       & Measure split optimism (H4) \\
     Treatment-anchored & Hours before first culture or antibiotic
-      \cite{kamran2024evaluation} & Test for treatment leakage (H3) \\
+      \cite{kamran2024evaluation} & Treatment leakage (H3) \\
     External & eICU-CRD v2.0 \cite{pollard2018eicu}, no retraining
-      & Test generalisability (H5) \\
+      & Generalisability (H5) \\
     \bottomrule
-  \end{tabularx}
+  \end{tabular}
   \caption{Validation architecture. All splits are patient-level: no patient
   appears in both training and test sets.}
   \label{tab:validation}

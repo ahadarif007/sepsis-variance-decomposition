@@ -1,7 +1,7 @@
 \chapter{System Design and Pipeline Architecture}
 \label{ch:design}
 
-The pipeline consists of thirteen numbered, single-purpose scripts in
+The pipeline consists of ten numbered, single-purpose scripts in
 \texttt{v2-proj/}. Each script reads from upstream outputs and writes its own
 results to \texttt{v2-proj/output/}. No script modifies the original source
 data. All random seeds are fixed for reproducibility.
@@ -9,66 +9,63 @@ Figure~\ref{fig:pipeline_dag} shows the data flow.
 
 \begin{figure}[H]
 \centering
-\usetikzlibrary{arrows.meta,positioning,fit,backgrounds}
+\usetikzlibrary{arrows.meta,positioning}
 \begin{tikzpicture}[
-  node distance=0.55cm and 1.1cm,
-  box/.style={rectangle, draw=ATUGreen, thick, rounded corners=3pt,
-              fill=ATULightGreen!40, text width=3.8cm, align=center,
-              font=\small, inner sep=4pt},
-  data/.style={rectangle, draw=ATUNavy, thick, rounded corners=3pt,
-               fill=ATUTeal!20, text width=3.2cm, align=center,
-               font=\footnotesize\itshape, inner sep=3pt},
-  arr/.style={-{Latex[length=2mm]}, thick, ATUGreen},
+  node distance=0.4cm and 0.7cm,
+  box/.style={rectangle, draw=ATUGreen, thick, rounded corners=2pt,
+              fill=ATULightGreen!40, text width=2.6cm, align=center,
+              font=\scriptsize, inner sep=3pt, minimum height=0.55cm},
+  data/.style={rectangle, draw=ATUNavy, thick, rounded corners=2pt,
+               fill=ATUTeal!20, text width=2.4cm, align=center,
+               font=\tiny\itshape, inner sep=2pt, minimum height=0.45cm},
+  arr/.style={-{Latex[length=1.5mm]}, thick, ATUGreen},
 ]
 
-%--- Raw data
+%--- Left column: scripts 01--05
 \node[data] (raw) {Raw data\\MIMIC-IV + eICU};
+\node[box, below=of raw]   (s01) {\texttt{01} Setup};
+\node[box, below=of s01]   (s02) {\texttt{02} Cohort Labels};
+\node[box, below=of s02]   (s03) {\texttt{03} Person-Hours};
+\node[box, below=of s03]   (s04) {\texttt{04} Sample Size};
+\node[box, below=of s04]   (s05) {\texttt{05} Primary Model};
 
-%--- Pipeline stages
-\node[box, below=of raw]          (s01) {\texttt{01} Setup};
-\node[box, below=of s01]          (s02) {\texttt{02} Cohort Labels};
-\node[box, below=of s02]          (s03) {\texttt{03} Person-Hours};
-\node[box, below=of s03]          (s07) {\texttt{07} Sample Size};
-\node[box, below=of s07]          (s08) {\texttt{08} Primary Model};
-\node[box, below=of s08]          (s09) {\texttt{09} Comparators};
-\node[box, below=of s09]          (s10) {\texttt{10} Metrics Suite};
-\node[box, below=of s10]          (s11) {\texttt{11} External Valid.};
-\node[box, below=of s11]          (s12) {\texttt{12} Variance Decomp.};
-\node[box, below=of s12]          (s13) {\texttt{13} Equity Analysis};
+%--- Right column: scripts 06--10
+\node[box, right=3.8cm of s01]  (s06) {\texttt{06} Comparators};
+\node[box, below=of s06]        (s07) {\texttt{07} Metrics Suite};
+\node[box, below=of s07]        (s08) {\texttt{08} External Valid.};
+\node[box, below=of s08]        (s09) {\texttt{09} Variance Decomp.};
+\node[box, below=of s09]        (s10) {\texttt{10} Equity Analysis};
 
-%--- Output column
-\node[data, right=of s02]         (cohort)  {cohort\_\{A,B,C\}.parquet};
-\node[data, right=of s03]         (ph)      {person\_hours\_\{A,B,C\}.parquet};
-\node[data, right=of s08]         (models)  {model\_primary\_\{A,B,C\}.rds};
-\node[data, right=of s09]         (preds)   {predictions\_comparators.parquet};
-\node[data, right=of s10]         (metrics) {10\_metric\_results.csv};
-\node[data, right=of s11]         (ext)     {11\_external\_validation.csv};
-\node[data, right=of s12]         (decomp)  {12\_variance\_decomp.csv};
+%--- Output nodes (between columns)
+\node[data, right=of s02] (cohort)  {cohort\_\{A,B,C\}.pq};
+\node[data, right=of s03] (ph)      {person\_hours.pq};
+\node[data, right=of s05] (models)  {model\_primary.rds};
+\node[data, right=of s07] (metrics) {metric\_results.csv};
 
-%--- Arrows (pipeline flow)
+%--- Left-column flow
 \draw[arr] (raw)  -- (s01);
 \draw[arr] (s01)  -- (s02);
 \draw[arr] (s02)  -- (s03);
-\draw[arr] (s03)  -- (s07);
+\draw[arr] (s03)  -- (s04);
+\draw[arr] (s04)  -- (s05);
+
+%--- Cross to right column
+\draw[arr] (s05)  -- (s06);
+
+%--- Right-column flow
+\draw[arr] (s06)  -- (s07);
 \draw[arr] (s07)  -- (s08);
 \draw[arr] (s08)  -- (s09);
 \draw[arr] (s09)  -- (s10);
-\draw[arr] (s10)  -- (s11);
-\draw[arr] (s11)  -- (s12);
-\draw[arr] (s12)  -- (s13);
 
 %--- Output arrows
 \draw[arr] (s02)  -- (cohort);
 \draw[arr] (s03)  -- (ph);
-\draw[arr] (s08)  -- (models);
-\draw[arr] (s09)  -- (preds);
-\draw[arr] (s10)  -- (metrics);
-\draw[arr] (s11)  -- (ext);
-\draw[arr] (s12)  -- (decomp);
+\draw[arr] (s05)  -- (models);
+\draw[arr] (s07)  -- (metrics);
 
-%--- Feed-forward arrows
-\draw[arr] (ph.south) to[out=-90,in=180] (s08.west);
-\draw[arr] (ph.south) to[out=-90,in=180] (s09.west);
+%--- Feed-forward: person-hours feed models and comparators
+\draw[arr, ATUNavy, densely dashed] (ph.east) to[out=0,in=180] (s06.west);
 
 \end{tikzpicture}
 \caption{Pipeline data flow. Each box is a single script; italic nodes are
@@ -175,7 +172,7 @@ intercept and slope, PhysioNet Utility Score (via Python module
 \texttt{utility\_score.py}), alert burden, lead time, and decision-curve net
 benefit.
 
-Output: \texttt{10\_metric\_results.csv}.
+Output: \texttt{07\_metric\_results.csv}.
 
 \section{Stage 08: External Validation on eICU-CRD}
 
