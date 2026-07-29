@@ -1,0 +1,31 @@
+% =============================================================================
+%  THANK YOU SLIDE  (bookend: sidebar kept, full-bleed tint)
+% =============================================================================
+{
+\atuspecialbg{%
+  \fill[BabyMint!12]
+    ([xshift=\atuBarTotal, yshift=1.75cm]current page.south west) rectangle
+    (current page.south east);
+}
+\begin{frame}[plain]
+\begin{tikzpicture}[remember picture,overlay]
+  \node[anchor=north east]
+    at ([xshift=-\atuMarginR, yshift=-0.45cm]current page.north east)
+    {\includegraphics[width=2.6cm]{images/atu-logo-navy.png}};
+  \aturule{north}{-1.75cm}{BabyPink}{1.5pt}
+  \aturule{south}{1.75cm}{BabyLavender}{1pt}
+
+  \atupagetitle{%
+    {\Huge\bfseries\color{DeepTeal} Thank You}\\[14pt]
+    {\large\color{MidGrey} Questions \& Discussion}\\[20pt]
+    {\normalsize\color{DarkText}\textbf{Abdul Ahad}}\\[5pt]
+    {\small\color{MidGrey}
+      M.Sc.\ in Computing $\cdot$ Atlantic Technological University (ATU),
+      Galway}\\[10pt]
+    {\footnotesize\color{MidGrey}\itshape
+      Pre-registered protocol. All extraction, modelling, and evaluation
+      code released for reproducibility.}%
+  }
+\end{tikzpicture}
+\end{frame}
+}

@@ -1,0 +1,31 @@
+% =============================================================================
+%  TITLE SLIDE  (bookend: sidebar kept, full-bleed tint)
+% =============================================================================
+{
+\atuspecialbg{%
+  \fill[DeepTeal!8]
+    ([xshift=\atuBarTotal, yshift=1.75cm]current page.south west) rectangle
+    (current page.south east);
+}
+\begin{frame}[plain]
+\begin{tikzpicture}[remember picture,overlay]
+  \node[anchor=north east]
+    at ([xshift=-\atuMarginR, yshift=-0.45cm]current page.north east)
+    {\includegraphics[width=2.6cm]{images/atu-logo-green.png}};
+  \aturule{north}{-1.75cm}{BabyPink}{1.5pt}
+  \aturule{south}{1.75cm}{BabyLavender}{1pt}
+
+  \atupagetitle{%
+    {\Large\bfseries\color{DeepTeal}
+      Quantifying Model, Label, and Analyst\\[3pt]
+      Contributions to Variance in\\[3pt]
+      Real-Time Sepsis Onset Prediction}\\[20pt]
+    {\normalsize\color{DarkText}\textbf{Abdul Ahad}}\\[6pt]
+    {\small\color{MidGrey}
+      M.Sc.\ in Computing\\
+      Department of Computer Science \& Applied Physics\\
+      Atlantic Technological University (ATU), Galway}%
+  }
+\end{tikzpicture}
+\end{frame}
+}
