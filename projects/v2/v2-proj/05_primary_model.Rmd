@@ -23,7 +23,7 @@ editor_options:
 ---
 
 ```{r setup, include=FALSE}
-set.seed(486649)   # student ID for reproducibility
+set.seed(42)
 
 knitr::opts_chunk$set(
   echo = FALSE, message = FALSE, warning = FALSE,
@@ -124,7 +124,6 @@ fit_primary_model <- function(vid) {
   mod_formula <- as.formula(formula_str)
 
   v2_log("  Fitting multinomial logistic regression...")
-  set.seed(42)
   fit <- tryCatch(
     nnet::multinom(mod_formula, data = as.data.frame(train),
                    trace = FALSE, MaxNWts = 50000, maxit = 500),
@@ -249,7 +248,6 @@ fit_primary_random <- function(vid = "B") {
   )
   mod_formula <- as.formula(formula_str)
 
-  set.seed(42)
   fit <- tryCatch(
     nnet::multinom(mod_formula, data = as.data.frame(train),
                    trace = FALSE, MaxNWts = 50000, maxit = 500),

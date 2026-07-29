@@ -553,6 +553,16 @@ source of variance while ignoring another of similar size.
 \subsection{Limitations}
 
 \begin{enumerate}
+  \item \textbf{Single-centre development.} All models were developed on
+  MIMIC-IV, which originates from a single academic medical centre (Beth
+  Israel Deaconess Medical Center, Boston). Clinical practices, patient
+  demographics, and EHR documentation patterns at BIDMC may not represent
+  those at other institutions. The equity and label-sensitivity findings in
+  particular should not be assumed to transfer to hospitals with different
+  patient populations or antibiotic prescribing cultures. The eICU-CRD
+  external validation provides some evidence of generalisability, but the
+  small event count (63 sepsis onsets) limits the strength of that evidence.
+
   \item \textbf{Small external event count.} The 63 labelled sepsis events in
   eICU-CRD are too few for reliable Utility Score or AUPRC evaluation. The
   external results primarily confirm the label-dependent generalisation

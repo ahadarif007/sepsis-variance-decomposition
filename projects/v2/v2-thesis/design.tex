@@ -203,7 +203,22 @@ label-sensitivity variation is the novel finding.
 
 \section{Reproducibility}
 
-The pipeline is orchestrated by \texttt{run\_pipeline.sh}. All intermediate
-outputs are Parquet (compressed, columnar). Small result tables ($<$1,000 rows)
-are CSV for readability. The full pipeline runs in approximately six hours on
-a machine with 64\,GB RAM.
+The pipeline is orchestrated by \texttt{run\_pipeline.R}, which executes all
+ten stages sequentially or by phase. All intermediate outputs are Parquet
+(compressed, columnar). Small result tables ($<$1,000 rows) are CSV for
+readability. The full pipeline runs in approximately six hours on a machine with
+64\,GB RAM.
+
+\subsection{Fixed Random Seed}
+
+All random operations use a single fixed seed (\texttt{42}) to ensure bitwise
+reproducibility. Every Rmd script sets \texttt{set.seed(42)} in its setup
+chunk before any computation. The same value is used for the patient-level
+random split (\texttt{RANDOM\_SPLIT\_SEED} in \texttt{config.R}), the
+\texttt{pmsampsize} sample-size calculation, and all model-fitting calls. No
+seed is drawn from wall-clock time or left to the system default.
+
+The full pipeline can be reproduced on any MIMIC-IV v3.1 installation by
+setting the environment variable \texttt{MIMIC\_RESEARCH\_ROOT} to the
+directory containing the \texttt{data/} folder. The code repository is
+released under a permissive open-source licence.

@@ -23,7 +23,7 @@ editor_options:
 ---
 
 ```{r setup, include=FALSE}
-set.seed(486649)   # student ID for reproducibility
+set.seed(42)
 
 knitr::opts_chunk$set(
   echo = FALSE, message = FALSE, warning = FALSE,

@@ -52,6 +52,32 @@ multi-centre database from over 200 US ICUs. It uses different electronic health
 record systems and covers a broader range of hospitals and patient populations
 than the single-centre MIMIC-IV, making it a meaningful external test.
 
+\section{Ethical Considerations}
+\label{sec:ethics}
+
+This study uses two publicly available, de-identified critical-care databases.
+Neither contains protected health information as defined under HIPAA, and no
+re-identification was attempted.
+
+\textbf{MIMIC-IV v3.1} is distributed by the MIT Laboratory for Computational
+Physiology via PhysioNet \cite{johnson2023mimiciv}. Access requires completion
+of the Collaborative Institutional Training Initiative (CITI) ``Data or
+Specimens Only Research'' course and signing a PhysioNet Credentialed Data Use
+Agreement (DUA). The DUA prohibits re-identification and restricts data sharing
+to credentialed collaborators. The principal investigator (the author) completed
+CITI training and executed the DUA before any data access; credentials are on
+file with PhysioNet.
+
+\textbf{eICU-CRD v2.0} \cite{pollard2018eicu} is distributed under the same
+PhysioNet credentialing framework and DUA terms.
+
+Both databases were collected under institutional review board (IRB) approvals
+held by the original data custodians (Beth Israel Deaconess Medical Center for
+MIMIC-IV; Philips Healthcare for eICU-CRD), with a waiver of informed consent
+for the de-identified research dataset. No additional IRB approval was required
+for secondary analysis of these de-identified records, consistent with the US
+Common Rule (45 CFR 46.104(d)(4)) and PhysioNet's data access policies.
+
 \section{Cohort Construction}
 
 The base cohort is built by applying three inclusion criteria uniformly across
@@ -65,6 +91,53 @@ all label variants:
 \end{itemize}
 
 The resulting cohort contains \textbf{65,078 stays} in MIMIC-IV.
+Figure~\ref{fig:consort} shows the patient flow through each exclusion step.
+
+\begin{figure}[H]
+\centering
+\usetikzlibrary{arrows.meta,positioning}
+\begin{tikzpicture}[
+  node distance=0.6cm,
+  box/.style={rectangle, draw=ATUGreen, thick, rounded corners=2pt,
+              fill=ATULightGreen!20, text width=7cm, align=center,
+              font=\small, inner sep=6pt, minimum height=0.8cm},
+  excl/.style={rectangle, draw=ATUOrange, thick, rounded corners=2pt,
+               fill=ATUSand!40, text width=5cm, align=center,
+               font=\small, inner sep=5pt, minimum height=0.7cm},
+  arr/.style={-{Latex[length=2mm]}, thick, ATUGreen},
+  exarr/.style={-{Latex[length=2mm]}, thick, ATUOrange},
+]
+
+\node[box] (total) {MIMIC-IV v3.1 ICU stays\\$n = 94{,}458$};
+\node[excl, right=1.2cm of total] (e1) {Non-first ICU stay\\$n = 29{,}092$ excluded};
+\draw[exarr] (total.east) -- (e1.west);
+
+\node[box, below=of total] (first) {First ICU stay per patient\\(all ages $\geq 18$ in MIMIC-IV)\\$n = 65{,}366$};
+\draw[arr] (total) -- (first);
+
+\node[excl, right=1.2cm of first] (e2) {LOS $< 4$ hours\\$n = 288$ excluded};
+\draw[exarr] (first.east) -- (e2.west);
+
+\node[box, below=of first] (final) {\textbf{Analysis cohort}\\$n = 65{,}078$};
+\draw[arr] (first) -- (final);
+
+\node[box, below left=0.8cm and -0.5cm of final, text width=3.2cm]
+  (va) {Variant A\\Sepsis: 6{,}252\\(9.6\%)};
+\node[box, below=0.8cm of final, text width=3.2cm]
+  (vb) {Variant B\\Sepsis: 6{,}447\\(9.9\%)};
+\node[box, below right=0.8cm and -0.5cm of final, text width=3.2cm]
+  (vc) {Variant C\\Sepsis: 12{,}581\\(19.3\%)};
+
+\draw[arr] (final.south) -- ++(0,-0.3) -| (va.north);
+\draw[arr] (final.south) -- (vb.north);
+\draw[arr] (final.south) -- ++(0,-0.3) -| (vc.north);
+
+\end{tikzpicture}
+\caption{CONSORT-style patient flow diagram. All 65,078 stays enter all three
+  label variants; only the sepsis outcome differs. Exclusion counts are from the
+  pipeline's cohort extraction log (script \texttt{02\_cohort\_labels.Rmd}).}
+\label{fig:consort}
+\end{figure}
 
 \section{Outcome Definition: Three Sepsis-3 Label Variants}
 \label{sec:label_variants}
