@@ -6,33 +6,203 @@ A full critical review of fifty sources is provided in the companion document
 \textit{Statistical and Machine-Learning Approaches to Real-Time Sepsis Onset
 Prediction on MIMIC-IV: An Extended Critical Literature Review}. This chapter
 extracts the seven evidence strands that directly informed the study's design
-choices.
+choices. Section~\ref{sec:search_strategy} documents the search strategy used
+to identify the literature and to support the novelty claims made in this
+thesis.
+
+
+\section{Search Strategy}
+\label{sec:search_strategy}
+
+The literature search was conducted to identify published work on real-time
+sepsis prediction with a focus on label sensitivity, evaluation methodology,
+and fairness/equity analysis. Table~\ref{tab:search_strategy} documents the
+search protocol.
+
+\begin{table}[H]
+    \centering\small
+    \begin{tabular}{p{3.2cm}p{9.5cm}}
+        \toprule
+        \textbf{Element} & \textbf{Detail} \\
+        \midrule
+        Databases searched &
+        PubMed/MEDLINE, Embase, Scopus, Web of Science, IEEE Xplore,
+        ACM Digital Library, Google Scholar, Cochrane Library,
+        ScienceDirect, SpringerLink, Wiley Online Library, Nature
+        Portfolio, JAMA Network, BMJ Journals (15 sources; see
+        \texttt{search\_strategy\_queries.xlsx} for database-specific
+        query syntax) \\
+        \addlinespace
+        Date range &
+        January 2015 -- July 2026 \\
+        \addlinespace
+        Search terms &
+        \texttt{(sepsis OR ``sepsis prediction'' OR ``sepsis detection'') AND
+            (MIMIC OR ``critical care'' OR ``intensive care'')} combined with each
+        of: \texttt{``label definition''}, \texttt{``label sensitivity''},
+        \texttt{``onset definition''}, \texttt{``utility score''},
+        \texttt{``clinical utility''}, \texttt{``fairness'' OR ``equity'' OR
+        ``disparity'' OR ``bias''}, \texttt{``subgroup analysis''},
+        \texttt{``competing risks'' OR ``discrete-time survival''} \\
+        \addlinespace
+        Inclusion criteria &
+        (1)~Peer-reviewed journal article, conference paper, or preprint on a
+        recognised server (arXiv, medRxiv);
+        (2)~Develops or evaluates a real-time (hourly or sub-hourly) sepsis
+        prediction model;
+        (3)~Uses EHR data from an ICU population;
+        (4)~Reports at least one quantitative performance metric \\
+        \addlinespace
+        Exclusion criteria &
+        (1)~Non-English language;
+        (2)~Editorials, commentaries, or letters without original results;
+        (3)~Models for sepsis severity staging or mortality only (not onset
+        prediction);
+        (4)~Studies on paediatric or neonatal populations exclusively \\
+        \addlinespace
+        Total screened &
+        \textbf{TODO: fill in after completing search} \\
+        \addlinespace
+        Total included &
+        \textbf{TODO: fill in after completing search} \\
+        \bottomrule
+    \end{tabular}
+    \caption{Literature search strategy. This search supports the novelty claims
+    for contributions C1 and C5: no identified study combines multi-variant
+    label sensitivity analysis with subgroup equity evaluation for a sepsis
+    prediction model.}
+    \label{tab:search_strategy}
+\end{table}
+
+Figure~\ref{fig:prisma} summarises the screening process following the
+PRISMA 2020 guidelines \cite{page2021prisma}.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  node distance=0.55cm,
+  box/.style={rectangle, draw=ATUGreen, thick, rounded corners=2pt,
+              fill=ATULightGreen!20, text width=7.5cm, align=center,
+              font=\small, inner sep=6pt, minimum height=0.8cm},
+  excl/.style={rectangle, draw=ATUOrange, thick, rounded corners=2pt,
+               fill=ATUSand!40, text width=5.5cm, align=center,
+               font=\small, inner sep=5pt, minimum height=0.7cm},
+  phase/.style={font=\small\bfseries, text=ATUNavy, rotate=90, anchor=south},
+  arr/.style={-{Latex[length=2mm]}, thick, ATUGreen},
+  exarr/.style={-{Latex[length=2mm]}, thick, ATUOrange},
+]
+
+% --- Identification ---
+\node[box] (db) {Records identified through\\database searching (15 sources)\\
+  ($n=\textbf{TODO}$ total)};
+
+\node[box, below=of db] (dedup) {Records after duplicates removed\\
+  ($n=\textbf{TODO}$)};
+\draw[arr] (db) -- (dedup);
+
+\node[excl, right=1cm of dedup] (e1) {Duplicates removed\\($n=\textbf{TODO}$)};
+\draw[exarr] (db.east) -- ++(0.5,0) |- (e1.west);
+
+% --- Screening ---
+\node[box, below=of dedup] (screen) {Records screened\\(title and abstract)\\
+  ($n=\textbf{TODO}$)};
+\draw[arr] (dedup) -- (screen);
+
+\node[excl, right=1cm of screen] (e2) {Excluded at screening\\($n=\textbf{TODO}$)};
+\draw[exarr] (screen.east) -- (e2.west);
+
+% --- Eligibility ---
+\node[box, below=of screen] (elig) {Full-text articles assessed\\for eligibility\\
+  ($n=\textbf{TODO}$)};
+\draw[arr] (screen) -- (elig);
+
+\node[excl, right=1cm of elig] (e3) {
+  Full-text exclusions ($n=\textbf{TODO}$):\\[2pt]
+  \begin{minipage}{4.8cm}\raggedright\scriptsize
+    Not onset prediction ($n=\textbf{TODO}$)\\
+    Paediatric only ($n=\textbf{TODO}$)\\
+    No quantitative metric ($n=\textbf{TODO}$)\\
+    Editorial/commentary ($n=\textbf{TODO}$)
+  \end{minipage}
+};
+\draw[exarr] (elig.east) -- (e3.west);
+
+% --- Included ---
+\node[box, below=of elig, fill=ATUGreen!15, draw=ATUGreen!80!black]
+  (incl) {Studies included in review\\($n=\textbf{TODO}$)};
+\draw[arr] (elig) -- (incl);
+
+% --- Phase labels ---
+\node[phase, left=1.2cm of db]     {Identification};
+\node[phase, left=1.2cm of screen] {Screening};
+\node[phase, left=1.2cm of elig]   {Eligibility};
+\node[phase, left=1.2cm of incl]   {Included};
+
+\end{tikzpicture}
+\caption{PRISMA 2020 flow diagram of the literature search and screening
+  process. All \textbf{TODO} values should be replaced with actual counts
+  after completing the search.}
+\label{fig:prisma}
+\end{figure}
+
+\paragraph{Supporting the novelty claims.}
+Two specific claims require search-based evidence:
+
+\begin{enumerate}
+    \item \textbf{C1 (Label variance):} No identified study applies three or
+    more Sepsis-3 label variants to a dynamic survival model on MIMIC-IV.
+    Cohen et al.\ \cite{cohen2024subtle} performed a multi-label analysis on
+    MIMIC-III using tree-based and deep learning models. Dutta et al.\
+    \cite{dutta2026performance} tested multiple label definitions
+    prospectively but used a commercial gradient-boosted model, not a survival
+    framework. The present study extends this line of work to a discrete-time
+    competing-risks model on MIMIC-IV v3.1.
+
+    \item \textbf{C5 (Equity-by-label):} No identified study reports both
+    subgroup model-performance disparities and subgroup label-sensitivity
+    variation for a sepsis prediction model. Wang et al.\ \cite{wang2022equity}
+    reported subgroup performance disparities under a single label definition.
+    Studies examining label sensitivity (Cohen et al., Dutta et al.) did not
+    stratify by demographic subgroup. The combination of both analyses is the
+    novel contribution.
+\end{enumerate}
+
+\paragraph{Clinical utility assessment criterion.}
+Wang et al.\ \cite{wang2025srpm} reviewed ninety-one real-time sepsis
+prediction models. Of these, only a minority reported the PhysioNet Utility
+Score or an equivalent net-benefit metric; the majority reported only AUROC
+and/or AUPRC. The claim that published models do not demonstrate good
+clinical utility is based on the subset of models for which a utility or
+net-benefit metric was available: among those, the median external Utility
+Score was $-0.164$, indicating net harm. For models reporting only AUROC,
+clinical utility could not be assessed, and no claim about their utility is
+made.
 
 \subsection*{Key Concepts}
 
 Several domain-specific terms recur throughout this review:
 
 \begin{itemize}
-  \item \textbf{MIMIC-IV} (Medical Information Mart for Intensive Care, version
+    \item \textbf{MIMIC-IV} (Medical Information Mart for Intensive Care, version
     IV): a freely available, de-identified database of approximately 74,000 ICU
     admissions at Beth Israel Deaconess Medical Center, Boston, covering
     2008--2019 \cite{johnson2023mimiciv}.
-  \item \textbf{Sepsis-3}: the current international consensus definition of
+    \item \textbf{Sepsis-3}: the current international consensus definition of
     sepsis as life-threatening organ dysfunction caused by a dysregulated host
     response to infection, operationalised through a combination of suspected
     infection (antibiotic order plus culture draw) and a rise in the Sequential
     Organ Failure Assessment (SOFA) score of $\geq$2 points
     \cite{singer2016sepsis3}.
-  \item \textbf{AUROC} (Area Under the Receiver Operating Characteristic
+    \item \textbf{AUROC} (Area Under the Receiver Operating Characteristic
     curve): a discrimination metric that measures a model's ability to rank
     positive cases above negative cases, ranging from 0.5 (random) to 1.0
     (perfect separation). It does not account for alert timing or
     false-alarm cost.
-  \item \textbf{Utility Score}: a net-benefit metric proposed by the
+    \item \textbf{Utility Score}: a net-benefit metric proposed by the
     PhysioNet/Computing in Cardiology Challenge that rewards early, true
     alerts and penalises late alerts and false alarms, producing values that
     can be negative when a model causes more harm than benefit.
-  \item \textbf{NEWS2} (National Early Warning Score 2): a standardised
+    \item \textbf{NEWS2} (National Early Warning Score 2): a standardised
     clinical scoring system aggregating six physiological parameters (respiratory
     rate, oxygen saturation, systolic blood pressure, pulse rate, level of
     consciousness, and temperature) into a single risk score used for bedside
@@ -45,16 +215,16 @@ This literature review is structured around four questions that directly
 inform the study's design:
 
 \begin{enumerate}
-  \item[\textbf{RQ1.}] How much does the choice of sepsis label definition
+    \item[\textbf{RQ1.}] How much does the choice of sepsis label definition
     affect model performance, and is this effect comparable in magnitude to
     the choice of model architecture?
-  \item[\textbf{RQ2.}] What methodological pitfalls---validation strategy,
+    \item[\textbf{RQ2.}] What methodological pitfalls---validation strategy,
     metric selection, treatment-time leakage---most distort reported
     performance in the sepsis prediction literature?
-  \item[\textbf{RQ3.}] What statistical framework is appropriate for
+    \item[\textbf{RQ3.}] What statistical framework is appropriate for
     modelling hourly ICU event data when the standard proportional-hazards
     assumption is violated?
-  \item[\textbf{RQ4.}] Does the existing equity literature on sepsis
+    \item[\textbf{RQ4.}] Does the existing equity literature on sepsis
     prediction account for label-level variation across demographic subgroups,
     or only model-level variation?
 \end{enumerate}
@@ -76,8 +246,8 @@ provides a structured comparison of the key studies that inform this
 analysis.
 
 \begin{table}[H]
-  \centering\small
-  \begin{tabularx}{\textwidth}{p{2.4cm}p{1.6cm}p{2.2cm}X p{2.2cm}}
+    \centering\small
+    \begin{tabularx}{\textwidth}{p{2.4cm}p{1.6cm}p{2.2cm}X p{2.2cm}}
     \toprule
     \textbf{Study} & \textbf{Dataset} & \textbf{Method} &
     \textbf{Key Finding} & \textbf{Gap Addressed} \\
@@ -124,10 +294,11 @@ analysis.
     Performance varies by race, ethnicity, insurance, language &
     Label-by-subgroup gap \\
     \bottomrule
-  \end{tabularx}
-  \caption{Comparison of key studies reviewed, their datasets, methods, and the design gaps each addresses.}
-  \label{tab:study_comparison}
+    \end{tabularx}
+    \caption{Comparison of key studies reviewed, their datasets, methods, and the design gaps each addresses.}
+    \label{tab:study_comparison}
 \end{table}
+
 
 \section{The Sepsis Label Is Not a Single Object}
 
@@ -161,11 +332,11 @@ interpretations, produces overlapping but distinct cohorts, each yielding
 different model performance.
 
 \begin{figure}[H]
-  \centering
-  \begin{tikzpicture}[
-    every node/.style={font=\small},
-    cohort/.style={draw, circle, minimum size=2.8cm, thick, fill opacity=0.15},
-  ]
+    \centering
+    \begin{tikzpicture}[
+        every node/.style={font=\small},
+        cohort/.style={draw, circle, minimum size=2.8cm, thick, fill opacity=0.15},
+    ]
     \node[cohort, fill=ATUGreen, draw=ATUGreen] (a) at (0, 0) {};
     \node[cohort, fill=ATUOrange, draw=ATUOrange] (b) at (1.6, 0) {};
     \node[cohort, fill=ATUNavy, draw=ATUNavy] (c) at (0.8, 1.3) {};
@@ -177,26 +348,27 @@ different model performance.
     \node[font=\scriptsize] at (0.8, 0.4) {\textbf{Shared}};
 
     \draw[decorate, decoration={brace, amplitude=5pt, raise=3pt}]
-      (-1.6, -2.0) -- (3.2, -2.0)
-      node[midway, below=10pt, font=\footnotesize, align=center]
-      {Same ICU population, same EHR data\\different ``sepsis cohorts''};
+    (-1.6, -2.0) -- (3.2, -2.0)
+    node[midway, below=10pt, font=\footnotesize, align=center]
+        {Same ICU population, same EHR data\\different ``sepsis cohorts''};
 
     \node[draw, rounded corners, fill=white, inner sep=6pt,
-          font=\footnotesize, align=left] at (6.5, 0.5) {
-      \textbf{Impact on AUROC:}\\[2pt]
-      Label A: 0.82\\
-      Label B: 0.78\\
-      Label C: 0.85\\[4pt]
-      $\Delta_{\text{label}} \approx \Delta_{\text{model}}$
+        font=\footnotesize, align=left] at (6.5, 0.5) {
+        \textbf{Impact on AUROC:}\\[2pt]
+        Label A: 0.82\\
+        Label B: 0.78\\
+        Label C: 0.85\\[4pt]
+        $\Delta_{\text{label}} \approx \Delta_{\text{model}}$
     };
-  \end{tikzpicture}
-  \caption{Conceptual illustration of label variance: three valid Sepsis-3
+    \end{tikzpicture}
+    \caption{Conceptual illustration of label variance: three valid Sepsis-3
     interpretations applied to the same ICU population produce overlapping but
     distinct cohorts, each yielding different model performance. The
     performance gap between labels is comparable to the gap between model
     architectures.}
-  \label{fig:label_variance_concept}
+    \label{fig:label_variance_concept}
 \end{figure}
+
 
 \section{The Label Depends on Clinical Action}
 
@@ -216,6 +388,7 @@ sign of a feature's effect; their example is SpO$_2$. This means a hazard
 ratio whose sign depends on how the study was framed is not a clinically
 meaningful quantity.
 
+
 \section{The Validation Split Must Be Time-Based}
 
 Guo et al.\ \cite{guo2022temporal} tested four clinical prediction tasks
@@ -228,6 +401,7 @@ This finding drives a key design decision: the primary validation in this study
 uses a time-based split (train on 2008--2016, test on 2017--2019). A random
 split is only used to measure how much performance it inflates.
 
+
 \section{AUROC Hides the Clinical Failure}
 
 Wang et al.\ \cite{wang2025srpm} reviewed ninety-one real-time sepsis
@@ -239,6 +413,7 @@ patients by risk. The Utility Score failed because it measures whether alerts
 arrive in time and at acceptable false-alert rates, and at external sites,
 they did not. Reporting AUROC as the main metric does not just miss the failure;
 it actively hides it.
+
 
 \section{The Survival Model for Hourly ICU Data}
 
@@ -258,6 +433,7 @@ sepsis. Treating these events as simple censoring overstates sepsis incidence
 and biases model estimates. The multinomial cause-specific formulation used
 in this study handles this correctly.
 
+
 \section{NEWS2 as the Baseline Comparator}
 
 Most MIMIC-IV sepsis models compare against SIRS, qSOFA, and NEWS. Evans et al.\
@@ -269,6 +445,7 @@ as a standalone screening tool, making NEWS2 the minimum meaningful comparator.
 This study retains SIRS and qSOFA for completeness but uses NEWS2 as the primary
 rule-based benchmark.
 
+
 \section{Equity Analysis: Performance and Label Sensitivity Together}
 
 Wang, Li, Naidech and Luo \cite{wang2022equity} showed that sepsis model
@@ -277,7 +454,9 @@ subgroups. However, they did not examine whether the label itself assigns sepsis
 status differently across those groups. This study adds that missing piece: for
 each subgroup, it reports both the variation in who gets labelled as septic
 under each label variant and the variation in model performance. This
-combination has not been reported for any sepsis model.
+combination has not, to the best of our knowledge, been reported for any
+sepsis model (see Section~\ref{sec:search_strategy}).
+
 
 \section{Summary: Design Decisions and Their Evidence}
 
@@ -285,34 +464,34 @@ Table~\ref{tab:design_warrant} maps each major design decision to the evidence
 that supports it.
 
 \begin{table}[H]
-  \centering\small
-  \begin{tabular}{p{3.2cm}p{6cm}p{3.5cm}}
-    \toprule
-    \textbf{Decision} & \textbf{Reason} & \textbf{Source} \\
-    \midrule
-    Three label variants & Label variance $\approx$ model variance &
-      Cohen et al.\ \cite{cohen2024subtle} \\
-    Label as variable & Variance is a finding, not a nuisance &
-      Cohen; Dutta et al.\ \cite{dutta2026performance} \\
-    Treatment-anchored eval & Label depends on clinical action &
-      Kamran et al.\ \cite{kamran2024evaluation} \\
-    Time-based split & Sepsis worst-affected by temporal shift &
-      Guo et al.\ \cite{guo2022temporal} \\
-    Utility Score primary & AUROC hides clinical failure &
-      Wang et al.\ \cite{wang2025srpm} \\
-    Calibration co-primary & Critical for clinical usefulness &
-      Van Calster et al.\ \cite{vancalster2019calibration} \\
-    Discrete-time model & Cox-equivalent; no PH assumption &
-      D'Agostino \cite{dagostino1990pooled};
-      Heyard \cite{heyard2019dynamic} \\
-    NEWS2 comparator & qSOFA no longer recommended &
-      Evans et al.\ \cite{evans2021ssc} \\
-    GBT comparator & Cross-study comparison needs same label &
-      Cohen et al.\ \cite{cohen2024subtle} \\
-    Subgroup label sens. & Equity literature omits label-by-subgroup &
-      Wang et al.\ \cite{wang2022equity} \\
-    \bottomrule
-  \end{tabular}
-  \caption{Design decisions and their evidence warrants.}
-  \label{tab:design_warrant}
+    \centering\small
+    \begin{tabular}{p{3.2cm}p{6cm}p{3.5cm}}
+        \toprule
+        \textbf{Decision} & \textbf{Reason} & \textbf{Source} \\
+        \midrule
+        Three label variants & Label variance $\approx$ model variance &
+        Cohen et al.\ \cite{cohen2024subtle} \\
+        Label as variable & Variance is a finding, not a nuisance &
+        Cohen; Dutta et al.\ \cite{dutta2026performance} \\
+        Treatment-anchored eval & Label depends on clinical action &
+        Kamran et al.\ \cite{kamran2024evaluation} \\
+        Time-based split & Sepsis worst-affected by temporal shift &
+        Guo et al.\ \cite{guo2022temporal} \\
+        Utility Score primary & AUROC hides clinical failure &
+        Wang et al.\ \cite{wang2025srpm} \\
+        Calibration co-primary & Critical for clinical usefulness &
+        Van Calster et al.\ \cite{vancalster2019calibration} \\
+        Discrete-time model & Cox-equivalent; no PH assumption &
+        D'Agostino \cite{dagostino1990pooled};
+        Heyard \cite{heyard2019dynamic} \\
+        NEWS2 comparator & qSOFA no longer recommended &
+        Evans et al.\ \cite{evans2021ssc} \\
+        GBT comparator & Cross-study comparison needs same label &
+        Cohen et al.\ \cite{cohen2024subtle} \\
+        Subgroup label sens. & Equity literature omits label-by-subgroup &
+        Wang et al.\ \cite{wang2022equity} \\
+        \bottomrule
+    \end{tabular}
+    \caption{Design decisions and their evidence warrants.}
+    \label{tab:design_warrant}
 \end{table}

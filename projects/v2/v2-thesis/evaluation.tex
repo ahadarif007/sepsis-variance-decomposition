@@ -7,6 +7,8 @@ validation, and equity analysis. All results are from pre-registered analyses
 unless marked as exploratory.
 
 %===========================================================================
+
+
 \section{Cohort Description and Label Variance}
 \label{sec:cohort}
 %===========================================================================
@@ -16,22 +18,22 @@ identifies 65,078 adult first ICU stays. The database and patients are the
 same across all three variants; only the sepsis definition differs.
 
 \begin{table}[H]
-  \centering\small
-  \begin{tabular}{llrrrrr}
-    \toprule
-    \textbf{Var} & \textbf{Name} & \textbf{Stays} & \textbf{Onsets}
-      & \textbf{\%} & \textbf{Deaths} & \textbf{Onset h (IQR)} \\
-    \midrule
-    A & Narrow           & 65{,}078 & 6{,}252  & 9.6  & 5{,}934 & 10 [4--26] \\
-    B & Seymour-Std      & 65{,}078 & 6{,}447  & 9.9  & 5{,}892 & 11 [4--30] \\
-    C & Liberal          & 65{,}078 & 12{,}581 & 19.3 & 4{,}956 & 10 [4--30] \\
-    \bottomrule
-  \end{tabular}
-  \caption{Cohort description by label variant. The Liberal variant identifies
-  about twice as many sepsis cases as the Narrow or Seymour-Standard variants,
-  mainly because it accepts wider antibiotic-culture windows and uses a rolling
-  SOFA baseline.}
-  \label{tab:cohort}
+    \centering\small
+    \begin{tabular}{llrrrrr}
+        \toprule
+        \textbf{Var} & \textbf{Name} & \textbf{Stays} & \textbf{Onsets}
+        & \textbf{\%} & \textbf{Deaths} & \textbf{Onset h (IQR)} \\
+        \midrule
+        A & Narrow      & 65{,}078 & 6{,}252  & 9.6  & 5{,}934 & 10 [4--26] \\
+        B & Seymour-Std & 65{,}078 & 6{,}447  & 9.9  & 5{,}892 & 11 [4--30] \\
+        C & Liberal     & 65{,}078 & 12{,}581 & 19.3 & 4{,}956 & 10 [4--30] \\
+        \bottomrule
+    \end{tabular}
+    \caption{Cohort description by label variant. The Liberal variant identifies
+    about twice as many sepsis cases as the Narrow or Seymour-Standard variants,
+        mainly because it accepts wider antibiotic-culture windows and uses a rolling
+        SOFA baseline.}
+    \label{tab:cohort}
 \end{table}
 
 The twofold difference in sepsis prevalence between Variant A (9.6\%) and
@@ -39,29 +41,33 @@ Variant C (19.3\%) confirms the label-sensitivity finding from Johnson et al.\
 \cite{johnson2018comparative} at MIMIC-IV scale.
 
 %===========================================================================
+
+
 \section{Sample Size Adequacy}
 \label{sec:sample_size_results}
 %===========================================================================
 
 \begin{table}[H]
-  \centering\small
-  \begin{tabular}{llrrrrr}
-    \toprule
-    \textbf{Var} & \textbf{Name} & \textbf{Train h} & \textbf{Events}
-      & \textbf{EPH rate} & \textbf{Min-N} & \textbf{EPV} \\
-    \midrule
-    A & Narrow      & 2{,}304{,}923 & 4{,}647 & 0.00202 & 52{,}201 & 185.9 \\
-    B & Seymour-Std & 2{,}301{,}842 & 4{,}847 & 0.00211 & 51{,}012 & 193.9 \\
-    C & Liberal     & 2{,}120{,}376 & 9{,}403 & 0.00443 & 24{,}069 & 376.1 \\
-    \bottomrule
-  \end{tabular}
-  \caption{Sample size results (Riley et al., 2019). EPV: events per candidate
-  predictor variable (25 predictors). All three variants exceed the minimum
-  required (52{,}946 stays each). Sample size is not the bottleneck.}
-  \label{tab:sample_size}
+    \centering\small
+    \begin{tabular}{llrrrrr}
+        \toprule
+        \textbf{Var} & \textbf{Name} & \textbf{Train h} & \textbf{Events}
+        & \textbf{EPH rate} & \textbf{Min-N} & \textbf{EPV} \\
+        \midrule
+        A & Narrow      & 2{,}304{,}923 & 4{,}647 & 0.00202 & 52{,}201 & 185.9 \\
+        B & Seymour-Std & 2{,}301{,}842 & 4{,}847 & 0.00211 & 51{,}012 & 193.9 \\
+        C & Liberal     & 2{,}120{,}376 & 9{,}403 & 0.00443 & 24{,}069 & 376.1 \\
+        \bottomrule
+    \end{tabular}
+    \caption{Sample size results (Riley et al., 2019). EPV: events per candidate
+    predictor variable (25 predictors). All three variants exceed the minimum
+    required (52{,}946 stays each). Sample size is not the bottleneck.}
+    \label{tab:sample_size}
 \end{table}
 
 %===========================================================================
+
+
 \section{Model Performance: Internal Temporal Evaluation}
 \label{sec:internal_performance}
 %===========================================================================
@@ -70,40 +76,40 @@ Table~\ref{tab:internal_results} reports performance on the temporal test set
 (2017--2019) under the unrestricted evaluation window.
 
 \begin{table}[H]
-  \centering\small
-  \begin{tabular}{llrrrr}
-    \toprule
-    \textbf{Var} & \textbf{Model}
-      & \textbf{AUROC} & \textbf{AUPRC}
-      & \textbf{Utility} & \textbf{Alert burden} \\
-    \midrule
-    A & Primary & 0.760 & 0.0093 & $-1.000$ & $\infty$ \\
-    A & GBT     & 0.747 & 0.0090 & $-4.819$ & 205 \\
-    A & NEWS2   & 0.629 & 0.0030 & $-1.647$ & 221 \\
-    A & Cox     & 0.642 & 0.0033 & $-10.056$ & 340 \\
-    A & qSOFA   & 0.601 & 0.0027 & $-5.720$ & 344 \\
-    A & SIRS    & 0.599 & 0.0029 & $-4.454$ & 299 \\
-    \midrule
-    B & Primary & 0.607 & 0.0030 & $-1.004$ & $\infty$ \\
-    B & GBT     & 0.740 & 0.0086 & $-5.112$ & 207 \\
-    B & NEWS2   & 0.635 & 0.0032 & $-1.616$ & 223 \\
-    B & Cox     & 0.623 & 0.0031 & $-10.014$ & 359 \\
-    B & qSOFA   & 0.609 & 0.0028 & $-5.503$ & 318 \\
-    B & SIRS    & 0.600 & 0.0031 & $-4.332$ & 299 \\
-    \midrule
-    C & Primary & 0.759 & 0.0196 & $-1.000$ & $\infty$ \\
-    C & GBT     & 0.754 & 0.0189 & $-2.458$ & 91 \\
-    C & NEWS2   & 0.641 & 0.0072 & $-1.121$ & 97 \\
-    C & Cox     & 0.661 & 0.0083 & $-4.406$ & 146 \\
-    C & qSOFA   & 0.601 & 0.0060 & $-2.526$ & 151 \\
-    C & SIRS    & 0.613 & 0.0068 & $-2.089$ & 128 \\
-    \bottomrule
-  \end{tabular}
-  \caption{Internal temporal test performance (2017--2019, all variants use
-  temporal split). N test rows: 548{,}854 (A/B), 504{,}828 (C). Utility:
-  PhysioNet Utility Score; $\infty$ alert burden = no true alerts at default
-  threshold. Benchmark: 1.4 (Moor et al., 2023).}
-  \label{tab:internal_results}
+    \centering\small
+    \begin{tabular}{llrrrr}
+        \toprule
+        \textbf{Var} & \textbf{Model}
+        & \textbf{AUROC} & \textbf{AUPRC}
+        & \textbf{Utility} & \textbf{Alert burden} \\
+        \midrule
+        A & Primary & 0.760 & 0.0093 & $-1.000$  & $\infty$ \\
+        A & GBT     & 0.747 & 0.0090 & $-4.819$  & 205      \\
+        A & NEWS2   & 0.629 & 0.0030 & $-1.647$  & 221      \\
+        A & Cox     & 0.642 & 0.0033 & $-10.056$ & 340      \\
+        A & qSOFA   & 0.601 & 0.0027 & $-5.720$  & 344      \\
+        A & SIRS    & 0.599 & 0.0029 & $-4.454$  & 299      \\
+        \midrule
+        B & Primary & 0.607 & 0.0030 & $-1.004$  & $\infty$ \\
+        B & GBT     & 0.740 & 0.0086 & $-5.112$  & 207      \\
+        B & NEWS2   & 0.635 & 0.0032 & $-1.616$  & 223      \\
+        B & Cox     & 0.623 & 0.0031 & $-10.014$ & 359      \\
+        B & qSOFA   & 0.609 & 0.0028 & $-5.503$  & 318      \\
+        B & SIRS    & 0.600 & 0.0031 & $-4.332$  & 299      \\
+        \midrule
+        C & Primary & 0.759 & 0.0196 & $-1.000$  & $\infty$ \\
+        C & GBT     & 0.754 & 0.0189 & $-2.458$  & 91       \\
+        C & NEWS2   & 0.641 & 0.0072 & $-1.121$  & 97       \\
+        C & Cox     & 0.661 & 0.0083 & $-4.406$  & 146      \\
+        C & qSOFA   & 0.601 & 0.0060 & $-2.526$  & 151      \\
+        C & SIRS    & 0.613 & 0.0068 & $-2.089$  & 128      \\
+        \bottomrule
+    \end{tabular}
+    \caption{Internal temporal test performance (2017--2019, all variants use
+    temporal split). N test rows: 548{,}854 (A/B), 504{,}828 (C). Utility:
+    PhysioNet Utility Score; $\infty$ alert burden = no true alerts at default
+    threshold. Benchmark: 1.4 (Moor et al., 2023).}
+    \label{tab:internal_results}
 \end{table}
 
 \subsection{Key Finding: Every Model Fails Clinically}
@@ -127,24 +133,26 @@ AUROC alone would hide it.
 \subsection{Calibration}
 
 \begin{table}[H]
-  \centering
-  \begin{tabular}{llrr}
-    \toprule
-    \textbf{Variant} & \textbf{Name} & \textbf{Intercept} & \textbf{Slope} \\
-    \midrule
-    A & Narrow           & $-0.176$ & 1.169 \\
-    B & Seymour-Standard & $-0.571$ & 0.318 \\
-    C & Liberal          & $-0.044$ & 1.103 \\
-    \bottomrule
-  \end{tabular}
-  \caption{Calibration for the primary model on the temporal test set. Perfect
-  calibration is intercept = 0, slope = 1. Variant B shows a slope of 0.318,
-  meaning the model substantially over-spreads its predicted probabilities.
-  Variant C has the best calibration.}
-  \label{tab:calibration}
+    \centering
+    \begin{tabular}{llrr}
+        \toprule
+        \textbf{Variant} & \textbf{Name}    & \textbf{Intercept} & \textbf{Slope} \\
+        \midrule
+        A                & Narrow           & $-0.176$           & 1.169          \\
+        B                & Seymour-Standard & $-0.571$           & 0.318          \\
+        C                & Liberal          & $-0.044$           & 1.103          \\
+        \bottomrule
+    \end{tabular}
+    \caption{Calibration for the primary model on the temporal test set. Perfect
+    calibration is intercept = 0, slope = 1. Variant B shows a slope of 0.318,
+        meaning the model substantially over-spreads its predicted probabilities.
+        Variant C has the best calibration.}
+    \label{tab:calibration}
 \end{table}
 
 %===========================================================================
+
+
 \section{Variance Decomposition and Hypothesis Verdicts}
 \label{sec:decomposition}
 %===========================================================================
@@ -152,21 +160,21 @@ AUROC alone would hide it.
 \subsection{The Decomposition Table}
 
 \begin{table}[H]
-  \centering\small
-  \begin{tabular}{p{5.5cm}ccl}
-    \toprule
-    \textbf{Factor (others fixed)} & \textbf{AUROC} & \textbf{Utility} & \textbf{H} \\
-    \midrule
-    Model class (label B, temporal)         & 0.140 & 9.01 & H6 \\
-    Label definition (primary, temporal)    & 0.153 & 0.004 & H1 \\
-    Split method (primary, label B)         & 0.123 & --   & H4 \\
-    Metric (AUROC vs Utility, int$\to$ext)  & 0.170 & --   & H5 \\
-    \bottomrule
-  \end{tabular}
-  \caption{Variance decomposition. All four factors produce AUROC changes of
-  0.12--0.17. The label spread (0.153) slightly exceeds the model-class spread
-  (0.140). Most studies fix three of these factors and compare only models.}
-  \label{tab:decomposition}
+    \centering\small
+    \begin{tabular}{p{5.5cm}ccl}
+        \toprule
+        \textbf{Factor (others fixed)}         & \textbf{AUROC} & \textbf{Utility} & \textbf{H} \\
+        \midrule
+        Model class (label B, temporal)        & 0.140          & 9.01             & H6         \\
+        Label definition (primary, temporal)   & 0.153          & 0.004            & H1         \\
+        Split method (primary, label B)        & 0.123          & --               & H4         \\
+        Metric (AUROC vs Utility, int$\to$ext) & 0.170          & --               & H5         \\
+        \bottomrule
+    \end{tabular}
+    \caption{Variance decomposition. All four factors produce AUROC changes of
+    0.12--0.17. The label spread (0.153) slightly exceeds the model-class spread
+        (0.140). Most studies fix three of these factors and compare only models.}
+    \label{tab:decomposition}
 \end{table}
 
 All four analyst decisions (model choice, label definition, split method,
@@ -177,11 +185,11 @@ while ignoring three others of similar size.
 \subsection{H1: Label Dominance (Confirmed)}
 
 \begin{mdframed}[backgroundcolor=ATUSand!30, linecolor=ATUGreen]
-  \textbf{H1:} Spread in AUROC across label variants $\geq$ spread across model
-  classes.
+    \textbf{H1:} Spread in AUROC across label variants $\geq$ spread across model
+    classes.
 
-  \textbf{Result:} Label spread = 0.153; model spread = 0.140.
-  \textbf{H1 CONFIRMED.}
+    \textbf{Result:} Label spread = 0.153; model spread = 0.140.
+    \textbf{H1 CONFIRMED.}
 \end{mdframed}
 
 Changing the sepsis definition while keeping the model fixed produces slightly
@@ -192,45 +200,45 @@ performance as the model choice. The margin is narrow (0.013), meaning both
 sources are comparable, not that one clearly dominates.
 
 \begin{figure}[H]
-  \centering
-  \includegraphics[width=0.85\textwidth]{images/09_label_variance_auroc.png}
-  \caption{AUROC by label variant for each model (temporal split). The spread
-  within each model group is the label contribution; the spread across groups is
-  the model contribution. Both are of similar size.}
-  \label{fig:label_variance_auroc}
+    \centering
+    \includegraphics[width=0.85\textwidth]{images/09_label_variance_auroc.png}
+    \caption{AUROC by label variant for each model (temporal split). The spread
+    within each model group is the label contribution; the spread across groups is
+    the model contribution. Both are of similar size.}
+    \label{fig:label_variance_auroc}
 \end{figure}
 
 \subsection{H2: Coefficient Instability (Confirmed)}
 
 \begin{mdframed}[backgroundcolor=ATUSand!30, linecolor=ATUGreen]
-  \textbf{H2:} At least one feature changes sign or magnitude $\geq 2\times$
-  across label variants.
+    \textbf{H2:} At least one feature changes sign or magnitude $\geq 2\times$
+    across label variants.
 
-  \textbf{Result:} 10 out of 25 features affected.
-  \textbf{H2 CONFIRMED.}
+    \textbf{Result:} 10 out of 25 features affected.
+    \textbf{H2 CONFIRMED.}
 \end{mdframed}
 
 \begin{table}[H]
-  \centering
-  \begin{tabular}{lp{8cm}}
-    \toprule
-    \textbf{Feature} & \textbf{What changed} \\
-    \midrule
-    MAP                    & Positive in Variant B, negative in A/C \\
-    Temperature            & Sign change across variants \\
-    Bilirubin              & Sign change across variants \\
-    Platelets              & Sign change across variants \\
-    Any vasopressor        & Sign change or magnitude $\geq 2\times$ \\
-    Norepinephrine/epinephrine & Sign change across variants \\
-    Respiratory rate slope & Sign change across variants \\
-    Platelets measured     & Magnitude change $\geq 2\times$ \\
-    WBC measured           & Sign change or magnitude $\geq 2\times$ \\
-    P/F ratio measured     & Sign change across variants \\
-    \bottomrule
-  \end{tabular}
-  \caption{Features with sign reversal or magnitude instability across label
-  variants. Ten of the 25 predictors are affected.}
-  \label{tab:coef_instability}
+    \centering
+    \begin{tabular}{lp{8cm}}
+        \toprule
+        \textbf{Feature}           & \textbf{What changed}                   \\
+        \midrule
+        MAP                        & Positive in Variant B, negative in A/C  \\
+        Temperature                & Sign change across variants             \\
+        Bilirubin                  & Sign change across variants             \\
+        Platelets                  & Sign change across variants             \\
+        Any vasopressor            & Sign change or magnitude $\geq 2\times$ \\
+        Norepinephrine/epinephrine & Sign change across variants             \\
+        Respiratory rate slope     & Sign change across variants             \\
+        Platelets measured         & Magnitude change $\geq 2\times$         \\
+        WBC measured               & Sign change or magnitude $\geq 2\times$ \\
+        P/F ratio measured         & Sign change across variants             \\
+        \bottomrule
+    \end{tabular}
+    \caption{Features with sign reversal or magnitude instability across label
+    variants. Ten of the 25 predictors are affected.}
+    \label{tab:coef_instability}
 \end{table}
 
 The sign instability of MAP, temperature, and vasopressor indicators is
@@ -243,11 +251,11 @@ knowing the exact label definition, confirming Lauritsen et al.'s
 \subsection{H3: Treatment Leakage, Label Constitutionality (Confirmed)}
 
 \begin{mdframed}[backgroundcolor=ATUPurple!10, linecolor=ATUPurple]
-  \textbf{H3:} Restricting to pre-treatment hours reduces AUROC by $\geq 0.03$.
+    \textbf{H3:} Restricting to pre-treatment hours reduces AUROC by $\geq 0.03$.
 
-  \textbf{Result:} \textbf{0 sepsis onset events} in 179,003 pre-treatment
-  person-hours. The prediction target is entirely absent.
-  \textbf{FINDING SUPERSEDES HYPOTHESIS.}
+    \textbf{Result:} \textbf{0 sepsis onset events} in 179,003 pre-treatment
+    person-hours. The prediction target is entirely absent.
+    \textbf{FINDING SUPERSEDES HYPOTHESIS.}
 \end{mdframed}
 
 When only hours before the first antibiotic or culture are considered, there
@@ -266,28 +274,28 @@ clinician will act, not when a patient will deteriorate.
 \subsection{H4: Split Optimism (Confirmed)}
 
 \begin{mdframed}[backgroundcolor=ATUSand!30, linecolor=ATUGreen]
-  \textbf{H4:} Temporal-split AUROC is at least 0.02 lower than random-split
-  AUROC.
+    \textbf{H4:} Temporal-split AUROC is at least 0.02 lower than random-split
+    AUROC.
 
-  \textbf{Result:} Primary model: random AUROC = 0.730, temporal AUROC = 0.607.
-  Difference: 0.123. \textbf{H4 CONFIRMED.}
+    \textbf{Result:} Primary model: random AUROC = 0.730, temporal AUROC = 0.607.
+    Difference: 0.123. \textbf{H4 CONFIRMED.}
 \end{mdframed}
 
 \begin{table}[H]
-  \centering
-  \begin{tabular}{llrr}
-    \toprule
-    \textbf{Split} & \textbf{Model} & \textbf{AUROC} & \textbf{Utility Score} \\
-    \midrule
-    Temporal & Primary & 0.607 & $-1.004$ \\
-    Random   & Primary & 0.730 & $-1.000$ \\
-    Temporal & GBT     & 0.746 & $-4.849$ \\
-    Random   & GBT     & 0.720 & $-5.167$ \\
-    \bottomrule
-  \end{tabular}
-  \caption{Temporal vs.\ random split comparison (Variant B). The primary model
-  gains 0.123 AUROC from the random split, far exceeding the 0.02 threshold.}
-  \label{tab:split_optimism}
+    \centering
+    \begin{tabular}{llrr}
+        \toprule
+        \textbf{Split} & \textbf{Model} & \textbf{AUROC} & \textbf{Utility Score} \\
+        \midrule
+        Temporal       & Primary        & 0.607          & $-1.004$               \\
+        Random         & Primary        & 0.730          & $-1.000$               \\
+        Temporal       & GBT            & 0.746          & $-4.849$               \\
+        Random         & GBT            & 0.720          & $-5.167$               \\
+        \bottomrule
+    \end{tabular}
+    \caption{Temporal vs.\ random split comparison (Variant B). The primary model
+    gains 0.123 AUROC from the random split, far exceeding the 0.02 threshold.}
+    \label{tab:split_optimism}
 \end{table}
 
 For the primary model, the random split inflates AUROC by \textbf{0.123}
@@ -305,11 +313,11 @@ of split method.
 \subsection{H5: Metric Divergence (Confirmed)}
 
 \begin{mdframed}[backgroundcolor=ATUSand!30, linecolor=ATUGreen]
-  \textbf{H5:} Utility Score declines proportionally more than AUROC from
-  internal to external validation.
+    \textbf{H5:} Utility Score declines proportionally more than AUROC from
+    internal to external validation.
 
-  \textbf{Result:} The Utility Score is already negative internally.
-  \textbf{H5 CONFIRMED (qualitatively stronger).}
+    \textbf{Result:} The Utility Score is already negative internally.
+    \textbf{H5 CONFIRMED (qualitatively stronger).}
 \end{mdframed}
 
 Wang et al.'s \cite{wang2025srpm} finding, that AUROC understates
@@ -321,10 +329,10 @@ before the model leaves MIMIC-IV.
 \subsection{H6: Model-Class Null (Rejected)}
 
 \begin{mdframed}[backgroundcolor=ATUOrange!20, linecolor=ATUOrange]
-  \textbf{H6:} $|\Delta_\text{AUROC}(\text{primary} - \text{GBT})| \leq 0.02$.
+    \textbf{H6:} $|\Delta_\text{AUROC}(\text{primary} - \text{GBT})| \leq 0.02$.
 
-  \textbf{Result:} $\Delta = 0.133$ (GBT: 0.740, primary: 0.607).
-  \textbf{H6 REJECTED.}
+    \textbf{Result:} $\Delta = 0.133$ (GBT: 0.740, primary: 0.607).
+    \textbf{H6 REJECTED.}
 \end{mdframed}
 
 GBT outperforms the primary model by 0.133 AUROC under the Seymour-Standard
@@ -337,41 +345,43 @@ more harmful false alerts. Which model is ``better'' depends entirely on
 which metric is used.
 
 \begin{figure}[H]
-  \centering
-  \includegraphics[width=0.85\textwidth]{images/09_model_class_auroc.png}
-  \caption{AUROC by model class (Variant B, temporal split). GBT substantially
-  outperforms all other models by AUROC, but has the worst Utility Score. The
-  model-class spread of 0.140 is comparable to the label spread of 0.153.}
-  \label{fig:model_class_auroc}
+    \centering
+    \includegraphics[width=0.85\textwidth]{images/09_model_class_auroc.png}
+    \caption{AUROC by model class (Variant B, temporal split). GBT substantially
+    outperforms all other models by AUROC, but has the worst Utility Score. The
+    model-class spread of 0.140 is comparable to the label spread of 0.153.}
+    \label{fig:model_class_auroc}
 \end{figure}
 
 %===========================================================================
+
+
 \section{External Validation on eICU-CRD}
 \label{sec:external}
 %===========================================================================
 
 \begin{table}[H]
-  \centering
-  \begin{tabular}{llrrrr}
-    \toprule
-    \textbf{Var} & \textbf{Model} & \textbf{N rows} & \textbf{N events}
-      & \textbf{AUROC (eICU)} & \textbf{AUROC (MIMIC)} \\
-    \midrule
-    A & Primary & 7{,}868{,}005 & 63 & 0.736 & 0.760 \\
-    A & NEWS2   & 7{,}868{,}005 & 63 & 0.605 & 0.629 \\
-    \midrule
-    B & Primary & 7{,}868{,}005 & 63 & 0.437 & 0.607 \\
-    B & NEWS2   & 7{,}868{,}005 & 63 & 0.605 & 0.635 \\
-    \midrule
-    C & Primary & 7{,}868{,}005 & 63 & 0.725 & 0.759 \\
-    C & NEWS2   & 7{,}868{,}005 & 63 & 0.605 & 0.641 \\
-    \bottomrule
-  \end{tabular}
-  \caption{External validation on eICU-CRD (frozen models, no retraining).
-  Variants A and C show small drops (0.024 and 0.034). Variant B collapses by
-  0.170 AUROC. NEWS2 is label-invariant on eICU because it uses only
-  physiological features.}
-  \label{tab:external}
+    \centering
+    \begin{tabular}{llrrrr}
+        \toprule
+        \textbf{Var} & \textbf{Model} & \textbf{N rows} & \textbf{N events}
+        & \textbf{AUROC (eICU)} & \textbf{AUROC (MIMIC)} \\
+        \midrule
+        A & Primary & 7{,}868{,}005 & 63 & 0.736 & 0.760 \\
+        A & NEWS2   & 7{,}868{,}005 & 63 & 0.605 & 0.629 \\
+        \midrule
+        B & Primary & 7{,}868{,}005 & 63 & 0.437 & 0.607 \\
+        B & NEWS2   & 7{,}868{,}005 & 63 & 0.605 & 0.635 \\
+        \midrule
+        C & Primary & 7{,}868{,}005 & 63 & 0.725 & 0.759 \\
+        C & NEWS2   & 7{,}868{,}005 & 63 & 0.605 & 0.641 \\
+        \bottomrule
+    \end{tabular}
+    \caption{External validation on eICU-CRD (frozen models, no retraining).
+    Variants A and C show small drops (0.024 and 0.034). Variant B collapses by
+    0.170 AUROC. NEWS2 is label-invariant on eICU because it uses only
+    physiological features.}
+    \label{tab:external}
 \end{table}
 
 External validation reveals a striking label-dependent pattern. Variants A and
@@ -388,6 +398,8 @@ The 63-event eICU sample is too small for reliable Utility Score or AUPRC
 values; these are not interpreted.
 
 %===========================================================================
+
+
 \section{Proportional-Hazards Testing}
 \label{sec:schoenfeld}
 %===========================================================================
@@ -402,33 +414,35 @@ confirms that the static Cox model is fundamentally wrong for this data and
 justifies the discrete-time formulation as the primary model.
 
 %===========================================================================
+
+
 \section{GBT Feature Importance}
 \label{sec:feature_importance}
 %===========================================================================
 
 \begin{table}[H]
-  \centering
-  \begin{tabular}{lrrr}
-    \toprule
-    \textbf{Feature} & \textbf{Gain} & \textbf{Cover} & \textbf{Frequency} \\
-    \midrule
-    MAP slope (6\,h)          & 0.176 & 0.133 & 0.088 \\
-    Temperature ($^\circ$C)   & 0.160 & 0.168 & 0.087 \\
-    Resp.\ rate slope (6\,h)  & 0.124 & 0.125 & 0.086 \\
-    GCS                       & 0.091 & 0.084 & 0.068 \\
-    WBC                       & 0.060 & 0.098 & 0.083 \\
-    Creatinine                & 0.053 & 0.060 & 0.077 \\
-    Bilirubin                 & 0.050 & 0.058 & 0.071 \\
-    Lactate                   & 0.048 & 0.054 & 0.065 \\
-    MAP (level)               & 0.048 & 0.038 & 0.103 \\
-    Platelets                 & 0.041 & 0.045 & 0.079 \\
-    \bottomrule
-  \end{tabular}
-  \caption{Top-10 GBT features by information gain (Variant B). Trend features
-  (MAP slope, respiratory rate slope) are the most informative predictors. The
-  direction of change over the past 6 hours carries more discriminative signal
-  than the current value.}
-  \label{tab:feature_importance}
+    \centering
+    \begin{tabular}{lrrr}
+        \toprule
+        \textbf{Feature}         & \textbf{Gain} & \textbf{Cover} & \textbf{Frequency} \\
+        \midrule
+        MAP slope (6\,h)         & 0.176         & 0.133          & 0.088              \\
+        Temperature ($^\circ$C)  & 0.160         & 0.168          & 0.087              \\
+        Resp.\ rate slope (6\,h) & 0.124         & 0.125          & 0.086              \\
+        GCS                      & 0.091         & 0.084          & 0.068              \\
+        WBC                      & 0.060         & 0.098          & 0.083              \\
+        Creatinine               & 0.053         & 0.060          & 0.077              \\
+        Bilirubin                & 0.050         & 0.058          & 0.071              \\
+        Lactate                  & 0.048         & 0.054          & 0.065              \\
+        MAP (level)              & 0.048         & 0.038          & 0.103              \\
+        Platelets                & 0.041         & 0.045          & 0.079              \\
+        \bottomrule
+    \end{tabular}
+    \caption{Top-10 GBT features by information gain (Variant B). Trend features
+        (MAP slope, respiratory rate slope) are the most informative predictors. The
+        direction of change over the past 6 hours carries more discriminative signal
+        than the current value.}
+    \label{tab:feature_importance}
 \end{table}
 
 The dominance of six-hour slope features is consistent with Lauritsen et al.'s
@@ -437,6 +451,8 @@ The dominance of six-hour slope features is consistent with Lauritsen et al.'s
 on the length of the history window used for feature construction.
 
 %===========================================================================
+
+
 \section{Equity Analysis}
 \label{sec:equity}
 %===========================================================================
@@ -444,26 +460,26 @@ on the length of the history window used for feature construction.
 \subsection{Performance Disparities by Subgroup}
 
 \begin{table}[H]
-  \centering\small
-  \begin{tabular}{lrrcc}
-    \toprule
-    \textbf{Racial group} & \textbf{N rows} & \textbf{N sep}
-      & \textbf{GBT} & \textbf{Primary} \\
-    \midrule
-    White                    & 317{,}688 & 597 & 0.736 & 0.614 \\
-    Unknown                  & 107{,}158 & 235 & 0.774 & 0.587 \\
-    Black / African American & 31{,}716  & 58  & 0.716 & 0.627 \\
-    Other                    & 22{,}825  & 35  & 0.681 & 0.562 \\
-    White -- Other European  & 11{,}768  & 18  & 0.649 & 0.664 \\
-    Asian                    & 6{,}543   & 16  & 0.784 & 0.628 \\
-    Hispanic / Latino (PR)   & 6{,}462   & 16  & 0.631 & 0.571 \\
-    Asian -- Chinese         & 5{,}386   & 13  & 0.593 & 0.710 \\
-    \bottomrule
-  \end{tabular}
-  \caption{AUROC by racial subgroup (Variant B, temporal test). The GBT AUROC
-  range (0.593--0.784, spread 0.191) exceeds both the model-class spread (0.140)
-  and the label spread (0.153). Small event counts limit precision.}
-  \label{tab:equity_performance}
+    \centering\small
+    \begin{tabular}{lrrcc}
+        \toprule
+        \textbf{Racial group} & \textbf{N rows} & \textbf{N sep}
+        & \textbf{GBT} & \textbf{Primary} \\
+        \midrule
+        White                    & 317{,}688 & 597 & 0.736 & 0.614 \\
+        Unknown                  & 107{,}158 & 235 & 0.774 & 0.587 \\
+        Black / African American & 31{,}716  & 58  & 0.716 & 0.627 \\
+        Other                    & 22{,}825  & 35  & 0.681 & 0.562 \\
+        White -- Other European  & 11{,}768  & 18  & 0.649 & 0.664 \\
+        Asian                    & 6{,}543   & 16  & 0.784 & 0.628 \\
+        Hispanic / Latino (PR)   & 6{,}462   & 16  & 0.631 & 0.571 \\
+        Asian -- Chinese         & 5{,}386   & 13  & 0.593 & 0.710 \\
+        \bottomrule
+    \end{tabular}
+    \caption{AUROC by racial subgroup (Variant B, temporal test). The GBT AUROC
+    range (0.593--0.784, spread 0.191) exceeds both the model-class spread (0.140)
+        and the label spread (0.153). Small event counts limit precision.}
+    \label{tab:equity_performance}
 \end{table}
 
 AUROC varies by up to 0.191 across racial subgroups, exceeding both the
@@ -471,38 +487,38 @@ model-class and label spreads. However, small event counts (13--597 per group)
 limit the reliability of these comparisons.
 
 \begin{figure}[H]
-  \centering
-  \includegraphics[width=0.85\textwidth]{images/10_auroc_by_race.png}
-  \caption{AUROC by racial subgroup (Variant B, temporal split). The spread
-  across subgroups exceeds the model-class spread, suggesting that the choice
-  of evaluation subgroup introduces at least as much variance as the model.}
-  \label{fig:auroc_by_race}
+    \centering
+    \includegraphics[width=0.85\textwidth]{images/10_auroc_by_race.png}
+    \caption{AUROC by racial subgroup (Variant B, temporal split). The spread
+    across subgroups exceeds the model-class spread, suggesting that the choice
+    of evaluation subgroup introduces at least as much variance as the model.}
+    \label{fig:auroc_by_race}
 \end{figure}
 
 \subsection{Label Sensitivity by Subgroup (Novel Finding)}
 
 \begin{table}[H]
-  \centering\small
-  \begin{tabular}{lcccc}
-    \toprule
-    \textbf{Racial group} & \textbf{A (\%)} & \textbf{B (\%)}
-      & \textbf{C (\%)} & \textbf{Range (pp)} \\
-    \midrule
-    White                    & 9.4  & 9.6  & 18.6 & 9.2 \\
-    Unknown                  & 11.6 & 12.8 & 23.9 & 12.3 \\
-    Black / African American & 9.3  & 9.1  & 19.0 & 9.9 \\
-    Other                    & 8.8  & 9.8  & 17.5 & 8.7 \\
-    Unable to obtain         & 9.7  & 11.1 & 22.5 & 12.8 \\
-    White -- Other European  & 9.4  & 7.7  & 16.6 & 8.9 \\
-    Asian                    & 10.5 & 11.5 & 21.3 & 10.8 \\
-    Asian -- Chinese         & 10.1 & 11.1 & 19.0 & 8.9 \\
-    \bottomrule
-  \end{tabular}
-  \caption{Percentage of stays labelled as septic by racial subgroup and label
-  variant. The fraction roughly doubles from Variant A to C across all groups.
-  The Unknown/Unable-to-obtain groups show the highest sensitivity (12.3--12.8
-  percentage points).}
-  \label{tab:equity_label}
+    \centering\small
+    \begin{tabular}{lcccc}
+        \toprule
+        \textbf{Racial group} & \textbf{A (\%)} & \textbf{B (\%)}
+        & \textbf{C (\%)} & \textbf{Range (pp)} \\
+        \midrule
+        White                    & 9.4  & 9.6  & 18.6 & 9.2  \\
+        Unknown                  & 11.6 & 12.8 & 23.9 & 12.3 \\
+        Black / African American & 9.3  & 9.1  & 19.0 & 9.9  \\
+        Other                    & 8.8  & 9.8  & 17.5 & 8.7  \\
+        Unable to obtain         & 9.7  & 11.1 & 22.5 & 12.8 \\
+        White -- Other European  & 9.4  & 7.7  & 16.6 & 8.9  \\
+        Asian                    & 10.5 & 11.5 & 21.3 & 10.8 \\
+        Asian -- Chinese         & 10.1 & 11.1 & 19.0 & 8.9  \\
+        \bottomrule
+    \end{tabular}
+    \caption{Percentage of stays labelled as septic by racial subgroup and label
+    variant. The fraction roughly doubles from Variant A to C across all groups.
+    The Unknown/Unable-to-obtain groups show the highest sensitivity (12.3--12.8
+    percentage points).}
+    \label{tab:equity_label}
 \end{table}
 
 The fraction of patients labelled as septic changes by 8.7--12.8 percentage
@@ -511,20 +527,24 @@ itself affects different groups differently, a potential fairness issue
 independent of the model.
 
 \begin{figure}[H]
-  \centering
-  \includegraphics[width=0.85\textwidth]{images/10_label_sens_vs_auroc.png}
-  \caption{Label sensitivity (fraction labelled septic) vs.\ AUROC by racial
-  subgroup, across all three label variants. Horizontal spread = label
-  sensitivity; vertical spread = performance variation. The two effects appear
-  independent.}
-  \label{fig:label_sens_vs_auroc}
+    \centering
+    \includegraphics[width=0.85\textwidth]{images/10_label_sens_vs_auroc.png}
+    \caption{Label sensitivity (fraction labelled septic) vs.\ AUROC by racial
+    subgroup, across all three label variants. Horizontal spread = label
+    sensitivity; vertical spread = performance variation. The two effects appear
+    independent.}
+    \label{fig:label_sens_vs_auroc}
 \end{figure}
 
-This is the first published report combining subgroup model-performance
-disparities with subgroup label-sensitivity variation for any sepsis model,
-following Wang et al.'s \cite{wang2022equity} recommendation.
+To the best of our knowledge, this is the first published report combining
+subgroup model-performance disparities with subgroup label-sensitivity
+variation for any sepsis model, following Wang et al.'s \cite{wang2022equity}
+recommendation (see Section~\ref{sec:search_strategy} for the search strategy
+supporting this claim).
 
 %===========================================================================
+
+
 \section{Discussion}
 \label{sec:discussion}
 %===========================================================================
@@ -553,30 +573,30 @@ source of variance while ignoring another of similar size.
 \subsection{Limitations}
 
 \begin{enumerate}
-  \item \textbf{Single-centre development.} All models were developed on
-  MIMIC-IV, which originates from a single academic medical centre (Beth
-  Israel Deaconess Medical Center, Boston). Clinical practices, patient
-  demographics, and EHR documentation patterns at BIDMC may not represent
-  those at other institutions. The equity and label-sensitivity findings in
-  particular should not be assumed to transfer to hospitals with different
-  patient populations or antibiotic prescribing cultures. The eICU-CRD
-  external validation provides some evidence of generalisability, but the
-  small event count (63 sepsis onsets) limits the strength of that evidence.
+    \item \textbf{Single-centre development.} All models were developed on
+    MIMIC-IV, which originates from a single academic medical centre (Beth
+    Israel Deaconess Medical Center, Boston). Clinical practices, patient
+    demographics, and EHR documentation patterns at BIDMC may not represent
+    those at other institutions. The equity and label-sensitivity findings in
+    particular should not be assumed to transfer to hospitals with different
+    patient populations or antibiotic prescribing cultures. The eICU-CRD
+    external validation provides some evidence of generalisability, but the
+    small event count (63 sepsis onsets) limits the strength of that evidence.
 
-  \item \textbf{Small external event count.} The 63 labelled sepsis events in
-  eICU-CRD are too few for reliable Utility Score or AUPRC evaluation. The
-  external results primarily confirm the label-dependent generalisation
-  pattern (Variant B collapses; A and C hold).
+    \item \textbf{Small external event count.} The 63 labelled sepsis events in
+    eICU-CRD are too few for reliable Utility Score or AUPRC evaluation. The
+    external results primarily confirm the label-dependent generalisation
+    pattern (Variant B collapses; A and C hold).
 
-  \item \textbf{Deep survival model not implemented.} A deep survival
-  comparator was planned but not built. This does not affect the structural
-  findings about the label.
+    \item \textbf{Deep survival model not implemented.} A deep survival
+    comparator was planned but not built. This does not affect the structural
+    findings about the label.
 
-  \item \textbf{Limited feature set.} Clinical notes, procedure codes, and
-  ventilator settings were not included. Richer features might improve
-  discrimination but would not change the treatment-constitutionality finding.
+    \item \textbf{Limited feature set.} Clinical notes, procedure codes, and
+    ventilator settings were not included. Richer features might improve
+    discrimination but would not change the treatment-constitutionality finding.
 
-  \item \textbf{Specific to Sepsis-3.} These findings apply to the Sepsis-3
-  definition on MIMIC-IV. Other sepsis definitions or databases may behave
-  differently.
+    \item \textbf{Specific to Sepsis-3.} These findings apply to the Sepsis-3
+    definition on MIMIC-IV. Other sepsis definitions or databases may behave
+    differently.
 \end{enumerate}

@@ -1,6 +1,7 @@
 \chapter{Conclusion}
 \label{ch:conclusion}
 
+
 \section{Summary of Findings}
 
 This thesis asked one question: in real-time sepsis prediction on MIMIC-IV, how
@@ -50,75 +51,81 @@ clinical ordering reverses: the primary model has a less negative Utility Score
 ($-1.004$ vs.\ $-5.112$). The ``better'' model by AUROC produces more harmful
 alerts.
 
+
 \section{The Central Lesson}
 
 The utility collapse documented by Wang et al.\ \cite{wang2025srpm} is
 not a model problem. It is a label problem. The Sepsis-3 label on MIMIC-IV:
 
 \begin{enumerate}
-  \item \textbf{Depends on clinical action:} no patient develops sepsis
-  before doctors order antibiotics and cultures.
-  \item \textbf{Is sensitive to how it is defined:} the number of sepsis
-  cases nearly doubles across plausible Sepsis-3 interpretations.
-  \item \textbf{Produces harmful alert behaviour:} every model, under every
-  label variant, has a negative Utility Score.
+    \item \textbf{Depends on clinical action:} no patient develops sepsis
+    before doctors order antibiotics and cultures.
+    \item \textbf{Is sensitive to how it is defined:} the number of sepsis
+    cases nearly doubles across plausible Sepsis-3 interpretations.
+    \item \textbf{Produces harmful alert behaviour:} every model, under every
+    label variant, has a negative Utility Score.
 \end{enumerate}
 
 These three problems are independent of model complexity. A better model
 cannot fix a label that is constituted by the very clinical actions it is
 supposed to predict ahead of. The solution requires changing the label.
 
+
 \section{Contributions}
 
 \begin{enumerate}
-  \item \textbf{C1 (Label variance):} First three-variant label sensitivity
-  analysis for a dynamic survival model on MIMIC-IV, confirming Cohen et al.\
-  at a larger scale (65,078 stays vs.\ 3,186).
+    \item \textbf{C1 (Label variance):} To the best of our knowledge, the first
+    three-variant label sensitivity analysis for a dynamic survival model on
+    MIMIC-IV, confirming Cohen et al.\ at a larger scale (65,078 stays vs.\
+    3,186).
 
-  \item \textbf{C2 (Treatment leakage exposed):} Demonstration that the
-  pre-treatment window contains zero onset events, providing the strongest
-  available confirmation of Kamran et al.'s \cite{kamran2024evaluation}
-  finding.
+    \item \textbf{C2 (Treatment leakage exposed):} Demonstration that the
+    pre-treatment window contains zero onset events, providing the strongest
+    available confirmation of Kamran et al.'s \cite{kamran2024evaluation}
+    finding.
 
-  \item \textbf{C3 (Utility collapse):} Negative Utility Score for every model
-  and label variant, extending Wang et al.'s \cite{wang2025srpm}
-  meta-analytic finding to a controlled single-study comparison.
+    \item \textbf{C3 (Utility collapse):} Negative Utility Score for every model
+    and label variant, extending Wang et al.'s \cite{wang2025srpm}
+    meta-analytic finding to a controlled single-study comparison.
 
-  \item \textbf{C4 (Coefficient instability):} Ten clinical features show sign
-  reversal or magnitude instability across labels, confirming Lauritsen et al.'s
-  \cite{lauritsen2021framing} framing-instability claim on MIMIC-IV.
+    \item \textbf{C4 (Coefficient instability):} Ten clinical features show sign
+    reversal or magnitude instability across labels, confirming Lauritsen et al.'s
+    \cite{lauritsen2021framing} framing-instability claim on MIMIC-IV.
 
-  \item \textbf{C5 (Equity-by-label):} First study combining subgroup
-  performance disparities with subgroup label sensitivity for any sepsis model.
+    \item \textbf{C5 (Equity-by-label):} To the best of our knowledge, the first
+    study combining subgroup performance disparities with subgroup label
+    sensitivity for any sepsis model.
 
-  \item \textbf{C6 (Reproducible pipeline):} Fully open, pre-registered,
-  TRIPOD+AI-conformant pipeline released under a permissive licence.
+    \item \textbf{C6 (Reproducible pipeline):} Fully open, pre-registered,
+    TRIPOD+AI-conformant pipeline released under a permissive licence.
 \end{enumerate}
+
 
 \section{Future Work}
 
 \begin{enumerate}
-  \item \textbf{Better sepsis labels.} Define sepsis using objective patient
-  measurements, such as lactate trajectories and organ function biomarkers,
-  instead of treatment-timing criteria. This would eliminate the
-  treatment-constitutionality problem and allow genuine pre-onset prediction.
+    \item \textbf{Better sepsis labels.} Define sepsis using objective patient
+    measurements, such as lactate trajectories and organ function biomarkers,
+    instead of treatment-timing criteria. This would eliminate the
+    treatment-constitutionality problem and allow genuine pre-onset prediction.
 
-  \item \textbf{Prospective validation.} Test the new label in real clinical
-  settings where sepsis onset can be determined by a protocol-blinded assessor,
-  independent of treatment decisions.
+    \item \textbf{Prospective validation.} Test the new label in real clinical
+    settings where sepsis onset can be determined by a protocol-blinded assessor,
+    independent of treatment decisions.
 
-  \item \textbf{Utility-optimised thresholds.} Choose alert thresholds that
-  maximise the Utility Score directly, rather than maximising AUROC. None of
-  the evaluated models was optimised for clinical utility; a direct
-  utility-maximising threshold search may recover positive utility at
-  restricted operating points.
+    \item \textbf{Utility-optimised thresholds.} Choose alert thresholds that
+    maximise the Utility Score directly, rather than maximising AUROC. None of
+    the evaluated models was optimised for clinical utility; a direct
+    utility-maximising threshold search may recover positive utility at
+    restricted operating points.
 
-  \item \textbf{Multi-hospital evaluation.} The alert burden (over 90 false
-  alerts per true alert under the best model) is a deployment problem, not a
-  statistical one. Determining whether any model can be deployed at a
-  practically acceptable burden requires prospective multi-centre testing with
-  clinical-staff feedback.
+    \item \textbf{Multi-hospital evaluation.} The alert burden (over 90 false
+    alerts per true alert under the best model) is a deployment problem, not a
+    statistical one. Determining whether any model can be deployed at a
+    practically acceptable burden requires prospective multi-centre testing with
+    clinical-staff feedback.
 \end{enumerate}
+
 
 \section{Closing Remark}
 

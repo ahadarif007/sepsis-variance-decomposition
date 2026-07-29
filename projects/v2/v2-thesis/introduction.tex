@@ -1,6 +1,7 @@
 \chapter{Introduction}
 \label{ch:introduction}
 
+
 \section{Context and Motivation}
 
 Sepsis is a life-threatening condition caused by the body's extreme response to
@@ -42,6 +43,7 @@ split, and the metric and asking which model wins, it treats all three as
 \textbf{sources of variance} and measures how much each one contributes to the
 spread in reported performance.
 
+
 \section{Limitations of the Conventional Approach}
 
 The standard approach to sepsis prediction follows a simple formula: choose one
@@ -52,31 +54,32 @@ follow this pattern.
 This approach has four key problems:
 
 \begin{enumerate}
-  \item \textbf{The sepsis label is not fixed.} Cohen et al.\
-  \cite{cohen2024subtle} showed that different ways of applying Sepsis-3 to
-  the same database can create very different patient groups (867--2,178 cases).
-  The label choice can change results as much as the model choice.
+    \item \textbf{The sepsis label is not fixed.} Cohen et al.\
+    \cite{cohen2024subtle} showed that different ways of applying Sepsis-3 to
+    the same database can create very different patient groups (867--2,178 cases).
+    The label choice can change results as much as the model choice.
 
-  \item \textbf{The data split can inflate results.} Guo et al.\
-  \cite{guo2022temporal} found that sepsis prediction suffers the largest
-  performance drop of any clinical task when tested on data from a different time
-  period. Random splits let future patterns leak into training, making models
-  look better than they are.
+    \item \textbf{The data split can inflate results.} Guo et al.\
+    \cite{guo2022temporal} found that sepsis prediction suffers the largest
+    performance drop of any clinical task when tested on data from a different time
+    period. Random splits let future patterns leak into training, making models
+    look better than they are.
 
-  \item \textbf{AUROC hides the real failure.} Wang et al.\
-  \cite{wang2025srpm} showed that a model can keep a high AUROC while its
-  clinical usefulness drops to harmful levels. The failure is invisible under
-  AUROC alone.
+    \item \textbf{AUROC hides the real failure.} Wang et al.\
+    \cite{wang2025srpm} showed that a model can keep a high AUROC while its
+    clinical usefulness drops to harmful levels. The failure is invisible under
+    AUROC alone.
 
-  \item \textbf{The label captures doctor behaviour.} Kamran et al.\
-  \cite{kamran2024evaluation} showed that models may learn when doctors
-  suspect sepsis and begin treatment, not when the patient's condition actually
-  worsens.
+    \item \textbf{The label captures doctor behaviour.} Kamran et al.\
+    \cite{kamran2024evaluation} showed that models may learn when doctors
+    suspect sepsis and begin treatment, not when the patient's condition actually
+    worsens.
 \end{enumerate}
 
 A study that fixes all of these choices and compares only models is measuring
 one source of variation while ignoring three others of similar size. This thesis
 fills in the missing cells of the comparison.
+
 
 \section{Research Question and Pre-Registered Hypotheses}
 \label{sec:rq}
@@ -84,58 +87,63 @@ fills in the missing cells of the comparison.
 \noindent\textbf{Research question.} \textit{In real-time sepsis prediction on
 MIMIC-IV, how much of the reported performance variation comes from (a) the
 choice of model, and (b) the researcher's decisions: how sepsis is defined,
-how data is split, when prediction is made, and how performance is measured?}
+    how data is split, when prediction is made, and how performance is measured?}
 
 Six hypotheses were pre-registered before any modelling:
 
 \begin{description}
-  \item[H1 (Label dominance)] Changing the sepsis definition affects AUROC at
-  least as much as changing the model.
-  \item[H2 (Coefficient instability)] At least one clinical feature changes its
-  effect direction across label variants.
-  \item[H3 (Treatment leakage)] Restricting evaluation to before treatment
-  begins reduces AUROC by at least 0.03.
-  \item[H4 (Split optimism)] Time-based testing gives at least 0.02 lower AUROC
-  than random testing.
-  \item[H5 (Metric divergence)] The Utility Score declines more than AUROC when
-  moving from internal to external validation.
-  \item[H6 (Model-class null)] The primary statistical model performs within 0.02
-  AUROC of gradient-boosted trees.
+    \item[H1 (Label dominance)] Changing the sepsis definition affects AUROC at
+    least as much as changing the model.
+    \item[H2 (Coefficient instability)] At least one clinical feature changes its
+    effect direction across label variants.
+    \item[H3 (Treatment leakage)] Restricting evaluation to before treatment
+    begins reduces AUROC by at least 0.03.
+    \item[H4 (Split optimism)] Time-based testing gives at least 0.02 lower AUROC
+    than random testing.
+    \item[H5 (Metric divergence)] The Utility Score declines more than AUROC when
+    moving from internal to external validation.
+    \item[H6 (Model-class null)] The primary statistical model performs within 0.02
+    AUROC of gradient-boosted trees.
 \end{description}
 
 H1 and H6 are in deliberate tension: if H1 is confirmed, the label is the main
 source of variation; if H6 is rejected, the model also matters. Both outcomes
 are informative.
 
+
 \section{Contributions}
 \label{sec:contrib}
 
 \begin{enumerate}
-  \item \textbf{C1 (Label variance).} The first three-variant label sensitivity
-  analysis for a dynamic survival model on MIMIC-IV, following Cohen et al.\
-  \cite{cohen2024subtle} and Dutta et al.\ \cite{dutta2026performance}.
+    \item \textbf{C1 (Label variance).} To the best of our knowledge, the first
+    three-variant label sensitivity analysis for a dynamic survival model on
+    MIMIC-IV, following Cohen et al.\ \cite{cohen2024subtle} and Dutta et al.\
+    \cite{dutta2026performance} (see Section~\ref{sec:search_strategy} for the
+    search strategy supporting this claim).
 
-  \item \textbf{C2 (Treatment leakage exposed).} A treatment-anchored evaluation
-  showing that the Sepsis-3 label has zero predictable events before clinical
-  action, confirming Kamran et al.\ \cite{kamran2024evaluation} on MIMIC-IV.
+    \item \textbf{C2 (Treatment leakage exposed).} A treatment-anchored evaluation
+    showing that the Sepsis-3 label has zero predictable events before clinical
+    action, confirming Kamran et al.\ \cite{kamran2024evaluation} on MIMIC-IV.
 
-  \item \textbf{C3 (Utility collapse documented).} The Utility Score is negative
-  for every model and every label variant, extending Wang et al.'s
-  \cite{wang2025srpm} meta-analytic finding to a controlled single-study
-  comparison.
+    \item \textbf{C3 (Utility collapse documented).} The Utility Score is negative
+    for every model and every label variant, extending Wang et al.'s
+    \cite{wang2025srpm} meta-analytic finding to a controlled single-study
+    comparison.
 
-  \item \textbf{C4 (Coefficient instability).} Ten clinical features change sign
-  or magnitude across label variants, validating Lauritsen et al.'s
-  \cite{lauritsen2021framing} framing-instability finding on MIMIC-IV.
+    \item \textbf{C4 (Coefficient instability).} Ten clinical features change sign
+    or magnitude across label variants, validating Lauritsen et al.'s
+    \cite{lauritsen2021framing} framing-instability finding on MIMIC-IV.
 
-  \item \textbf{C5 (Equity-by-label analysis).} The first study to examine both
-  model performance disparities and label sensitivity across demographic
-  subgroups, following Wang et al.\ \cite{wang2022equity}.
+    \item \textbf{C5 (Equity-by-label analysis).} To the best of our knowledge,
+    the first study to examine both model performance disparities and label
+    sensitivity across demographic subgroups, following Wang et al.\
+    \cite{wang2022equity} (see Section~\ref{sec:search_strategy}).
 
-  \item \textbf{C6 (Reproducible pipeline).} A fully open, pre-registered
-  pipeline following TRIPOD+AI \cite{collins2024tripodai} and PROBAST+AI
-  \cite{moons2025probastai} reporting standards.
+    \item \textbf{C6 (Reproducible pipeline).} A fully open, pre-registered
+    pipeline following TRIPOD+AI \cite{collins2024tripodai} and PROBAST+AI
+    \cite{moons2025probastai} reporting standards.
 \end{enumerate}
+
 
 \section{Thesis Structure}
 

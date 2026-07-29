@@ -8,70 +8,70 @@ data. All random seeds are fixed for reproducibility.
 Figure~\ref{fig:pipeline_dag} shows the data flow.
 
 \begin{figure}[H]
-\centering
-\usetikzlibrary{arrows.meta,positioning}
-\begin{tikzpicture}[
-  node distance=0.4cm and 0.7cm,
-  box/.style={rectangle, draw=ATUGreen, thick, rounded corners=2pt,
-              fill=ATULightGreen!40, text width=2.6cm, align=center,
-              font=\scriptsize, inner sep=3pt, minimum height=0.55cm},
-  data/.style={rectangle, draw=ATUNavy, thick, rounded corners=2pt,
-               fill=ATUTeal!20, text width=2.4cm, align=center,
-               font=\tiny\itshape, inner sep=2pt, minimum height=0.45cm},
-  arr/.style={-{Latex[length=1.5mm]}, thick, ATUGreen},
-]
+    \centering
+    \begin{tikzpicture}[
+        node distance=0.4cm and 0.7cm,
+        box/.style={rectangle, draw=ATUGreen, thick, rounded corners=2pt,
+        fill=ATULightGreen!40, text width=2.6cm, align=center,
+        font=\scriptsize, inner sep=3pt, minimum height=0.55cm},
+        data/.style={rectangle, draw=ATUNavy, thick, rounded corners=2pt,
+        fill=ATUTeal!20, text width=2.4cm, align=center,
+        font=\tiny\itshape, inner sep=2pt, minimum height=0.45cm},
+        arr/.style={-{Latex[length=1.5mm]}, thick, ATUGreen},
+    ]
 
 %--- Left column: scripts 01--05
-\node[data] (raw) {Raw data\\MIMIC-IV + eICU};
-\node[box, below=of raw]   (s01) {\texttt{01} Setup};
-\node[box, below=of s01]   (s02) {\texttt{02} Cohort Labels};
-\node[box, below=of s02]   (s03) {\texttt{03} Person-Hours};
-\node[box, below=of s03]   (s04) {\texttt{04} Sample Size};
-\node[box, below=of s04]   (s05) {\texttt{05} Primary Model};
+        \node[data] (raw) {Raw data\\MIMIC-IV + eICU};
+        \node[box, below=of raw]   (s01) {\texttt{01} Setup};
+        \node[box, below=of s01]   (s02) {\texttt{02} Cohort Labels};
+        \node[box, below=of s02]   (s03) {\texttt{03} Person-Hours};
+        \node[box, below=of s03]   (s04) {\texttt{04} Sample Size};
+        \node[box, below=of s04]   (s05) {\texttt{05} Primary Model};
 
 %--- Right column: scripts 06--10
-\node[box, right=3.8cm of s01]  (s06) {\texttt{06} Comparators};
-\node[box, below=of s06]        (s07) {\texttt{07} Metrics Suite};
-\node[box, below=of s07]        (s08) {\texttt{08} External Valid.};
-\node[box, below=of s08]        (s09) {\texttt{09} Variance Decomp.};
-\node[box, below=of s09]        (s10) {\texttt{10} Equity Analysis};
+        \node[box, right=3.8cm of s01]  (s06) {\texttt{06} Comparators};
+        \node[box, below=of s06]        (s07) {\texttt{07} Metrics Suite};
+        \node[box, below=of s07]        (s08) {\texttt{08} External Valid.};
+        \node[box, below=of s08]        (s09) {\texttt{09} Variance Decomp.};
+        \node[box, below=of s09]        (s10) {\texttt{10} Equity Analysis};
 
 %--- Output nodes (between columns)
-\node[data, right=of s02] (cohort)  {cohort\_\{A,B,C\}.pq};
-\node[data, right=of s03] (ph)      {person\_hours.pq};
-\node[data, right=of s05] (models)  {model\_primary.rds};
-\node[data, right=of s07] (metrics) {metric\_results.csv};
+        \node[data, right=of s02] (cohort)  {cohort\_\{A,B,C\}.pq};
+        \node[data, right=of s03] (ph)      {person\_hours.pq};
+        \node[data, right=of s05] (models)  {model\_primary.rds};
+        \node[data, right=of s07] (metrics) {metric\_results.csv};
 
 %--- Left-column flow
-\draw[arr] (raw)  -- (s01);
-\draw[arr] (s01)  -- (s02);
-\draw[arr] (s02)  -- (s03);
-\draw[arr] (s03)  -- (s04);
-\draw[arr] (s04)  -- (s05);
+        \draw[arr] (raw)  -- (s01);
+        \draw[arr] (s01)  -- (s02);
+        \draw[arr] (s02)  -- (s03);
+        \draw[arr] (s03)  -- (s04);
+        \draw[arr] (s04)  -- (s05);
 
 %--- Cross to right column
-\draw[arr] (s05)  -- (s06);
+        \draw[arr] (s05)  -- (s06);
 
 %--- Right-column flow
-\draw[arr] (s06)  -- (s07);
-\draw[arr] (s07)  -- (s08);
-\draw[arr] (s08)  -- (s09);
-\draw[arr] (s09)  -- (s10);
+        \draw[arr] (s06)  -- (s07);
+        \draw[arr] (s07)  -- (s08);
+        \draw[arr] (s08)  -- (s09);
+        \draw[arr] (s09)  -- (s10);
 
 %--- Output arrows
-\draw[arr] (s02)  -- (cohort);
-\draw[arr] (s03)  -- (ph);
-\draw[arr] (s05)  -- (models);
-\draw[arr] (s07)  -- (metrics);
+        \draw[arr] (s02)  -- (cohort);
+        \draw[arr] (s03)  -- (ph);
+        \draw[arr] (s05)  -- (models);
+        \draw[arr] (s07)  -- (metrics);
 
 %--- Feed-forward: person-hours feed models and comparators
-\draw[arr, ATUNavy, densely dashed] (ph.east) to[out=0,in=180] (s06.west);
+        \draw[arr, ATUNavy, densely dashed] (ph.east) to[out=0,in=180] (s06.west);
 
-\end{tikzpicture}
-\caption{Pipeline data flow. Each box is a single script; italic nodes are
-  output files. Raw MIMIC-IV and eICU data are read-only.}
-\label{fig:pipeline_dag}
+    \end{tikzpicture}
+    \caption{Pipeline data flow. Each box is a single script; italic nodes are
+    output files. Raw MIMIC-IV and eICU data are read-only.}
+    \label{fig:pipeline_dag}
 \end{figure}
+
 
 \section{Configuration and Utilities}
 
@@ -89,31 +89,34 @@ wrappers.
 The full pipeline can be reproduced on any MIMIC-IV installation by setting a
 single environment variable (\texttt{MIMIC\_RESEARCH\_ROOT}).
 
+
 \section{Stage 01: Setup Validation}
 
 \texttt{01\_setup.Rmd} checks that all required MIMIC-IV source tables exist
 and reports their sizes. The pipeline stops if any table is missing.
+
 
 \section{Stage 02: Cohort Extraction and Labelling}
 
 \texttt{02\_cohort\_labels.Rmd} builds all three cohorts in a single pass:
 
 \begin{enumerate}
-  \item \textbf{Base cohort:} Adult first ICU stays with LOS $\geq 4$\,h
-  (65,078 stays). Equity variables (race, language, insurance) are attached.
+    \item \textbf{Base cohort:} Adult first ICU stays with LOS $\geq 4$\,h
+    (65,078 stays). Equity variables (race, language, insurance) are attached.
 
-  \item \textbf{Suspected infection:} Qualifying antibiotic-culture pairs
-  within each variant's time windows. Surveillance cultures are excluded.
+    \item \textbf{Suspected infection:} Qualifying antibiotic-culture pairs
+    within each variant's time windows. Surveillance cultures are excluded.
 
-  \item \textbf{SOFA organ dysfunction:} SOFA components are computed from
-  chartevents, labevents, inputevents, and outputevents. A SOFA rise
-  $\geq 2$ within each variant's windows defines organ dysfunction.
+    \item \textbf{SOFA organ dysfunction:} SOFA components are computed from
+    chartevents, labevents, inputevents, and outputevents. A SOFA rise
+    $\geq 2$ within each variant's windows defines organ dysfunction.
 
-  \item \textbf{Onset time:} The hour when both criteria (infection + SOFA rise)
-  are simultaneously met.
+    \item \textbf{Onset time:} The hour when both criteria (infection + SOFA rise)
+    are simultaneously met.
 \end{enumerate}
 
 Outputs: \texttt{cohort\_A/B/C.parquet} and \texttt{label\_variance\_table.csv}.
+
 
 \section{Stage 03: Person-Hour Table Construction}
 
@@ -123,25 +126,27 @@ streaming, pre-filtered to cohort stays, to avoid loading everything into
 memory. For each person-hour:
 
 \begin{itemize}
-  \item Vitals and labs are LOCF-imputed from the most recent measurement.
-  \item Six-hour rolling slopes are computed for respiratory rate, MAP, and
-  lactate.
-  \item Vasopressor indicators are set from concurrent infusions.
-  \item Missingness flags are set for each lab test.
-  \item The competing-event code (0/1/2/3) is assigned based on the hour's
-  relationship to onset, discharge, or death.
-  \item The temporal split group is assigned from the stay's admission year.
-  \item Treatment anchor timestamps (first antibiotic, first culture) are
-  recorded.
+    \item Vitals and labs are LOCF-imputed from the most recent measurement.
+    \item Six-hour rolling slopes are computed for respiratory rate, MAP, and
+    lactate.
+    \item Vasopressor indicators are set from concurrent infusions.
+    \item Missingness flags are set for each lab test.
+    \item The competing-event code (0/1/2/3) is assigned based on the hour's
+    relationship to onset, discharge, or death.
+    \item The temporal split group is assigned from the stay's admission year.
+    \item Treatment anchor timestamps (first antibiotic, first culture) are
+    recorded.
 \end{itemize}
 
 Outputs: \texttt{person\_hours\_A/B/C.parquet}.
+
 
 \section{Stage 04: Sample Size Calculation}
 
 \texttt{04\_sample\_size.Rmd} applies the Riley et al.\
 \cite{riley2019sample} criteria to the training portion of each
 person-hour table (2008--2016). Sufficiency is evaluated per label variant.
+
 
 \section{Stage 05: Primary Model}
 
@@ -154,6 +159,7 @@ is also fitted to support H4.
 Outputs: \texttt{model\_primary\_A/B/C.rds}, coefficient tables, and
 \texttt{predictions\_primary\_A/B/C.parquet}.
 
+
 \section{Stage 06: Comparator Models}
 
 \texttt{06\_comparators.Rmd} fits the XGBoost GBT model, the static Cox model
@@ -163,6 +169,7 @@ feature importance is exported for each variant.
 
 Outputs: model objects, predictions, feature importance tables, and Schoenfeld
 test results.
+
 
 \section{Stage 07: Metrics Suite}
 
@@ -174,11 +181,13 @@ benefit.
 
 Output: \texttt{07\_metric\_results.csv}.
 
+
 \section{Stage 08: External Validation on eICU-CRD}
 
 \texttt{08\_external\_validation.Rmd} applies the frozen MIMIC-IV models
 (primary and NEWS2) to eICU-CRD without any retraining. AUROC and AUPRC are
 reported for each variant and model.
+
 
 \section{Stage 09: Variance Decomposition}
 
@@ -186,13 +195,14 @@ reported for each variant and model.
 decomposition by varying one factor at a time while holding all others fixed:
 
 \begin{itemize}
-  \item \textbf{Label spread (H1):} AUROC range across Variants A/B/C.
-  \item \textbf{Model-class spread:} AUROC range across all models.
-  \item \textbf{Split optimism (H4):} Random vs.\ temporal split comparison.
-  \item \textbf{Metric divergence (H5):} AUROC vs.\ Utility Score decline.
+    \item \textbf{Label spread (H1):} AUROC range across Variants A/B/C.
+    \item \textbf{Model-class spread:} AUROC range across all models.
+    \item \textbf{Split optimism (H4):} Random vs.\ temporal split comparison.
+    \item \textbf{Metric divergence (H5):} AUROC vs.\ Utility Score decline.
 \end{itemize}
 
 Outputs: decomposition tables, hypothesis verdicts, and comparison plots.
+
 
 \section{Stage 10: Equity Analysis}
 
@@ -200,6 +210,7 @@ Outputs: decomposition tables, hypothesis verdicts, and comparison plots.
 sensitivity within each stratum of four equity variables: race, ethnicity,
 language, and insurance. The combination of performance disparities and
 label-sensitivity variation is the novel finding.
+
 
 \section{Reproducibility}
 

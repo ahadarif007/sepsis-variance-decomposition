@@ -1,6 +1,7 @@
 \chapter{Research Methodology}
 \label{ch:methodology}
 
+
 \section{Research Design}
 
 This is a retrospective, observational prediction-modelling study on
@@ -15,6 +16,7 @@ All code is implemented in R (v4.x) and Python (v3.11), with a single
 configuration module (\texttt{config.R}) as the sole source of truth for all
 paths, clinical identifiers, and thresholds.
 
+
 \section{Data Sources}
 \label{sec:data}
 
@@ -26,23 +28,23 @@ de-identified critical-care database from Beth Israel Deaconess Medical Center
 study uses eight clinical tables (Table~\ref{tab:data_sources}).
 
 \begin{table}[H]
-  \centering
-  \begin{tabular}{lrr}
-    \toprule
-    \textbf{Table} & \textbf{Exists} & \textbf{Size (MB)} \\
-    \midrule
-    admissions       & yes & 19.9 \\
-    patients         & yes & 2.8 \\
-    icustays         & yes & 3.3 \\
-    chartevents      & yes & 3,502.6 \\
-    labevents        & yes & 2,593.0 \\
-    prescriptions    & yes & 606.7 \\
-    microbiologyevents & yes & 117.2 \\
-    inputevents      & yes & 401.3 \\
-    \bottomrule
-  \end{tabular}
-  \caption{MIMIC-IV v3.1 source tables used in this study.}
-  \label{tab:data_sources}
+    \centering
+    \begin{tabular}{lrr}
+        \toprule
+        \textbf{Table}     & \textbf{Exists} & \textbf{Size (MB)} \\
+        \midrule
+        admissions         & yes             & 19.9               \\
+        patients           & yes             & 2.8                \\
+        icustays           & yes             & 3.3                \\
+        chartevents        & yes             & 3,502.6            \\
+        labevents          & yes             & 2,593.0            \\
+        prescriptions      & yes             & 606.7              \\
+        microbiologyevents & yes             & 117.2              \\
+        inputevents        & yes             & 401.3              \\
+        \bottomrule
+    \end{tabular}
+    \caption{MIMIC-IV v3.1 source tables used in this study.}
+    \label{tab:data_sources}
 \end{table}
 
 \subsection{External Validation Data: eICU-CRD v2.0}
@@ -51,6 +53,7 @@ External validation uses eICU-CRD v2.0 \cite{pollard2018eicu}, a
 multi-centre database from over 200 US ICUs. It uses different electronic health
 record systems and covers a broader range of hospitals and patient populations
 than the single-centre MIMIC-IV, making it a meaningful external test.
+
 
 \section{Ethical Considerations}
 \label{sec:ethics}
@@ -78,35 +81,35 @@ for the de-identified research dataset. No additional IRB approval was required
 for secondary analysis of these de-identified records, consistent with the US
 Common Rule (45 CFR 46.104(d)(4)) and PhysioNet's data access policies.
 
+
 \section{Cohort Construction}
 
 The base cohort is built by applying three inclusion criteria uniformly across
 all label variants:
 
 \begin{itemize}
-  \item Age $\geq 18$ at ICU admission.
-  \item First ICU stay per patient only (to prevent within-patient correlation).
-  \item ICU length of stay $\geq 4$ hours (to ensure enough data for hourly
-  features and at least one prediction opportunity).
+    \item Age $\geq 18$ at ICU admission.
+    \item First ICU stay per patient only (to prevent within-patient correlation).
+    \item ICU length of stay $\geq 4$ hours (to ensure enough data for hourly
+    features and at least one prediction opportunity).
 \end{itemize}
 
 The resulting cohort contains \textbf{65,078 stays} in MIMIC-IV.
 Figure~\ref{fig:consort} shows the patient flow through each exclusion step.
 
 \begin{figure}[H]
-\centering
-\usetikzlibrary{arrows.meta,positioning}
-\begin{tikzpicture}[
-  node distance=0.6cm,
-  box/.style={rectangle, draw=ATUGreen, thick, rounded corners=2pt,
-              fill=ATULightGreen!20, text width=7cm, align=center,
-              font=\small, inner sep=6pt, minimum height=0.8cm},
-  excl/.style={rectangle, draw=ATUOrange, thick, rounded corners=2pt,
-               fill=ATUSand!40, text width=5cm, align=center,
-               font=\small, inner sep=5pt, minimum height=0.7cm},
-  arr/.style={-{Latex[length=2mm]}, thick, ATUGreen},
-  exarr/.style={-{Latex[length=2mm]}, thick, ATUOrange},
-]
+    \centering
+    \begin{tikzpicture}[
+        node distance=0.6cm,
+        box/.style={rectangle, draw=ATUGreen, thick, rounded corners=2pt,
+        fill=ATULightGreen!20, text width=7cm, align=center,
+        font=\small, inner sep=6pt, minimum height=0.8cm},
+        excl/.style={rectangle, draw=ATUOrange, thick, rounded corners=2pt,
+        fill=ATUSand!40, text width=5cm, align=center,
+        font=\small, inner sep=5pt, minimum height=0.7cm},
+        arr/.style={-{Latex[length=2mm]}, thick, ATUGreen},
+        exarr/.style={-{Latex[length=2mm]}, thick, ATUOrange},
+    ]
 
 \node[box] (total) {MIMIC-IV v3.1 ICU stays\\$n = 94{,}458$};
 \node[excl, right=1.2cm of total] (e1) {Non-first ICU stay\\$n = 29{,}092$ excluded};
@@ -122,22 +125,23 @@ Figure~\ref{fig:consort} shows the patient flow through each exclusion step.
 \draw[arr] (first) -- (final);
 
 \node[box, below left=0.8cm and -0.5cm of final, text width=3.2cm]
-  (va) {Variant A\\Sepsis: 6{,}252\\(9.6\%)};
+(va) {Variant A\\Sepsis: 6{,}252\\(9.6\%)};
 \node[box, below=0.8cm of final, text width=3.2cm]
-  (vb) {Variant B\\Sepsis: 6{,}447\\(9.9\%)};
+(vb) {Variant B\\Sepsis: 6{,}447\\(9.9\%)};
 \node[box, below right=0.8cm and -0.5cm of final, text width=3.2cm]
-  (vc) {Variant C\\Sepsis: 12{,}581\\(19.3\%)};
+(vc) {Variant C\\Sepsis: 12{,}581\\(19.3\%)};
 
 \draw[arr] (final.south) -- ++(0,-0.3) -| (va.north);
 \draw[arr] (final.south) -- (vb.north);
 \draw[arr] (final.south) -- ++(0,-0.3) -| (vc.north);
 
-\end{tikzpicture}
-\caption{CONSORT-style patient flow diagram. All 65,078 stays enter all three
-  label variants; only the sepsis outcome differs. Exclusion counts are from the
-  pipeline's cohort extraction log (script \texttt{02\_cohort\_labels.Rmd}).}
-\label{fig:consort}
+    \end{tikzpicture}
+    \caption{CONSORT-style patient flow diagram. All 65,078 stays enter all three
+    label variants; only the sepsis outcome differs. Exclusion counts are from the
+    pipeline's cohort extraction log (script \texttt{02\_cohort\_labels.Rmd}).}
+    \label{fig:consort}
 \end{figure}
+
 
 \section{Outcome Definition: Three Sepsis-3 Label Variants}
 \label{sec:label_variants}
@@ -150,21 +154,21 @@ antibiotic-culture time windows and the SOFA baseline
 (Table~\ref{tab:label_variants}).
 
 \begin{table}[H]
-  \centering\small
-  \begin{tabular}{llccccc}
-    \toprule
-    \textbf{ID} & \textbf{Name} & \textbf{ABX$\to$cx} & \textbf{cx$\to$ABX}
-      & \textbf{SOFA$-$} & \textbf{SOFA$+$} & \textbf{Baseline} \\
-    \midrule
-    A & Narrow      & 24\,h & 24\,h & 24\,h & 12\,h & Admission \\
-    B & Seymour-Std & 72\,h & 24\,h & 48\,h & 24\,h & Admission \\
-    C & Liberal     & 72\,h & 72\,h & 48\,h & 24\,h & Rolling 24\,h \\
-    \bottomrule
-  \end{tabular}
-  \caption{Three pre-registered Sepsis-3 label variants. ABX = antibiotic;
-  cx = culture; SOFA$-$/SOFA$+$ = hours before/after suspicion time in which
-  a SOFA rise of $\geq 2$ must be observed. Baseline = SOFA reference value.}
-  \label{tab:label_variants}
+    \centering\small
+    \begin{tabular}{llccccc}
+        \toprule
+        \textbf{ID} & \textbf{Name} & \textbf{ABX$\to$cx} & \textbf{cx$\to$ABX}
+        & \textbf{SOFA$-$} & \textbf{SOFA$+$} & \textbf{Baseline} \\
+        \midrule
+        A & Narrow      & 24\,h & 24\,h & 24\,h & 12\,h & Admission     \\
+        B & Seymour-Std & 72\,h & 24\,h & 48\,h & 24\,h & Admission     \\
+        C & Liberal     & 72\,h & 72\,h & 48\,h & 24\,h & Rolling 24\,h \\
+        \bottomrule
+    \end{tabular}
+    \caption{Three pre-registered Sepsis-3 label variants. ABX = antibiotic;
+    cx = culture; SOFA$-$/SOFA$+$ = hours before/after suspicion time in which
+    a SOFA rise of $\geq 2$ must be observed. Baseline = SOFA reference value.}
+    \label{tab:label_variants}
 \end{table}
 
 In all three variants, a patient has sepsis if there is suspected infection
@@ -175,6 +179,7 @@ screens) are excluded.
 Variant B (Seymour-Standard) is the \textbf{primary analysis}. Variants A and C
 are pre-specified sensitivity analyses for the variance decomposition.
 
+
 \section{Prediction Framing}
 \label{sec:framing}
 
@@ -182,17 +187,18 @@ Following Lauritsen et al.\ \cite{lauritsen2021framing} and Reyna et al.\
 \cite{reyna2020utility}:
 
 \begin{itemize}
-  \item \textbf{Observation window:} Expanding from ICU admission, uses all
-  data available up to the current hour.
-  \item \textbf{Prediction horizon:} 6 hours (will sepsis onset occur within the
-  next 6 hours?).
-  \item \textbf{Prediction frequency:} Every hour.
-  \item \textbf{Start time:} 1 hour after ICU admission.
-  \item \textbf{End time:} 72 hours after ICU admission (right-censored).
+    \item \textbf{Observation window:} Expanding from ICU admission, uses all
+    data available up to the current hour.
+    \item \textbf{Prediction horizon:} 6 hours (will sepsis onset occur within the
+    next 6 hours?).
+    \item \textbf{Prediction frequency:} Every hour.
+    \item \textbf{Start time:} 1 hour after ICU admission.
+    \item \textbf{End time:} 72 hours after ICU admission (right-censored).
 \end{itemize}
 
 This framing matches the PhysioNet/CinC 2019 Challenge
 \cite{reyna2020utility}.
+
 
 \section{Person-Hour Table and Competing Events}
 \label{sec:person_hours}
@@ -202,15 +208,16 @@ risk. Following Heyard et al.\ \cite{heyard2019dynamic}, each hour is
 assigned one of four outcomes:
 
 \begin{itemize}
-  \item 0: Still at risk (censored at this hour)
-  \item 1: Sepsis onset (the event of interest)
-  \item 2: Discharged alive without sepsis (competing event)
-  \item 3: Died without sepsis (competing event)
+    \item 0: Still at risk (censored at this hour)
+    \item 1: Sepsis onset (the event of interest)
+    \item 2: Discharged alive without sepsis (competing event)
+    \item 3: Died without sepsis (competing event)
 \end{itemize}
 
 Treating discharge and death as simple censoring would overstate sepsis
 incidence and bias model estimates. The multinomial competing-risks formulation
 avoids this problem.
+
 
 \section{Feature Construction}
 \label{sec:features}
@@ -219,22 +226,23 @@ Features are extracted at each person-hour from chartevents, labevents,
 inputevents, and outputevents. The feature set includes:
 
 \begin{enumerate}
-  \item \textbf{Vital signs} (last value carried forward per hour): heart rate,
-  respiratory rate, SpO$_2$, MAP (invasive or noninvasive), temperature
-  ($^\circ$C), GCS total.
-  \item \textbf{Laboratory values} (last value carried forward): lactate,
-  creatinine, total bilirubin, platelet count, WBC, P/F ratio.
-  \item \textbf{Vasopressor indicators:} any vasopressor (yes/no); any
-  norepinephrine or epinephrine (yes/no).
-  \item \textbf{Six-hour trends:} rolling slopes for respiratory rate, MAP,
-  and lactate.
-  \item \textbf{Missingness indicators:} whether each lab test was ordered in
-  the current hour (one flag per test).
+    \item \textbf{Vital signs} (last value carried forward per hour): heart rate,
+    respiratory rate, SpO$_2$, MAP (invasive or noninvasive), temperature
+    ($^\circ$C), GCS total.
+    \item \textbf{Laboratory values} (last value carried forward): lactate,
+    creatinine, total bilirubin, platelet count, WBC, P/F ratio.
+    \item \textbf{Vasopressor indicators:} any vasopressor (yes/no); any
+    norepinephrine or epinephrine (yes/no).
+    \item \textbf{Six-hour trends:} rolling slopes for respiratory rate, MAP,
+    and lactate.
+    \item \textbf{Missingness indicators:} whether each lab test was ordered in
+    the current hour (one flag per test).
 \end{enumerate}
 
 Temperature in Fahrenheit is converted to Celsius. FiO$_2$ values above 1.0
 (percentage format) are divided by 100. In total, 25 candidate predictors are
 used.
+
 
 \section{Model Classes}
 \label{sec:models}
@@ -246,10 +254,10 @@ following D'Agostino et al.\ \cite{dagostino1990pooled} and Heyard et al.\
 \cite{heyard2019dynamic}:
 
 \begin{equation}
-  \lambda_r(t \mid \mathbf{X}_{it}) =
+    \lambda_r(t \mid \mathbf{X}_{it}) =
     \frac{\exp\!\bigl(\alpha_r(t) + \boldsymbol{\beta}_r^\top \mathbf{X}_{it}\bigr)}
-         {1 + \sum_{s} \exp\!\bigl(\alpha_s(t) + \boldsymbol{\beta}_s^\top \mathbf{X}_{it}\bigr)}
-  \label{eq:primary_model}
+    {1 + \sum_{s} \exp\!\bigl(\alpha_s(t) + \boldsymbol{\beta}_s^\top \mathbf{X}_{it}\bigr)}
+    \label{eq:primary_model}
 \end{equation}
 
 where $r \in \{1=\text{sepsis},\, 2=\text{discharge},\, 3=\text{death}\}$.
@@ -281,29 +289,31 @@ NEWS2, qSOFA, and SIRS are computed at each person-hour from the same features.
 NEWS2 is the headline comparator following Evans et al.\
 \cite{evans2021ssc}.
 
+
 \section{Validation Architecture}
 \label{sec:validation}
 
 \begin{table}[H]
-  \centering\small
-  \begin{tabular}{p{2.8cm}p{6.5cm}p{3.5cm}}
-    \toprule
-    \textbf{Split} & \textbf{How} & \textbf{Why} \\
-    \midrule
-    Internal (primary) & Time-based: train 2008--2016, test 2017--2019
-      \cite{guo2022temporal} & Honest internal estimate \\
-    Internal (secondary) & Random 75/25 patient-level split (seed = 42)
-      & Measure split optimism (H4) \\
-    Treatment-anchored & Hours before first culture or antibiotic
-      \cite{kamran2024evaluation} & Treatment leakage (H3) \\
-    External & eICU-CRD v2.0 \cite{pollard2018eicu}, no retraining
-      & Generalisability (H5) \\
-    \bottomrule
-  \end{tabular}
-  \caption{Validation architecture. All splits are patient-level: no patient
-  appears in both training and test sets.}
-  \label{tab:validation}
+    \centering\small
+    \begin{tabular}{p{2.8cm}p{6.5cm}p{3.5cm}}
+        \toprule
+        \textbf{Split} & \textbf{How} & \textbf{Why} \\
+        \midrule
+        Internal (primary) & Time-based: train 2008--2016, test 2017--2019
+        \cite{guo2022temporal} & Honest internal estimate \\
+        Internal (secondary) & Random 75/25 patient-level split (seed = 42)
+        & Measure split optimism (H4) \\
+        Treatment-anchored & Hours before first culture or antibiotic
+        \cite{kamran2024evaluation} & Treatment leakage (H3) \\
+        External & eICU-CRD v2.0 \cite{pollard2018eicu}, no retraining
+        & Generalisability (H5) \\
+        \bottomrule
+    \end{tabular}
+    \caption{Validation architecture. All splits are patient-level: no patient
+    appears in both training and test sets.}
+    \label{tab:validation}
 \end{table}
+
 
 \section{Evaluation Metrics}
 \label{sec:metrics}
@@ -326,6 +336,7 @@ benchmark: 1.4 from Moor et al.\ \cite{moor2023review}), lead time
 (benchmark: 3.7 hours from Moor et al.), and decision-curve net benefit
 \cite{vickers2006dca}.
 
+
 \section{Sample Size}
 \label{sec:sample_size}
 
@@ -334,6 +345,7 @@ method, targeting a shrinkage factor $\geq 0.9$ with 25 predictors and an
 anticipated AUC of 0.846 from Moor et al.\ \cite{moor2023review}. Each
 label variant is evaluated separately; an underpowered variant is a finding,
 not a failure.
+
 
 \section{Pre-Registration and Reporting}
 
