@@ -13,6 +13,7 @@
 #   5: Evaluation               (07_metrics_suite.Rmd)
 #   6: External validation      (08_external_validation.Rmd)
 #   7: Variance decomp + equity (09_variance_decomposition.Rmd + 10_equity_analysis.Rmd)
+#   8: Clinical utility metrics (11_clinical_metrics.Rmd)
 #   all: run all phases sequentially
 
 suppressPackageStartupMessages({
@@ -76,7 +77,8 @@ run_phase <- function(phase_num) {
     `4` = c("05_primary_model.Rmd", "06_comparators.Rmd"),
     `5` = "07_metrics_suite.Rmd",
     `6` = "08_external_validation.Rmd",
-    `7` = c("09_variance_decomposition.Rmd", "10_equity_analysis.Rmd")
+    `7` = c("09_variance_decomposition.Rmd", "10_equity_analysis.Rmd"),
+    `8` = "11_clinical_metrics.Rmd"
   )
 
   scripts <- phase_scripts[[as.character(phase_num)]]
@@ -101,7 +103,7 @@ if (file.exists(prereg_path)) {
 
 # Run requested phases
 if (requested_phase == "all") {
-  for (ph in 1:7) run_phase(ph)
+  for (ph in 1:8) run_phase(ph)
 } else {
   run_phase(as.integer(requested_phase))
 }

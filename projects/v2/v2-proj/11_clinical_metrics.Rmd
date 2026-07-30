@@ -1,0 +1,983 @@
+---
+title: "11 Clinical Utility Metrics - Calibration Curves, Net Benefit, Operating Points, Event-Level Detection"
+author: "Abdul Ahad. Student ID: G00486649"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  bookdown::pdf_document2:
+    latex_engine: xelatex
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    fig_caption: true
+geometry: margin=2.3cm
+fontsize: 11pt
+header-includes:
+  - \usepackage{float}
+  - \usepackage{caption}
+  - \captionsetup[figure]{font=small}
+  - \captionsetup[table]{font=small}
+  - \renewcommand{\contentsname}{Table of Contents}
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+set.seed(42)
+
+knitr::opts_chunk$set(
+  echo = FALSE, message = FALSE, warning = FALSE,
+  fig.align = "center", fig.pos = "H",
+  out.width = "85%", fig.width = 7, fig.height = 4.2
+)
+```
+
+## Introduction
+
+Notebook 07 reports discrimination (AUROC, AUPRC), the PhysioNet Utility
+Score, calibration intercept and slope, and a ratio-based alert burden. That
+suite leaves six clinically relevant questions unanswered, and this notebook
+answers them:
+
+1. **Calibration curves.** Intercept and slope are two numbers summarising a
+   whole curve. The flexible calibration curve is plotted directly, and
+   summarised with the Integrated Calibration Index (ICI), E50, E90 and the
+   scaled Brier score (Austin & Steyerberg, 2019; Van Calster et al., 2019).
+2. **Decision-curve / net-benefit analysis.** Notebook 07 evaluated net
+   benefit on a threshold grid of 0.01--0.20. Event prevalence in the
+   person-hour table is roughly 0.2 per cent, so every threshold on that grid
+   is an order of magnitude above the prevalence and the whole curve is
+   trivially below "treat none". Net benefit is recomputed here on a
+   prevalence-appropriate grid (Vickers & Elkin, 2006; Vickers et al., 2019).
+3. **PPV at a fixed sensitivity.** Alerting systems are commissioned at an
+   operating point, not at a default 0.5 cut-off. Thresholds are chosen to
+   hit sensitivity 0.50 / 0.80 / 0.90 and PPV, specificity and number needed
+   to evaluate are reported there.
+4. **False alarms per patient-day.** The ratio-based burden (false alerts per
+   true alert) is not time-normalised, so it cannot be compared against
+   ward-level alarm-fatigue thresholds. Both alert-hours and distinct
+   alarm *episodes* per patient-day are computed here.
+5. **Per-patient (event-level) detection.** All of notebook 07's
+   discrimination is per person-hour. Episode-level sensitivity ("what
+   fraction of septic patients were alerted before onset?"), per-patient PPV
+   and the fraction of non-septic stays that received at least one alert are
+   reported alongside the per-hour figures.
+6. **Lead time.** Reported as a full distribution (median, IQR, proportion
+   detected at least 3 h ahead), not a single median buried in a wide table.
+
+Everything is computed on the temporal test set (2017--2019) using the
+predictions already written by notebooks 05, 06 and 08. No model is refitted.
+
+```{r load-deps}
+suppressPackageStartupMessages({
+  library(data.table)
+  library(arrow)
+  library(splines)
+  library(ggplot2)
+  library(dplyr)
+})
+
+source("config.R")
+source("utils.R")
+
+step("=== Clinical Utility Metric Suite (11) ===")
+
+# Sensitivity targets at which operating points are defined
+SENS_TARGETS <- c(0.50, 0.80, 0.90)
+
+# Headline operating point reported in the thesis
+HEADLINE_SENS <- 0.80
+
+# Models carried through this notebook
+MODEL_NAMES <- c(primary = "pred_sepsis", gbt = "pred_gbt",
+                  news2 = "pred_news2", cox = "pred_cox",
+                  qsofa = "pred_qsofa", sirs = "pred_sirs")
+
+# Models shown in the plots (the primary model and its two headline comparators)
+PLOT_MODELS <- c("primary", "gbt", "news2")
+
+MODEL_LABELS <- c(primary = "Primary (pooled logistic)", gbt = "GBT",
+                   news2 = "NEWS2", cox = "Cox", qsofa = "qSOFA", sirs = "SIRS")
+```
+
+## Metric Functions
+
+```{r metric-fns}
+# --------------------------------------------------------------------------- #
+# Small helpers
+# --------------------------------------------------------------------------- #
+clamp_p <- function(p, eps = 1e-6) pmin(pmax(p, eps), 1 - eps)
+
+#' Count, for each threshold, how many predictions are >= that threshold,
+#' and how many of those are events. O(n log n) once, then O(k log n).
+#' Returns a data.table with threshold, n_alert, tp, fp.
+counts_at_thresholds <- function(y, p, thresholds) {
+  ord    <- order(p, decreasing = TRUE)
+  p_desc <- p[ord]
+  y_desc <- y[ord]
+  cum_tp <- cumsum(y_desc)
+  n      <- length(p_desc)
+  p_asc  <- rev(p_desc)
+
+  # number of predictions strictly below t  ->  n_alert = n - that
+  n_below <- findInterval(thresholds, p_asc, left.open = TRUE)
+  k       <- n - n_below
+  tp      <- ifelse(k > 0, cum_tp[pmax(k, 1)], 0)
+
+  data.table(threshold = thresholds,
+             n_alert   = k,
+             tp        = tp,
+             fp        = k - tp)
+}
+
+# --------------------------------------------------------------------------- #
+# 1. Calibration: flexible curve + ICI / E50 / E90 / Brier
+#    Austin & Steyerberg (2019). The calibration curve is a restricted cubic
+#    spline of the outcome on the logit of the predicted risk.
+# --------------------------------------------------------------------------- #
+calibration_curve <- function(y, p, n_bins = 20L, df_spline = 3L) {
+  keep <- !is.na(y) & !is.na(p)
+  y <- as.integer(y[keep]); p <- as.numeric(p[keep])
+  if (length(y) < 100 || sum(y) < 10 || length(unique(p)) < 20)
+    return(list(summary = NULL, curve = NULL, bins = NULL))
+
+  pc <- clamp_p(p)
+  lp <- qlogis(pc)
+
+  fit <- tryCatch(
+    glm(y ~ ns(lp, df = df_spline), family = binomial),
+    error = function(e) NULL
+  )
+  if (is.null(fit)) return(list(summary = NULL, curve = NULL, bins = NULL))
+
+  obs <- as.numeric(fitted(fit))
+  d   <- abs(obs - pc)
+
+  # Intercept / slope (recomputed here so the curve and the summary agree)
+  int_fit   <- tryCatch(coef(glm(y ~ offset(lp), family = binomial))[1],
+                        error = function(e) NA_real_)
+  slope_fit <- tryCatch(coef(glm(y ~ lp, family = binomial))[2],
+                        error = function(e) NA_real_)
+
+  brier      <- mean((pc - y)^2)
+  prev       <- mean(y)
+  brier_null <- prev * (1 - prev)
+
+  summ <- data.table(
+    n            = length(y),
+    n_events     = sum(y),
+    prevalence   = prev,
+    calib_int    = as.numeric(int_fit),
+    calib_slope  = as.numeric(slope_fit),
+    ici          = mean(d),
+    e50          = as.numeric(stats::quantile(d, 0.50)),
+    e90          = as.numeric(stats::quantile(d, 0.90)),
+    emax         = max(d),
+    brier        = brier,
+    brier_scaled = 1 - brier / brier_null
+  )
+
+  # Smooth curve on a grid over the observed prediction range
+  grid_lp <- seq(quantile(lp, 0.001), quantile(lp, 0.999), length.out = 200)
+  grid_p  <- plogis(grid_lp)
+  pr      <- predict(fit, newdata = data.frame(lp = grid_lp),
+                     type = "link", se.fit = TRUE)
+  curve <- data.table(
+    pred     = grid_p,
+    obs      = plogis(pr$fit),
+    obs_low  = plogis(pr$fit - 1.96 * pr$se.fit),
+    obs_high = plogis(pr$fit + 1.96 * pr$se.fit)
+  )
+
+  # Decile (default: vigintile) bins for the overlaid points
+  brk <- unique(stats::quantile(pc, probs = seq(0, 1, length.out = n_bins + 1)))
+  if (length(brk) > 2) {
+    bin <- cut(pc, breaks = brk, include.lowest = TRUE, labels = FALSE)
+    bins <- data.table(bin = bin, y = y, p = pc)[
+      !is.na(bin), .(pred = mean(p), obs = mean(y), n = .N), by = bin]
+    bins[, `:=`(obs_low  = pmax(0, obs - 1.96 * sqrt(obs * (1 - obs) / n)),
+                obs_high = pmin(1, obs + 1.96 * sqrt(obs * (1 - obs) / n)))]
+  } else bins <- NULL
+
+  list(summary = summ, curve = curve, bins = bins)
+}
+
+# --------------------------------------------------------------------------- #
+# 2. Net benefit (Vickers & Elkin, 2006)
+#    NB(t) = TP/N - (FP/N) * t/(1-t);  NB_all(t) = prev - (1-prev)*t/(1-t)
+# --------------------------------------------------------------------------- #
+net_benefit_curve <- function(y, p, thresholds) {
+  keep <- !is.na(y) & !is.na(p)
+  y <- as.integer(y[keep]); p <- as.numeric(p[keep])
+  n <- length(y)
+  if (n < 100 || sum(y) == 0) return(NULL)
+
+  cnt  <- counts_at_thresholds(y, p, thresholds)
+  w    <- thresholds / (1 - thresholds)
+  prev <- mean(y)
+
+  data.table(
+    threshold      = thresholds,
+    net_benefit    = cnt$tp / n - (cnt$fp / n) * w,
+    nb_treat_all   = prev - (1 - prev) * w,
+    nb_treat_none  = 0,
+    alert_rate     = cnt$n_alert / n,
+    prevalence     = prev
+  )
+}
+
+# --------------------------------------------------------------------------- #
+# 3. Operating point at a fixed sensitivity
+#    Threshold = the largest cut-off achieving at least the target sensitivity.
+# --------------------------------------------------------------------------- #
+operating_point <- function(y, p, target_sens, hours_per_row = 1) {
+  keep <- !is.na(y) & !is.na(p)
+  y <- as.integer(y[keep]); p <- as.numeric(p[keep])
+  n  <- length(y); n_pos <- sum(y); n_neg <- n - n_pos
+  if (n_pos < 5 || n_neg < 5) return(NULL)
+
+  # P(p >= thr | y = 1) >= target  ->  thr = quantile of positives
+  thr <- as.numeric(stats::quantile(p[y == 1], probs = 1 - target_sens,
+                                    type = 1, names = FALSE))
+
+  alert <- p >= thr
+  tp <- sum(alert & y == 1); fp <- sum(alert & y == 0)
+  fn <- n_pos - tp;          tn <- n_neg - fp
+
+  sens <- tp / n_pos
+  spec <- tn / n_neg
+  ppv  <- if ((tp + fp) > 0) tp / (tp + fp) else NA_real_
+  npv  <- if ((tn + fn) > 0) tn / (tn + fn) else NA_real_
+
+  patient_days <- n * hours_per_row / 24
+
+  data.table(
+    target_sens        = target_sens,
+    threshold          = thr,
+    n_hours            = n,
+    n_event_hours      = n_pos,
+    patient_days       = patient_days,
+    sensitivity        = sens,
+    specificity        = spec,
+    ppv                = ppv,
+    npv                = npv,
+    nne                = if (!is.na(ppv) && ppv > 0) 1 / ppv else NA_real_,
+    alert_hours        = tp + fp,
+    alert_rate         = (tp + fp) / n,
+    false_alert_hours  = fp,
+    fa_per_patient_day = fp / patient_days,
+    alerts_per_pt_day  = (tp + fp) / patient_days,
+    alert_burden_ratio = if (tp > 0) fp / tp else Inf
+  )
+}
+
+# --------------------------------------------------------------------------- #
+# 4. Per-patient (event-level) detection at a given threshold
+#
+#    A stay is a sepsis stay if it contributes at least one event hour.
+#    Detection windows follow the Utility Score convention (Reyna et al., 2020):
+#      - actionable window : [onset - 6h, onset]
+#      - any pre-onset     : first alert at or before onset
+#    A contiguous run of alert hours counts as ONE alarm episode; an episode
+#    is a true alarm if it overlaps [onset - 6h, onset + 3h].
+# --------------------------------------------------------------------------- #
+patient_level_metrics <- function(dt, pred_col, thr) {
+  d <- dt[!is.na(get(pred_col)), .(stay_id, hour,
+                                    ev    = as.integer(event == 1),
+                                    onset = as.numeric(onset_hour),
+                                    alert = as.integer(get(pred_col) >= thr))]
+  if (nrow(d) == 0) return(NULL)
+  setorder(d, stay_id, hour)
+
+  # alarm episodes: contiguous runs of alert hours within a stay
+  d[, run := rleid(stay_id, alert)]
+  ep <- d[alert == 1L, .(stay_id = stay_id[1],
+                          h_start = min(hour), h_end = max(hour),
+                          onset   = onset[1]), by = run]
+  ep[, true_alarm := !is.na(onset) &
+       h_end >= (onset + UTILITY_TP_MIN) & h_start <= (onset + UTILITY_TP_MAX)]
+
+  stay <- d[, .(
+    is_sepsis = as.integer(any(ev == 1L)),
+    onset     = as.numeric(onset[1]),
+    n_hours   = .N,
+    any_alert = as.integer(any(alert == 1L))
+  ), by = stay_id]
+
+  # first alert inside the actionable window [onset - 6 h, onset], and
+  # first alert at any point at or before onset
+  win <- d[alert == 1L & !is.na(onset) & hour >= (onset + UTILITY_TP_MIN) &
+             hour <= onset,
+           .(first_win_alert = as.numeric(min(hour))), by = stay_id]
+  pre <- d[alert == 1L & !is.na(onset) & hour <= onset,
+           .(first_pre_alert = as.numeric(min(hour))), by = stay_id]
+
+  stay <- merge(stay, win, by = "stay_id", all.x = TRUE)
+  stay <- merge(stay, pre, by = "stay_id", all.x = TRUE)
+  stay[, detected_window := as.integer(is_sepsis == 1L & !is.na(first_win_alert))]
+  stay[, detected_pre    := as.integer(is_sepsis == 1L & !is.na(first_pre_alert))]
+  stay[, lead_time_h     := ifelse(detected_pre == 1L, onset - first_pre_alert,
+                                   NA_real_)]
+
+  n_sepsis    <- stay[, sum(is_sepsis == 1L)]
+  n_nonsepsis <- stay[, sum(is_sepsis == 0L)]
+  n_alerted   <- stay[, sum(any_alert == 1L)]
+  patient_days <- stay[, sum(n_hours)] / 24
+
+  fa_episodes <- ep[true_alarm == FALSE, .N]
+  tp_episodes <- ep[true_alarm == TRUE,  .N]
+
+  lt <- stay[detected_pre == 1L & is.finite(lead_time_h), lead_time_h]
+
+  list(
+    summary = data.table(
+      threshold             = thr,
+      n_stays               = nrow(stay),
+      n_sepsis_stays        = n_sepsis,
+      n_nonsepsis_stays     = n_nonsepsis,
+      patient_days          = patient_days,
+      # event-level sensitivity
+      episode_sens_window   = if (n_sepsis > 0)
+        stay[, sum(detected_window)] / n_sepsis else NA_real_,
+      episode_sens_pre      = if (n_sepsis > 0)
+        stay[, sum(detected_pre)] / n_sepsis else NA_real_,
+      # event-level PPV and false-alarm exposure
+      stays_alerted         = n_alerted,
+      frac_stays_alerted    = n_alerted / nrow(stay),
+      frac_nonsepsis_alerted = if (n_nonsepsis > 0)
+        stay[is_sepsis == 0L, sum(any_alert)] / n_nonsepsis else NA_real_,
+      patient_ppv           = if (n_alerted > 0)
+        stay[, sum(detected_pre)] / n_alerted else NA_real_,
+      # alarm episodes
+      n_alarm_episodes      = nrow(ep),
+      n_false_alarm_episodes = fa_episodes,
+      n_true_alarm_episodes  = tp_episodes,
+      fa_episodes_per_pt_day = fa_episodes / patient_days,
+      # lead time
+      lead_median_h         = if (length(lt) > 0) median(lt) else NA_real_,
+      lead_q25_h            = if (length(lt) > 0) as.numeric(quantile(lt, .25)) else NA_real_,
+      lead_q75_h            = if (length(lt) > 0) as.numeric(quantile(lt, .75)) else NA_real_,
+      frac_lead_ge_3h       = if (n_sepsis > 0) sum(lt >= 3) / n_sepsis else NA_real_,
+      frac_lead_ge_6h       = if (n_sepsis > 0) sum(lt >= 6) / n_sepsis else NA_real_
+    ),
+    lead_times = lt
+  )
+}
+```
+
+## Data Assembly
+
+The same merge as notebook 07: primary-model predictions joined to the
+comparator predictions on `(stay_id, hour)`. Only the unrestricted evaluation
+window is used — the treatment-anchored window contains zero event hours
+(notebook 07, H3), so no operating point can be defined in it.
+
+```{r assemble}
+load_variant <- function(vid) {
+  prim_path <- file.path(DATA_DIR, paste0("05_predictions_primary_",     vid, ".parquet"))
+  comp_path <- file.path(DATA_DIR, paste0("06_predictions_comparators_", vid, ".parquet"))
+  if (!file.exists(prim_path)) return(NULL)
+
+  ph <- as.data.table(arrow::read_parquet(prim_path))
+  if (file.exists(comp_path)) {
+    cp <- as.data.table(arrow::read_parquet(comp_path))
+    add <- c("stay_id", "hour", setdiff(names(cp), names(ph)))
+    ph <- merge(ph, cp[, ..add], by = c("stay_id", "hour"), all.x = TRUE)
+  }
+  ph
+}
+
+variants <- names(LABEL_VARIANTS)
+ph_list  <- setNames(lapply(variants, load_variant), variants)
+ph_list  <- ph_list[!vapply(ph_list, is.null, logical(1))]
+
+for (vid in names(ph_list)) {
+  v2_log(sprintf("Variant %s: %s test hours, %s event hours, %s stays",
+                 vid,
+                 format(nrow(ph_list[[vid]]), big.mark = ","),
+                 format(sum(ph_list[[vid]]$event == 1), big.mark = ","),
+                 format(uniqueN(ph_list[[vid]]$stay_id), big.mark = ",")))
+}
+```
+
+## Calibration Curves
+
+Predicted risk against observed event rate. The diagonal is perfect
+calibration. The spline curve is the flexible calibration curve; the points
+are twenty equal-sized bins of predicted risk with binomial confidence
+intervals. Axes are restricted to the observed prediction range, because at a
+0.2 per cent event rate no model ever predicts a risk near 1.
+
+```{r calibration, fig.height=4.6}
+calib_summ  <- list()
+calib_curve <- list()
+calib_bins  <- list()
+
+for (vid in names(ph_list)) {
+  ph <- ph_list[[vid]]
+  y  <- as.integer(ph$event == 1)
+  for (mod in names(MODEL_NAMES)) {
+    pcol <- MODEL_NAMES[[mod]]
+    if (!pcol %in% names(ph)) next
+    res <- calibration_curve(y, as.numeric(ph[[pcol]]))
+    if (is.null(res$summary)) next
+    key <- paste(vid, mod, sep = "-")
+    calib_summ[[key]]  <- cbind(variant = vid, model = mod, res$summary)
+    if (mod %in% PLOT_MODELS) {
+      calib_curve[[key]] <- cbind(variant = vid, model = mod, res$curve)
+      if (!is.null(res$bins))
+        calib_bins[[key]] <- cbind(variant = vid, model = mod, res$bins)
+    }
+  }
+}
+
+calib_summ_dt <- rbindlist(calib_summ, fill = TRUE)
+save_parquet(calib_summ_dt, "11_calibration_summary", DATA_DIR)
+save_csv(calib_summ_dt,     "11_calibration_summary", DATA_DIR)
+
+curve_dt <- rbindlist(calib_curve, fill = TRUE)
+bins_dt  <- rbindlist(calib_bins,  fill = TRUE)
+
+if (nrow(curve_dt) > 0) {
+  curve_dt[, model_lab := factor(MODEL_LABELS[model],
+                                  levels = MODEL_LABELS[PLOT_MODELS])]
+  bins_dt[,  model_lab := factor(MODEL_LABELS[model],
+                                  levels = MODEL_LABELS[PLOT_MODELS])]
+  curve_dt[, variant_lab := paste0("Variant ", variant)]
+  bins_dt[,  variant_lab := paste0("Variant ", variant)]
+
+  # Predicted-risk scales differ by orders of magnitude between the pooled
+  # logistic model (calibrated to a 0.2% hourly event rate) and GBT, so every
+  # panel needs its own scale. facet_grid(scales = "free") only frees axes per
+  # row/column, so facet_wrap over the model-variant interaction is used
+  # instead. The dashed diagonal is perfect calibration in every panel.
+  mk_panel <- function(d) {
+    d[, panel_lab := factor(
+      paste0(model_lab, ", Variant ", variant),
+      levels = unlist(lapply(MODEL_LABELS[PLOT_MODELS], function(m)
+        paste0(m, ", Variant ", sort(unique(curve_dt$variant))))))]
+    d[!is.na(panel_lab)]
+  }
+  curve_dt <- mk_panel(curve_dt)
+  bins_dt  <- mk_panel(bins_dt)
+
+  p_cal <- ggplot(curve_dt, aes(pred, obs, colour = model_lab, fill = model_lab)) +
+    geom_abline(slope = 1, intercept = 0, linetype = "dashed",
+                colour = "grey40", linewidth = 0.4) +
+    geom_ribbon(aes(ymin = obs_low, ymax = obs_high), alpha = 0.18,
+                colour = NA) +
+    geom_line(linewidth = 0.7) +
+    geom_point(data = bins_dt, aes(pred, obs), size = 1.0, alpha = 0.7,
+               inherit.aes = TRUE) +
+    facet_wrap(~ panel_lab, scales = "free", ncol = 3) +
+    expand_limits(x = 0, y = 0) +
+    labs(x = "Predicted risk of sepsis onset within 6 h",
+         y = "Observed event rate",
+         colour = NULL, fill = NULL) +
+    theme_bw() +
+    theme(legend.position = "none",
+          panel.grid.minor = element_blank(),
+          strip.text = element_text(size = 7.5),
+          axis.text = element_text(size = 6.5))
+
+  n_panels <- length(unique(curve_dt$panel_lab))
+  ggsave(file.path(FIGURES_DIR, "11_calibration_curves.png"), p_cal,
+         width = 9, height = 2.4 * ceiling(n_panels / 3) + 0.4, dpi = 150)
+  print(p_cal)
+}
+```
+
+```{r calibration-table}
+if (nrow(calib_summ_dt) > 0) {
+  tab <- calib_summ_dt[model %in% PLOT_MODELS,
+    .(variant, model = MODEL_LABELS[model],
+      Intercept = round(calib_int, 3), Slope = round(calib_slope, 3),
+      ICI = signif(ici, 3), E50 = signif(e50, 3), E90 = signif(e90, 3),
+      Brier = signif(brier, 4), `Brier scaled` = round(brier_scaled, 4))]
+  knitr::kable(tab[order(variant, model)],
+    caption = paste("Calibration summary. ICI = Integrated Calibration Index",
+                    "(mean absolute difference between predicted risk and the",
+                    "flexible calibration curve). E50/E90 = median and 90th",
+                    "percentile of that difference. Scaled Brier = 1 - Brier /",
+                    "Brier(null); values at or below 0 mean the model is no",
+                    "better than predicting the prevalence for everyone."))
+}
+```
+
+## Decision-Curve Analysis
+
+Net benefit is evaluated on a grid running from one tenth of the event
+prevalence to roughly ten times it. This is the range in which a
+sepsis-alerting threshold could plausibly be set: a threshold probability of
+$t$ encodes a willingness to accept $\left(1-t\right)/t$ false alarms per
+true detection. At a 0.2 per cent event rate, a threshold of 0.01 already
+encodes a willingness to tolerate only 99 false alarms per detection, which
+is why the 0.01--0.20 grid used in notebook 07 produced nothing but
+negative curves.
+
+```{r dca, fig.height=4.6}
+nb_list <- list()
+
+for (vid in names(ph_list)) {
+  ph   <- ph_list[[vid]]
+  y    <- as.integer(ph$event == 1)
+  prev <- mean(y)
+  thr_grid <- unique(sort(c(
+    seq(prev / 10, prev * 10, length.out = 80),
+    prev
+  )))
+  thr_grid <- thr_grid[thr_grid > 0 & thr_grid < 0.5]
+
+  for (mod in names(MODEL_NAMES)) {
+    pcol <- MODEL_NAMES[[mod]]
+    if (!pcol %in% names(ph)) next
+    nb <- net_benefit_curve(y, as.numeric(ph[[pcol]]), thr_grid)
+    if (is.null(nb)) next
+    nb_list[[paste(vid, mod, sep = "-")]] <- cbind(variant = vid, model = mod, nb)
+  }
+}
+
+nb_dt <- rbindlist(nb_list, fill = TRUE)
+save_parquet(nb_dt, "11_net_benefit", DATA_DIR)
+
+if (nrow(nb_dt) > 0) {
+  # Treat-all and treat-none are plotted as named series so that the reader can
+  # see directly which model curves lie on top of a default strategy.
+  ref <- unique(nb_dt[, .(variant, threshold, nb_treat_all)])
+  series <- rbind(
+    nb_dt[model %in% PLOT_MODELS,
+          .(variant, threshold, nb = net_benefit, series = MODEL_LABELS[model])],
+    ref[,  .(variant, threshold, nb = nb_treat_all, series = "Treat all")],
+    ref[,  .(variant, threshold, nb = 0,           series = "Treat none")]
+  )
+  ser_levels <- c(unname(MODEL_LABELS[PLOT_MODELS]), "Treat all", "Treat none")
+  series[, series := factor(series, levels = ser_levels)]
+  series[, variant_lab := paste0("Variant ", variant)]
+
+  # The maximum attainable net benefit is the prevalence, so the informative
+  # band is a small multiple of it. Curves are clipped below -1.75 x prevalence
+  # so that the near-zero region stays legible; a line that leaves the bottom
+  # of a panel is worse than treating nobody from that threshold onwards.
+  series <- merge(series, nb_dt[, .(prev = prevalence[1]), by = variant],
+                  by = "variant", all.x = TRUE)
+  series[, nb_clip := fifelse(nb < -1.75 * prev, NA_real_, nb)]
+
+  p_dca <- ggplot(series, aes(threshold, nb_clip, colour = series,
+                              linetype = series, linewidth = series)) +
+    geom_line(na.rm = TRUE) +
+    facet_wrap(~ variant_lab, nrow = 1, scales = "free") +
+    scale_x_continuous(labels = scales::percent_format(accuracy = 0.1)) +
+    scale_colour_manual(values = setNames(
+      c(scales::hue_pal()(length(PLOT_MODELS)), "grey25", "grey55"), ser_levels)) +
+    scale_linetype_manual(values = setNames(
+      c(rep("solid", length(PLOT_MODELS)), "dotdash", "dashed"), ser_levels)) +
+    scale_linewidth_manual(values = setNames(
+      c(rep(0.75, length(PLOT_MODELS)), 0.5, 0.5), ser_levels)) +
+    labs(x = "Threshold probability", y = "Net benefit",
+         colour = NULL, linetype = NULL, linewidth = NULL) +
+    theme_bw() +
+    theme(legend.position = "bottom", panel.grid.minor = element_blank())
+
+  ggsave(file.path(FIGURES_DIR, "11_decision_curves.png"), p_dca,
+         width = 9, height = 4, dpi = 150)
+  print(p_dca)
+}
+```
+
+```{r dca-table}
+# Net benefit at the threshold equal to the event prevalence. At t = prevalence
+# both defaults have net benefit exactly 0, so any positive value is a real
+# gain over both, and the maximum attainable net benefit is the prevalence
+# itself. Standardised net benefit (Vickers et al., 2019) = NB / prevalence,
+# i.e. the fraction of the attainable benefit that the model captures.
+if (nrow(nb_dt) > 0) {
+  nb_prev <- nb_dt[, {
+    i <- which.min(abs(threshold - prevalence[1]))
+    .(threshold   = threshold[i],
+      prevalence  = prevalence[1],
+      net_benefit = net_benefit[i],
+      nb_treat_all = nb_treat_all[i],
+      snb         = net_benefit[i] / prevalence[1],
+      alert_rate  = alert_rate[i],
+      # does the alert rate respond to the threshold at all?
+      alert_rate_range = max(alert_rate) - min(alert_rate))
+  }, by = .(variant, model)]
+
+  save_parquet(nb_prev, "11_net_benefit_at_prevalence", DATA_DIR)
+  save_csv(nb_prev,     "11_net_benefit_at_prevalence", DATA_DIR)
+
+  knitr::kable(
+    nb_prev[order(variant, model),
+      .(variant, model = MODEL_LABELS[model],
+        Threshold = signif(threshold, 3),
+        `Net benefit` = signif(net_benefit, 3),
+        `Treat all` = signif(nb_treat_all, 2),
+        `Std NB` = round(snb, 3),
+        `Alert rate` = round(alert_rate, 3),
+        `Alert rate span` = round(alert_rate_range, 3))],
+    caption = paste("Net benefit at a threshold probability equal to the event",
+                    "prevalence. Both default strategies have net benefit 0 at",
+                    "this threshold, so Std NB (net benefit divided by the",
+                    "prevalence) is the fraction of the attainable benefit",
+                    "captured. 'Alert rate span' is the change in alert rate",
+                    "across the whole threshold grid: a span of 0 means the",
+                    "score cannot be tuned anywhere in the plausible range and",
+                    "the decision curve collapses onto a default strategy."))
+}
+```
+
+## Operating Points at Fixed Sensitivity
+
+For each model the threshold is set to the largest cut-off achieving the
+target per-hour sensitivity, and PPV, specificity, number needed to evaluate
+(NNE $=1/\text{PPV}$), alert rate and time-normalised false-alarm rate are
+read off at that point.
+
+```{r operating-points}
+op_list <- list()
+
+for (vid in names(ph_list)) {
+  ph <- ph_list[[vid]]
+  y  <- as.integer(ph$event == 1)
+  for (mod in names(MODEL_NAMES)) {
+    pcol <- MODEL_NAMES[[mod]]
+    if (!pcol %in% names(ph)) next
+    p <- as.numeric(ph[[pcol]])
+    for (ts in SENS_TARGETS) {
+      op <- operating_point(y, p, ts)
+      if (is.null(op)) next
+      op_list[[paste(vid, mod, ts, sep = "-")]] <-
+        cbind(variant = vid, model = mod, op)
+    }
+  }
+}
+
+op_dt <- rbindlist(op_list, fill = TRUE)
+save_parquet(op_dt, "11_operating_points", DATA_DIR)
+save_csv(op_dt,     "11_operating_points", DATA_DIR)
+
+if (nrow(op_dt) > 0) {
+  show <- op_dt[target_sens == HEADLINE_SENS & model %in% PLOT_MODELS,
+    .(variant, model = MODEL_LABELS[model],
+      Threshold   = signif(threshold, 3),
+      Sens        = round(sensitivity, 3),
+      Spec        = round(specificity, 3),
+      PPV         = signif(ppv, 3),
+      NNE         = round(nne, 0),
+      `Alerts/pt-day` = round(alerts_per_pt_day, 2),
+      `FA/pt-day` = round(fa_per_patient_day, 2),
+      `FP:TP`     = round(alert_burden_ratio, 0))]
+  knitr::kable(show[order(variant, model)],
+    caption = sprintf(paste("Operating characteristics at a fixed per-hour",
+                            "sensitivity of %.0f%%. NNE = number of alerted",
+                            "person-hours per true event hour. FA/pt-day =",
+                            "false-alert hours per patient-day."),
+                      HEADLINE_SENS * 100))
+}
+```
+
+```{r sens-tradeoff, fig.height=3.6}
+if (nrow(op_dt) > 0) {
+  tr <- op_dt[model %in% PLOT_MODELS]
+  tr[, model_lab := factor(MODEL_LABELS[model], levels = MODEL_LABELS[PLOT_MODELS])]
+  tr[, variant_lab := paste0("Variant ", variant)]
+
+  p_tr <- ggplot(tr, aes(sensitivity, fa_per_patient_day,
+                         colour = model_lab, group = model_lab)) +
+    geom_line(linewidth = 0.6) +
+    geom_point(size = 1.6) +
+    facet_wrap(~ variant_lab, nrow = 1) +
+    scale_x_continuous(labels = scales::percent_format(accuracy = 1)) +
+    labs(x = "Per-hour sensitivity", y = "False alerts per patient-day",
+         colour = NULL) +
+    theme_bw() +
+    theme(legend.position = "bottom", panel.grid.minor = element_blank())
+
+  ggsave(file.path(FIGURES_DIR, "11_false_alarms_vs_sensitivity.png"), p_tr,
+         width = 9, height = 3.4, dpi = 150)
+  print(p_tr)
+}
+```
+
+## Per-Patient (Event-Level) Detection
+
+Every figure above is per person-hour. Under the discrete-time
+competing-risks framing, `event == 1` marks the sepsis onset hour itself
+(states 2 and 3 are discharge alive and death without sepsis), so each septic
+stay contributes exactly one event hour. Per-hour sensitivity is therefore a
+strict quantity: the alert must fire *in the onset hour itself*. Per-patient
+sensitivity is the clinically meaningful counterpart: it asks only whether
+the patient was alerted at all before onset. The gap between the two, and the
+price paid for it in false alarms, is the point of this section.
+
+```{r patient-level}
+pat_list  <- list()
+lead_list <- list()
+
+for (vid in names(ph_list)) {
+  ph <- ph_list[[vid]]
+  for (mod in names(MODEL_NAMES)) {
+    pcol <- MODEL_NAMES[[mod]]
+    if (!pcol %in% names(ph)) next
+    for (ts in SENS_TARGETS) {
+      thr <- op_dt[variant == vid & model == mod & target_sens == ts, threshold]
+      if (length(thr) == 0) next
+      res <- tryCatch(patient_level_metrics(ph, pcol, thr[1]),
+                      error = function(e) { v2_log(sprintf(
+                        "patient_level_metrics failed (%s/%s/%.2f): %s",
+                        vid, mod, ts, e$message), level = "WARN"); NULL })
+      if (is.null(res)) next
+      key <- paste(vid, mod, ts, sep = "-")
+      pat_list[[key]] <- cbind(variant = vid, model = mod,
+                                target_sens = ts, res$summary)
+      if (ts == HEADLINE_SENS && mod %in% PLOT_MODELS && length(res$lead_times) > 0)
+        lead_list[[key]] <- data.table(variant = vid, model = mod,
+                                        lead_time_h = res$lead_times)
+    }
+  }
+}
+
+pat_dt <- rbindlist(pat_list, fill = TRUE)
+save_parquet(pat_dt, "11_patient_level_metrics", DATA_DIR)
+save_csv(pat_dt,     "11_patient_level_metrics", DATA_DIR)
+
+if (nrow(pat_dt) > 0) {
+  show_p <- pat_dt[target_sens == HEADLINE_SENS & model %in% PLOT_MODELS,
+    .(variant, model = MODEL_LABELS[model],
+      `Sepsis stays`      = n_sepsis_stays,
+      `Episode sens (6h)` = round(episode_sens_window, 3),
+      `Episode sens (any pre)` = round(episode_sens_pre, 3),
+      `Patient PPV`       = signif(patient_ppv, 3),
+      `% stays alerted`   = round(100 * frac_stays_alerted, 1),
+      `% non-sepsis alerted` = round(100 * frac_nonsepsis_alerted, 1),
+      `FA episodes/pt-day` = round(fa_episodes_per_pt_day, 2))]
+  knitr::kable(show_p[order(variant, model)],
+    caption = paste("Per-patient detection at the same thresholds as the",
+                    "operating-point table. Episode sens (6h) = fraction of",
+                    "septic stays alerted inside the actionable window",
+                    "[onset - 6 h, onset]. Episode sens (any pre) = alerted at",
+                    "any point before onset. FA episodes = contiguous runs of",
+                    "alert hours that do not overlap [onset - 6 h, onset + 3 h]."))
+}
+```
+
+### Per-Hour versus Per-Patient, Side by Side
+
+```{r hour-vs-patient}
+if (nrow(op_dt) > 0 && nrow(pat_dt) > 0) {
+  side <- merge(
+    op_dt[target_sens == HEADLINE_SENS,
+          .(variant, model, target_sens,
+            hour_sens = sensitivity, hour_ppv = ppv,
+            hour_burden = alert_burden_ratio, fa_per_patient_day)],
+    pat_dt[target_sens == HEADLINE_SENS,
+           .(variant, model, target_sens,
+             pt_sens = episode_sens_pre, pt_ppv = patient_ppv,
+             fa_episodes_per_pt_day)],
+    by = c("variant", "model", "target_sens"))
+
+  save_parquet(side, "11_hour_vs_patient", DATA_DIR)
+  save_csv(side,     "11_hour_vs_patient", DATA_DIR)
+
+  knitr::kable(
+    side[model %in% PLOT_MODELS][order(variant, model),
+      .(variant, model = MODEL_LABELS[model],
+        `Sens (hour)` = round(hour_sens, 3),
+        `Sens (patient)` = round(pt_sens, 3),
+        `PPV (hour)` = signif(hour_ppv, 3),
+        `PPV (patient)` = signif(pt_ppv, 3),
+        `FA hours/pt-day` = round(fa_per_patient_day, 2),
+        `FA episodes/pt-day` = round(fa_episodes_per_pt_day, 2))],
+    caption = paste("Per-hour and per-patient views of the same operating",
+                    "point. Patient-level sensitivity is much higher than",
+                    "per-hour sensitivity because one alert anywhere before",
+                    "onset counts the whole episode as detected; patient-level",
+                    "PPV is correspondingly higher than per-hour PPV because a",
+                    "multi-hour alert run counts once."))
+}
+```
+
+## Lead Time to Onset
+
+Lead time is the interval between the first alert issued at or before onset
+and the onset hour itself, computed at the fixed-sensitivity threshold and
+over the septic stays that were alerted at all.
+
+```{r lead-time, fig.height=3.6}
+lead_dt <- rbindlist(lead_list, fill = TRUE)
+
+lead_summary <- pat_dt[target_sens == HEADLINE_SENS,
+  .(variant, model, n_sepsis_stays,
+    detected_pre = round(episode_sens_pre, 3),
+    lead_median_h, lead_q25_h, lead_q75_h,
+    frac_lead_ge_3h = round(frac_lead_ge_3h, 3),
+    frac_lead_ge_6h = round(frac_lead_ge_6h, 3))]
+save_parquet(lead_summary, "11_lead_time_summary", DATA_DIR)
+save_csv(lead_summary,     "11_lead_time_summary", DATA_DIR)
+
+if (nrow(lead_dt) > 0) {
+  lead_dt[, model_lab := factor(MODEL_LABELS[model], levels = MODEL_LABELS[PLOT_MODELS])]
+  lead_dt[, variant_lab := paste0("Variant ", variant)]
+
+  p_lead <- ggplot(lead_dt[lead_time_h >= 0 & lead_time_h <= 48],
+                   aes(lead_time_h, fill = model_lab)) +
+    geom_histogram(binwidth = 2, position = "identity", alpha = 0.55,
+                   colour = NA) +
+    facet_wrap(~ variant_lab, nrow = 1, scales = "free_y") +
+    labs(x = "Lead time before sepsis onset (h)",
+         y = "Septic stays", fill = NULL) +
+    theme_bw() +
+    theme(legend.position = "bottom", panel.grid.minor = element_blank())
+
+  ggsave(file.path(FIGURES_DIR, "11_lead_time_distribution.png"), p_lead,
+         width = 9, height = 3.4, dpi = 150)
+  print(p_lead)
+}
+
+knitr::kable(
+  lead_summary[model %in% PLOT_MODELS][order(variant, model),
+    .(variant, model = MODEL_LABELS[model], n_sepsis_stays, detected_pre,
+      `Median lead (h)` = lead_median_h,
+      `IQR` = paste0(lead_q25_h, "-", lead_q75_h),
+      `>= 3 h` = frac_lead_ge_3h, `>= 6 h` = frac_lead_ge_6h)],
+  caption = sprintf(paste("Lead time at the %.0f%% sensitivity operating",
+                          "point. '>= 3 h' and '>= 6 h' are fractions of ALL",
+                          "septic stays (not just detected ones) alerted at",
+                          "least that far ahead of onset."),
+                    HEADLINE_SENS * 100))
+```
+
+## External Validation: Clinical Utility on eICU-CRD
+
+The same operating-point and per-patient machinery applied to the eICU
+predictions from notebook 08, so that the clinical-utility picture is
+available externally as well as internally.
+
+```{r external}
+ext_op  <- list()
+ext_pat <- list()
+
+for (vid in variants) {
+  ext_path <- file.path(DATA_DIR, paste0("08_eicu_predictions_", vid, ".parquet"))
+  if (!file.exists(ext_path)) next
+  ext <- as.data.table(arrow::read_parquet(ext_path))
+  y   <- as.integer(ext$event == 1)
+  if (sum(y) < 10) next
+
+  for (mod in names(MODEL_NAMES)) {
+    pcol <- MODEL_NAMES[[mod]]
+    if (!pcol %in% names(ext)) next
+    op <- operating_point(y, as.numeric(ext[[pcol]]), HEADLINE_SENS)
+    if (is.null(op)) next
+    ext_op[[paste(vid, mod, sep = "-")]] <- cbind(variant = vid, model = mod,
+                                                   cohort = "eICU", op)
+    res <- tryCatch(patient_level_metrics(ext, pcol, op$threshold),
+                    error = function(e) NULL)
+    if (!is.null(res))
+      ext_pat[[paste(vid, mod, sep = "-")]] <-
+        cbind(variant = vid, model = mod, cohort = "eICU",
+              target_sens = HEADLINE_SENS, res$summary)
+  }
+  rm(ext); gc(verbose = FALSE)
+}
+
+ext_op_dt  <- rbindlist(ext_op,  fill = TRUE)
+ext_pat_dt <- rbindlist(ext_pat, fill = TRUE)
+
+if (nrow(ext_op_dt) > 0) {
+  save_parquet(ext_op_dt,  "11_external_operating_points", DATA_DIR)
+  save_csv(ext_op_dt,      "11_external_operating_points", DATA_DIR)
+  knitr::kable(
+    ext_op_dt[model %in% PLOT_MODELS][order(variant, model),
+      .(variant, model = MODEL_LABELS[model],
+        Threshold = signif(threshold, 3), Sens = round(sensitivity, 3),
+        PPV = signif(ppv, 4), NNE = round(nne, 0),
+        `FA/pt-day` = round(fa_per_patient_day, 2))],
+    caption = sprintf(paste("eICU-CRD operating characteristics at the same",
+                            "%.0f%% target sensitivity (thresholds re-derived",
+                            "on the external cohort)."), HEADLINE_SENS * 100))
+}
+
+if (nrow(ext_pat_dt) > 0) {
+  save_parquet(ext_pat_dt, "11_external_patient_level", DATA_DIR)
+  save_csv(ext_pat_dt,     "11_external_patient_level", DATA_DIR)
+  knitr::kable(
+    ext_pat_dt[model %in% PLOT_MODELS][order(variant, model),
+      .(variant, model = MODEL_LABELS[model], n_sepsis_stays,
+        `Episode sens (6h)` = round(episode_sens_window, 3),
+        `Episode sens (any pre)` = round(episode_sens_pre, 3),
+        `Patient PPV` = signif(patient_ppv, 3),
+        `FA episodes/pt-day` = round(fa_episodes_per_pt_day, 2))],
+    caption = "eICU-CRD per-patient detection at the external operating point.")
+}
+```
+
+## Cross-Check Against Notebook 07
+
+The net-benefit computation here is implemented directly from the
+Vickers--Elkin formula rather than through `dcurves`. The two are compared at
+the thresholds they have in common, as a correctness check.
+
+```{r crosscheck}
+chk_rows <- list()
+for (vid in variants) {
+  f <- file.path(DATA_DIR, paste0("07_dca_", vid, ".parquet"))
+  if (!file.exists(f)) next
+  old <- as.data.table(arrow::read_parquet(f))
+  old <- old[variable %in% c("pred_sepsis", "pred_gbt")]
+  if (nrow(old) == 0) next
+  old[, model := ifelse(variable == "pred_sepsis", "primary", "gbt")]
+
+  new <- nb_dt[variant == vid & model %in% c("primary", "gbt")]
+  if (nrow(new) == 0) next
+
+  for (m in unique(old$model)) {
+    # NB: the 07 DCA table carries a column literally called `n`, so local
+    # objects here are named to avoid colliding with it inside `[.data.table`.
+    o_dt   <- old[model == m]
+    new_dt <- new[model == m]
+    thr_new <- new_dt$threshold
+    thr_lo  <- min(thr_new); thr_hi <- max(thr_new)
+    # nearest new threshold to each old threshold within the shared range
+    o_dt <- o_dt[threshold <= thr_hi & threshold >= thr_lo]
+    if (nrow(o_dt) == 0) next
+    idx <- vapply(o_dt$threshold, function(t) which.min(abs(thr_new - t)),
+                  integer(1))
+    chk_rows[[paste(vid, m)]] <- data.table(
+      variant = vid, model = m, n_compared = nrow(o_dt),
+      max_abs_diff = signif(max(abs(o_dt$net_benefit -
+                                      new_dt$net_benefit[idx])), 3))
+  }
+}
+
+if (length(chk_rows) > 0) {
+  knitr::kable(rbindlist(chk_rows),
+    caption = paste("Agreement between the dcurves output stored by notebook",
+                    "07 and the net benefit recomputed here, over the shared",
+                    "threshold range. Differences reflect only the threshold",
+                    "grid offset, not a difference in definition."))
+} else {
+  cat("No overlapping threshold range between the 07 grid (0.01-0.20) and the",
+      "prevalence-scaled grid used here; nothing to cross-check.\n")
+}
+```
+
+## Summary
+
+```{r summary-out}
+cat("Artefacts written to", DATA_DIR, ":\n")
+for (f in c("11_calibration_summary", "11_net_benefit", "11_operating_points",
+            "11_patient_level_metrics", "11_hour_vs_patient",
+            "11_lead_time_summary", "11_external_operating_points",
+            "11_external_patient_level")) {
+  p <- file.path(DATA_DIR, paste0(f, ".parquet"))
+  if (file.exists(p)) cat("  -", basename(p), "\n")
+}
+cat("\nFigures written to", FIGURES_DIR, ":\n")
+for (f in c("11_calibration_curves.png", "11_decision_curves.png",
+            "11_false_alarms_vs_sensitivity.png",
+            "11_lead_time_distribution.png")) {
+  p <- file.path(FIGURES_DIR, f)
+  if (file.exists(p)) cat("  -", f, "\n")
+}
+```
