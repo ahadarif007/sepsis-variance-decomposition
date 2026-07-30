@@ -400,7 +400,7 @@ The percentage of patients labelled as septic changed by **7.4–14.2 percentage
 definitions within demographic subgroups.
 
 - The **Unknown/Unable-to-obtain** race groups showed the largest changes (12.3–12.8 pp).
-- This is the first study to examine both model performance disparities and label sensitivity across subgroups [13].
+- To the best of our knowledge, this is the first study to examine both model performance disparities and label sensitivity across subgroups [13].
 
 **The patients identified as septic can change depending on how the label is defined. This creates a potential fairness
 issue because the label itself may affect different groups differently.**
@@ -433,7 +433,7 @@ required.
 | C3 | Confirmed that all models had negative Utility Scores, extending the findings of Wang et al. [4].                                   |
 | C4 | Found that 10 clinical features changed their effects across different label definitions, supporting Lauritsen et al. [11].         |
 | C5 | Quantified split optimism: random splits inflated AUROC by 0.123 compared to temporal splits, confirming Guo et al. [6].           |
-| C6 | First study to examine how different sepsis label definitions affect racial subgroup analysis [13].                                 |
+| C6 | To our knowledge, the first study to examine how different sepsis label definitions affect racial subgroup analysis [13].            |
 | C7 | Used a pre-registered, TRIPOD+AI-compliant, fully reproducible research pipeline [9].                                               |
 
 ---
