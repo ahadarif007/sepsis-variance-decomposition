@@ -14,7 +14,13 @@
 #   6: External validation      (08_external_validation.Rmd)
 #   7: Variance decomp + equity (09_variance_decomposition.Rmd + 10_equity_analysis.Rmd)
 #   8: Clinical utility metrics (11_clinical_metrics.Rmd)
+#   9: Inference + multiplicity  (12_inference.Rmd)
 #   all: run all phases sequentially
+#
+# Phase 9 attaches cluster-bootstrap intervals to every point estimate and
+# applies the multiplicity corrections described in 00_preregistration.md §13.
+# It reads only the parquet outputs of earlier phases, so it can be re-run on
+# its own. Set V2_BOOT_B=50 for a fast smoke test (results are not reportable).
 
 suppressPackageStartupMessages({
   library(data.table)
@@ -78,7 +84,8 @@ run_phase <- function(phase_num) {
     `5` = "07_metrics_suite.Rmd",
     `6` = "08_external_validation.Rmd",
     `7` = c("09_variance_decomposition.Rmd", "10_equity_analysis.Rmd"),
-    `8` = "11_clinical_metrics.Rmd"
+    `8` = "11_clinical_metrics.Rmd",
+    `9` = "12_inference.Rmd"
   )
 
   scripts <- phase_scripts[[as.character(phase_num)]]
@@ -103,7 +110,7 @@ if (file.exists(prereg_path)) {
 
 # Run requested phases
 if (requested_phase == "all") {
-  for (ph in 1:8) run_phase(ph)
+  for (ph in 1:9) run_phase(ph)
 } else {
   run_phase(as.integer(requested_phase))
 }

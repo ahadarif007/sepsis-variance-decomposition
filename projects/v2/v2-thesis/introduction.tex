@@ -110,6 +110,13 @@ H1 and H6 are in deliberate tension: if H1 is confirmed, the label is the main
 source of variation; if H6 is rejected, the model also matters. Both outcomes
 are informative.
 
+These six form a single confirmatory family and are tested with
+Holm--Bonferroni control of the family-wise error rate. Every other analysis in
+this thesis, including the entire equity analysis, is exploratory and is
+reported with cluster-bootstrap intervals and Benjamini--Hochberg
+false-discovery control. Section~\ref{sec:inference} sets out the plan and
+states plainly that it was written after the analyses had been run.
+
 
 \section{Contributions}
 \label{sec:contrib}
@@ -130,9 +137,10 @@ are informative.
     \cite{wang2025srpm} meta-analytic finding to a controlled single-study
     comparison.
 
-    \item \textbf{C4 (Coefficient instability).} Ten clinical features change sign
-    or magnitude across label variants, validating Lauritsen et al.'s
-    \cite{lauritsen2021framing} framing-instability finding on MIMIC-IV.
+    \item \textbf{C4 (Coefficient instability).} Ten of the twenty shared
+    clinical covariates reverse sign across label variants, and eighteen either
+    reverse sign or change magnitude at least twofold, validating Lauritsen et
+    al.'s \cite{lauritsen2021framing} framing-instability finding on MIMIC-IV.
 
     \item \textbf{C5 (Equity-by-label analysis).} To the best of our knowledge,
     the first study to examine both model performance disparities and label

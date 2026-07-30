@@ -347,10 +347,112 @@ label variant is evaluated separately; an underpowered variant is a finding,
 not a failure.
 
 
+\section{Statistical Inference and Multiplicity}
+\label{sec:inference}
+
+\subsection{Uncertainty: the Stay-Level Cluster Bootstrap}
+
+Person-hours are nested within ICU stays: a single stay contributes on average
+about 45 highly correlated hourly rows. Treating those rows as independent
+would produce standard errors several times too small. Every interval in this
+thesis therefore comes from a \textbf{stay-level cluster bootstrap}, in which
+whole ICU stays are drawn with replacement and all person-hours belonging to a
+drawn stay are carried with it. Intervals are 95\% percentile intervals from
+$B = 2{,}000$ replicates for internal and subgroup analyses and $B = 1{,}000$
+for eICU-CRD, which contains 7.9 million person-hours. The seed is fixed at 42.
+
+Contrasts between quantities measured on the \emph{same} person-hours are
+evaluated within replicate, so the interval accounts for their correlation.
+This applies to the label-variant comparison (all three variants are built on
+the same test stays) and to the model-class comparison (all models score the
+same hours). Contrasts across \emph{different} evaluation sets --- temporal
+versus random split, and MIMIC-IV versus eICU-CRD --- use independent bootstrap
+streams and propagate both variances.
+
+For subgroup analyses the bootstrap is stratified: stays are resampled within
+each subgroup so the observed subgroup sizes are held fixed. The subgroups are
+the object of study, not a random draw from a larger frame.
+
+P-values are obtained by recentring the bootstrap distribution on the null
+boundary and reading off the tail area, using the $(1 + \text{count})/(B + 1)$
+convention so that no p-value is reported as exactly zero. The smallest
+reportable p-value is therefore $1/(B+1)$.
+
+\subsection{Confirmatory and Exploratory Families}
+
+The six pre-registered hypotheses form a single \textbf{confirmatory} family
+and are corrected by Holm--Bonferroni at a family-wise error rate of 0.05. The
+family size is fixed at $m = 6$: the number of hypotheses that were
+pre-registered, not the number that turned out to be testable. H2 and H3 each
+reserve a slot without contributing a p-value (Section~\ref{sec:decomposition}
+explains why neither admits one), which is deliberately conservative. A
+hypothesis becoming untestable after the data were seen must not be allowed to
+relax the correction applied to the others.
+
+All subgroup analyses are \textbf{exploratory}. The pre-registration fixed
+their \emph{scope} --- that race, language and insurance would be examined ---
+but not the subgroup levels, the reference level, or the direction of any
+comparison. They are corrected by Benjamini--Hochberg at $q = 0.05$ within two
+families: E1, all subgroup AUROC contrasts against the reference level across
+every equity variable and both models; and E2, all subgroup
+label-sensitivity contrasts. The correction denominator is the number of
+contrasts \emph{computed}, not the smaller number selected for presentation in
+Chapter~\ref{ch:evaluation}. Bonferroni-adjusted p-values are also reported so
+that a reader preferring family-wise control over false-discovery control can
+substitute them.
+
+The two procedures differ by design. A confirmatory claim must survive
+family-wise control, because one false confirmation invalidates the claim. An
+exploratory scan exists to generate hypotheses and needs only its
+false-discovery proportion bounded; applying family-wise control to it would
+suppress every signal the scan is meant to surface.
+
+Each subgroup is contrasted against the largest level of its own variable. The
+reference is chosen by sample size alone, never by outcome. A subgroup is
+reported only if it has at least 50 person-hours and at least 5 sepsis onsets;
+below that floor an AUROC is not estimable and the subgroup is listed as such
+rather than shown as a point estimate.
+
+\subsection{Analysis Status Tagging}
+
+Every result in Chapter~\ref{ch:evaluation} carries an explicit status tag
+rather than relying on a single blanket statement in this chapter:
+
+\begin{itemize}
+    \item \textbf{Confirmatory} --- estimand, threshold and direction were
+          fixed in \texttt{00\_preregistration.md} before any modelling.
+    \item \textbf{Exploratory} --- pre-registered in scope but not in specific
+          contrasts. Generates hypotheses; does not test them.
+    \item \textbf{Descriptive} --- no inferential claim is attached.
+\end{itemize}
+
+The tags are held in a machine-readable analysis register
+(\texttt{12\_analysis\_register.parquet}) produced by the pipeline, and are
+reproduced in Table~\ref{tab:register}.
+
+\subsection{Status of the Inference Plan Itself}
+
+This inference and multiplicity plan is \textbf{Protocol Amendment 1}, dated
+30 July 2026 and recorded as \S13--15 of
+\texttt{00\_preregistration.md}. It was written \emph{after} the analyses of
+Chapter~\ref{ch:evaluation} had been run and inspected, and it is therefore
+itself post-hoc. It is reported as such rather than presented as
+pre-specification.
+
+The amendment changes no hypothesis, estimand, threshold, direction, subgroup
+or model. It attaches uncertainty to contrasts that were already pre-specified
+and imposes the multiplicity control the original protocol omitted. Where the
+correction changes a verdict recorded in the original protocol, the corrected
+verdict is the one reported, and the change is stated explicitly.
+
+
 \section{Pre-Registration and Reporting}
 
 The full protocol was locked before any data extraction. All six hypotheses,
 label variants, model classes, splits, metrics, and decision thresholds are
 specified in \texttt{00\_preregistration.md}. Any analysis not specified there
-is labelled as exploratory. The pipeline is released under a permissive
+is labelled as exploratory, and, following
+Section~\ref{sec:inference}, each individual result carries its status tag in
+the results table itself rather than inheriting it from this statement alone.
+The pipeline is released under a permissive
 open-source licence following TRIPOD+AI \cite{collins2024tripodai}.

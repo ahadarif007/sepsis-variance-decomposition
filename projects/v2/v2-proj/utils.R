@@ -68,6 +68,169 @@ save_csv <- function(df, name, out_dir) {
 }
 
 # --------------------------------------------------------------------------- #
+# Weighted discrimination metrics
+#
+# Person-hours are clustered within ICU stays, so all uncertainty in this
+# pipeline comes from a *stay-level* (cluster) bootstrap. Rather than
+# materialising a resampled table on every replicate, each replicate is encoded
+# as an integer weight per stay: w_s = number of times stay s was drawn. AUROC
+# and AUPRC are then evaluated as weighted rank statistics in O(n) using
+# pre-sorted data, which makes 2,000 replicates on ~5x10^5 rows tractable.
+# --------------------------------------------------------------------------- #
+
+#' Pre-sort a (prediction, outcome, cluster) triple for weighted AUC evaluation
+#'
+#' @param pred numeric vector of risk scores
+#' @param y integer 0/1 outcome
+#' @param stay_idx integer index (1..n_stays) identifying the cluster of each row
+#' @param n_stays total number of clusters in the resampling frame
+#' @return list consumed by boot_auroc_w() / boot_auprc_w()
+auc_precompute <- function(pred, y, stay_idx, n_stays) {
+  keep <- !is.na(pred) & !is.na(y)
+  pred <- as.numeric(pred[keep]); y <- as.integer(y[keep]); stay_idx <- as.integer(stay_idx[keep])
+  if (length(pred) == 0L) return(NULL)
+  ord <- order(pred)                       # ascending; ties adjacent
+  p_o <- pred[ord]
+  # last row index of each tie group (groups are contiguous once sorted)
+  grp_end <- which(c(p_o[-1] != p_o[-length(p_o)], TRUE))
+  list(
+    y        = y[ord],
+    stay_idx = stay_idx[ord],
+    grp_end  = grp_end,
+    n        = length(p_o),
+    n_stays  = as.integer(n_stays)
+  )
+}
+
+# Collapse weighted positive/negative mass to tie groups (ascending score order)
+.grp_mass <- function(pre, w_stay) {
+  w  <- w_stay[pre$stay_idx]
+  wy <- w * pre$y
+  cy <- cumsum(wy)[pre$grp_end]
+  cn <- cumsum(w - wy)[pre$grp_end]
+  list(sy = diff(c(0, cy)), sn = diff(c(0, cn)))
+}
+
+#' Weighted AUROC (Mann-Whitney form, mid-rank tie handling)
+boot_auroc_w <- function(pre, w_stay) {
+  if (is.null(pre)) return(NA_real_)
+  m <- .grp_mass(pre, w_stay)
+  tot_p <- sum(m$sy); tot_n <- sum(m$sn)
+  if (tot_p == 0 || tot_n == 0) return(NA_real_)
+  neg_less <- c(0, cumsum(m$sn)[-length(m$sn)])
+  sum(m$sy * (neg_less + 0.5 * m$sn)) / (tot_p * tot_n)
+}
+
+#' Weighted AUPRC (trapezoidal integration of the PR curve, as PRROC auc.integral)
+boot_auprc_w <- function(pre, w_stay) {
+  if (is.null(pre)) return(NA_real_)
+  m <- .grp_mass(pre, w_stay)
+  tot_p <- sum(m$sy); tot_n <- sum(m$sn)
+  if (tot_p == 0 || tot_n == 0) return(NA_real_)
+  # sweep the threshold from the highest score downwards
+  sy <- rev(m$sy); sn <- rev(m$sn)
+  tp <- cumsum(sy); fp <- cumsum(sn)
+  rec  <- tp / tot_p
+  prec <- tp / (tp + fp)
+  keep <- tp > 0
+  if (!any(keep)) return(0)
+  rec <- c(0, rec[keep]); prec <- c(prec[keep][1], prec[keep])
+  sum(diff(rec) * (head(prec, -1) + tail(prec, -1)) / 2)
+}
+
+#' Unweighted convenience wrappers (weights all one)
+auroc_point <- function(pred, y) {
+  pre <- auc_precompute(pred, y, rep(1L, length(pred)), 1L)
+  boot_auroc_w(pre, 1)
+}
+auprc_point <- function(pred, y) {
+  pre <- auc_precompute(pred, y, rep(1L, length(pred)), 1L)
+  boot_auprc_w(pre, 1)
+}
+
+# --------------------------------------------------------------------------- #
+# Cluster bootstrap machinery
+# --------------------------------------------------------------------------- #
+
+#' Run a stay-level cluster bootstrap
+#'
+#' Replicate weight vectors are generated one at a time rather than stored, so
+#' memory stays flat regardless of B.
+#'
+#' @param n_stays number of clusters in the resampling frame
+#' @param B number of replicates
+#' @param FUN function of the weight vector returning a fixed-length numeric
+#'   vector of statistics
+#' @param strata optional vector (length n_stays). When given, stays are
+#'   resampled *within* stratum so that stratum sizes are held fixed; this is
+#'   the appropriate design for subgroup analyses, where the subgroup sizes are
+#'   part of the estimand rather than a random quantity.
+#' @param seed RNG seed
+#' @param progress_every emit a progress line every N replicates (0 = silent)
+#' @return matrix, B x length(FUN(...)), of bootstrap statistics
+boot_run <- function(n_stays, B, FUN, strata = NULL, seed = 42L, progress_every = 0L) {
+  set.seed(seed)
+  groups <- if (is.null(strata)) list(seq_len(n_stays)) else
+    unname(split(seq_len(n_stays), strata))
+  gsize <- vapply(groups, length, integer(1))
+  out <- NULL
+  for (b in seq_len(B)) {
+    w <- integer(n_stays)
+    for (gi in seq_along(groups)) {
+      ng <- gsize[gi]
+      w[groups[[gi]]] <- tabulate(sample.int(ng, ng, replace = TRUE), nbins = ng)
+    }
+    val <- FUN(w)
+    if (is.null(out)) out <- matrix(NA_real_, nrow = B, ncol = length(val),
+                                    dimnames = list(NULL, names(val)))
+    out[b, ] <- val
+    if (progress_every > 0L && b %% progress_every == 0L)
+      v2_log(sprintf("  bootstrap %d/%d", b, B))
+  }
+  out
+}
+
+#' Percentile bootstrap confidence interval
+perc_ci <- function(theta_star, level = 0.95) {
+  ts <- theta_star[is.finite(theta_star)]
+  if (length(ts) < 10) return(c(lo = NA_real_, hi = NA_real_))
+  a <- (1 - level) / 2
+  q <- unname(stats::quantile(ts, c(a, 1 - a), na.rm = TRUE))
+  c(lo = q[1], hi = q[2])
+}
+
+#' Bootstrap p-value obtained by inverting the percentile interval
+#'
+#' Tests H0: theta <= theta_0 (side = "greater"), H0: theta >= theta_0
+#' (side = "less"), or H0: theta == theta_0 (side = "two.sided"). The bootstrap
+#' distribution is recentred on the null boundary before the tail area is read
+#' off, and the (1 + count)/(B + 1) convention keeps the p-value strictly
+#' positive.
+boot_pvalue <- function(theta_star, theta_hat, theta_0 = 0, side = c("two.sided", "greater", "less")) {
+  side <- match.arg(side)
+  ts <- theta_star[is.finite(theta_star)]
+  B  <- length(ts)
+  if (B < 10 || !is.finite(theta_hat)) return(NA_real_)
+  t_centred <- ts - theta_hat          # approximates theta_hat - theta under H0
+  d <- theta_hat - theta_0
+  switch(side,
+    greater   = (1 + sum(t_centred >=  d)) / (B + 1),
+    less      = (1 + sum(t_centred <=  d)) / (B + 1),
+    two.sided = min(1, 2 * min((1 + sum(t_centred >=  abs(d))) / (B + 1),
+                               (1 + sum(t_centred <= -abs(d))) / (B + 1)))
+  )
+}
+
+#' Exact one-sided upper bound on a binomial rate when zero events are observed
+#'
+#' Rule-of-three style Clopper-Pearson bound; used where a hypothesis becomes
+#' untestable because the outcome is entirely absent from the evaluation window.
+zero_event_upper <- function(n, level = 0.95) {
+  if (n <= 0) return(NA_real_)
+  1 - (1 - level)^(1 / n)
+}
+
+# --------------------------------------------------------------------------- #
 # Antibiotic matching
 # --------------------------------------------------------------------------- #
 match_antibiotics <- function(drug_vec, abx_list) {

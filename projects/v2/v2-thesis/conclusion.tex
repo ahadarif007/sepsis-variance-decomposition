@@ -12,44 +12,53 @@ The answer is clear: the researcher's choices matter as much as the model, and
 the sepsis label itself has a fundamental problem: it contains no signal that
 is independent of clinical action.
 
-\paragraph{H1 (Label dominance): Confirmed.}
+\paragraph{H1 (Label dominance): Not confirmed under correction.}
 Changing the sepsis definition (while keeping the model fixed) changes AUROC by
-0.153. Changing the model (while keeping the label fixed) changes AUROC by
-0.140. Both are large relative to typical performance differences reported in
-the literature. Cohen et al.'s \cite{cohen2024subtle} MIMIC-III finding is
-confirmed on MIMIC-IV.
+0.153 (95\% CI 0.136--0.177). Changing the model (while keeping the label
+fixed) changes AUROC by 0.145 (95\% CI 0.133--0.165). Both are large relative
+to typical performance differences reported in the literature, but the margin
+between them is 0.007 (95\% CI $-0.020$--$0.030$, $p = 0.31$, Holm-adjusted
+$p = 0.93$), so the label cannot be shown to dominate the model. Cohen et al.'s
+\cite{cohen2024subtle} MIMIC-III finding is supported on MIMIC-IV in its weaker
+form: label choice contributes variance comparable to model choice.
 
-\paragraph{H2 (Coefficient instability): Confirmed.}
-Ten of 25 features, including MAP, temperature, bilirubin, platelet count,
-and vasopressor indicators, change sign or magnitude across label variants.
+\paragraph{H2 (Coefficient instability): Confirmed, descriptively.}
+Ten of the 20 shared covariates, including MAP, temperature, bilirubin,
+platelet count, and vasopressor indicators, reverse sign across label variants;
+18 reverse sign or change magnitude at least twofold. H2 is a stability
+criterion rather than a contrast, so no test statistic is defined for it.
 Published hazard ratios from MIMIC-IV sepsis models are not interpretable
 without knowing which label definition was used.
 
 \paragraph{H3 (Treatment leakage): Structural finding.}
 The pre-treatment window contains zero sepsis onset events across 179,003
-person-hours. The Sepsis-3 label on MIMIC-IV does not contain any event that
+person-hours (exact one-sided 95\% upper bound on the per-hour onset rate:
+$1.7\times10^{-5}$). The Sepsis-3 label on MIMIC-IV does not contain any event that
 occurs before the clinical action that defines it. Every published MIMIC-IV
 real-time sepsis model measures the ability to predict clinician suspicion, not
 physiological deterioration.
 
 \paragraph{H4 (Split optimism): Confirmed.}
-The random split inflates AUROC by 0.123 compared to the temporal split for the
-primary model (0.730 vs.\ 0.607), far exceeding the 0.02 threshold. Studies
+The random split inflates AUROC by 0.123 (95\% CI 0.100--0.147) compared to the
+temporal split for the primary model (0.730 vs.\ 0.607), far exceeding the 0.02
+threshold (Holm-adjusted $p = 0.003$). Studies
 using random splits substantially overestimate real-world performance.
 
 \paragraph{H5 (Metric divergence): Confirmed.}
 The Utility Score is negative for every model and every label variant in the
 temporal test set. The utility collapse documented by Wang et al.\
 \cite{wang2025srpm} across ninety-one models appears \textit{internally}
-on MIMIC-IV under an honest time-based split. Alert burdens range from 91 to
-over 340 false alerts per true alert (benchmark: 1.4, Moor et al.\
-\cite{moor2023review}).
+on MIMIC-IV under an honest time-based split. External AUROC falls by 0.170
+(95\% CI 0.102--0.242, Holm-adjusted $p = 0.004$) to 0.436, an interval whose
+upper limit reaches chance. Alert burdens range from 93 to over 340 false
+alerts per true alert (benchmark: 1.4, Moor et al.\ \cite{moor2023review}).
 
 \paragraph{H6 (Model-class null): Rejected.}
-GBT outperforms the primary model by 0.133 AUROC (0.740 vs.\ 0.607). But the
-clinical ordering reverses: the primary model has a less negative Utility Score
-($-1.004$ vs.\ $-5.112$). The ``better'' model by AUROC produces more harmful
-alerts.
+GBT outperforms the primary model by 0.139 AUROC (0.746 vs.\ 0.607), 95\% CI
+0.117--0.160, entirely above the 0.02 equivalence bound (Holm-adjusted
+$p = 0.003$). But the clinical ordering reverses: the primary model has a less
+negative Utility Score ($-1.004$ vs.\ $-4.849$). The ``better'' model by AUROC
+produces more harmful alerts.
 
 
 \section{The Central Lesson}
@@ -88,13 +97,18 @@ supposed to predict ahead of. The solution requires changing the label.
     and label variant, extending Wang et al.'s \cite{wang2025srpm}
     meta-analytic finding to a controlled single-study comparison.
 
-    \item \textbf{C4 (Coefficient instability):} Ten clinical features show sign
-    reversal or magnitude instability across labels, confirming Lauritsen et al.'s
+    \item \textbf{C4 (Coefficient instability):} Ten of the 20 shared covariates
+    reverse sign across labels and 18 reverse sign or change magnitude at least
+    twofold, confirming Lauritsen et al.'s
     \cite{lauritsen2021framing} framing-instability claim on MIMIC-IV.
 
     \item \textbf{C5 (Equity-by-label):} To the best of our knowledge, the first
     study combining subgroup performance disparities with subgroup label
-    sensitivity for any sepsis model.
+    sensitivity for any sepsis model, and the first to report both with
+    cluster-bootstrap intervals under false-discovery control. The
+    label-sensitivity disparity survives correction; the discrimination
+    disparity does not, and reporting the second without the first would have
+    inverted which finding is defensible.
 
     \item \textbf{C6 (Reproducible pipeline):} Fully open, pre-registered,
     TRIPOD+AI-conformant pipeline released under a permissive licence.

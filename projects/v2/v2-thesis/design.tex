@@ -212,10 +212,35 @@ language, and insurance. The combination of performance disparities and
 label-sensitivity variation is the novel finding.
 
 
+\section{Stage 11: Clinical Utility Metrics}
+
+\texttt{11\_clinical\_metrics.Rmd} computes flexible calibration curves,
+decision-curve net benefit, operating points at a fixed per-hour sensitivity,
+per-patient (event-level) detection and alarm-episode counts, and lead time
+to onset, for both MIMIC-IV and eICU-CRD.
+
+
+\section{Stage 12: Inference and Multiplicity}
+
+\texttt{12\_inference.Rmd} is the inference layer. It reads only the Parquet
+outputs of the earlier stages, so it can be re-run without refitting anything,
+and it produces three things: stay-level cluster-bootstrap confidence intervals
+for every headline and subgroup estimate; the Holm-corrected confirmatory tests
+of H1--H6 and the Benjamini--Hochberg-corrected exploratory subgroup families;
+and the machine-readable analysis register that supplies the status tags used
+throughout Chapter~\ref{ch:evaluation}. The bootstrap resamples ICU stays, never
+person-hours, and evaluates AUROC and AUPRC as weighted rank statistics on
+pre-sorted data so that 2,000 replicates over half a million person-hours
+remain tractable. Setting \texttt{V2\_BOOT\_B} overrides the replicate count
+for a fast smoke test; reported results always use the values fixed in
+\texttt{config.R}. The statistical rationale is given in
+Section~\ref{sec:inference}.
+
+
 \section{Reproducibility}
 
 The pipeline is orchestrated by \texttt{run\_pipeline.R}, which executes all
-ten stages sequentially or by phase. All intermediate outputs are Parquet
+stages sequentially or by phase. All intermediate outputs are Parquet
 (compressed, columnar). Small result tables ($<$1,000 rows) are CSV for
 readability. The full pipeline runs in approximately six hours on a machine with
 64\,GB RAM.

@@ -237,6 +237,33 @@ EXPECTED_EXTERNAL_DEGRADATION <- 0.085
 EQUITY_VARS <- c("race", "ethnicity", "language", "insurance")
 
 # --------------------------------------------------------------------------- #
+# Inference, uncertainty, and multiplicity control
+# (Protocol Amendment 1, 2026-07-30 — see 00_preregistration.md §13.
+#  Added after unblinding; the amendment itself is therefore not pre-specified.)
+# --------------------------------------------------------------------------- #
+
+# Stay-level (cluster) bootstrap: person-hours are nested within ICU stays, so
+# the resampling unit is the stay, never the row.
+BOOT_SEED        <- 42L
+BOOT_B_MAIN      <- 2000L   # internal contrasts (MIMIC-IV temporal test set)
+BOOT_B_SUBGROUP  <- 2000L   # subgroup / equity analyses
+BOOT_B_EXTERNAL  <- 1000L   # eICU-CRD (7.9M person-hours; fewer replicates)
+CI_LEVEL         <- 0.95
+
+# Confirmatory family: the six pre-registered hypotheses. Family size is fixed
+# at six even where a hypothesis yields no test statistic, so the correction is
+# never made less strict by a hypothesis turning out to be untestable.
+CONFIRMATORY_FAMILY_SIZE <- 6L
+FWER_ALPHA               <- 0.05   # Holm-Bonferroni across the confirmatory family
+FDR_Q                    <- 0.05   # Benjamini-Hochberg within each exploratory family
+
+# Subgroup analyses are exploratory. Each subgroup is contrasted against the
+# largest level of its own variable, which is chosen empirically and recorded.
+MIN_SUBGROUP_ROWS   <- 50L   # minimum person-hours to report a subgroup at all
+MIN_SUBGROUP_EVENTS <- 5L    # minimum sepsis onsets for an interpretable AUROC
+MAX_SUBGROUP_LEVELS <- 8L    # top-N levels per equity variable (matches 10_equity_analysis)
+
+# --------------------------------------------------------------------------- #
 # Sample size (Riley et al., 2019) — reference anticipated AUC
 # --------------------------------------------------------------------------- #
 ANTICIPATED_AUC <- 0.846  # Moor et al. (2023) internal AUC

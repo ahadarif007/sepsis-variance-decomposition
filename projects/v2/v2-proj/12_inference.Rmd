@@ -1,0 +1,845 @@
+---
+title: "12 Inference - Bootstrap Uncertainty, Multiplicity Control, and Analysis Status"
+author: "Abdul Ahad. Student ID: G00486649"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  bookdown::pdf_document2:
+    latex_engine: xelatex
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    fig_caption: true
+geometry: margin=2.3cm
+fontsize: 11pt
+header-includes:
+  - \usepackage{float}
+  - \usepackage{caption}
+  - \captionsetup[figure]{font=small}
+  - \captionsetup[table]{font=small}
+  - \renewcommand{\contentsname}{Table of Contents}
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+set.seed(42)
+
+knitr::opts_chunk$set(
+  echo = FALSE, message = FALSE, warning = FALSE,
+  fig.align = "center", fig.pos = "H",
+  out.width = "80%", fig.width = 6, fig.height = 3.6
+)
+```
+
+## Introduction
+
+Every result reported so far is a point estimate. This notebook attaches
+uncertainty to those estimates and controls the error rate incurred by testing
+many of them at once. Three things are produced:
+
+1. **Cluster-bootstrap confidence intervals** for every headline and subgroup
+   estimate. Person-hours are nested within ICU stays, so the resampling unit
+   is the stay: naive row-level intervals would be far too narrow.
+
+2. **Multiplicity control.** The six pre-registered hypotheses form a
+   *confirmatory* family and are corrected by Holm--Bonferroni at
+   $\alpha = 0.05$ (FWER). All subgroup analyses form *exploratory* families
+   and are corrected by Benjamini--Hochberg at $q = 0.05$ (FDR). The two
+   procedures are deliberately different: a confirmatory claim must survive
+   strict family-wise control, whereas an exploratory scan is intended to
+   generate hypotheses and only needs its false-discovery proportion bounded.
+
+3. **An analysis register** tagging every reported analysis as confirmatory,
+   exploratory, or descriptive, with the pre-registration clause that licenses
+   it. The register is written to disk so the thesis tables can carry the tag
+   in the table itself rather than relying on a blanket methodological
+   statement.
+
+**Status of this notebook.** The uncertainty and multiplicity plan is
+*Protocol Amendment 1* (`00_preregistration.md` §13), written after the
+analyses in notebooks 02--11 had been run. The amendment is therefore itself
+post-hoc. It does not change any hypothesis, threshold, or estimand; it only
+attaches uncertainty to contrasts that were pre-specified and imposes a
+correction that the original protocol omitted. Where a correction changes a
+verdict, that is reported as the corrected verdict.
+
+```{r load-deps}
+suppressPackageStartupMessages({
+  library(data.table)
+  library(arrow)
+  library(ggplot2)
+  library(dplyr)
+})
+
+source("config.R")
+source("utils.R")
+
+step("=== Phase 9: Inference, uncertainty, and multiplicity ===")
+
+# Smoke-test override: V2_BOOT_B=50 runs the whole notebook end to end in
+# seconds. Reported results always use the values fixed in config.R.
+.b_override <- suppressWarnings(as.integer(Sys.getenv("V2_BOOT_B", "")))
+if (!is.na(.b_override) && .b_override > 0) {
+  BOOT_B_MAIN <- BOOT_B_SUBGROUP <- BOOT_B_EXTERNAL <- .b_override
+  v2_log(sprintf("V2_BOOT_B override active: B = %d (smoke test, not for reporting)",
+                 .b_override), level = "WARN")
+}
+
+v2_log(sprintf("Bootstrap replicates: main=%d, subgroup=%d, external=%d (seed %d)",
+               BOOT_B_MAIN, BOOT_B_SUBGROUP, BOOT_B_EXTERNAL, BOOT_SEED))
+
+MODELS <- c(primary = "pred_sepsis", gbt = "pred_gbt", news2 = "pred_news2",
+            cox = "pred_cox", qsofa = "pred_qsofa", sirs = "pred_sirs")
+
+fmt_ci <- function(lo, hi, digits = 3)
+  sprintf("[%.*f, %.*f]", digits, lo, digits, hi)
+```
+
+## Data Assembly
+
+The temporal test predictions for each label variant are joined to the
+comparator predictions and to stay-level demographics. Rows are ordered by
+`stay_id` so that a stay maps to a contiguous block, and each stay is given an
+index into a **common resampling frame** shared by variants A, B and C. Because
+all three variants are built on the same 12,132 test stays, one replicate draw
+can be applied to all three simultaneously, which makes the label-variant
+contrast in H1 a *paired* comparison.
+
+```{r assemble}
+load_test_table <- function(vid) {
+  prim <- file.path(DATA_DIR, sprintf("05_predictions_primary_%s.parquet", vid))
+  comp <- file.path(DATA_DIR, sprintf("06_predictions_comparators_%s.parquet", vid))
+  if (!file.exists(prim)) return(NULL)
+
+  dt <- as.data.table(read_parquet(prim))
+  if (file.exists(comp)) {
+    cp <- as.data.table(read_parquet(comp))
+    keep <- intersect(c("pred_gbt", "pred_news2", "pred_cox", "pred_qsofa", "pred_sirs"),
+                      names(cp))
+    dt <- merge(dt, cp[, c("stay_id", "hour", keep), with = FALSE],
+                by = c("stay_id", "hour"), all.x = TRUE)
+  }
+
+  demo_path <- file.path(DATA_DIR, sprintf("03_person_hours_%s.parquet", vid))
+  if (file.exists(demo_path)) {
+    demo <- unique(as.data.table(read_parquet(
+      demo_path, col_select = c("stay_id", EQUITY_VARS[EQUITY_VARS != "ethnicity"]))))
+    dt <- merge(dt, demo, by = "stay_id", all.x = TRUE)
+  }
+
+  dt[, y := as.integer(event == 1)]
+  setorder(dt, stay_id, hour)
+  dt[]
+}
+
+test_tab <- lapply(c(A = "A", B = "B", C = "C"), load_test_table)
+test_tab <- Filter(Negate(is.null), test_tab)
+
+# Common stay frame across variants (all variants share the same test stays)
+stay_frame <- sort(Reduce(intersect, lapply(test_tab, function(d) unique(d$stay_id))))
+N_STAYS    <- length(stay_frame)
+for (v in names(test_tab)) test_tab[[v]][, sidx := match(stay_id, stay_frame)]
+
+cat(sprintf("Common test-stay resampling frame: %d stays\n", N_STAYS))
+for (v in names(test_tab))
+  cat(sprintf("  Variant %s: %s person-hours, %d sepsis onsets\n",
+              v, format(nrow(test_tab[[v]]), big.mark = ","), sum(test_tab[[v]]$y)))
+```
+
+## Internal Performance with Confidence Intervals
+
+AUROC and AUPRC for every model on the Variant B temporal test set, with
+percentile intervals from `r format(BOOT_B_MAIN, big.mark=",")` stay-level
+bootstrap replicates. A single replicate is shared across all six models, so
+the intervals are mutually consistent and model-to-model differences can be
+read off the same replicates as paired contrasts.
+
+```{r main-ci}
+tb <- test_tab[["B"]]
+pre_B <- lapply(MODELS, function(m)
+  if (m %in% names(tb)) auc_precompute(tb[[m]], tb$y, tb$sidx, N_STAYS) else NULL)
+names(pre_B) <- names(MODELS)
+pre_B <- Filter(Negate(is.null), pre_B)
+
+stat_main <- function(w) {
+  c(vapply(pre_B, boot_auroc_w, numeric(1), w_stay = w),
+    vapply(pre_B, boot_auprc_w, numeric(1), w_stay = w)) |>
+    setNames(c(paste0("auroc_", names(pre_B)), paste0("auprc_", names(pre_B))))
+}
+
+t_start   <- proc.time()
+boot_main <- boot_run(N_STAYS, BOOT_B_MAIN, stat_main, seed = BOOT_SEED,
+                      progress_every = 500L)
+v2_log(sprintf("Main bootstrap: %.1f s", (proc.time() - t_start)["elapsed"]))
+
+ones <- rep(1L, N_STAYS)
+main_ci <- rbindlist(lapply(names(pre_B), function(m) {
+  a <- perc_ci(boot_main[, paste0("auroc_", m)], CI_LEVEL)
+  p <- perc_ci(boot_main[, paste0("auprc_", m)], CI_LEVEL)
+  data.table(model = m,
+             n_rows = pre_B[[m]]$n,
+             n_events = sum(tb$y),
+             auroc = boot_auroc_w(pre_B[[m]], ones), auroc_lo = a["lo"], auroc_hi = a["hi"],
+             auprc = boot_auprc_w(pre_B[[m]], ones), auprc_lo = p["lo"], auprc_hi = p["hi"])
+}))
+main_ci[, `:=`(auroc_ci = fmt_ci(auroc_lo, auroc_hi),
+               auprc_ci = fmt_ci(auprc_lo, auprc_hi, 4))]
+
+save_parquet(main_ci, "12_internal_ci", DATA_DIR)
+save_csv(main_ci, "12_internal_ci", DATA_DIR)
+
+knitr::kable(main_ci[, .(model, n_events, auroc = round(auroc, 4), auroc_ci,
+                          auprc = round(auprc, 5), auprc_ci)],
+             caption = "Internal temporal test performance with 95\\% stay-level cluster bootstrap intervals (Variant B)")
+```
+
+## Confirmatory Family: the Six Pre-Registered Hypotheses
+
+Each hypothesis is expressed as a single scalar contrast $\theta$ tested
+against its **pre-registered** threshold $\theta_0$. Because the protocol
+states each hypothesis directionally, the tests are one-sided. P-values are
+obtained by recentring the bootstrap distribution on the null boundary and
+reading off the tail area, with the $(1+\#)/(B+1)$ convention so that no
+p-value is reported as exactly zero.
+
+### Contrast Estimation
+
+```{r confirmatory-boot}
+# --- H1 / H6: label spread, model spread, and the primary-vs-GBT gap --------
+pre_label <- lapply(names(test_tab), function(v) {
+  d <- test_tab[[v]]
+  auc_precompute(d$pred_sepsis, d$y, d$sidx, N_STAYS)
+})
+names(pre_label) <- names(test_tab)
+
+stat_h1h6 <- function(w) {
+  lab <- vapply(pre_label, boot_auroc_w, numeric(1), w_stay = w)
+  mod <- vapply(pre_B,     boot_auroc_w, numeric(1), w_stay = w)
+  c(label_spread = diff(range(lab, na.rm = TRUE)),
+    model_spread = diff(range(mod, na.rm = TRUE)),
+    h1_delta     = diff(range(lab, na.rm = TRUE)) - diff(range(mod, na.rm = TRUE)),
+    h6_delta     = unname(mod["gbt"] - mod["primary"]))
+}
+
+t_start  <- proc.time()
+boot_h1  <- boot_run(N_STAYS, BOOT_B_MAIN, stat_h1h6, seed = BOOT_SEED + 1L,
+                     progress_every = 500L)
+v2_log(sprintf("H1/H6 bootstrap: %.1f s", (proc.time() - t_start)["elapsed"]))
+obs_h1h6 <- stat_h1h6(ones)
+```
+
+```{r confirmatory-h4}
+# --- H4: random-split optimism (independent test set, so an independent draw)
+rnd_prim <- file.path(DATA_DIR, "05_predictions_primary_random_B.parquet")
+boot_h4 <- NULL; obs_h4 <- NA_real_
+if (file.exists(rnd_prim)) {
+  rd <- as.data.table(read_parquet(rnd_prim))
+  rd[, y := as.integer(event == 1)]
+  setorder(rd, stay_id, hour)
+  rstays <- sort(unique(rd$stay_id)); rd[, sidx := match(stay_id, rstays)]
+  pre_rnd <- auc_precompute(rd$pred_sepsis, rd$y, rd$sidx, length(rstays))
+
+  b_rnd <- boot_run(length(rstays), BOOT_B_MAIN,
+                    function(w) c(auroc = boot_auroc_w(pre_rnd, w)),
+                    seed = BOOT_SEED + 2L, progress_every = 1000L)[, "auroc"]
+  b_tmp <- boot_run(N_STAYS, BOOT_B_MAIN,
+                    function(w) c(auroc = boot_auroc_w(pre_B$primary, w)),
+                    seed = BOOT_SEED + 3L, progress_every = 1000L)[, "auroc"]
+  # independent samples: pair the two bootstrap streams to propagate both variances
+  boot_h4 <- b_rnd - b_tmp
+  obs_h4  <- boot_auroc_w(pre_rnd, rep(1L, length(rstays))) -
+             boot_auroc_w(pre_B$primary, ones)
+  cat(sprintf("H4: random AUROC = %.4f, temporal AUROC = %.4f, delta = %.4f\n",
+              boot_auroc_w(pre_rnd, rep(1L, length(rstays))),
+              boot_auroc_w(pre_B$primary, ones), obs_h4))
+}
+```
+
+```{r confirmatory-h5}
+# --- H5: internal -> external degradation on eICU-CRD -----------------------
+eicu_path <- file.path(DATA_DIR, "08_eicu_predictions_B.parquet")
+boot_h5 <- NULL; obs_h5 <- NA_real_; ext_auroc <- NA_real_
+if (file.exists(eicu_path)) {
+  ed <- as.data.table(read_parquet(eicu_path))
+  ed[, y := as.integer(event == 1)]
+  setorder(ed, stay_id, hour)
+  estays <- sort(unique(ed$stay_id)); ed[, sidx := match(stay_id, estays)]
+  pre_ext <- auc_precompute(ed$pred_sepsis, ed$y, ed$sidx, length(estays))
+  ext_auroc <- boot_auroc_w(pre_ext, rep(1L, length(estays)))
+
+  t_start <- proc.time()
+  b_ext <- boot_run(length(estays), BOOT_B_EXTERNAL,
+                    function(w) c(auroc = boot_auroc_w(pre_ext, w)),
+                    seed = BOOT_SEED + 4L, progress_every = 250L)[, "auroc"]
+  v2_log(sprintf("External bootstrap: %.1f s", (proc.time() - t_start)["elapsed"]))
+  b_int <- boot_run(N_STAYS, BOOT_B_EXTERNAL,
+                    function(w) c(auroc = boot_auroc_w(pre_B$primary, w)),
+                    seed = BOOT_SEED + 5L, progress_every = 500L)[, "auroc"]
+
+  boot_h5 <- b_int - b_ext
+  obs_h5  <- boot_auroc_w(pre_B$primary, ones) - ext_auroc
+  ext_ci  <- perc_ci(b_ext, CI_LEVEL)
+  cat(sprintf("H5: internal AUROC = %.4f, external AUROC = %.4f %s, degradation = %.4f\n",
+              boot_auroc_w(pre_B$primary, ones), ext_auroc,
+              fmt_ci(ext_ci["lo"], ext_ci["hi"]), obs_h5))
+}
+```
+
+```{r confirmatory-h2h3}
+# --- H2: coefficient stability (descriptive; no test statistic) -------------
+# The primary model is a multinomial fit whose stored object carries no
+# Hessian, so no standard errors are available and refitting under a bootstrap
+# is not tractable at 2.3M training rows. H2 is therefore reported as a
+# descriptive stability count, and it still consumes a slot in the family size.
+coef_path <- file.path(DATA_DIR, "05_coef_all_variants.parquet")
+h2_sign <- NA_integer_; h2_mag <- NA_integer_; h2_any <- NA_integer_; h2_n_terms <- NA_integer_
+if (file.exists(coef_path)) {
+  ct <- as.data.table(read_parquet(coef_path))
+  cs <- ct[outcome == "sepsis" & !grepl("^ns\\(|^\\(Intercept\\)", as.character(term))]
+  terms_common <- Reduce(intersect, lapply(c("A", "B", "C"),
+                                            function(v) unique(as.character(cs[variant == v, term]))))
+  flags <- rbindlist(lapply(terms_common, function(tm) {
+    vals <- vapply(c("A", "B", "C"), function(v) {
+      r <- cs[variant == v & as.character(term) == tm, coef]
+      if (length(r) == 0) NA_real_ else as.numeric(r[1])
+    }, numeric(1))
+    vals <- vals[!is.na(vals)]
+    if (length(vals) < 2) return(data.table(term = tm, sign_flip = FALSE, mag_flip = FALSE))
+    mag <- abs(vals); mag <- mag[mag > 0]
+    data.table(term = tm,
+               sign_flip = diff(range(sign(vals))) != 0,
+               mag_flip  = length(mag) >= 2 && (max(mag) / min(mag)) >= 2)
+  }))
+  h2_sign    <- sum(flags$sign_flip)
+  h2_mag     <- sum(flags$mag_flip)
+  h2_any     <- sum(flags$sign_flip | flags$mag_flip)
+  h2_n_terms <- nrow(flags)
+  save_parquet(flags, "12_h2_coefficient_stability", DATA_DIR)
+  save_csv(flags,     "12_h2_coefficient_stability", DATA_DIR)
+  cat(sprintf("H2: of %d shared covariates, %d reverse sign, %d change magnitude >=2x, %d do either\n",
+              h2_n_terms, h2_sign, h2_mag, h2_any))
+}
+
+# --- H3: treatment-anchored window (degenerate; exact bound instead) --------
+mt <- as.data.table(read_parquet(file.path(DATA_DIR, "07_metric_results.parquet")))
+anch <- mt[eval_window == "treatment_anchored" & variant == "B" & model == "primary"]
+h3_n_hours  <- if (nrow(anch)) anch$n_rows[1] else NA_integer_
+h3_n_events <- if (nrow(anch)) anch$n_sepsis_events[1] else NA_integer_
+h3_upper    <- if (!is.na(h3_n_hours) && h3_n_events == 0) zero_event_upper(h3_n_hours, CI_LEVEL) else NA_real_
+if (!is.na(h3_upper))
+  cat(sprintf("H3: %d sepsis onsets in %s pre-treatment person-hours; exact 95%% upper bound on the per-hour onset rate = %.3g (1 in %s)\n",
+              h3_n_events, format(h3_n_hours, big.mark = ","), h3_upper,
+              format(round(1 / h3_upper), big.mark = ",")))
+```
+
+### Corrected Confirmatory Verdicts
+
+```{r confirmatory-table}
+mk <- function(id, label, contrast, theta, ci, null_txt, p, note = "") {
+  data.table(hypothesis = id, claim = label, contrast = contrast,
+             estimate = theta, ci_lo = ci[1], ci_hi = ci[2],
+             null_hypothesis = null_txt, p_raw = p, note = note)
+}
+
+rows <- list()
+
+# H1: theta = label spread - model spread; H0: theta <= 0
+ci_h1 <- perc_ci(boot_h1[, "h1_delta"], CI_LEVEL)
+p_h1  <- boot_pvalue(boot_h1[, "h1_delta"], obs_h1h6["h1_delta"], 0, "greater")
+rows[["H1"]] <- mk("H1", "Label dominance",
+                   "AUROC spread across label variants - spread across model classes",
+                   unname(obs_h1h6["h1_delta"]), ci_h1, "theta <= 0", p_h1,
+                   sprintf("label spread %.4f %s; model spread %.4f %s",
+                           obs_h1h6["label_spread"],
+                           do.call(fmt_ci, as.list(perc_ci(boot_h1[, "label_spread"], CI_LEVEL))),
+                           obs_h1h6["model_spread"],
+                           do.call(fmt_ci, as.list(perc_ci(boot_h1[, "model_spread"], CI_LEVEL)))))
+
+# H2: descriptive only
+rows[["H2"]] <- mk("H2", "Coefficient instability",
+                   "Covariates with sign reversal or >=2x magnitude change across variants",
+                   as.numeric(h2_any), c(NA_real_, NA_real_),
+                   "not testable (primary model carries no variance estimate)", NA_real_,
+                   sprintf("%d of %d covariates unstable (%d sign reversals, %d magnitude >=2x)",
+                           h2_any, h2_n_terms, h2_sign, h2_mag))
+
+# H3: degenerate; exact bound rather than a test
+rows[["H3"]] <- mk("H3", "Treatment leakage",
+                   "Sepsis onsets in the pre-treatment (treatment-anchored) window",
+                   as.numeric(h3_n_events), c(NA_real_, NA_real_),
+                   "not testable (outcome absent from the window)", NA_real_,
+                   sprintf("%d onsets in %s person-hours; exact 95%% upper bound on the per-hour onset rate = %.2e (1 in %s)",
+                           h3_n_events, format(h3_n_hours, big.mark = ","), h3_upper,
+                           format(round(1 / h3_upper), big.mark = ",")))
+
+# H4: theta = random - temporal AUROC; H0: theta <= 0.02
+if (!is.null(boot_h4)) {
+  ci_h4 <- perc_ci(boot_h4, CI_LEVEL)
+  p_h4  <- boot_pvalue(boot_h4, obs_h4, 0.02, "greater")
+  rows[["H4"]] <- mk("H4", "Split optimism",
+                     "Random-split AUROC - temporal-split AUROC (primary, Variant B)",
+                     obs_h4, ci_h4, "theta <= 0.02", p_h4,
+                     "independent test sets; both bootstrap streams propagated")
+}
+
+# H5: theta = internal - external AUROC; H0: theta <= 0
+if (!is.null(boot_h5)) {
+  ci_h5 <- perc_ci(boot_h5, CI_LEVEL)
+  p_h5  <- boot_pvalue(boot_h5, obs_h5, 0, "greater")
+  rows[["H5"]] <- mk("H5", "Metric divergence",
+                     "Internal - external AUROC (primary, Variant B, eICU-CRD)",
+                     obs_h5, ci_h5, "theta <= 0", p_h5,
+                     sprintf("external AUROC %.4f; Utility Score arm not testable because the internal Utility Score is already negative (%.3f), leaving a proportional decline undefined",
+                             ext_auroc,
+                             mt[variant == "B" & model == "primary" & eval_window == "unrestricted",
+                                utility_normalised][1]))
+}
+
+# H6: equivalence bound 0.02; rejecting H6 requires evidence that |delta| > 0.02
+ci_h6 <- perc_ci(boot_h1[, "h6_delta"], CI_LEVEL)
+p_h6  <- boot_pvalue(boot_h1[, "h6_delta"], obs_h1h6["h6_delta"], 0.02, "greater")
+rows[["H6"]] <- mk("H6", "Model-class null",
+                   "GBT AUROC - primary AUROC (Variant B, temporal)",
+                   unname(obs_h1h6["h6_delta"]), ci_h6,
+                   "|theta| <= 0.02 (equivalence)", p_h6,
+                   "paired: both models scored on the same person-hours")
+
+conf <- rbindlist(rows)
+setorder(conf, hypothesis)
+
+# Holm-Bonferroni over the pre-registered family size, not over the number of
+# tests that happened to be computable.
+p_vec <- conf$p_raw
+m_fam <- CONFIRMATORY_FAMILY_SIZE
+ord   <- order(p_vec, na.last = NA)
+p_adj <- rep(NA_real_, length(p_vec))
+if (length(ord) > 0) {
+  running <- 0
+  for (k in seq_along(ord)) {
+    running <- max(running, (m_fam - k + 1) * p_vec[ord[k]])
+    p_adj[ord[k]] <- min(1, running)
+  }
+}
+conf[, p_holm := p_adj]
+conf[, significant_holm := !is.na(p_holm) & p_holm < FWER_ALPHA]
+conf[, verdict := fifelse(is.na(p_raw), "Descriptive (not testable)",
+                   fifelse(significant_holm,
+                           fifelse(hypothesis == "H6", "H6 REJECTED (non-equivalence)", "CONFIRMED"),
+                           fifelse(hypothesis == "H6", "H6 not rejected", "NOT confirmed")))]
+conf[hypothesis == "H2", verdict := "Descriptive: instability present"]
+conf[hypothesis == "H3", verdict := "Structural: outcome absent from window"]
+conf[, family := "confirmatory (pre-registered)"]
+conf[, correction := sprintf("Holm-Bonferroni, m=%d, FWER=%.2f", m_fam, FWER_ALPHA)]
+
+save_parquet(conf, "12_confirmatory_tests", DATA_DIR)
+save_csv(conf, "12_confirmatory_tests", DATA_DIR)
+
+knitr::kable(
+  conf[, .(H = hypothesis, claim, estimate = round(estimate, 4),
+           CI = fifelse(is.na(ci_lo), "--", fmt_ci(ci_lo, ci_hi)),
+           H0 = null_hypothesis,
+           p = fifelse(is.na(p_raw), "--", formatC(p_raw, format = "g", digits = 2)),
+           p_holm = fifelse(is.na(p_holm), "--", formatC(p_holm, format = "g", digits = 2)),
+           verdict)],
+  caption = "Confirmatory family: six pre-registered hypotheses, one-sided cluster-bootstrap tests against their pre-registered thresholds, Holm-Bonferroni corrected at family size 6")
+
+knitr::kable(conf[nzchar(note), .(H = hypothesis, note)],
+             caption = "Supporting detail for the confirmatory family")
+```
+
+## Exploratory Family E1: Subgroup Discrimination
+
+Subgroup AUROC is estimated with a bootstrap **stratified by subgroup level**:
+stays are resampled within each level, so the level sizes are held at their
+observed values. This is the correct design when the subgroups themselves are
+the estimand rather than a random draw.
+
+Each subgroup is contrasted against the largest level of its own variable
+(the reference), and the resulting family of differences is corrected by
+Benjamini--Hochberg. The reference level is chosen by sample size, not by
+outcome, and is recorded in the output.
+
+```{r subgroup-auroc}
+subgroup_models <- c(primary = "pred_sepsis", gbt = "pred_gbt")
+
+sub_rows <- list(); sub_diff <- list()
+
+for (svar in EQUITY_VARS) {
+  if (!svar %in% names(tb)) next
+  # blank strings are missing data, not a demographic category
+  dsub <- tb[!is.na(get(svar)) & nzchar(trimws(as.character(get(svar))))]
+  if (nrow(dsub) == 0) next
+
+  lvl_n  <- dsub[, .N, by = svar][order(-N)]
+  levels_keep <- head(as.character(lvl_n[[svar]]), MAX_SUBGROUP_LEVELS)
+  dsub <- dsub[as.character(get(svar)) %chin% levels_keep]
+  if (nrow(dsub) == 0) next
+
+  # stay-level stratification frame for this variable
+  stay_lvl <- unique(dsub[, .(stay_id, lvl = as.character(get(svar)))])
+  stay_lvl <- stay_lvl[!duplicated(stay_id)]
+  setorder(stay_lvl, lvl, stay_id)
+  stay_lvl[, k := .I]
+  dsub <- merge(dsub, stay_lvl[, .(stay_id, k)], by = "stay_id")
+  n_k  <- nrow(stay_lvl)
+
+  # eligible levels: enough rows and enough events to support an AUROC
+  elig <- dsub[, .(n_rows = .N, n_events = sum(y), n_stays = uniqueN(stay_id)),
+               by = .(lvl = as.character(get(svar)))]
+  elig <- elig[n_rows >= MIN_SUBGROUP_ROWS & n_events >= MIN_SUBGROUP_EVENTS]
+  if (nrow(elig) == 0) next
+  ref_lvl <- elig[order(-n_rows)][1, lvl]
+
+  # Estimand keys are opaque ids paired with a lookup table: subgroup labels
+  # contain slashes, spaces and hyphens, so they are never parsed out of a key.
+  pre_sub <- list(); key_tab <- list()
+  for (mn in names(subgroup_models)) {
+    mc <- subgroup_models[[mn]]
+    if (!mc %in% names(dsub)) next
+    for (lv in elig$lvl) {
+      kk  <- sprintf("e%03d", length(pre_sub) + 1L)
+      dd  <- dsub[as.character(get(svar)) == lv]
+      pre_sub[[kk]] <- auc_precompute(dd[[mc]], dd$y, dd$k, n_k)
+      key_tab[[kk]] <- data.table(estimand = kk, model = mn, lvl = lv)
+    }
+  }
+  if (length(pre_sub) == 0) next
+  key_tab <- rbindlist(key_tab)
+
+  stat_sub <- function(w) vapply(pre_sub, boot_auroc_w, numeric(1), w_stay = w)
+  v2_log(sprintf("Subgroup bootstrap: %s (%d levels, %d estimands)",
+                 svar, nrow(elig), length(pre_sub)))
+  b_sub <- boot_run(n_k, BOOT_B_SUBGROUP, stat_sub,
+                    strata = stay_lvl$lvl, seed = BOOT_SEED + 10L,
+                    progress_every = 1000L)
+  obs_sub <- stat_sub(rep(1L, n_k))
+
+  for (i in seq_len(nrow(key_tab))) {
+    nm <- key_tab$estimand[i]; mn <- key_tab$model[i]; lv <- key_tab$lvl[i]
+    ci <- perc_ci(b_sub[, nm], CI_LEVEL)
+    e  <- elig[lvl == lv]
+    sub_rows[[paste(svar, nm)]] <- data.table(
+      subgroup_col = svar, subgroup_val = lv, model = mn,
+      is_reference = lv == ref_lvl,
+      n_rows = e$n_rows, n_stays = e$n_stays, n_events = e$n_events,
+      auroc = unname(obs_sub[nm]), ci_lo = ci["lo"], ci_hi = ci["hi"],
+      ci_width = unname(ci["hi"] - ci["lo"]))
+
+    if (lv != ref_lvl) {
+      ref_nm <- key_tab[model == mn & lvl == ref_lvl, estimand]
+      if (length(ref_nm) == 1L) {
+        dvec <- b_sub[, nm] - b_sub[, ref_nm]
+        dobs <- unname(obs_sub[nm] - obs_sub[ref_nm])
+        dci  <- perc_ci(dvec, CI_LEVEL)
+        sub_diff[[paste(svar, nm)]] <- data.table(
+          subgroup_col = svar, subgroup_val = lv, model = mn,
+          reference = ref_lvl, n_events = e$n_events,
+          delta_auroc = dobs, ci_lo = dci["lo"], ci_hi = dci["hi"],
+          p_raw = boot_pvalue(dvec, dobs, 0, "two.sided"))
+      }
+    }
+  }
+}
+
+sub_auroc <- rbindlist(sub_rows)
+sub_delta <- rbindlist(sub_diff)
+```
+
+```{r subgroup-fdr}
+if (nrow(sub_delta) > 0) {
+  sub_delta[, p_bh := p.adjust(p_raw, method = "BH")]
+  sub_delta[, p_bonf := p.adjust(p_raw, method = "bonferroni")]
+  sub_delta[, significant_bh := p_bh < FDR_Q]
+  sub_delta[, family := sprintf("exploratory E1 (m=%d subgroup AUROC contrasts)", nrow(sub_delta))]
+  setorder(sub_delta, p_raw)
+}
+sub_auroc[, family := "exploratory E1"]
+
+save_parquet(sub_auroc, "12_subgroup_auroc_ci", DATA_DIR)
+save_csv(sub_auroc,     "12_subgroup_auroc_ci", DATA_DIR)
+if (nrow(sub_delta) > 0) {
+  save_parquet(sub_delta, "12_subgroup_auroc_contrasts", DATA_DIR)
+  save_csv(sub_delta,     "12_subgroup_auroc_contrasts", DATA_DIR)
+}
+
+knitr::kable(
+  sub_auroc[subgroup_col == "race"][order(model, -n_rows),
+    .(model, subgroup = subgroup_val, n_rows, n_events,
+      auroc = round(auroc, 3), CI = fmt_ci(ci_lo, ci_hi), width = round(ci_width, 3))],
+  caption = "Subgroup AUROC by race with 95\\% stratified cluster-bootstrap intervals (Variant B, temporal test)")
+
+if (nrow(sub_delta) > 0)
+  knitr::kable(
+    sub_delta[subgroup_col == "race"][order(model, p_raw),
+      .(model, subgroup = subgroup_val, reference, n_events,
+        delta = round(delta_auroc, 3), CI = fmt_ci(ci_lo, ci_hi),
+        p = formatC(p_raw, format = "f", digits = 3),
+        q_BH = formatC(p_bh, format = "f", digits = 3), significant_bh)],
+    caption = "Subgroup AUROC differences vs.\\ the reference group, Benjamini-Hochberg corrected across the whole exploratory family E1")
+```
+
+## Exploratory Family E2: Subgroup Label Sensitivity
+
+The fraction of stays labelled septic under each variant is a stay-level
+proportion, so the bootstrap resamples whole stays within subgroup. Because the
+same 65,078 stays are labelled under all three variants, the A/B/C comparison
+is paired within replicate, and the interval on the A--C *range* correctly
+reflects that pairing.
+
+```{r label-sens-ci}
+coh <- lapply(c(A = "A", B = "B", C = "C"), function(v) {
+  p <- file.path(DATA_DIR, sprintf("02_cohort_%s.parquet", v))
+  if (!file.exists(p)) return(NULL)
+  d <- as.data.table(read_parquet(p))
+  d[, .(stay_id, septic = as.integer(!is.na(onset_hour)),
+        race, language, insurance)]
+})
+coh <- Filter(Negate(is.null), coh)
+
+ls_rows <- list(); ls_diff <- list()
+
+if (length(coh) >= 2) {
+  base <- coh[[1]]
+  common_stays <- sort(Reduce(intersect, lapply(coh, function(d) d$stay_id)))
+  for (v in names(coh)) {
+    coh[[v]] <- coh[[v]][stay_id %in% common_stays]
+    setorder(coh[[v]], stay_id)
+  }
+  n_cs <- length(common_stays)
+
+  for (svar in EQUITY_VARS) {
+    if (!svar %in% names(coh[["B"]])) next
+    lv_dt <- coh[["B"]][!is.na(get(svar)) & nzchar(trimws(as.character(get(svar)))),
+                        .N, by = svar][order(-N)]
+    levels_keep <- head(as.character(lv_dt[[svar]]), MAX_SUBGROUP_LEVELS)
+    if (length(levels_keep) < 2) next
+
+    lvl_vec <- as.character(coh[["B"]][[svar]])
+    keep    <- !is.na(lvl_vec) & lvl_vec %chin% levels_keep
+    idx     <- which(keep)
+    lvl_k   <- lvl_vec[idx]
+    ord     <- order(lvl_k, common_stays[idx])
+    idx     <- idx[ord]; lvl_k <- lvl_k[ord]
+    n_k     <- length(idx)
+
+    sep_mat <- vapply(names(coh), function(v) coh[[v]]$septic[idx], numeric(n_k))
+    lvl_f   <- factor(lvl_k, levels = levels_keep[levels_keep %in% lvl_k])
+    ref_lvl <- names(sort(table(lvl_k), decreasing = TRUE))[1]
+
+    stat_ls <- function(w) {
+      num <- rowsum(w * sep_mat, lvl_f, reorder = FALSE)
+      den <- as.vector(rowsum(w, lvl_f, reorder = FALSE))
+      pct <- 100 * num / den
+      rng <- apply(pct, 1, function(r) diff(range(r)))
+      out <- c(as.vector(pct), rng)
+      names(out) <- c(outer(rownames(pct), colnames(sep_mat),
+                            function(a, b) paste0("pct_", b, "||", a)),
+                      paste0("range||", rownames(pct)))
+      out
+    }
+
+    v2_log(sprintf("Label-sensitivity bootstrap: %s (%d levels)", svar, nlevels(lvl_f)))
+    b_ls  <- boot_run(n_k, BOOT_B_SUBGROUP, stat_ls, strata = lvl_k,
+                      seed = BOOT_SEED + 20L, progress_every = 1000L)
+    obs_ls <- stat_ls(rep(1L, n_k))
+
+    for (lv in levels(lvl_f)) {
+      r <- list(subgroup_col = svar, subgroup_val = lv,
+                n_stays = sum(lvl_k == lv), is_reference = lv == ref_lvl)
+      for (v in names(coh)) {
+        nm <- paste0("pct_", v, "||", lv)
+        ci <- perc_ci(b_ls[, nm], CI_LEVEL)
+        r[[paste0("pct_", v)]]    <- unname(obs_ls[nm])
+        r[[paste0("pct_", v, "_lo")]] <- unname(ci["lo"])
+        r[[paste0("pct_", v, "_hi")]] <- unname(ci["hi"])
+      }
+      nm <- paste0("range||", lv)
+      ci <- perc_ci(b_ls[, nm], CI_LEVEL)
+      r$range_pp <- unname(obs_ls[nm]); r$range_lo <- unname(ci["lo"]); r$range_hi <- unname(ci["hi"])
+      ls_rows[[paste(svar, lv)]] <- as.data.table(r)
+
+      if (lv != ref_lvl) {
+        dvec <- b_ls[, nm] - b_ls[, paste0("range||", ref_lvl)]
+        dobs <- unname(obs_ls[nm] - obs_ls[paste0("range||", ref_lvl)])
+        dci  <- perc_ci(dvec, CI_LEVEL)
+        ls_diff[[paste(svar, lv)]] <- data.table(
+          subgroup_col = svar, subgroup_val = lv, reference = ref_lvl,
+          n_stays = sum(lvl_k == lv), delta_range_pp = dobs,
+          ci_lo = dci["lo"], ci_hi = dci["hi"],
+          p_raw = boot_pvalue(dvec, dobs, 0, "two.sided"))
+      }
+    }
+  }
+}
+
+ls_ci   <- rbindlist(ls_rows, fill = TRUE)
+ls_delta <- rbindlist(ls_diff, fill = TRUE)
+if (nrow(ls_delta) > 0) {
+  ls_delta[, p_bh := p.adjust(p_raw, method = "BH")]
+  ls_delta[, p_bonf := p.adjust(p_raw, method = "bonferroni")]
+  ls_delta[, significant_bh := p_bh < FDR_Q]
+  ls_delta[, family := sprintf("exploratory E2 (m=%d label-sensitivity contrasts)", nrow(ls_delta))]
+  setorder(ls_delta, p_raw)
+}
+if (nrow(ls_ci) > 0) {
+  ls_ci[, family := "exploratory E2"]
+  save_parquet(ls_ci, "12_subgroup_labelsens_ci", DATA_DIR)
+  save_csv(ls_ci,     "12_subgroup_labelsens_ci", DATA_DIR)
+}
+if (nrow(ls_delta) > 0) {
+  save_parquet(ls_delta, "12_subgroup_labelsens_contrasts", DATA_DIR)
+  save_csv(ls_delta,     "12_subgroup_labelsens_contrasts", DATA_DIR)
+}
+
+if (nrow(ls_ci) > 0)
+  knitr::kable(
+    ls_ci[subgroup_col == "race"][order(-n_stays),
+      .(subgroup = subgroup_val, n_stays,
+        A = sprintf("%.1f %s", pct_A, fmt_ci(pct_A_lo, pct_A_hi, 1)),
+        B = sprintf("%.1f %s", pct_B, fmt_ci(pct_B_lo, pct_B_hi, 1)),
+        C = sprintf("%.1f %s", pct_C, fmt_ci(pct_C_lo, pct_C_hi, 1)),
+        range = sprintf("%.1f %s", range_pp, fmt_ci(range_lo, range_hi, 1)))],
+    caption = "Percentage of stays labelled septic by race and label variant, with 95\\% stratified cluster-bootstrap intervals")
+
+if (nrow(ls_delta) > 0)
+  knitr::kable(
+    ls_delta[subgroup_col == "race"][order(p_raw),
+      .(subgroup = subgroup_val, reference, n_stays,
+        delta_pp = round(delta_range_pp, 2), CI = fmt_ci(ci_lo, ci_hi, 2),
+        p = formatC(p_raw, format = "f", digits = 3),
+        q_BH = formatC(p_bh, format = "f", digits = 3), significant_bh)],
+    caption = "Difference in label sensitivity (A--C range) vs.\\ the reference group, Benjamini-Hochberg corrected across exploratory family E2")
+```
+
+## Subgroup Interval Widths
+
+The point of attaching intervals to the equity tables is that a subgroup with
+few events cannot support a claim in either direction. This figure plots each
+subgroup AUROC with its interval against the number of sepsis onsets in that
+subgroup.
+
+```{r subgroup-ci-plot, fig.cap="Subgroup AUROC with 95\\% cluster-bootstrap intervals (Variant B, temporal test). Interval width is driven almost entirely by the subgroup event count; the smallest groups cannot distinguish their AUROC from chance.", fig.width=8, fig.height=5.5}
+if (nrow(sub_auroc) > 0) {
+  pd <- sub_auroc[subgroup_col == "race"]
+  if (nrow(pd) > 0) {
+    pd[, lbl := paste0(subgroup_val, " (", n_events, ")")]
+    p_ci <- ggplot(pd, aes(x = reorder(lbl, auroc), y = auroc, colour = model)) +
+      geom_hline(yintercept = 0.5, linetype = "dotted", colour = "gray40") +
+      geom_pointrange(aes(ymin = ci_lo, ymax = ci_hi),
+                      position = position_dodge(width = 0.5), size = 0.35) +
+      coord_flip() +
+      labs(title    = "Subgroup AUROC with 95% cluster-bootstrap intervals",
+           subtitle = "Race, Variant B, temporal test. Sepsis onset count in parentheses.",
+           x = "Racial subgroup (n events)", y = "AUROC", colour = "Model") +
+      theme_bw() + theme(legend.position = "bottom")
+    print(p_ci)
+    ggsave(file.path(FIGURES_DIR, "12_subgroup_auroc_ci.png"), p_ci,
+           width = 8, height = 5.5, dpi = 150)
+  }
+}
+```
+
+## Analysis Register
+
+Every analysis reported in the thesis is tagged here. `confirmatory` means the
+estimand, threshold, and direction were fixed in `00_preregistration.md` before
+any modelling. `exploratory` means the analysis was pre-registered in *scope*
+but not in specific contrasts, so it generates hypotheses rather than testing
+them. `descriptive` means no inferential claim is attached.
+
+```{r register}
+register <- rbindlist(list(
+  data.table(analysis = "Cohort description by label variant",           status = "descriptive",
+             prereg = "§2",        correction = "none",  reported_in = "Table: cohort"),
+  data.table(analysis = "Sample size adequacy (Riley et al.)",           status = "confirmatory",
+             prereg = "§10",       correction = "none (single pre-specified criterion)",
+             reported_in = "Table: sample_size"),
+  data.table(analysis = "Internal temporal performance (all models)",    status = "confirmatory",
+             prereg = "§5, §6",    correction = "none (estimation, not testing)",
+             reported_in = "Table: internal_results"),
+  data.table(analysis = "Calibration intercept and slope",               status = "confirmatory",
+             prereg = "§5",        correction = "none (estimation)",
+             reported_in = "Table: calibration"),
+  data.table(analysis = "Decision-curve net benefit",                    status = "confirmatory",
+             prereg = "§6",        correction = "none (estimation)",
+             reported_in = "Table: net_benefit"),
+  data.table(analysis = "Operating points at fixed sensitivity",         status = "exploratory",
+             prereg = "not specified (threshold chosen post hoc)",
+             correction = "none; reported as descriptive operating characteristics",
+             reported_in = "Table: operating_points"),
+  data.table(analysis = "Per-patient detection and lead time",           status = "confirmatory",
+             prereg = "§6",        correction = "none (estimation)",
+             reported_in = "Table: patient_level, lead_time"),
+  data.table(analysis = "H1 label dominance",                            status = "confirmatory",
+             prereg = "§7",        correction = "Holm (m=6)", reported_in = "H1 box"),
+  data.table(analysis = "H2 coefficient instability",                    status = "confirmatory",
+             prereg = "§7",        correction = "family slot reserved; no test statistic",
+             reported_in = "H2 box, Table: coef_instability"),
+  data.table(analysis = "H3 treatment leakage",                          status = "confirmatory",
+             prereg = "§7",        correction = "family slot reserved; exact bound reported",
+             reported_in = "H3 box"),
+  data.table(analysis = "H4 split optimism",                             status = "confirmatory",
+             prereg = "§7",        correction = "Holm (m=6)", reported_in = "H4 box"),
+  data.table(analysis = "H5 metric divergence",                          status = "confirmatory",
+             prereg = "§7",        correction = "Holm (m=6)", reported_in = "H5 box"),
+  data.table(analysis = "H6 model-class null",                           status = "confirmatory",
+             prereg = "§7",        correction = "Holm (m=6)", reported_in = "H6 box"),
+  data.table(analysis = "External validation on eICU-CRD",               status = "confirmatory",
+             prereg = "§4",        correction = "none (estimation); feeds H5",
+             reported_in = "Table: external"),
+  data.table(analysis = "Variance decomposition table",                  status = "confirmatory",
+             prereg = "§1",        correction = "none (descriptive assembly of H1-H6 contrasts)",
+             reported_in = "Table: decomposition"),
+  data.table(analysis = "Proportional-hazards (Schoenfeld) testing",     status = "confirmatory",
+             prereg = "§8",        correction = "none (single pre-specified check)",
+             reported_in = "PH section"),
+  data.table(analysis = "GBT feature importance",                        status = "exploratory",
+             prereg = "not specified", correction = "none (ranking, no inference)",
+             reported_in = "Table: feature_importance"),
+  data.table(analysis = "Subgroup AUROC by race/language/insurance",     status = "exploratory",
+             prereg = "§9 (scope only; contrasts not pre-specified)",
+             correction = "Benjamini-Hochberg within family E1",
+             reported_in = "Table: equity_performance"),
+  data.table(analysis = "Subgroup label sensitivity across variants",    status = "exploratory",
+             prereg = "§9 (scope only; contrasts not pre-specified)",
+             correction = "Benjamini-Hochberg within family E2",
+             reported_in = "Table: equity_label"),
+  data.table(analysis = "Label sensitivity vs. AUROC association",       status = "exploratory",
+             prereg = "not specified", correction = "none (visual, no test)",
+             reported_in = "Figure: label_sens_vs_auroc")
+))
+
+save_parquet(register, "12_analysis_register", DATA_DIR)
+save_csv(register,     "12_analysis_register", DATA_DIR)
+
+knitr::kable(register, caption = "Analysis register: confirmatory vs.\\ exploratory status and the multiplicity correction applied to each")
+```
+
+## Summary
+
+```{r summary}
+cat("Confirmatory family (Holm, m = 6, FWER = 0.05):\n")
+for (i in seq_len(nrow(conf)))
+  cat(sprintf("  %s  %-26s est=%s  p_raw=%s  p_holm=%s  -> %s\n",
+              conf$hypothesis[i], conf$claim[i],
+              formatC(conf$estimate[i], format = "g", digits = 4),
+              ifelse(is.na(conf$p_raw[i]),  "--", formatC(conf$p_raw[i],  format = "g", digits = 2)),
+              ifelse(is.na(conf$p_holm[i]), "--", formatC(conf$p_holm[i], format = "g", digits = 2)),
+              conf$verdict[i]))
+
+if (nrow(sub_delta) > 0) {
+  cat(sprintf("\nExploratory family E1: %d subgroup AUROC contrasts, %d significant at BH q < %.2f\n",
+              nrow(sub_delta), sum(sub_delta$significant_bh), FDR_Q))
+  cat(sprintf("  Smallest raw p = %.4f (%s, %s vs %s); smallest BH q = %.4f\n",
+              min(sub_delta$p_raw), sub_delta$subgroup_val[1], sub_delta$model[1],
+              sub_delta$reference[1], min(sub_delta$p_bh)))
+  cat(sprintf("  Median 95%% CI width for subgroup AUROC: %.3f (max %.3f)\n",
+              median(sub_auroc$ci_width, na.rm = TRUE), max(sub_auroc$ci_width, na.rm = TRUE)))
+}
+if (nrow(ls_delta) > 0)
+  cat(sprintf("\nExploratory family E2: %d label-sensitivity contrasts, %d significant at BH q < %.2f\n",
+              nrow(ls_delta), sum(ls_delta$significant_bh), FDR_Q))
+
+cat("\nInference notebook complete.\n")
+```

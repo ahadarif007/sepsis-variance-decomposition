@@ -14,15 +14,26 @@ Sepsis-3 label variants (Narrow, Seymour-Standard, Liberal) are tested with a
 dynamic discrete-time competing-risks hazard model, gradient-boosted trees (GBT),
 a static Cox model, and rule-based scores (NEWS2, qSOFA, SIRS).
 
-The results show that the sepsis label definition changes AUROC by 0.153,
-slightly more than the model choice (0.140). Ten clinical features change
-direction or strength across labels, making published risk factors unreliable
-without knowing which label was used. Random data splits inflate AUROC by 0.123
-compared to time-based splits. Most importantly, the pre-treatment evaluation
-window contains \textbf{zero sepsis events}: no patient develops sepsis before
-doctors begin treatment. This means current models predict when clinicians act,
-not when patients deteriorate. The Utility Score is \textbf{negative for every
+The results show that the sepsis label definition changes AUROC by 0.153
+(95\% CI 0.136--0.177), a spread statistically indistinguishable from the one
+produced by changing the model (0.145, 95\% CI 0.133--0.165): both analyst
+decisions are large and neither dominates. Ten of the twenty shared clinical
+covariates reverse direction across labels, making published risk factors
+unreliable without knowing which label was used. Random data splits inflate
+AUROC by 0.123 (95\% CI 0.100--0.147) compared to time-based splits. Most
+importantly, the pre-treatment evaluation window contains \textbf{zero sepsis
+events} in 179,003 person-hours: no patient develops sepsis before doctors
+begin treatment. This means current models predict when clinicians act, not
+when patients deteriorate. The Utility Score is \textbf{negative for every
 model and every label}, with over 90 false alerts for each true one.
+
+All estimates carry stay-level cluster-bootstrap intervals; the six
+pre-registered hypotheses are corrected by Holm--Bonferroni and all subgroup
+analyses by Benjamini--Hochberg. Under correction, subgroup discrimination
+differences by race are too imprecisely estimated to support any claim, while
+differential \emph{label} sensitivity does survive: patients whose race is
+undocumented, and Spanish-speaking patients, change sepsis status across label
+definitions significantly more often than the reference groups.
 
 The collapse in clinical utility is not a model problem; it is a label
 problem. Better models cannot fix a label that depends on the actions it is
