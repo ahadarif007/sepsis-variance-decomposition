@@ -270,3 +270,116 @@ individual result rather than sitting once in the methodology chapter.
 `12_subgroup_auroc_contrasts`, `12_subgroup_labelsens_ci`,
 `12_subgroup_labelsens_contrasts`, `12_internal_ci`,
 `12_h2_coefficient_stability`, and `12_analysis_register`.
+
+---
+
+# Amendment 2 — A Label That Does Not Depend on Treatment Timing
+
+**Date:** 2026-08-02
+**Status:** **POST-HOC.** Written after the analyses in notebooks 02–12 had been
+run. Like Amendment 1, it is *not* pre-specified and must not be described as
+such anywhere in the thesis.
+
+**Motivation.** §2 locks three label variants, and all three are Sepsis-3
+readings firing on the same culture-plus-antibiotic anchor. That anchor records
+a clinician's decision to treat. Two things therefore follow from the
+label-variant result, and the original protocol cannot separate them:
+
+- **Definitional.** Sepsis-3 makes onset a function of treatment timing, so
+  changing the antibiotic–culture windows *must* move the onsets. Part of the
+  H1 label spread is guaranteed by construction and would appear even if the
+  physiology were identical across patients.
+- **Empirical.** Whether a label owing nothing to treatment timing selects
+  different patients, at different hours, with different predictability.
+
+Only the second is a claim about the world. It cannot be tested inside a family
+of labels that all share the anchor, so a label outside that family is added.
+
+**Scope.** The amendment adds nothing to §§1–15. No hypothesis, estimand,
+threshold, direction, subgroup, or model is changed, added, or removed. H1–H6,
+the variance decomposition table, and the equity families E1/E2 are computed
+from exactly the same inputs as before. The new variants are held outside
+`LABEL_VARIANTS` in `config.R` for this reason, and their metrics are written
+to separate files (`07_metric_results_altlabel`, `05_coef_alt_variants`) so
+they cannot be pooled with A–C by accident.
+
+## 16. Alternative Label Variants
+
+Sepsis-3 is a conjunction — *suspected infection* **and** *acute organ
+dysfunction*. The conjunction is split and each limb is labelled on its own.
+
+| Variant | Name | Suspicion anchor | Organ dysfunction | Uses treatment timing? |
+|---------|------|------------------|-------------------|------------------------|
+| B | Seymour-Standard | required | required | yes |
+| E | Anchor-Only | required (B's windows) | not required | yes |
+| D | Deterioration | not required | required | **no** |
+
+**16.1 Variant E (Anchor-Only).** Onset is the suspicion-of-infection time
+itself, computed with Variant B's windows (ABX→culture 72 h, culture→ABX 24 h),
+with the SOFA criterion removed. The label is purely a record of clinician
+behaviour: predicting it means predicting who gets cultured and started on
+antibiotics. E is *not* a sepsis definition and its AUROC is not a sepsis
+result.
+
+**16.2 Variant D (Deterioration).** Onset is the first hour after hour 1 at
+which a **physiology-only** SOFA score rises ≥ 2 points above the stay's
+admission baseline (component means over hours 0–3, mirroring the "admission"
+baseline of variants A and B). Physiology-only means the vasopressor and
+catecholamine terms are withheld from the SOFA computation, so the
+cardiovascular component is scored from MAP alone. No antibiotic order, culture
+draw, or drug administration enters the definition. Onsets are derived in
+`03_person_hours.Rmd`, where the hourly panel exists.
+
+**16.3 Why not PhysioNet/CinC 2019, SEP-1, or CDC Adult Sepsis Event.** All
+three were considered and rejected for this specific purpose. CinC 2019 sets
+onset to min(t_suspicion, t_SOFA) using the same culture-plus-antibiotic
+trigger; SEP-1 and CDC ASE are defined on antibiotic days. Each is anchored to
+treatment timing by construction, so none of them breaks the circularity that
+motivates this amendment. They remain valid *alternative Sepsis-adjacent*
+definitions and are discussed as such, but they cannot serve as the
+treatment-independent comparator.
+
+**16.4 Fitting.** D and E are fitted with the identical model specification,
+feature set, temporal split, and seed as A–C, so the label is the only thing
+that differs.
+
+**16.5 Interpretive limits, stated in advance of reading the results.**
+
+- Variant E's discrimination is discrimination about treatment behaviour, not
+  about sepsis.
+- Variant D's label is a threshold function of recorded physiology, and five of
+  its six SOFA components (all but PaO₂/FiO₂) are model inputs. Its AUROC is
+  therefore partly self-fulfilling and its *level* is not comparable with
+  Variant B's. The informative comparison is not the level but whether D
+  selects **different patients at different hours**, reported as onset
+  agreement (Cohen's κ, sensitivity to B) and median onset shift.
+
+## 17. Estimands and Multiplicity for Amendment 2
+
+**17.1 Anchor-attributable fraction.** The share of Variant B's above-chance
+discrimination reproduced by the treatment anchor alone:
+
+    φ_anchor = (AUROC_E − 0.5) / (AUROC_B − 0.5)
+
+Bootstrapped end to end on the stay-level cluster bootstrap of §13, reported as
+a point estimate with a 95% percentile interval. It is a ratio with no
+meaningful null at zero, so **no p-value is computed for it** and it sits
+outside the corrected family.
+
+**17.2 Exploratory family E3.** The AUROC differences against Variant B —
+{D, E} × {primary, GBT} — form a new exploratory family corrected by
+**Benjamini–Hochberg at q = 0.05**, on the same terms as E1 and E2 (§14.2).
+Contrasts are paired within replicate: all variants are labelled on the same
+test stays, so one replicate draw applies to all of them.
+
+**17.3 Label agreement.** Onset agreement between each variant and B (percent
+agreement, Cohen's κ, sensitivity to B's positives, median onset shift among
+stays positive under both) is **descriptive**. No test is attached. Onsets
+beyond the 72 h modelling horizon count as negative so that D, whose onsets
+exist only inside the panel, is comparable with variants labelled on the full
+stay.
+
+**Deliverables:** `02_alt_label_variance_table`, `05_coef_alt_variants`,
+`07_metric_results_altlabel`, `09_label_anchor_attribution`,
+`09_label_agreement`, `12_altlabel_auroc_ci`, `12_altlabel_contrasts`,
+`12_anchor_attribution_ci`, and figure `09_label_anchor_attribution.png`.

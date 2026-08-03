@@ -15,10 +15,10 @@ is independent of clinical action.
 \paragraph{H1 (Label dominance): Not confirmed under correction.}
 Changing the sepsis definition (while keeping the model fixed) changes AUROC by
 0.153 (95\% CI 0.136--0.177). Changing the model (while keeping the label
-fixed) changes AUROC by 0.145 (95\% CI 0.133--0.165). Both are large relative
+fixed) changes AUROC by 0.142 (95\% CI 0.130--0.161). Both are large relative
 to typical performance differences reported in the literature, but the margin
-between them is 0.007 (95\% CI $-0.020$--$0.030$, $p = 0.31$, Holm-adjusted
-$p = 0.93$), so the label cannot be shown to dominate the model. Cohen et al.'s
+between them is 0.011 (95\% CI $-0.017$--$0.034$, $p = 0.21$, Holm-adjusted
+$p = 0.63$), so the label cannot be shown to dominate the model. Cohen et al.'s
 \cite{cohen2024subtle} MIMIC-III finding is supported on MIMIC-IV in its weaker
 form: label choice contributes variance comparable to model choice.
 
@@ -50,14 +50,14 @@ temporal test set. The utility collapse documented by Wang et al.\
 \cite{wang2025srpm} across ninety-one models appears \textit{internally}
 on MIMIC-IV under an honest time-based split. External AUROC falls by 0.170
 (95\% CI 0.102--0.242, Holm-adjusted $p = 0.004$) to 0.436, an interval whose
-upper limit reaches chance. Alert burdens range from 93 to over 340 false
+upper limit reaches chance. Alert burdens range from 91 to over 340 false
 alerts per true alert (benchmark: 1.4, Moor et al.\ \cite{moor2023review}).
 
 \paragraph{H6 (Model-class null): Rejected.}
-GBT outperforms the primary model by 0.139 AUROC (0.746 vs.\ 0.607), 95\% CI
-0.117--0.160, entirely above the 0.02 equivalence bound (Holm-adjusted
+GBT outperforms the primary model by 0.135 AUROC (0.742 vs.\ 0.607), 95\% CI
+0.113--0.156, entirely above the 0.02 equivalence bound (Holm-adjusted
 $p = 0.003$). But the clinical ordering reverses: the primary model has a less
-negative Utility Score ($-1.004$ vs.\ $-4.849$). The ``better'' model by AUROC
+negative Utility Score ($-1.004$ vs.\ $-5.059$). The ``better'' model by AUROC
 produces more harmful alerts.
 
 
@@ -67,8 +67,10 @@ The utility collapse documented by Wang et al.\ \cite{wang2025srpm} is
 not a model problem. It is a label problem. The Sepsis-3 label on MIMIC-IV:
 
 \begin{enumerate}
-    \item \textbf{Depends on clinical action:} no patient develops sepsis
-    before doctors order antibiotics and cultures.
+    \item \textbf{Depends on clinical action:} no patient is \emph{labelled}
+    septic before doctors order antibiotics and cultures. A deterioration label
+    that uses no treatment timestamp records 1,362 onsets in the same window, so
+    the emptiness belongs to the definition, not to the patients.
     \item \textbf{Is sensitive to how it is defined:} the number of sepsis
     cases nearly doubles across plausible Sepsis-3 interpretations.
     \item \textbf{Produces harmful alert behaviour:} every model, under every
@@ -78,6 +80,23 @@ not a model problem. It is a label problem. The Sepsis-3 label on MIMIC-IV:
 These three problems are independent of model complexity. A better model
 cannot fix a label that is constituted by the very clinical actions it is
 supposed to predict ahead of. The solution requires changing the label.
+
+Splitting the definition sharpens point (2) and qualifies it
+(Section~\ref{sec:label_anchor_results}). It is qualified because the onset
+\emph{time} under every Sepsis-3 variant is fixed entirely by the treatment
+anchor --- the organ-dysfunction criterion decides which stays are labelled and
+moves no onset by an hour --- so part of the variation between variants is
+guaranteed by the definition rather than found in the data. It is sharpened
+because a label built from physiology alone, owing nothing to treatment timing,
+agrees with Sepsis-3 barely better than chance ($\kappa = 0.057$). The label
+effect is therefore real, not merely definitional.
+
+The same comparison relocates the difficulty. Sepsis-3 is \emph{harder} to
+predict than either of the limbs it is built from: the treatment anchor alone
+reaches 0.756 AUROC and physiological deterioration alone 0.842, against 0.607
+for the conjunction. Neither clinician behaviour nor patient physiology is
+unreadable. What resists prediction is the requirement that both occur
+together, which is what Sepsis-3 operationalises.
 
 
 \section{Contributions}
@@ -110,18 +129,45 @@ supposed to predict ahead of. The solution requires changing the label.
     disparity does not, and reporting the second without the first would have
     inverted which finding is defensible.
 
-    \item \textbf{C6 (Reproducible pipeline):} Fully open, pre-registered,
-    TRIPOD+AI-conformant pipeline released under a permissive licence.
+    \item \textbf{C6 (Reproducible pipeline):} A pre-registered,
+    TRIPOD+AI-conformant pipeline with fixed seeds and a single orchestration
+    script, which reproduces every reported estimate exactly from the raw
+    databases (Section~\ref{sec:code_availability}).
+
+    \item \textbf{C7 (Definitional vs.\ empirical label variance separated):}
+    A treatment-independent deterioration label, tested alongside the three
+    Sepsis-3 variants, shows that the label effect is not an artefact of how one
+    definition is read: it agrees with Sepsis-3 at $\kappa = 0.057$ and matches
+    its onset hour in 6.4\% of shared stays. The same comparison shows that
+    Sepsis-3 is harder to predict than either of the limbs it is built from,
+    and that the pre-treatment window empty of Sepsis-3 onsets contains 1,362
+    treatment-independent deterioration onsets identified at 0.840 AUROC. This
+    relocates the difficulty of sepsis prediction from the physiology to the
+    definition (Section~\ref{sec:label_anchor_results}).
 \end{enumerate}
 
 
 \section{Future Work}
 
 \begin{enumerate}
-    \item \textbf{Better sepsis labels.} Define sepsis using objective patient
-    measurements, such as lactate trajectories and organ function biomarkers,
-    instead of treatment-timing criteria. This would eliminate the
-    treatment-constitutionality problem and allow genuine pre-onset prediction.
+    \item \textbf{Better sepsis labels.} Section~\ref{sec:label_anchor_results}
+    takes the first step --- a deterioration label built from physiology alone,
+    with no treatment timestamp --- and shows it identifies substantially
+    different patients at substantially different hours. But that label is an
+    operational construct built for this comparison, not a validated definition,
+    and its components overlap the model's own inputs. The work remaining is a
+    sepsis definition grounded in objective measurements such as lactate
+    trajectories and organ-function biomarkers, adjudicated independently of the
+    model's feature set, which would eliminate the treatment-constitutionality
+    problem and allow genuine pre-onset prediction.
+
+    \item \textbf{Non-Sepsis-3 consensus definitions.} SEP-1 and the CDC Adult
+    Sepsis Event were not implemented. Neither would have tested
+    treatment-independence --- both are defined on antibiotic days --- but each
+    yields a different cohort, and Dutta et al.\ \cite{dutta2026performance}
+    report that performance moves substantially between them. Adding them would
+    extend the label-variance decomposition across definitions rather than
+    within one.
 
     \item \textbf{Prospective validation.} Test the new label in real clinical
     settings where sepsis onset can be determined by a protocol-blinded assessor,
@@ -149,6 +195,13 @@ hypothesis framework ensures that confirmed, rejected, and superseded
 hypotheses are all equally informative about the underlying problem.
 
 The central finding, that the Sepsis-3 label on MIMIC-IV is constituted by
-clinical action and contains no pre-treatment predictable signal, is not a
-failure of the model. It is a finding about the data itself, and it is the most
-important contribution this study makes.
+clinical action, is not a failure of the model. It is a finding about the label
+itself, and it is the most important contribution this study makes.
+
+The final chapter of that finding is the one that took a label outside Sepsis-3
+to see. The pre-treatment window is not empty of predictable deterioration ---
+it contains 1,362 onsets under a treatment-independent label, identified at
+0.840 AUROC. It is empty of \emph{Sepsis-3}, because Sepsis-3 cannot place an
+onset before the treatment it is anchored to. The signal clinicians would want a
+model to find is present in the data. The definition the field has agreed to
+train on is what cannot represent it.

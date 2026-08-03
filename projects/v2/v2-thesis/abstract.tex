@@ -12,11 +12,15 @@ The study uses MIMIC-IV v3.1 (65,078 adult ICU stays) with external validation
 on eICU-CRD v2.0 (63 sepsis cases across 7.9 million person-hours). Three
 Sepsis-3 label variants (Narrow, Seymour-Standard, Liberal) are tested with a
 dynamic discrete-time competing-risks hazard model, gradient-boosted trees (GBT),
-a static Cox model, and rule-based scores (NEWS2, qSOFA, SIRS).
+a static Cox model, and rule-based scores (NEWS2, qSOFA, SIRS). Because all
+three variants share one culture-plus-antibiotic anchor, the Sepsis-3
+conjunction is additionally split into its two limbs and each is labelled
+separately, including a deterioration label that uses no treatment timestamp at
+all.
 
 The results show that the sepsis label definition changes AUROC by 0.153
 (95\% CI 0.136--0.177), a spread statistically indistinguishable from the one
-produced by changing the model (0.145, 95\% CI 0.133--0.165): both analyst
+produced by changing the model (0.142, 95\% CI 0.130--0.161): both analyst
 decisions are large and neither dominates. Ten of the twenty shared clinical
 covariates reverse direction across labels, making published risk factors
 unreliable without knowing which label was used. Random data splits inflate
@@ -26,6 +30,21 @@ events} in 179,003 person-hours: no patient develops sepsis before doctors
 begin treatment. This means current models predict when clinicians act, not
 when patients deteriorate. The Utility Score is \textbf{negative for every
 model and every label}, with over 90 false alerts for each true one.
+
+Splitting the definition shows how much of the label effect is definitional and
+how much is real. The onset \emph{time} under every Sepsis-3 variant is fixed
+entirely by the treatment anchor, the organ-dysfunction criterion selecting
+which stays are labelled without moving any onset by an hour. Yet a
+treatment-independent deterioration label agrees with Sepsis-3 at
+$\kappa = 0.057$, close to chance, so the label effect is not an artefact of
+re-reading one definition. Sepsis-3 also proves \emph{harder} to predict than
+either limb it is built from --- 0.607 AUROC against 0.756 for the treatment
+anchor alone and 0.842 for deterioration alone --- which places the difficulty
+in the conjunction rather than in the physiology or in clinician behaviour.
+Critically, the same deterioration label records \textbf{1,362 onsets in the
+pre-treatment window where Sepsis-3 records none}, at 0.840 AUROC: patients do
+deteriorate before clinicians act, and the empty window is a limitation of the
+definition rather than a fact about the patients.
 
 All estimates carry stay-level cluster-bootstrap intervals; the six
 pre-registered hypotheses are corrected by Holm--Bonferroni and all subgroup
@@ -41,4 +60,4 @@ supposed to predict ahead of.
 
 \noindent\textbf{Keywords:} sepsis; MIMIC-IV; discrete-time survival analysis;
 competing risks; label definition; variance decomposition; clinical utility;
-temporal dataset shift; TRIPOD+AI.
+temporal dataset shift; treatment-anchored labels; TRIPOD+AI.

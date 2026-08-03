@@ -42,7 +42,7 @@ $$\lambda_r(t \mid X_{it}) = \frac{\exp\bigl(\alpha_r(t) + \boldsymbol{\beta}_r^
 
 $\alpha_r(t)$ is the baseline log-hazard (natural cubic spline in hours since admission) and $\boldsymbol{\beta}_r$ are cause-specific covariate coefficients. Standard errors use a cluster-robust sandwich estimator (clustered on `stay_id`).
 
-Models are fitted per label variant: Variant B is primary; A and C support the cross-label coefficient comparison (H2).
+Models are fitted per label variant: Variant B is primary; A and C support the cross-label coefficient comparison (H2). The alternative-label variants of Protocol Amendment 2 (D, E) are fitted with exactly the same specification so that the label is the only thing that differs; their coefficients are kept in a separate file and take no part in H2.
 
 ```{r load-deps}
 suppressPackageStartupMessages({
@@ -89,7 +89,7 @@ Per variant: load training person-hours, impute remaining NAs to zero, fit the m
 ```{r fit-primary-model, code_folding="hide"}
 fit_primary_model <- function(vid) {
   step(sprintf("--- Fitting primary model: Variant %s (%s) ---",
-               vid, LABEL_VARIANTS[[vid]]$name))
+               vid, variant_name(vid)))
 
   ph <- as.data.table(arrow::read_parquet(
     file.path(DATA_DIR, paste0("03_person_hours_", vid, ".parquet"))
@@ -200,8 +200,9 @@ fit_primary_model <- function(vid) {
 ```
 
 ```{r run-all-variants}
-models        <- lapply(names(LABEL_VARIANTS), fit_primary_model)
-names(models) <- names(LABEL_VARIANTS)
+run_variants  <- active_variants()
+models        <- lapply(run_variants, fit_primary_model)
+names(models) <- run_variants
 ```
 
 ## Random-Split Re-Fit (H4: Split Optimism)
@@ -294,7 +295,10 @@ fit_primary_random <- function(vid = "B") {
   fit
 }
 
-random_model_B <- fit_primary_random("B")
+random_model_B <- if ("B" %in% run_variants) fit_primary_random("B") else {
+  cat("Variant B not selected in this run; keeping the existing random-split fit.\n")
+  NULL
+}
 ```
 
 ## Cross-Label Coefficient Stability
@@ -304,20 +308,32 @@ The combined coefficient table across variants feeds the H2 (coefficient instabi
 ```{r cross-label-coefs}
 step("Computing cross-label coefficient stability (→ H2)...")
 
-all_coefs <- data.table::rbindlist(
-  lapply(names(models), function(vid) as.data.table(models[[vid]]$coef_table)),
-  fill = TRUE
+bind_coefs <- function(vids) data.table::rbindlist(
+  lapply(vids, function(vid) as.data.table(models[[vid]]$coef_table)), fill = TRUE
 )
-save_parquet(all_coefs, "05_coef_all_variants", DATA_DIR)
-cat("Cross-label coefficient tables saved for H2 testing.\n")
 
-# Show sepsis-outcome coefficients for Variant B as a preview
-coef_b_sepsis <- all_coefs[outcome == "sepsis" & variant == "B" &
-                              !grepl("^ns\\(|^\\(Intercept\\)", as.character(term))]
-if (nrow(coef_b_sepsis) > 0) {
-  knitr::kable(head(coef_b_sepsis[order(-abs(coef)), .(term, coef, variant)], 15),
-               caption = "Top 15 sepsis-outcome coefficients (Variant B, by |coef|)")
+# H2 is defined on the pre-registered family, so the alternative-label
+# coefficients are written to their own file and never mixed in.
+prereg_run <- intersect(run_variants, names(LABEL_VARIANTS))
+if (length(prereg_run) > 0) {
+  all_coefs <- bind_coefs(prereg_run)
+  save_parquet(all_coefs, "05_coef_all_variants", DATA_DIR)
+  cat("Cross-label coefficient tables saved for H2 testing.\n")
+
+  # Show sepsis-outcome coefficients for Variant B as a preview
+  coef_b_sepsis <- all_coefs[outcome == "sepsis" & variant == "B" &
+                                !grepl("^ns\\(|^\\(Intercept\\)", as.character(term))]
+  if (nrow(coef_b_sepsis) > 0) {
+    knitr::kable(head(coef_b_sepsis[order(-abs(coef)), .(term, coef, variant)], 15),
+                 caption = "Top 15 sepsis-outcome coefficients (Variant B, by |coef|)")
+  }
+} else {
+  cat("No pre-registered variants in this run; 05_coef_all_variants left unchanged.\n")
 }
 
-cat("\nCross-label coefficient tables saved.\n")
+alt_run <- intersect(run_variants, names(ALT_LABEL_VARIANTS))
+if (length(alt_run) > 0) {
+  save_parquet(bind_coefs(alt_run), "05_coef_alt_variants", DATA_DIR)
+  cat("Alternative-label coefficient tables saved (Protocol Amendment 2).\n")
+}
 ```

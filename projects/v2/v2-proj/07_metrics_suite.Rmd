@@ -172,8 +172,10 @@ MODEL_NAMES <- c(primary = "pred_sepsis", news2 = "pred_news2",
 
 all_results <- list()
 
-for (vid in names(LABEL_VARIANTS)) {
-  step(sprintf("--- Evaluating Variant %s (%s) ---", vid, LABEL_VARIANTS[[vid]]$name))
+run_variants <- active_variants()
+
+for (vid in run_variants) {
+  step(sprintf("--- Evaluating Variant %s (%s) ---", vid, variant_name(vid)))
 
   prim_pred_path <- file.path(DATA_DIR, paste0("05_predictions_primary_",     vid, ".parquet"))
   comp_pred_path <- file.path(DATA_DIR, paste0("06_predictions_comparators_", vid, ".parquet"))
@@ -233,7 +235,7 @@ for (vid in names(LABEL_VARIANTS)) {
 
       result_row <- data.frame(
         variant            = vid,
-        variant_name       = LABEL_VARIANTS[[vid]]$name,
+        variant_name       = variant_name(vid),
         model              = mod_name,
         eval_window        = win_name,
         split_type         = "temporal",
@@ -277,20 +279,53 @@ for (vid in names(LABEL_VARIANTS)) {
 Central performance comparison. Key checks: (i) primary vs. GBT Utility Score (H6), (ii) treatment-anchored vs. unrestricted (H3, leakage), (iii) calibration slope near 1.0.
 
 ```{r show-results}
-if (length(all_results) > 0) {
-  results_df <- do.call(rbind, all_results)
-  save_parquet(results_df, "07_metric_results", DATA_DIR)
+display_cols <- c("variant", "model", "eval_window", "auroc", "auprc",
+                  "utility_normalised", "alert_burden", "lead_time_h")
 
-  display_cols <- c("variant", "model", "eval_window", "auroc", "auprc",
-                    "utility_normalised", "alert_burden", "lead_time_h")
+results_df <- if (length(all_results) > 0) do.call(rbind, all_results) else NULL
+
+# The pre-registered variance decomposition reads 07_metric_results.parquet, so
+# the alternative-label variants of Protocol Amendment 2 are written to their
+# own file and cannot leak into H1 or the decomposition table.
+prereg_df <- if (!is.null(results_df))
+               results_df[results_df$variant %in% names(LABEL_VARIANTS), ] else NULL
+
+if (!is.null(prereg_df) && nrow(prereg_df) > 0) {
+  save_parquet(prereg_df, "07_metric_results", DATA_DIR)
   knitr::kable(
-    results_df[order(results_df$variant, results_df$eval_window, results_df$model),
-               display_cols],
+    prereg_df[order(prereg_df$variant, prereg_df$eval_window, prereg_df$model),
+              display_cols],
     caption = "Evaluation results: all models x variants x windows (temporal split)"
   )
   cat("\nSaved: 07_metric_results.parquet\n")
 } else {
-  cat("No results to display. Check that 05 and 06 have been run.\n")
+  cat("No pre-registered-variant results in this run; 07_metric_results.parquet left unchanged.\n")
+}
+```
+
+## Alternative-Label Evaluation (Protocol Amendment 2)
+
+Variants D and E are evaluated with the identical metric suite. Because a
+label change alters the event definition, the event counts and prevalences
+differ from the Sepsis-3 variants and are reported alongside the metrics; the
+comparison of interest is made in `09_variance_decomposition.Rmd`.
+
+```{r show-alt-results}
+alt_df <- if (!is.null(results_df))
+            results_df[results_df$variant %in% names(ALT_LABEL_VARIANTS), ] else NULL
+
+if (!is.null(alt_df) && nrow(alt_df) > 0) {
+  alt_df$label_family <- vapply(alt_df$variant, variant_type, character(1))
+  save_parquet(alt_df, "07_metric_results_altlabel", DATA_DIR)
+  save_csv(alt_df,     "07_metric_results_altlabel", DATA_DIR)
+  knitr::kable(
+    alt_df[order(alt_df$variant, alt_df$eval_window, alt_df$model),
+           c(display_cols, "n_sepsis_events")],
+    caption = "Evaluation results under the alternative (non-Sepsis-3) labels"
+  )
+  cat("\nSaved: 07_metric_results_altlabel.parquet\n")
+} else {
+  cat("No alternative-label variants selected in this run.\n")
 }
 ```
 

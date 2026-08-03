@@ -250,8 +250,9 @@ fit_comparators <- function(vid) {
 ```
 
 ```{r run-comparators}
-all_comparator_preds        <- lapply(names(LABEL_VARIANTS), fit_comparators)
-names(all_comparator_preds) <- names(LABEL_VARIANTS)
+run_variants                <- active_variants()
+all_comparator_preds        <- lapply(run_variants, fit_comparators)
+names(all_comparator_preds) <- run_variants
 ```
 
 ## Random-Split Comparators (H4)
@@ -262,9 +263,14 @@ GBT and rule-based comparators are re-fitted on the random patient-level split f
 step("--- Random-split comparators for Variant B (H4) ---")
 
 vid <- "B"
-ph <- as.data.table(arrow::read_parquet(
-  file.path(DATA_DIR, paste0("03_person_hours_", vid, ".parquet"))
-))
+ph <- if ("B" %in% run_variants) {
+  as.data.table(arrow::read_parquet(
+    file.path(DATA_DIR, paste0("03_person_hours_", vid, ".parquet"))
+  ))
+} else {
+  cat("Variant B not selected in this run; keeping the existing random-split comparators.\n")
+  data.table()
+}
 
 if ("random_split" %in% names(ph)) {
   train_r <- ph[random_split == "train"]
@@ -392,7 +398,9 @@ if ("random_split" %in% names(ph)) {
 GBT feature importance provides a cross-check: if GBT relies on the same features as the multinomial regression, both model classes are learning similar structure.
 
 ```{r gbt-importance}
-imp_files <- list.files(DATA_DIR, pattern = "^06_gbt_feature_importance_.*\\.parquet$", full.names = TRUE)
+imp_files <- file.path(DATA_DIR, sprintf("06_gbt_feature_importance_%s.parquet",
+                                          names(LABEL_VARIANTS)))
+imp_files <- imp_files[file.exists(imp_files)]
 if (length(imp_files) > 0) {
   imp_all <- rbindlist(lapply(imp_files, function(f) as.data.table(arrow::read_parquet(f))))
   if (nrow(imp_all) > 0) {

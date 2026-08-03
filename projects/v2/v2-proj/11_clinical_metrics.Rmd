@@ -897,7 +897,9 @@ if (nrow(ext_op_dt) > 0) {
                             "%.0f%% target sensitivity (thresholds re-derived",
                             "on the external cohort)."), HEADLINE_SENS * 100))
 }
+```
 
+```{r external-patient}
 if (nrow(ext_pat_dt) > 0) {
   save_parquet(ext_pat_dt, "11_external_patient_level", DATA_DIR)
   save_csv(ext_pat_dt,     "11_external_patient_level", DATA_DIR)

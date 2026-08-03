@@ -308,3 +308,217 @@ if (nrow(metrics[!is.na(auroc)]) > 0) {
 
 cat("\nVariance decomposition complete.\n")
 ```
+
+## Label-Anchor Attribution (Protocol Amendment 2)
+
+Everything above varies the label *within* Sepsis-3. Variants A, B and C are
+three readings of one definition and all three fire on the same
+culture-plus-antibiotic trigger, so the label spread entering H1 is partly a
+**definitional** quantity: it measures how much the reading of a definition
+matters, not how much the choice of construct matters. Whether the physiology
+itself carries the signal cannot be settled inside that family.
+
+Sepsis-3 is a conjunction --- *suspected infection* **and** *acute organ
+dysfunction*. This section splits it and fits the same model to each limb alone:
+
+| Variant | Suspicion anchor | Organ dysfunction | Reads a treatment decision? |
+|---|---|---|---|
+| B (Seymour-Standard) | required | required | yes |
+| E (Anchor-Only) | required | not required | yes |
+| D (Deterioration) | not required | required | **no** |
+
+Variant D is the treatment-independent labelling the decomposition was missing:
+its onsets are derived from recorded physiology alone, so no antibiotic order,
+culture draw or drug administration enters the label.
+
+Two quantities are read off the comparison. The **anchor-attributable
+fraction** is the share of Variant B's above-chance discrimination that is
+reproduced by predicting the treatment anchor on its own,
+
+$$\phi_{\text{anchor}} = \frac{\mathrm{AUROC}_E - 0.5}{\mathrm{AUROC}_B - 0.5},$$
+
+and the **label agreement** statistics report how far the alternative labels
+move the onsets themselves.
+
+```{r anchor-attribution}
+step("Label-anchor attribution (Protocol Amendment 2)...")
+
+alt_path <- file.path(DATA_DIR, "07_metric_results_altlabel.parquet")
+alt_res  <- if (file.exists(alt_path)) as.data.table(arrow::read_parquet(alt_path)) else NULL
+
+attrib <- NULL
+if (is.null(alt_res)) {
+  cat("07_metric_results_altlabel.parquet not found; run 07 with variants D and E.\n")
+} else {
+  ref <- metrics[eval_window == "unrestricted" & variant == "B",
+                 .(model, auroc_B = auroc, auprc_B = auprc,
+                   utility_B = utility_normalised, n_events_B = n_sepsis_events)]
+
+  alt <- alt_res[eval_window == "unrestricted",
+                 .(variant, variant_name, model, auroc, auprc,
+                   utility_normalised, n_sepsis_events)]
+
+  attrib <- merge(alt, ref, by = "model")
+  attrib[, `:=`(
+    delta_auroc_vs_B  = round(auroc - auroc_B, 4),
+    anchor_fraction   = ifelse(variant == "E" & auroc_B > 0.5,
+                               round((auroc - 0.5) / (auroc_B - 0.5), 3), NA_real_),
+    event_rate_ratio  = round(n_sepsis_events / n_events_B, 2)
+  )]
+  setorder(attrib, variant, -auroc)
+
+  knitr::kable(
+    attrib[, .(variant, label = variant_name, model,
+               auroc = round(auroc, 4), auroc_B = round(auroc_B, 4),
+               delta_auroc_vs_B, n_events = n_sepsis_events,
+               event_rate_ratio, anchor_fraction)],
+    caption = "Discrimination under each limb of the Sepsis-3 conjunction, against Variant B (temporal test, unrestricted window)"
+  )
+  save_parquet(attrib, "09_label_anchor_attribution", DATA_DIR)
+  save_csv(attrib,     "09_label_anchor_attribution", DATA_DIR)
+
+  phi <- attrib[variant == "E" & model == "primary", anchor_fraction]
+  if (length(phi) == 1 && !is.na(phi))
+    cat(sprintf("\nAnchor-attributable fraction (primary model): %.1f%% of Variant B's above-chance AUROC is reproduced by the treatment anchor alone.\n",
+                100 * phi))
+}
+```
+
+## Label Agreement Between Definitions
+
+How far the alternative labels move the onsets, measured on the same stays:
+the share of stays each pair labels identically (Cohen's $\kappa$ for chance
+correction) and, among stays positive under both, the median shift in onset
+hour. A label that disagrees with Sepsis-3 about *which* patients deteriorate
+is a different construct, not a re-reading of the same one.
+
+```{r label-agreement}
+# Onsets come from the person-hour tables where those exist, and otherwise from
+# the cohort tables, which carry the same stay-level onset_hour for every
+# variant except D (whose onsets are only defined on the hourly panel).
+load_onsets <- function(vid) {
+  p <- file.path(DATA_DIR, sprintf("03_onsets_%s.parquet", vid))
+  if (!file.exists(p)) p <- file.path(DATA_DIR, sprintf("02_cohort_%s.parquet", vid))
+  if (!file.exists(p)) return(NULL)
+  d <- unique(as.data.table(
+    arrow::read_parquet(p, col_select = c("stay_id", "onset_hour"))))
+  # Onsets beyond the modelled horizon never become events, so they count as
+  # negative here; this keeps D, whose onsets exist only inside the panel,
+  # comparable with the variants labelled on the full stay.
+  d[!is.na(onset_hour) & onset_hour > MAX_PANEL_HOURS, onset_hour := NA_integer_]
+  setnames(d, "onset_hour", paste0("onset_", vid))
+  d
+}
+
+cohen_kappa <- function(a, b) {
+  po <- mean(a == b)
+  pe <- mean(a) * mean(b) + mean(!a) * mean(!b)
+  if (pe >= 1) return(NA_real_)
+  (po - pe) / (1 - pe)
+}
+
+agreement <- NULL
+ons <- Filter(Negate(is.null), lapply(ALL_VARIANTS, load_onsets))
+if (length(ons) < 2 || is.null(load_onsets("B"))) {
+  cat("Per-variant onset tables not available; re-run 03_person_hours.Rmd.\n")
+} else {
+  wide <- Reduce(function(x, y) merge(x, y, by = "stay_id"), ons)
+  others <- setdiff(ALL_VARIANTS, "B")
+  others <- others[paste0("onset_", others) %in% names(wide)]
+
+  agreement <- rbindlist(lapply(others, function(vid) {
+    oc <- paste0("onset_", vid)
+    pos_B <- !is.na(wide$onset_B); pos_v <- !is.na(wide[[oc]])
+    both  <- pos_B & pos_v
+    data.table(
+      variant          = vid,
+      label            = variant_name(vid),
+      label_family     = variant_type(vid),
+      n_stays          = nrow(wide),
+      n_positive       = sum(pos_v),
+      n_positive_B     = sum(pos_B),
+      n_positive_both  = sum(both),
+      pct_agree        = round(100 * mean(pos_B == pos_v), 1),
+      kappa_vs_B       = round(cohen_kappa(pos_B, pos_v), 3),
+      # of the stays Sepsis-3 (B) calls septic, how many does this label find
+      sensitivity_to_B = round(sum(both) / max(sum(pos_B), 1), 3),
+      median_shift_h   = if (sum(both) > 0)
+                           round(median(wide[[oc]][both] - wide$onset_B[both]), 1)
+                         else NA_real_
+    )
+  }))
+
+  knitr::kable(agreement, caption = "Onset agreement with Variant B across all label variants")
+  save_parquet(agreement, "09_label_agreement", DATA_DIR)
+  save_csv(agreement,     "09_label_agreement", DATA_DIR)
+}
+```
+
+```{r anchor-attribution-plot, fig.cap="Discrimination under each limb of the Sepsis-3 conjunction. Variant B requires suspected infection and organ dysfunction; E keeps only the treatment anchor; D keeps only the physiological deterioration and contains no treatment timestamp.", fig.width=7, fig.height=4}
+if (!is.null(attrib) && nrow(attrib) > 0) {
+  tryCatch({
+    plot_dt <- rbind(
+      metrics[eval_window == "unrestricted" & variant == "B",
+              .(variant, model, auroc)],
+      attrib[, .(variant, model, auroc)]
+    )
+    plot_dt[, label := factor(
+      variant,
+      levels = c("E", "B", "D"),
+      labels = c("E: anchor only\n(treatment)", "B: Sepsis-3\n(anchor AND dysfunction)",
+                 "D: deterioration only\n(treatment-independent)"))]
+    plot_dt <- plot_dt[!is.na(label) & !is.na(auroc)]
+
+    p_anchor <- ggplot(plot_dt, aes(x = label, y = auroc, fill = model)) +
+      geom_col(position = position_dodge(width = 0.8), width = 0.75) +
+      geom_hline(yintercept = 0.5, linetype = "dashed") +
+      labs(title    = "Splitting the Sepsis-3 conjunction into its two limbs",
+           subtitle = "Temporal test set, unrestricted window; dashed line = chance",
+           x = NULL, y = "AUROC", fill = "Model") +
+      theme_bw() + theme(axis.text.x = element_text(size = 8))
+    print(p_anchor)
+    ggsave(file.path(FIGURES_DIR, "09_label_anchor_attribution.png"), p_anchor,
+           width = 7, height = 4, dpi = 150)
+  }, error = function(e) cat("Anchor attribution plot failed:", e$message, "\n"))
+}
+```
+
+## Reading the Attribution
+
+Three things follow, and only the third is empirical rather than definitional.
+
+1. **Variant E is not a sepsis model.** Its label is the moment a clinician
+   sent a culture and started antibiotics. Whatever discrimination it achieves
+   is discrimination about treatment behaviour, and $\phi_{\text{anchor}}$
+   states how much of Variant B's apparent skill that behaviour already
+   accounts for.
+2. **Variant D is not directly comparable to B on AUROC.** Its label is a
+   threshold function of recorded physiology, and five of the six SOFA
+   components (all but PaO$_2$/FiO$_2$) are model inputs, so a high AUROC would
+   be partly self-fulfilling. The comparison that carries information is not
+   the level but whether the label changes *which* patients are flagged, which
+   the agreement table answers.
+3. **The label-sensitivity finding survives only to the extent that D and B
+   disagree.** If a treatment-independent label picks out substantially
+   different patients at substantially different hours, then label choice is a
+   real constraint on what a sepsis model can be trained to do, not an artefact
+   of how one definition is read.
+
+```{r attribution-summary}
+if (!is.null(attrib)) {
+  e_prim <- attrib[variant == "E" & model == "primary"]
+  d_prim <- attrib[variant == "D" & model == "primary"]
+  b_prim <- metrics[variant == "B" & model == "primary" & eval_window == "unrestricted"]
+  if (nrow(e_prim) == 1 && nrow(b_prim) == 1)
+    cat(sprintf("Primary model AUROC — B (Sepsis-3): %.3f | E (anchor only): %.3f | D (deterioration): %s\n",
+                b_prim$auroc, e_prim$auroc,
+                if (nrow(d_prim) == 1) sprintf("%.3f", d_prim$auroc) else "n/a"))
+}
+if (!is.null(agreement)) {
+  d_row <- agreement[variant == "D"]
+  if (nrow(d_row) == 1)
+    cat(sprintf("Variant D vs B: kappa = %.3f, %.1f%% of B's septic stays also deteriorate, median onset shift %s h\n",
+                d_row$kappa_vs_B, 100 * d_row$sensitivity_to_B,
+                format(d_row$median_shift_h)))
+}
+```

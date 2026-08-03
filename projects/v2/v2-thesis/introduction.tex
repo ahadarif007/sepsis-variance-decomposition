@@ -147,9 +147,24 @@ states plainly that it was written after the analyses had been run.
     sensitivity across demographic subgroups, following Wang et al.\
     \cite{wang2022equity} (see Section~\ref{sec:search_strategy}).
 
-    \item \textbf{C6 (Reproducible pipeline).} A fully open, pre-registered
+    \item \textbf{C6 (Reproducible pipeline).} A pre-registered, seed-fixed
     pipeline following TRIPOD+AI \cite{collins2024tripodai} and PROBAST+AI
     \cite{moons2025probastai} reporting standards.
+
+    \item \textbf{C7 (Definitional vs.\ empirical label variance separated).}
+    The Sepsis-3 conjunction is split into its two limbs and each is labelled
+    separately, so that the part of the label effect guaranteed by the
+    definition can be told apart from the part discovered in the data. Two
+    results follow. The onset \emph{time} under every Sepsis-3 variant is fixed
+    entirely by the treatment anchor --- the organ-dysfunction criterion filters
+    which stays are labelled and moves no onset by a single hour --- while a
+    treatment-independent deterioration label agrees with Sepsis-3 at
+    $\kappa = 0.057$, close to chance. And Sepsis-3 is \emph{harder} to predict
+    than either limb alone, so the difficulty lies in the conjunction rather
+    than in the physiology or in clinician behaviour taken separately. The same
+    comparison shows the empty pre-treatment window of C2 to be a property of
+    the definition: a treatment-independent label records 1,362 onsets there,
+    at 0.840 AUROC (Section~\ref{sec:label_anchor_results}).
 \end{enumerate}
 
 
@@ -158,7 +173,7 @@ states plainly that it was written after the analyses had been run.
 Chapter~\ref{ch:review} reviews the evidence that motivated this study's design.
 Chapter~\ref{ch:methodology} describes the data, labels, models, and evaluation
 plan.
-Chapter~\ref{ch:design} explains the pipeline architecture and its ten
+Chapter~\ref{ch:design} explains the pipeline architecture and its twelve
 scripts.
 Chapter~\ref{ch:evaluation} presents all results, organised around the six
 hypotheses.

@@ -136,6 +136,85 @@ LABEL_VARIANTS <- list(
 
 SOFA_INCREASE_THRESHOLD <- 2   # >= 2 SOFA points = organ dysfunction
 
+# --------------------------------------------------------------------------- #
+# Alternative (non-Sepsis-3) label definitions — Protocol Amendment 2
+#
+# All three pre-registered variants above are Sepsis-3 interpretations sharing
+# one culture-plus-antibiotic suspicion anchor, so their mutual disagreement is
+# partly definitional rather than empirical. These two variants break the
+# Sepsis-3 conjunction (suspected infection AND organ dysfunction) into its two
+# limbs so the contribution of the treatment anchor can be measured:
+#
+#   E  anchor limb alone     — the suspicion-of-infection time itself, with the
+#                              SOFA criterion removed. Depends only on clinician
+#                              treatment behaviour, not on physiology.
+#   D  dysfunction limb alone — first hour of acute organ dysfunction relative to
+#                              the ICU-admission baseline, with no infection
+#                              criterion and with treatment-derived SOFA
+#                              components (vasopressors) excluded. Contains no
+#                              treatment timestamp of any kind.
+#
+# They are deliberately held OUTSIDE LABEL_VARIANTS: H1 and the variance
+# decomposition are defined on the pre-registered A/B/C family and must not
+# absorb post-hoc variants.
+# --------------------------------------------------------------------------- #
+ALT_LABEL_VARIANTS <- list(
+  D = list(
+    name          = "Deterioration",
+    type          = "deterioration",
+    # Onset is derived per hour in 03_person_hours.Rmd, where the hourly panel
+    # exists; the physiology-only SOFA baseline is the stay's first
+    # DETERIORATION_BASELINE_H + 1 hours, mirroring the "admission" baseline
+    # used by variants A and B.
+    sofa_baseline = "admission"
+  ),
+  E = list(
+    name                 = "Anchor-Only",
+    type                 = "anchor_only",
+    # Identical suspicion windows to Variant B, so E is exactly B's anchor limb.
+    abx_before_culture_h = 72,
+    culture_before_abx_h = 24
+  )
+)
+
+# Hours 0..DETERIORATION_BASELINE_H form the Variant D baseline window.
+DETERIORATION_BASELINE_H <- 3
+
+# Every variant the pipeline knows about, pre-registered first.
+ALL_VARIANTS <- c(names(LABEL_VARIANTS), names(ALT_LABEL_VARIANTS))
+
+#' Restrict the per-variant loops in stages 02-07 to a subset.
+#'
+#' Set V2_VARIANTS to a comma-separated list (e.g. V2_VARIANTS=D,E) to add or
+#' refresh variants without refitting the others. This matters because the
+#' XGBoost comparator is not bit-stable across runs, so an incidental refit of
+#' A/B/C would silently move every GBT-dependent number in the thesis. Unset
+#' (the default) runs all variants, so a clean end-to-end run is unaffected.
+active_variants <- function(all_ids = ALL_VARIANTS) {
+  sel <- Sys.getenv("V2_VARIANTS", "")
+  if (!nzchar(sel)) return(all_ids)
+  keep <- trimws(strsplit(sel, ",", fixed = TRUE)[[1]])
+  unknown <- setdiff(keep, all_ids)
+  if (length(unknown) > 0)
+    stop("V2_VARIANTS names unknown variants: ", paste(unknown, collapse = ", "))
+  intersect(all_ids, keep)
+}
+
+#' Look up a variant's definition in either family.
+variant_def <- function(vid) {
+  if (!is.null(LABEL_VARIANTS[[vid]])) LABEL_VARIANTS[[vid]] else ALT_LABEL_VARIANTS[[vid]]
+}
+
+#' A variant's display name.
+variant_name <- function(vid) variant_def(vid)$name
+
+#' A variant's label family: "sepsis3" for the pre-registered A/B/C, otherwise
+#' the alternative-label type.
+variant_type <- function(vid) {
+  ty <- variant_def(vid)$type
+  if (is.null(ty)) "sepsis3" else ty
+}
+
 # Surveillance cultures to exclude from suspected-infection definition
 SURVEILLANCE_SPEC_TYPES <- c(
   "MRSA SCREEN", "Staph aureus swab", "Cipro Resistant Screen",

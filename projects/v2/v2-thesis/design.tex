@@ -1,10 +1,11 @@
 \chapter{System Design and Pipeline Architecture}
 \label{ch:design}
 
-The pipeline consists of ten numbered, single-purpose scripts in
-\texttt{v2-proj/}. Each script reads from upstream outputs and writes its own
-results to \texttt{v2-proj/output/}. No script modifies the original source
-data. All random seeds are fixed for reproducibility.
+The pipeline consists of twelve numbered, single-purpose scripts in
+\texttt{v2-proj/}, preceded by the locked pre-registration document
+(\texttt{00\_preregistration.md}). Each script reads from upstream outputs and
+writes its own results to \texttt{v2-proj/output/}. No script modifies the
+original source data. All random seeds are fixed for reproducibility.
 Figure~\ref{fig:pipeline_dag} shows the data flow.
 
 \begin{figure}[H]
@@ -34,12 +35,14 @@ Figure~\ref{fig:pipeline_dag} shows the data flow.
         \node[box, below=of s07]        (s08) {\texttt{08} External Valid.};
         \node[box, below=of s08]        (s09) {\texttt{09} Variance Decomp.};
         \node[box, below=of s09]        (s10) {\texttt{10} Equity Analysis};
+        \node[box, below=of s10]        (s11) {\texttt{11} Clinical Utility};
+        \node[box, below=of s11]        (s12) {\texttt{12} Inference};
 
 %--- Output nodes (between columns)
         \node[data, right=of s02] (cohort)  {cohort\_\{A,B,C\}.pq};
         \node[data, right=of s03] (ph)      {person\_hours.pq};
         \node[data, right=of s05] (models)  {model\_primary.rds};
-        \node[data, right=of s07] (metrics) {metric\_results.csv};
+        \node[data, right=of s07] (metrics) {metric\_results.pq};
 
 %--- Left-column flow
         \draw[arr] (raw)  -- (s01);
@@ -56,6 +59,8 @@ Figure~\ref{fig:pipeline_dag} shows the data flow.
         \draw[arr] (s07)  -- (s08);
         \draw[arr] (s08)  -- (s09);
         \draw[arr] (s09)  -- (s10);
+        \draw[arr] (s10)  -- (s11);
+        \draw[arr] (s11)  -- (s12);
 
 %--- Output arrows
         \draw[arr] (s02)  -- (cohort);
@@ -98,7 +103,7 @@ and reports their sizes. The pipeline stops if any table is missing.
 
 \section{Stage 02: Cohort Extraction and Labelling}
 
-\texttt{02\_cohort\_labels.Rmd} builds all three cohorts in a single pass:
+\texttt{02\_cohort\_labels.Rmd} builds all cohorts in a single pass:
 
 \begin{enumerate}
     \item \textbf{Base cohort:} Adult first ICU stays with LOS $\geq 4$\,h
@@ -113,9 +118,27 @@ and reports their sizes. The pipeline stops if any table is missing.
 
     \item \textbf{Onset time:} The hour when both criteria (infection + SOFA rise)
     are simultaneously met.
+
+    \item \textbf{Alternative labels (Protocol Amendment 2):} The Sepsis-3
+    conjunction is also split into its two limbs
+    (Section~\ref{sec:alt_labels}). Variant E keeps the suspicion anchor and
+    drops the SOFA criterion; Variant D keeps organ dysfunction and drops the
+    anchor, so its onsets are derived from physiology in Stage 03 rather than
+    here. Both are held outside the pre-registered variant set in
+    \texttt{config.R} and their outputs are written to separate files so they
+    cannot enter H1 or the decomposition table.
 \end{enumerate}
 
-Outputs: \texttt{cohort\_A/B/C.parquet} and \texttt{label\_variance\_table.csv}.
+Outputs: \texttt{cohort\_A/B/C.parquet},
+\texttt{label\_variance\_table.parquet},
+\texttt{cohort\_D/E.parquet}, and
+\texttt{alt\_label\_variance\_table.parquet}.
+
+A single environment variable, \texttt{V2\_VARIANTS}, restricts the per-variant
+loops in Stages 02--07 to a named subset. Adding the alternative labels
+therefore did not require refitting variants A--C: XGBoost is not bit-stable
+across runs, so an incidental refit would have moved every GBT-dependent number
+in this thesis without any change of substance.
 
 
 \section{Stage 03: Person-Hour Table Construction}
@@ -179,7 +202,8 @@ intercept and slope, PhysioNet Utility Score (via Python module
 \texttt{utility\_score.py}), alert burden, lead time, and decision-curve net
 benefit.
 
-Output: \texttt{07\_metric\_results.csv}.
+Output: \texttt{07\_metric\_results.parquet} (and
+\texttt{07\_metric\_results\_random.parquet} for the random-split arm).
 
 
 \section{Stage 08: External Validation on eICU-CRD}
@@ -201,14 +225,24 @@ decomposition by varying one factor at a time while holding all others fixed:
     \item \textbf{Metric divergence (H5):} AUROC vs.\ Utility Score decline.
 \end{itemize}
 
-Outputs: decomposition tables, hypothesis verdicts, and comparison plots.
+It then runs the \textbf{label-anchor attribution} of Protocol Amendment 2:
+performance under each limb of the Sepsis-3 conjunction, the
+anchor-attributable fraction of Equation~\ref{eq:anchor_fraction}, and onset
+agreement (Cohen's $\kappa$, median onset shift) between every label variant
+and Variant B.
+
+Outputs: decomposition tables, hypothesis verdicts, comparison plots,
+\texttt{label\_anchor\_attribution}, and \texttt{label\_agreement}.
 
 
 \section{Stage 10: Equity Analysis}
 
 \texttt{10\_equity\_analysis.Rmd} evaluates model performance and label
-sensitivity within each stratum of four equity variables: race, ethnicity,
-language, and insurance. The combination of performance disparities and
+sensitivity within each stratum of the equity variables declared in
+\texttt{config.R} (race, ethnicity, language, insurance). MIMIC-IV v3.1 records
+race and ethnicity in a single field, so three variables carry data and are
+reported: \textbf{race, language, and insurance}. Levels are restricted to the
+eight largest per variable. The combination of performance disparities and
 label-sensitivity variation is the novel finding.
 
 
@@ -226,8 +260,9 @@ to onset, for both MIMIC-IV and eICU-CRD.
 outputs of the earlier stages, so it can be re-run without refitting anything,
 and it produces three things: stay-level cluster-bootstrap confidence intervals
 for every headline and subgroup estimate; the Holm-corrected confirmatory tests
-of H1--H6 and the Benjamini--Hochberg-corrected exploratory subgroup families;
-and the machine-readable analysis register that supplies the status tags used
+of H1--H6 and the Benjamini--Hochberg-corrected exploratory families (E1 and E2
+subgroup analyses, E3 alternative-label contrasts); and the machine-readable
+analysis register that supplies the status tags used
 throughout Chapter~\ref{ch:evaluation}. The bootstrap resamples ICU stays, never
 person-hours, and evaluates AUROC and AUPRC as weighted rank statistics on
 pre-sorted data so that 2,000 replicates over half a million person-hours
@@ -239,11 +274,15 @@ Section~\ref{sec:inference}.
 
 \section{Reproducibility}
 
-The pipeline is orchestrated by \texttt{run\_pipeline.R}, which executes all
-stages sequentially or by phase. All intermediate outputs are Parquet
-(compressed, columnar). Small result tables ($<$1,000 rows) are CSV for
-readability. The full pipeline runs in approximately six hours on a machine with
-64\,GB RAM.
+The pipeline is orchestrated by \texttt{run\_pipeline.R} (or the equivalent
+\texttt{run\_pipeline.sh}), which executes all stages sequentially or by phase,
+renders each stage to PDF in \texttt{output/pdf/}, and writes a per-stage and a
+combined run log to \texttt{output/logs/}. All intermediate outputs are Parquet
+(compressed, columnar). Small result tables ($<$1,000 rows) are additionally
+written as CSV for readability. The end-to-end run reported in this thesis
+completed in 60 minutes on an Apple silicon workstation; the dominant cost is
+stage 05, which fits the multinomial model on 2.3 million person-hours for each
+label variant.
 
 \subsection{Fixed Random Seed}
 
@@ -256,5 +295,24 @@ seed is drawn from wall-clock time or left to the system default.
 
 The full pipeline can be reproduced on any MIMIC-IV v3.1 installation by
 setting the environment variable \texttt{MIMIC\_RESEARCH\_ROOT} to the
-directory containing the \texttt{data/} folder. The code repository is
-released under a permissive open-source licence.
+directory containing the \texttt{data/} folder.
+
+\subsection{Code Availability}
+\label{sec:code_availability}
+
+The complete pipeline --- the twelve numbered scripts, \texttt{config.R},
+\texttt{utils.R}, \texttt{utility\_score.py}, the pre-registration document and
+the orchestration scripts --- is held in a version-controlled repository and is
+available from the author on request, including to examiners. The repository is
+currently private; the licence under which it will be released has not yet been
+fixed and is stated here as undetermined rather than asserted.
+
+The repository contains \textbf{code only}. No MIMIC-IV or eICU-CRD record,
+derived person-hour table, or fitted model object is included: the
+\texttt{data/}, \texttt{processed\_data/} and \texttt{output/} directories are
+excluded from version control by design, because the PhysioNet Credentialed
+Data Use Agreement (Section~\ref{sec:ethics}) prohibits redistribution of the
+underlying data. A reader wishing to reproduce these results must obtain
+MIMIC-IV v3.1 and eICU-CRD v2.0 through their own PhysioNet credentialing, then
+re-run the pipeline; with the fixed seed above it reproduces the reported
+estimates exactly.

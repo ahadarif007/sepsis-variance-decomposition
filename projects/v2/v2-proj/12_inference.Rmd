@@ -44,8 +44,10 @@ many of them at once. Three things are produced:
 
 2. **Multiplicity control.** The six pre-registered hypotheses form a
    *confirmatory* family and are corrected by Holm--Bonferroni at
-   $\alpha = 0.05$ (FWER). All subgroup analyses form *exploratory* families
-   and are corrected by Benjamini--Hochberg at $q = 0.05$ (FDR). The two
+   $\alpha = 0.05$ (FWER). The subgroup analyses and the alternative-label
+   comparison form *exploratory* families (E1 subgroup discrimination, E2
+   subgroup label sensitivity, E3 alternative-label contrasts) and are
+   corrected by Benjamini--Hochberg at $q = 0.05$ (FDR). The two
    procedures are deliberately different: a confirmatory claim must survive
    strict family-wise control, whereas an exploratory scan is intended to
    generate hypotheses and only needs its false-discovery proportion bounded.
@@ -63,6 +65,12 @@ post-hoc. It does not change any hypothesis, threshold, or estimand; it only
 attaches uncertainty to contrasts that were pre-specified and imposes a
 correction that the original protocol omitted. Where a correction changes a
 verdict, that is reported as the corrected verdict.
+
+Family E3 belongs to *Protocol Amendment 2* (`00_preregistration.md` §§16--17),
+which adds two non-Sepsis-3 label definitions. It too is post-hoc, and it
+likewise leaves every pre-registered hypothesis untouched: variants D and E are
+never pooled with A--C, so H1 and the variance decomposition are computed from
+exactly the same inputs as before.
 
 ```{r load-deps}
 suppressPackageStartupMessages({
@@ -443,7 +451,9 @@ knitr::kable(
            p_holm = fifelse(is.na(p_holm), "--", formatC(p_holm, format = "g", digits = 2)),
            verdict)],
   caption = "Confirmatory family: six pre-registered hypotheses, one-sided cluster-bootstrap tests against their pre-registered thresholds, Holm-Bonferroni corrected at family size 6")
+```
 
+```{r confirmatory-notes}
 knitr::kable(conf[nzchar(note), .(H = hypothesis, note)],
              caption = "Supporting detail for the confirmatory family")
 ```
@@ -568,7 +578,9 @@ knitr::kable(
     .(model, subgroup = subgroup_val, n_rows, n_events,
       auroc = round(auroc, 3), CI = fmt_ci(ci_lo, ci_hi), width = round(ci_width, 3))],
   caption = "Subgroup AUROC by race with 95\\% stratified cluster-bootstrap intervals (Variant B, temporal test)")
+```
 
+```{r subgroup-fdr-contrasts}
 if (nrow(sub_delta) > 0)
   knitr::kable(
     sub_delta[subgroup_col == "race"][order(model, p_raw),
@@ -701,7 +713,9 @@ if (nrow(ls_ci) > 0)
         C = sprintf("%.1f %s", pct_C, fmt_ci(pct_C_lo, pct_C_hi, 1)),
         range = sprintf("%.1f %s", range_pp, fmt_ci(range_lo, range_hi, 1)))],
     caption = "Percentage of stays labelled septic by race and label variant, with 95\\% stratified cluster-bootstrap intervals")
+```
 
+```{r label-sens-contrasts}
 if (nrow(ls_delta) > 0)
   knitr::kable(
     ls_delta[subgroup_col == "race"][order(p_raw),
@@ -710,6 +724,155 @@ if (nrow(ls_delta) > 0)
         p = formatC(p_raw, format = "f", digits = 3),
         q_BH = formatC(p_bh, format = "f", digits = 3), significant_bh)],
     caption = "Difference in label sensitivity (A--C range) vs.\\ the reference group, Benjamini-Hochberg corrected across exploratory family E2")
+```
+
+## Exploratory Family E3: Alternative-Label Contrasts
+
+Families E1 and E2 vary the label only *within* Sepsis-3, so they cannot say
+whether the label sensitivity is empirical or definitional. This family attaches
+intervals to the Protocol Amendment 2 comparison: Variant E is Sepsis-3's
+treatment anchor with the organ-dysfunction requirement removed, Variant D is
+the organ-dysfunction limb with no treatment timestamp at all.
+
+All variants are labelled on the same test stays, so one replicate draw applies
+to all three and each contrast is paired within replicate. Reported alongside
+the differences is the **anchor-attributable fraction**
+$\phi = (\mathrm{AUROC}_E - 0.5)/(\mathrm{AUROC}_B - 0.5)$, the share of Variant
+B's above-chance discrimination that the treatment anchor reproduces on its own.
+$\phi$ is a ratio with no meaningful null at zero, so it is reported as an
+interval and is not part of the corrected family.
+
+```{r alt-label-ci}
+alt_tab <- lapply(c(D = "D", E = "E"), load_test_table)
+alt_tab <- Filter(Negate(is.null), alt_tab)
+
+alt_ci <- data.table(); alt_delta <- data.table()
+
+if (length(alt_tab) == 0) {
+  cat("No alternative-label predictions found; run 05-07 with variants D and E.\n")
+} else {
+  ALT_MODELS <- c(primary = "pred_sepsis", gbt = "pred_gbt")
+
+  # Reuse the A/B/C resampling frame so the contrasts against B are paired.
+  pre_alt <- list()
+  for (v in names(alt_tab)) {
+    d <- alt_tab[[v]]
+    d[, sidx := match(stay_id, stay_frame)]
+    n_off <- d[is.na(sidx), uniqueN(stay_id)]
+    if (n_off > 0)
+      v2_log(sprintf("Variant %s: %d test stays outside the common frame, dropped",
+                     v, n_off), level = "WARN")
+    d <- d[!is.na(sidx)]
+    alt_tab[[v]] <- d
+    for (m in names(ALT_MODELS)) {
+      col <- ALT_MODELS[[m]]
+      if (col %in% names(d))
+        pre_alt[[paste(v, m, sep = "_")]] <- auc_precompute(d[[col]], d$y, d$sidx, N_STAYS)
+    }
+  }
+  for (m in names(ALT_MODELS))
+    if (!is.null(pre_B[[m]])) pre_alt[[paste("B", m, sep = "_")]] <- pre_B[[m]]
+  pre_alt <- Filter(Negate(is.null), pre_alt)
+
+  stat_alt <- function(w) vapply(pre_alt, boot_auroc_w, numeric(1), w_stay = w)
+
+  t_start  <- proc.time()
+  boot_alt <- boot_run(N_STAYS, BOOT_B_MAIN, stat_alt, seed = BOOT_SEED + 30L,
+                       progress_every = 500L)
+  v2_log(sprintf("Alternative-label bootstrap: %.1f s", (proc.time() - t_start)["elapsed"]))
+  obs_alt <- stat_alt(ones)
+
+  n_events_of <- function(v, m) {
+    d <- if (v == "B") tb else alt_tab[[v]]
+    if (is.null(d)) NA_integer_ else sum(d$y)
+  }
+
+  alt_ci <- rbindlist(lapply(names(pre_alt), function(k) {
+    parts <- strsplit(k, "_", fixed = TRUE)[[1]]
+    v <- parts[1]; m <- parts[2]
+    ci <- perc_ci(boot_alt[, k], CI_LEVEL)
+    data.table(variant = v, label = variant_name(v), label_family = variant_type(v),
+               model = m, n_rows = pre_alt[[k]]$n, n_events = n_events_of(v, m),
+               auroc = unname(obs_alt[k]), ci_lo = ci["lo"], ci_hi = ci["hi"])
+  }))
+  alt_ci[, `:=`(auroc_ci = fmt_ci(ci_lo, ci_hi), family = "exploratory E3")]
+  setorder(alt_ci, model, variant)
+
+  # Contrasts against Sepsis-3 (Variant B), paired within replicate
+  rows <- list()
+  for (m in names(ALT_MODELS)) {
+    kb <- paste("B", m, sep = "_")
+    if (!kb %in% colnames(boot_alt)) next
+    for (v in names(alt_tab)) {
+      kv <- paste(v, m, sep = "_")
+      if (!kv %in% colnames(boot_alt)) next
+      dvec <- boot_alt[, kv] - boot_alt[, kb]
+      dobs <- unname(obs_alt[kv] - obs_alt[kb])
+      dci  <- perc_ci(dvec, CI_LEVEL)
+      rows[[kv]] <- data.table(
+        variant = v, label = variant_name(v), model = m,
+        delta_auroc = dobs, ci_lo = dci["lo"], ci_hi = dci["hi"],
+        p_raw = boot_pvalue(dvec, dobs, 0, "two.sided"))
+    }
+  }
+  alt_delta <- rbindlist(rows)
+  if (nrow(alt_delta) > 0) {
+    alt_delta[, p_bh := p.adjust(p_raw, method = "BH")]
+    alt_delta[, p_bonf := p.adjust(p_raw, method = "bonferroni")]
+    alt_delta[, significant_bh := p_bh < FDR_Q]
+    alt_delta[, family := sprintf("exploratory E3 (m=%d alternative-label contrasts)",
+                                  nrow(alt_delta))]
+    setorder(alt_delta, p_raw)
+  }
+
+  # Anchor-attributable fraction, with the ratio bootstrapped end to end
+  phi_rows <- list()
+  for (m in names(ALT_MODELS)) {
+    kb <- paste("B", m, sep = "_"); ke <- paste("E", m, sep = "_")
+    if (!all(c(kb, ke) %in% colnames(boot_alt))) next
+    denom <- boot_alt[, kb] - 0.5
+    pvec  <- ifelse(denom > 0, (boot_alt[, ke] - 0.5) / denom, NA_real_)
+    pci   <- perc_ci(pvec, CI_LEVEL)
+    phi_rows[[m]] <- data.table(
+      model = m,
+      auroc_B = unname(obs_alt[kb]), auroc_E = unname(obs_alt[ke]),
+      phi_anchor = unname((obs_alt[ke] - 0.5) / (obs_alt[kb] - 0.5)),
+      ci_lo = pci["lo"], ci_hi = pci["hi"])
+  }
+  phi_dt <- rbindlist(phi_rows)
+
+  save_parquet(alt_ci, "12_altlabel_auroc_ci", DATA_DIR)
+  save_csv(alt_ci,     "12_altlabel_auroc_ci", DATA_DIR)
+  if (nrow(alt_delta) > 0) {
+    save_parquet(alt_delta, "12_altlabel_contrasts", DATA_DIR)
+    save_csv(alt_delta,     "12_altlabel_contrasts", DATA_DIR)
+  }
+  if (nrow(phi_dt) > 0) {
+    save_parquet(phi_dt, "12_anchor_attribution_ci", DATA_DIR)
+    save_csv(phi_dt,     "12_anchor_attribution_ci", DATA_DIR)
+  }
+
+  knitr::kable(
+    alt_ci[, .(variant, label, model, n_events,
+               auroc = round(auroc, 4), CI = auroc_ci)],
+    caption = "AUROC under each limb of the Sepsis-3 conjunction, with 95\\% stay-level cluster-bootstrap intervals (temporal test)")
+
+  if (nrow(phi_dt) > 0)
+    knitr::kable(
+      phi_dt[, .(model, auroc_B = round(auroc_B, 4), auroc_E = round(auroc_E, 4),
+                 phi_anchor = round(phi_anchor, 3), CI = fmt_ci(ci_lo, ci_hi))],
+      caption = "Anchor-attributable fraction: share of Variant B's above-chance AUROC reproduced by the treatment anchor alone")
+}
+```
+
+```{r alt-label-contrast-table}
+if (nrow(alt_delta) > 0)
+  knitr::kable(
+    alt_delta[, .(variant, label, model, delta = round(delta_auroc, 4),
+                  CI = fmt_ci(ci_lo, ci_hi),
+                  p = formatC(p_raw, format = "f", digits = 4),
+                  q_BH = formatC(p_bh, format = "f", digits = 4), significant_bh)],
+    caption = "AUROC difference vs.\\ Sepsis-3 (Variant B), Benjamini-Hochberg corrected across exploratory family E3")
 ```
 
 ## Subgroup Interval Widths
@@ -807,7 +970,19 @@ register <- rbindlist(list(
              reported_in = "Table: equity_label"),
   data.table(analysis = "Label sensitivity vs. AUROC association",       status = "exploratory",
              prereg = "not specified", correction = "none (visual, no test)",
-             reported_in = "Figure: label_sens_vs_auroc")
+             reported_in = "Figure: label_sens_vs_auroc"),
+  data.table(analysis = "Alternative-label AUROC vs. Sepsis-3 (variants D, E)", status = "exploratory",
+             prereg = "Protocol Amendment 2 (post hoc; §16-17)",
+             correction = "Benjamini-Hochberg within family E3",
+             reported_in = "Table: altlabel_contrasts"),
+  data.table(analysis = "Anchor-attributable fraction of discrimination", status = "exploratory",
+             prereg = "Protocol Amendment 2 (post hoc; §16-17)",
+             correction = "none (ratio reported as an interval, no null at zero)",
+             reported_in = "Table: anchor_attribution_ci"),
+  data.table(analysis = "Onset agreement between label definitions",     status = "descriptive",
+             prereg = "Protocol Amendment 2 (post hoc; §16-17)",
+             correction = "none (descriptive agreement statistics)",
+             reported_in = "Table: label_agreement")
 ))
 
 save_parquet(register, "12_analysis_register", DATA_DIR)
@@ -840,6 +1015,16 @@ if (nrow(sub_delta) > 0) {
 if (nrow(ls_delta) > 0)
   cat(sprintf("\nExploratory family E2: %d label-sensitivity contrasts, %d significant at BH q < %.2f\n",
               nrow(ls_delta), sum(ls_delta$significant_bh), FDR_Q))
+
+if (nrow(alt_delta) > 0) {
+  cat(sprintf("\nExploratory family E3: %d alternative-label contrasts, %d significant at BH q < %.2f\n",
+              nrow(alt_delta), sum(alt_delta$significant_bh), FDR_Q))
+  for (i in seq_len(nrow(alt_delta)))
+    cat(sprintf("  %s (%s) vs B, %-7s delta=%+.4f %s  q_BH=%.4f\n",
+                alt_delta$variant[i], alt_delta$label[i], alt_delta$model[i],
+                alt_delta$delta_auroc[i],
+                fmt_ci(alt_delta$ci_lo[i], alt_delta$ci_hi[i]), alt_delta$p_bh[i]))
+}
 
 cat("\nInference notebook complete.\n")
 ```

@@ -180,6 +180,96 @@ Variant B (Seymour-Standard) is the \textbf{primary analysis}. Variants A and C
 are pre-specified sensitivity analyses for the variance decomposition.
 
 
+\section{Beyond Sepsis-3: A Treatment-Independent Label}
+\label{sec:alt_labels}
+
+Variants A, B and C are three readings of one definition, and all three fire on
+the same trigger: a culture drawn near an antibiotic order. That shared anchor
+is a record of a clinician's decision to treat, not a measurement of the
+patient. Two consequences follow, and they must be separated.
+
+The first is \textbf{definitional}. Sepsis-3 \cite{singer2016sepsis3} makes
+onset a function of when treatment was given, so any variation in the
+antibiotic--culture windows necessarily moves the onsets. Part of the
+label-variant spread reported in Chapter~\ref{ch:evaluation} is therefore
+guaranteed by the construction of the definition and would appear even if the
+underlying physiology were identical across patients. The second is
+\textbf{empirical}: whether a label that owes nothing to treatment timing picks
+out different patients, at different hours, with different predictability. Only
+the second is a claim about the world, and it cannot be settled inside a family
+of labels that all share the anchor.
+
+Sepsis-3 is a conjunction --- \emph{suspected infection} \textbf{and}
+\emph{acute organ dysfunction}. Under Protocol Amendment 2 the conjunction is
+split and each limb is labelled on its own
+(Table~\ref{tab:alt_label_variants}).
+
+\begin{table}[H]
+    \centering\small
+    \begin{tabular}{llccc}
+        \toprule
+        \textbf{ID} & \textbf{Name} & \textbf{Suspicion anchor}
+        & \textbf{Organ dysfunction} & \textbf{Uses treatment timing?} \\
+        \midrule
+        B & Seymour-Std    & required     & required     & yes \\
+        E & Anchor-Only    & required     & not required & yes \\
+        D & Deterioration  & not required & required     & \textbf{no} \\
+        \bottomrule
+    \end{tabular}
+    \caption{The two limbs of the Sepsis-3 conjunction, labelled separately.
+    Variant E is Variant B's suspicion anchor with the SOFA criterion removed;
+    Variant D is acute organ dysfunction with the infection criterion removed.}
+    \label{tab:alt_label_variants}
+\end{table}
+
+\textbf{Variant E (Anchor-Only)} takes onset to be the suspicion time itself,
+using Variant B's windows, with no organ-dysfunction requirement. Its label is
+purely a record of clinician behaviour. Predicting it well means predicting who
+gets cultured and started on antibiotics, which is the quantity a
+treatment-anchored sepsis label partly encodes. The share of Variant B's
+above-chance discrimination that Variant E reproduces,
+\begin{equation}
+    \phi_{\text{anchor}}
+    = \frac{\mathrm{AUROC}_E - 0.5}{\mathrm{AUROC}_B - 0.5},
+    \label{eq:anchor_fraction}
+\end{equation}
+is reported as the \textbf{anchor-attributable fraction}.
+
+\textbf{Variant D (Deterioration)} takes onset to be the first hour after hour~1
+at which a \emph{physiology-only} SOFA score rises at least 2 points above the
+patient's admission baseline (the mean of each component over hours 0--3).
+"Physiology-only" means the vasopressor and catecholamine terms are withheld,
+so the cardiovascular component is scored from mean arterial pressure alone.
+No antibiotic order, culture draw or drug administration enters the definition
+at any point: Variant D is the treatment-independent labelling that the
+pre-registered family lacked. Both variants are fitted with the identical model
+specification, feature set and temporal split, so the label is the only thing
+that changes.
+
+The PhysioNet/CinC 2019 operationalisation \cite{reyna2020utility} was
+considered as the alternative label and rejected for this purpose. It sets
+onset to $\min(t_{\text{suspicion}}, t_{\text{SOFA}})$ with the same
+culture-plus-antibiotic trigger, so it is anchored to treatment timing by
+construction and would not have broken the circularity. The same objection
+applies to SEP-1 and to the CDC Adult Sepsis Event
+\cite{dutta2026performance}, both of which are defined on antibiotic days.
+
+Two limits on interpretation are stated here and carried through the results.
+Variant~E is not a sepsis model and its AUROC is not a sepsis result. Variant~D
+is a threshold function of recorded physiology, and five of the six SOFA
+components are themselves model inputs, so its discrimination is partly
+self-fulfilling and its \emph{level} is not comparable with Variant~B's. What
+is comparable, and what carries the empirical content, is whether Variant~D
+selects different patients at different hours --- reported as onset agreement
+(Cohen's $\kappa$) and median onset shift in
+Section~\ref{sec:label_anchor_results}.
+
+Variants D and E are post-hoc and are never pooled with A--C. They take no part
+in H1 or in the variance decomposition table, which are computed from exactly
+the same inputs as before the amendment; their contrasts form their own
+exploratory family (E3), corrected by Benjamini--Hochberg.
+
+
 \section{Prediction Framing}
 \label{sec:framing}
 
@@ -327,14 +417,54 @@ means actively harmful. AUROC is reported only for comparison, because it
 hides the clinical failure mode \cite{wang2025srpm}.
 
 \textbf{Calibration} is assessed via calibration intercept and slope, following
-Heyard et al.\ \cite{heyard2020evaluation}.
+Heyard et al.\ \cite{heyard2020evaluation}, and, following Van Calster et al.\
+\cite{vancalster2019calibration}, is additionally reported as a flexible
+calibration curve (restricted cubic spline of the outcome on the logit of
+predicted risk) summarised by the Integrated Calibration Index (ICI), E50, E90,
+E\textsubscript{max}, and the scaled Brier score. Predicted probabilities are
+floored at $10^{-6}$ rather than at the conventional $10^{-3}$, because at an
+hourly event rate below 0.5 per cent the conventional guard overwrites the
+majority of the distribution being measured.
 
 \subsection{Secondary Metrics}
 
 AUPRC (important at low event rates), alert burden (false alerts per true alert;
 benchmark: 1.4 from Moor et al.\ \cite{moor2023review}), lead time
 (benchmark: 3.7 hours from Moor et al.), and decision-curve net benefit
-\cite{vickers2006dca}.
+\cite{vickers2006dca}. Net benefit is evaluated on a threshold grid running
+from one tenth to ten times the observed event prevalence rather than on the
+conventional 0.01--0.20 grid, which at this prevalence lies entirely above the
+range of thresholds any deployment would use.
+
+\subsection{Deployment-Facing Metrics}
+\label{sec:deployment_metrics}
+
+AUROC, AUPRC and the Utility Score characterise a model but not the alert load
+a ward would carry. The following are therefore reported alongside them, at a
+threshold set to the largest cut-off achieving a fixed per-hour sensitivity of
+80 per cent rather than at an arbitrary 0.5 cut-off:
+
+\begin{itemize}
+    \item \textbf{Positive predictive value} and its reciprocal, the number
+    needed to evaluate (NNE), at that fixed sensitivity.
+    \item \textbf{False alerts per patient-day}, which normalises alarm volume
+    by exposure time rather than by the number of true alerts.
+    \item \textbf{Per-patient (event-level) detection}: the fraction of septic
+    stays alerted within the actionable window
+    $[\text{onset}-6\,\text{h},\ \text{onset}]$, the fraction alerted at any
+    point before onset, patient-level PPV, and the fraction of all stays
+    alerted. Per-hour and per-patient views of the same operating point are
+    reported side by side, because the choice of denominator moves the headline
+    PPV by more than an order of magnitude.
+    \item \textbf{False-alarm episodes per patient-day}, counting a contiguous
+    run of alert hours once rather than once per hour.
+    \item \textbf{Lead time} from first alert to onset: median, interquartile
+    range, and the fraction of septic stays alerted at least 3 and 6 hours
+    ahead.
+\end{itemize}
+
+The same quantities are computed on eICU-CRD with thresholds re-derived on the
+external cohort.
 
 
 \section{Sample Size}
@@ -392,10 +522,16 @@ relax the correction applied to the others.
 All subgroup analyses are \textbf{exploratory}. The pre-registration fixed
 their \emph{scope} --- that race, language and insurance would be examined ---
 but not the subgroup levels, the reference level, or the direction of any
-comparison. They are corrected by Benjamini--Hochberg at $q = 0.05$ within two
-families: E1, all subgroup AUROC contrasts against the reference level across
-every equity variable and both models; and E2, all subgroup
-label-sensitivity contrasts. The correction denominator is the number of
+comparison. They are corrected by Benjamini--Hochberg at $q = 0.05$ within
+three families: E1, all subgroup AUROC contrasts against the reference level
+across every equity variable and both models; E2, all subgroup
+label-sensitivity contrasts; and E3, the alternative-label contrasts of
+Protocol Amendment 2, in which the AUROC under each limb of the Sepsis-3
+conjunction (Section~\ref{sec:alt_labels}) is compared with Variant B for both
+models. The anchor-attributable fraction of
+Equation~\ref{eq:anchor_fraction} is a ratio with no meaningful null at zero
+and is reported as an interval only, outside the corrected family. The
+correction denominator is the number of
 contrasts \emph{computed}, not the smaller number selected for presentation in
 Chapter~\ref{ch:evaluation}. Bonferroni-adjusted p-values are also reported so
 that a reader preferring family-wise control over false-discovery control can
@@ -454,5 +590,6 @@ specified in \texttt{00\_preregistration.md}. Any analysis not specified there
 is labelled as exploratory, and, following
 Section~\ref{sec:inference}, each individual result carries its status tag in
 the results table itself rather than inheriting it from this statement alone.
-The pipeline is released under a permissive
-open-source licence following TRIPOD+AI \cite{collins2024tripodai}.
+Reporting follows TRIPOD+AI \cite{collins2024tripodai}; code availability and
+the constraints the data use agreement places on it are set out in
+Section~\ref{sec:code_availability}.

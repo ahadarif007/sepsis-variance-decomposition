@@ -1,10 +1,12 @@
 \chapter{Results}
 \label{ch:evaluation}
 
-This chapter presents the results in seven sections: cohort description, model
-performance and calibration, clinical utility (net benefit, operating points
-and event-level detection), variance decomposition, treatment-anchored
-evaluation, external validation, and equity analysis.
+This chapter presents the results in eleven sections: cohort description,
+sample size adequacy, model performance and calibration, clinical utility (net
+benefit, operating points, event-level detection and lead time), variance
+decomposition and the six hypothesis verdicts, external validation,
+proportional-hazards testing, GBT feature importance, equity analysis, the
+analysis register, and a closing discussion.
 
 Every result below carries an explicit status tag --- \textbf{[C]}
 confirmatory, \textbf{[E]} exploratory, \textbf{[D]} descriptive --- defined in
@@ -95,21 +97,21 @@ Table~\ref{tab:internal_results} reports performance on the temporal test set
         & \textbf{Utility} & \textbf{Alert burden} \\
         \midrule
         A & Primary & 0.760 & 0.0093 & $-1.000$  & $\infty$ \\
-        A & GBT     & 0.742 & 0.0094 & $-4.667$  & 203      \\
+        A & GBT     & 0.745 & 0.0091 & $-4.824$  & 207      \\
         A & NEWS2   & 0.629 & 0.0030 & $-1.647$  & 221      \\
         A & Cox     & 0.642 & 0.0033 & $-10.056$ & 340      \\
         A & qSOFA   & 0.601 & 0.0027 & $-5.720$  & 344      \\
         A & SIRS    & 0.599 & 0.0029 & $-4.454$  & 299      \\
         \midrule
         B & Primary & 0.607 & 0.0030 & $-1.004$  & $\infty$ \\
-        B & GBT     & 0.746 & 0.0092 & $-4.849$  & 194      \\
+        B & GBT     & 0.742 & 0.0100 & $-5.059$  & 202      \\
         B & NEWS2   & 0.635 & 0.0032 & $-1.616$  & 223      \\
         B & Cox     & 0.623 & 0.0031 & $-10.014$ & 359      \\
         B & qSOFA   & 0.609 & 0.0028 & $-5.503$  & 318      \\
         B & SIRS    & 0.600 & 0.0031 & $-4.332$  & 299      \\
         \midrule
         C & Primary & 0.759 & 0.0196 & $-1.000$  & $\infty$ \\
-        C & GBT     & 0.752 & 0.0192 & $-2.475$  & 93       \\
+        C & GBT     & 0.753 & 0.0189 & $-2.464$  & 91       \\
         C & NEWS2   & 0.641 & 0.0072 & $-1.121$  & 97       \\
         C & Cox     & 0.661 & 0.0083 & $-4.406$  & 146      \\
         C & qSOFA   & 0.601 & 0.0060 & $-2.526$  & 151      \\
@@ -131,7 +133,7 @@ Table~\ref{tab:internal_results} reports performance on the temporal test set
         \textbf{Model} & \textbf{AUROC} & \textbf{95\% CI} & \textbf{AUPRC (95\% CI)} \\
         \midrule
         Primary & 0.607 & 0.589--0.625 & 0.0030 (0.0027--0.0034) \\
-        GBT     & 0.746 & 0.730--0.761 & 0.0093 (0.0080--0.0127) \\
+        GBT     & 0.742 & 0.726--0.758 & 0.0100 (0.0079--0.0137) \\
         NEWS2   & 0.635 & 0.618--0.653 & 0.0032 (0.0029--0.0036) \\
         Cox     & 0.623 & 0.605--0.640 & 0.0031 (0.0028--0.0035) \\
         qSOFA   & 0.609 & 0.593--0.625 & 0.0030 (0.0026--0.0033) \\
@@ -154,7 +156,7 @@ Score. This is the primary empirical finding. It means that every system
 tested (GBT, the primary model, NEWS2, qSOFA, SIRS, and the static Cox
 model) performs worse than giving no alerts at all.
 
-Alert burdens range from 93 false alerts per true alert (GBT, Variant C) to
+Alert burdens range from 91 false alerts per true alert (GBT, Variant C) to
 over 340 (Cox and qSOFA, Variants A/B), compared with the published benchmark
 of 1.4 \cite{moor2023review}. The primary model issues no true alerts
 at all ($\infty$ alert burden) under the default threshold.
@@ -197,15 +199,15 @@ the prevalence for every person-hour.
         & \textbf{ICI} & \textbf{Brier} & \textbf{Scaled Brier} \\
         \midrule
         A & Primary & $-0.087$ & 1.029 & 0.00026 & 0.0018 & $+0.004$   \\
-        A & GBT     & $-6.089$ & 1.265 & 0.400   & 0.179  & $-95.9$    \\
+        A & GBT     & $-6.091$ & 1.256 & 0.398   & 0.179  & $-95.7$    \\
         A & Cox     & $-6.390$ & 1.233 & 0.509   & 0.265  & $-142.8$   \\
         \midrule
         B & Primary & $-0.393$ & 0.209 & 0.0027  & 0.0021 & $-0.129$   \\
-        B & GBT     & $-6.064$ & 1.202 & 0.390   & 0.175  & $-91.6$    \\
+        B & GBT     & $-6.095$ & 1.465 & 0.417   & 0.190  & $-99.6$    \\
         B & Cox     & $-6.376$ & 1.087 & 0.511   & 0.268  & $-140.5$   \\
         \midrule
         C & Primary & $-0.041$ & 1.097 & 0.00043 & 0.0042 & $+0.008$   \\
-        C & GBT     & $-5.320$ & 1.882 & 0.435   & 0.203  & $-47.4$    \\
+        C & GBT     & $-5.312$ & 1.392 & 0.412   & 0.191  & $-44.4$    \\
         C & Cox     & $-5.551$ & 1.351 & 0.502   & 0.262  & $-61.3$    \\
         \bottomrule
     \end{tabular}
@@ -227,8 +229,8 @@ one per cent.
 
 Second, GBT and Cox are not merely imperfectly calibrated; they are
 miscalibrated by roughly three orders of magnitude. Both carry intercepts near
-$-6$, and their scaled Brier scores range from $-47$ to $-143$. A scaled Brier
-of $-91.6$ means the GBT model's squared error is 92.6 times worse than simply
+$-6$, and their scaled Brier scores range from $-44$ to $-143$. A scaled Brier
+of $-99.6$ means the GBT model's squared error is 100.6 times worse than simply
 predicting the prevalence for every person-hour. Figure~\ref{fig:calibration}
 shows why: GBT emits predicted risks between 0.2 and 0.9 for person-hours
 whose observed event rate never exceeds 0.04. This matters directly for
@@ -406,17 +408,17 @@ resulting operating characteristics.
         & \textbf{FP:TP} \\
         \midrule
         A & Primary & 0.534 & 0.0032 & 315 & 11.19 & 11.16 & 314 \\
-        A & GBT     & 0.530 & 0.0032 & 318 & 11.30 & 11.27 & 317 \\
+        A & GBT     & 0.536 & 0.0032 & 314 & 11.15 & 11.12 & 313 \\
         A & NEWS2   & 0.343 & 0.0023 & 439 & 15.78 & 15.75 & 438 \\
         A & Cox     & 0.364 & 0.0023 & 430 & 15.27 & 15.24 & 429 \\
         \midrule
         B & Primary & 0.293 & 0.0021 & 466 & 16.98 & 16.94 & 465 \\
-        B & GBT     & 0.523 & 0.0032 & 315 & 11.46 & 11.42 & 314 \\
+        B & GBT     & 0.510 & 0.0031 & 323 & 11.78 & 11.74 & 322 \\
         B & NEWS2   & 0.343 & 0.0024 & 424 & 15.77 & 15.74 & 423 \\
         B & Cox     & 0.333 & 0.0023 & 440 & 16.02 & 15.99 & 439 \\
         \midrule
         C & Primary & 0.545 & 0.0074 & 135 & 10.96 & 10.87 & 134 \\
-        C & GBT     & 0.529 & 0.0071 & 140 & 11.33 & 11.25 & 139 \\
+        C & GBT     & 0.528 & 0.0071 & 140 & 11.36 & 11.27 & 139 \\
         C & NEWS2   & 0.357 & 0.0054 & 187 & 15.44 & 15.36 & 186 \\
         C & Cox     & 0.395 & 0.0056 & 179 & 14.53 & 14.45 & 178 \\
         \bottomrule
@@ -432,7 +434,7 @@ resulting operating characteristics.
 At 80 per cent sensitivity, PPV ranges from 0.0021 to 0.0074. The best case,
 the primary model under the Liberal label, requires 135 alerted person-hours
 per true event hour; the worst, the same model under the Seymour-Standard
-label, requires 466. Every configuration generates between 10.9 and 17.0
+label, requires 466. Every configuration generates between 10.9 and 16.9
 false-alert hours per patient-day. A twelve-bed unit at the best operating
 point would field roughly 130 false alert-hours per day.
 
@@ -477,17 +479,17 @@ five-hour alert run counts once rather than five times.
         & \textbf{FA ep./pt-day} \\
         \midrule
         A & Primary & 0.859 & 1.000 & 0.084 & 100.0 & 0.55 \\
-        A & GBT     & 0.911 & 0.996 & 0.085 & 98.5  & 1.26 \\
+        A & GBT     & 0.905 & 0.997 & 0.085 & 98.5  & 1.26 \\
         A & NEWS2   & 0.954 & 0.980 & 0.084 & 97.6  & 2.14 \\
         A & Cox     & 0.869 & 0.904 & 0.088 & 85.6  & 0.62 \\
         \midrule
         B & Primary & 0.927 & 0.997 & 0.086 & 99.9  & 1.24 \\
-        B & GBT     & 0.911 & 0.990 & 0.088 & 97.0  & 1.22 \\
+        B & GBT     & 0.899 & 0.991 & 0.087 & 97.8  & 1.10 \\
         B & NEWS2   & 0.953 & 0.983 & 0.086 & 97.6  & 2.14 \\
         B & Cox     & 0.837 & 0.877 & 0.091 & 82.9  & 0.50 \\
         \midrule
         C & Primary & 0.850 & 1.000 & 0.175 & 100.0 & 0.57 \\
-        C & GBT     & 0.896 & 0.995 & 0.176 & 98.9  & 0.88 \\
+        C & GBT     & 0.895 & 0.994 & 0.177 & 98.7  & 0.95 \\
         C & NEWS2   & 0.952 & 0.982 & 0.177 & 97.4  & 2.14 \\
         C & Cox     & 0.866 & 0.911 & 0.189 & 84.5  & 0.53 \\
         \bottomrule
@@ -501,7 +503,7 @@ five-hour alert run counts once rather than five times.
     \label{tab:patient_level}
 \end{table}
 
-Read alone, the first two columns look like a success: 85--95 per cent of
+Read alone, the first two columns look like a success: 84--95 per cent of
 septic patients are alerted inside the actionable six-hour window, and
 88--100 per cent are alerted at some point before onset. This is the number a
 paper reporting only per-patient detection would headline.
@@ -529,15 +531,15 @@ triggering it.
         & \textbf{FA hr/pt-day} & \textbf{FA ep./pt-day} \\
         \midrule
         A & Primary & 0.801 & 1.000 & 0.0032 & 0.084 & 11.16 & 0.55 \\
-        A & GBT     & 0.801 & 0.996 & 0.0031 & 0.085 & 11.27 & 1.26 \\
+        A & GBT     & 0.801 & 0.997 & 0.0032 & 0.085 & 11.12 & 1.26 \\
         A & NEWS2   & 0.811 & 0.980 & 0.0023 & 0.084 & 15.75 & 2.14 \\
         \midrule
         B & Primary & 0.801 & 0.997 & 0.0021 & 0.086 & 16.94 & 1.24 \\
-        B & GBT     & 0.801 & 0.990 & 0.0032 & 0.088 & 11.42 & 1.22 \\
+        B & GBT     & 0.801 & 0.991 & 0.0031 & 0.087 & 11.74 & 1.10 \\
         B & NEWS2   & 0.818 & 0.983 & 0.0024 & 0.086 & 15.74 & 2.14 \\
         \midrule
         C & Primary & 0.800 & 1.000 & 0.0074 & 0.175 & 10.87 & 0.57 \\
-        C & GBT     & 0.800 & 0.995 & 0.0071 & 0.176 & 11.25 & 0.88 \\
+        C & GBT     & 0.800 & 0.994 & 0.0071 & 0.177 & 11.27 & 0.95 \\
         C & NEWS2   & 0.817 & 0.982 & 0.0054 & 0.177 & 15.36 & 2.14 \\
         \bottomrule
     \end{tabular}
@@ -568,17 +570,17 @@ and the onset hour, over septic stays that were alerted at all.
         & \textbf{$\geq 3$\,h} & \textbf{$\geq 6$\,h} \\
         \midrule
         A & Primary & 8 & 4--20    & 0.895 & 0.638 \\
-        A & GBT     & 8 & 3--19    & 0.839 & 0.600 \\
+        A & GBT     & 8 & 3--19    & 0.839 & 0.599 \\
         A & NEWS2   & 8 & 4--20    & 0.861 & 0.611 \\
         A & Cox     & 7 & 4--19    & 0.785 & 0.557 \\
         \midrule
         B & Primary & 9 & 4--22    & 0.884 & 0.626 \\
-        B & GBT     & 8 & 3--21.75 & 0.818 & 0.581 \\
+        B & GBT     & 8 & 3--21    & 0.821 & 0.582 \\
         B & NEWS2   & 8 & 4--21    & 0.858 & 0.599 \\
         B & Cox     & 7 & 3--21    & 0.713 & 0.508 \\
         \midrule
         C & Primary & 7 & 3--21    & 0.842 & 0.588 \\
-        C & GBT     & 7 & 3--21    & 0.835 & 0.584 \\
+        C & GBT     & 7 & 3--21    & 0.834 & 0.585 \\
         C & NEWS2   & 8 & 4--21    & 0.859 & 0.599 \\
         C & Cox     & 7 & 4--21    & 0.781 & 0.547 \\
         \bottomrule
@@ -620,7 +622,7 @@ once the false-alarm rate is controlled, and it is not controlled here.
         \midrule
         A & Primary & 0.454 & $1.19\times10^{-5}$ & 84{,}213  & 13.10 & 0.00035 \\
         B & Primary & 0.137 & $7.51\times10^{-6}$ & 133{,}199 & 20.72 & 0.00033 \\
-        C & Primary & 0.382 & $1.05\times10^{-5}$ & 95{,}335  & 14.83 & 0.00034 \\
+        C & Primary & 0.382 & $1.05\times10^{-5}$ & 95{,}349  & 14.83 & 0.00034 \\
         \midrule
         A--C & NEWS2 & 0.000 & $8.01\times10^{-6}$ & 124{,}889 & 24.00 & 0.00035 \\
         \bottomrule
@@ -662,7 +664,7 @@ models transfer, not as a measurement of it.
         \toprule
         \textbf{Factor (others fixed)}         & \textbf{$\Delta$AUROC} & \textbf{95\% CI} & \textbf{H} \\
         \midrule
-        Model class (label B, temporal)        & 0.145 & 0.133--0.165 & H6 \\
+        Model class (label B, temporal)        & 0.142 & 0.130--0.161 & H6 \\
         Label definition (primary, temporal)   & 0.153 & 0.136--0.177 & H1 \\
         Split method (primary, label B)        & 0.123 & 0.100--0.147 & H4 \\
         Metric (AUROC vs Utility, int$\to$ext) & 0.170 & 0.102--0.242 & H5 \\
@@ -697,12 +699,12 @@ choice, not that any one of them dominates. H1 fails for exactly this reason.
         \textbf{H} & \textbf{Contrast $\theta$} & \textbf{Est.} & \textbf{95\% CI}
         & \textbf{$p$} & \textbf{$p_{\text{Holm}}$} & \textbf{Verdict} \\
         \midrule
-        H1 & Label spread $-$ model spread   & 0.007 & $-0.020$--$0.030$ & 0.310 & 0.931 & Not confirmed \\
+        H1 & Label spread $-$ model spread   & 0.011 & $-0.017$--$0.034$ & 0.211 & 0.634 & Not confirmed \\
         H2 & Unstable covariates (count)     & 18    & ---               & ---   & ---   & Descriptive \\
         H3 & Pre-treatment onsets (count)    & 0     & ---               & ---   & ---   & Structural \\
         H4 & Random $-$ temporal AUROC       & 0.123 & 0.100--0.147      & 0.0005 & 0.003 & Confirmed \\
         H5 & Internal $-$ external AUROC     & 0.170 & 0.102--0.242      & 0.0010 & 0.004 & Confirmed \\
-        H6 & GBT $-$ primary AUROC           & 0.139 & 0.117--0.160      & 0.0005 & 0.003 & H6 rejected \\
+        H6 & GBT $-$ primary AUROC           & 0.135 & 0.113--0.156      & 0.0005 & 0.003 & H6 rejected \\
         \bottomrule
     \end{tabular}
     \caption{The confirmatory family. One-sided cluster-bootstrap tests against
@@ -728,26 +730,26 @@ overturns H1 --- quantifying uncertainty at all is.
     model classes.
 
     \textbf{Point estimates:} label spread $= 0.153$ (95\% CI 0.136--0.177);
-    model spread $= 0.145$ (95\% CI 0.133--0.165).
+    model spread $= 0.142$ (95\% CI 0.130--0.161).
 
-    \textbf{Contrast:} $\theta = 0.007$ (95\% CI $-0.020$--$0.030$),
-    $p = 0.31$, Holm-adjusted $p = 0.93$.
+    \textbf{Contrast:} $\theta = 0.011$ (95\% CI $-0.017$--$0.034$),
+    $p = 0.21$, Holm-adjusted $p = 0.63$.
     \textbf{H1 NOT CONFIRMED.}
 \end{mdframed}
 
 On point estimates alone H1 holds: changing the sepsis definition while keeping
 the model fixed produces slightly more AUROC variation (0.153) than changing
-the model while keeping the label fixed (0.145). Under the original protocol,
+the model while keeping the label fixed (0.142). Under the original protocol,
 which specified no uncertainty quantification, this would have been recorded as
 a confirmation.
 
 It does not survive. The two spreads are estimated on the same test stays, so
 their difference can be evaluated within bootstrap replicate; that difference
-is 0.007 with an interval running from $-0.020$ to $+0.030$. The interval
-covers zero comfortably, and the ordering reverses in roughly a third of
+is 0.011 with an interval running from $-0.017$ to $+0.034$. The interval
+covers zero comfortably, and the ordering reverses in roughly a fifth of
 replicates. \textbf{The margin by which the label out-varies the model is
 indistinguishable from sampling noise}, and this conclusion does not depend on
-the multiplicity correction --- the uncorrected p-value is already 0.31.
+the multiplicity correction --- the uncorrected p-value is already 0.21.
 
 What survives is the weaker but still substantive claim: the label spread and
 the model spread are of \emph{comparable} magnitude, both around 0.15. That is
@@ -755,6 +757,16 @@ the finding relevant to Cohen et al.\ \cite{cohen2024subtle}. A literature that
 fixes the label and compares only models is measuring one source of variance
 while ignoring another that is at least its equal in size. Claiming the label
 strictly dominates would require more data than this study has.
+
+One caveat applies to both spreads and is developed in
+Section~\ref{sec:label_anchor_results}. Variants A, B and C are three readings
+of one definition and all three fire on the same culture-plus-antibiotic
+anchor. Sepsis-3 makes onset a function of treatment timing, so moving the
+antibiotic--culture windows \emph{must} move the onsets: part of the label
+spread measured here is guaranteed by the construction of the definition rather
+than discovered in the data. Whether a label owing nothing to treatment timing
+behaves differently cannot be answered inside this family, and is taken up
+separately.
 
 \begin{figure}[H]
     \centering
@@ -799,11 +811,11 @@ it.
         Temperature                & Sign change across variants             \\
         Bilirubin                  & Sign change across variants             \\
         Platelets                  & Sign change across variants             \\
-        Any vasopressor            & Sign change or magnitude $\geq 2\times$ \\
+        Any vasopressor            & Sign change and magnitude $\geq 2\times$ \\
         Norepinephrine/epinephrine & Sign change across variants             \\
         Respiratory rate slope     & Sign change across variants             \\
-        Platelets measured         & Magnitude change $\geq 2\times$         \\
-        WBC measured               & Sign change or magnitude $\geq 2\times$ \\
+        Platelets measured         & Sign change and magnitude $\geq 2\times$ \\
+        WBC measured               & Sign change and magnitude $\geq 2\times$ \\
         P/F ratio measured         & Sign change across variants             \\
         \bottomrule
     \end{tabular}
@@ -858,6 +870,17 @@ published MIMIC-IV sepsis prediction result that does not restrict to the
 pre-treatment window is evaluating whether the model can predict when a
 clinician will act, not when a patient will deteriorate.
 
+One clarification is needed, and
+Section~\ref{sec:pretreatment_label} supplies it. The zero is a statement about
+the \emph{label}, not about the patients. A deterioration label that uses no
+treatment timestamp records 1,362 onsets in a comparable pre-treatment window,
+identified at 0.840 AUROC. Patients do deteriorate before clinicians act; the
+Sepsis-3 definition is simply unable to place an onset there. That makes the
+constitution claim stronger rather than weaker --- the model is not accidentally
+predicting clinician behaviour, it is prevented by the definition from
+predicting anything else --- but the claim must be stated as a property of the
+label rather than as a claim that nothing predictable happens before treatment.
+
 \subsection{H4: Split Optimism (Confirmed)}
 
 \begin{mdframed}[backgroundcolor=ATUSand!30, linecolor=ATUGreen]
@@ -878,8 +901,8 @@ clinician will act, not when a patient will deteriorate.
         \midrule
         Temporal       & Primary        & 0.607          & $-1.004$               \\
         Random         & Primary        & 0.730          & $-1.000$               \\
-        Temporal       & GBT            & 0.746          & $-4.849$               \\
-        Random         & GBT            & 0.720          & $-5.167$               \\
+        Temporal       & GBT            & 0.742          & $-5.059$               \\
+        Random         & GBT            & 0.715          & $-5.093$               \\
         \bottomrule
     \end{tabular}
     \caption{Temporal vs.\ random split comparison (Variant B). The primary model
@@ -894,8 +917,8 @@ appear much better than it would perform in practice. This confirms Guo et
 al.'s \cite{guo2022temporal} finding: studies that use random splits may
 substantially overestimate real-world performance.
 
-The GBT model shows a smaller, reversed pattern (temporal 0.746 vs.\ random
-0.720), suggesting the tree ensemble is more robust to temporal shift than
+The GBT model shows a smaller, reversed pattern (temporal 0.742 vs.\ random
+0.715), suggesting the tree ensemble is more robust to temporal shift than
 the linear model. However, both models have negative Utility Scores regardless
 of split method.
 
@@ -935,20 +958,20 @@ model does not generalise to eICU-CRD in any usable sense.
 \begin{mdframed}[backgroundcolor=ATUOrange!20, linecolor=ATUOrange]
     \textbf{H6 [C]:} $|\Delta_\text{AUROC}(\text{primary} - \text{GBT})| \leq 0.02$.
 
-    \textbf{Result:} $\Delta = 0.139$ (GBT: 0.746, primary: 0.607), 95\% CI
-    0.117--0.160. Test against the equivalence bound $\theta_0 = 0.02$:
+    \textbf{Result:} $\Delta = 0.135$ (GBT: 0.742, primary: 0.607), 95\% CI
+    0.113--0.156. Test against the equivalence bound $\theta_0 = 0.02$:
     $p = 5.0\times10^{-4}$, Holm-adjusted $p = 0.003$.
     \textbf{H6 REJECTED (non-equivalence established).}
 \end{mdframed}
 
-GBT outperforms the primary model by 0.139 AUROC under the Seymour-Standard
+GBT outperforms the primary model by 0.135 AUROC under the Seymour-Standard
 label. The entire confidence interval lies above the 0.02 equivalence bound, so
 non-equivalence is established rather than merely suggested: the interpretable
 model carries a substantial AUROC cost. Both models are scored on the same
 person-hours, so the contrast is paired and the interval is correspondingly
 tight.
 
-But the ranking reverses on clinical utility: GBT has Utility Score $-4.849$
+But the ranking reverses on clinical utility: GBT has Utility Score $-5.059$
 while the primary model has $-1.004$. The model with higher AUROC produces
 more harmful false alerts. Which model is ``better'' depends entirely on
 which metric is used.
@@ -958,9 +981,286 @@ which metric is used.
     \includegraphics[width=0.85\textwidth]{images/09_model_class_auroc.png}
     \caption{AUROC by model class (Variant B, temporal split). GBT substantially
     outperforms all other models by AUROC, but has the worst Utility Score. The
-    model-class spread of 0.145 is comparable to the label spread of 0.153.}
+    model-class spread of 0.142 is comparable to the label spread of 0.153.}
     \label{fig:model_class_auroc}
 \end{figure}
+
+%===========================================================================
+
+
+\section{Label-Anchor Attribution: Definitional or Empirical?
+\texorpdfstring{[E]}{[E]}}
+\label{sec:label_anchor_results}
+%===========================================================================
+
+Everything to this point varies the label \emph{within} Sepsis-3. Variants A, B
+and C are three readings of one definition and all three fire on the same
+culture-plus-antibiotic anchor, so H1 cannot distinguish two very different
+claims: that the reading of a definition matters (definitional), or that the
+choice of construct matters (empirical). This section separates them by
+splitting the Sepsis-3 conjunction into its two limbs and labelling each on its
+own (Section~\ref{sec:alt_labels}). It is post-hoc, under Protocol
+Amendment 2, and its contrasts form exploratory family E3.
+
+\subsection{The Anchor Determines Every Onset Time}
+
+The first result is structural rather than statistical, and it can be stated
+exactly. Under variants A, B and C the onset time \emph{is} the suspicion time
+$t_{\text{susp}}$; the SOFA criterion decides only \emph{whether} a stay is
+labelled, never \emph{when}. Variant E, which removes the SOFA criterion,
+therefore turns out to be a strict superset of Variant B: every one of B's
+5,887 labelled stays is also labelled by E, and in \textbf{100\% of them the
+onset hour is identical}. Adding the organ-dysfunction requirement discards
+11,364 of E's 17,251 labelled stays --- two thirds --- and moves not one onset
+by a single hour.
+
+\begin{table}[H]
+    \centering\small
+    \begin{tabular}{llrrrrr}
+        \toprule
+        \textbf{Var} & \textbf{Label} & \textbf{Onsets} & \textbf{\%}
+        & \textbf{$\kappa$ vs B} & \textbf{Sens.\ to B}
+        & \textbf{Exact onset match} \\
+        \midrule
+        A & Narrow          & 5{,}662  & 8.7  & 0.267 & 0.325 & 97.5\% \\
+        B & Seymour-Std     & 5{,}887  & 9.0  & ---   & ---   & ---    \\
+        C & Liberal         & 11{,}531 & 17.7 & 0.344 & 0.625 & 98.6\% \\
+        \midrule
+        E & Anchor-Only     & 17{,}251 & 26.5 & 0.432 & \textbf{1.000} & \textbf{100.0\%} \\
+        D & Deterioration   & 27{,}195 & 41.8 & \textbf{0.057} & 0.555 & \textbf{6.4\%} \\
+        \bottomrule
+    \end{tabular}
+    \caption{Onset agreement with Variant B across all five label variants, on
+    the 65,078 shared stays. Counts are restricted to onsets inside the 72\,h
+    modelling horizon so that Variant D, whose onsets exist only within the
+    panel, is comparable. ``Sens.\ to B'' is the fraction of B's labelled stays
+    that the variant also labels; ``exact onset match'' is computed among stays
+    labelled by both.}
+    \label{tab:label_agreement}
+\end{table}
+
+Table~\ref{tab:label_agreement} makes the definitional component visible. Within
+Sepsis-3, when two variants agree that a stay is septic they agree on the hour
+almost always (97.5\% for A, 98.6\% for C). The pre-registered label variance is
+therefore entirely a disagreement about \emph{which patients}, never about
+\emph{when} --- because the ``when'' is fixed by the treatment anchor in all
+three.
+
+Variant D breaks that pattern completely. A label built from physiology alone
+agrees with Sepsis-3 at $\kappa = 0.057$, which is barely distinguishable from
+chance, and matches B's exact onset hour in only 6.4\% of the stays both label,
+with a median absolute shift of 9 hours (IQR $-11$ to $+7$). \textbf{This is the
+empirical component, and it is large.} A treatment-independent label is not a
+re-reading of Sepsis-3; it is a different construct, identifying different
+patients at different times. The label-sensitivity finding of this thesis is
+therefore not merely tautological --- but the part of it measured by H1 is
+substantially definitional, and only the D comparison establishes the rest.
+
+\subsection{Discrimination Under Each Limb}
+
+\begin{table}[H]
+    \centering\small
+    \begin{tabular}{lrrr@{\hskip 1.5em}rrr}
+        \toprule
+        & \multicolumn{3}{c}{\textbf{AUROC}} & \multicolumn{3}{c}{\textbf{AUPRC}} \\
+        \cmidrule(lr){2-4}\cmidrule(lr){5-7}
+        \textbf{Model} & \textbf{E} & \textbf{B} & \textbf{D}
+                       & \textbf{E} & \textbf{B} & \textbf{D} \\
+        \midrule
+        Primary & 0.756 & 0.607 & 0.842 & 0.031 & 0.003 & 0.075 \\
+        GBT     & 0.766 & 0.742 & 0.915 & 0.033 & 0.010 & 0.134 \\
+        NEWS2   & 0.656 & 0.635 & 0.688 & 0.012 & 0.003 & 0.025 \\
+        Cox     & 0.663 & 0.623 & 0.774 & 0.013 & 0.003 & 0.033 \\
+        qSOFA   & 0.624 & 0.609 & 0.731 & 0.011 & 0.003 & 0.031 \\
+        SIRS    & 0.628 & 0.600 & 0.565 & 0.012 & 0.003 & 0.015 \\
+        \midrule
+        \textbf{Events} & 3{,}073 & 1{,}040 & 4{,}773 & & & \\
+        \bottomrule
+    \end{tabular}
+    \caption{Discrimination under each limb of the Sepsis-3 conjunction
+    (temporal test set, unrestricted window). E = suspicion anchor only;
+    B = Sepsis-3 (anchor \textbf{and} organ dysfunction); D = organ dysfunction
+    only, treatment-independent. Columns are ordered E, B, D to show that
+    \textbf{Sepsis-3 is harder to predict than either of the limbs it is built
+    from}.}
+    \label{tab:label_anchor}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/09_label_anchor_attribution.png}
+    \caption{Splitting the Sepsis-3 conjunction. Neither limb on its own is
+    hard to predict; requiring both is what makes Sepsis-3 hard. The dashed
+    line is chance.}
+    \label{fig:label_anchor}
+\end{figure}
+
+The ordering in Table~\ref{tab:label_anchor} is the finding, and it is not the
+one the anchor-attribution framing anticipated. \textbf{Sepsis-3 is the hardest
+of the three labels for every model.} The primary model reaches 0.607 on
+Variant B, 0.756 on the treatment anchor alone, and 0.842 on physiological
+deterioration alone. The anchor-attributable fraction of
+Equation~\ref{eq:anchor_fraction} is consequently
+\begin{equation*}
+    \phi_{\text{anchor}} = \frac{0.756 - 0.5}{0.607 - 0.5} = 2.40
+\end{equation*}
+for the primary model and 1.10 for GBT. A value above 1 means the treatment
+anchor \emph{on its own} is more predictable than the Sepsis-3 label built on
+top of it. The question ``how much of the model's performance is attributable
+to the treatment anchor?'' does not have an answer of the form ``a fraction'':
+for the interpretable model the anchor accounts for more than all of it.
+
+The mechanism is visible in the previous subsection. Predicting the anchor means
+predicting which patients a clinician will culture and treat, and that decision
+is patterned and physiologically driven, so a model does it reasonably well.
+The SOFA gate then discards two thirds of those stays without moving any onset
+time. What it removes is not noise: it is precisely the subset the model could
+identify. The residue --- anchor-positive stays that also cross a SOFA
+threshold in the specified window --- is what the model cannot separate, and it
+is the residue that Sepsis-3 calls sepsis.
+
+This reframes the central result of the thesis rather than overturning it. The
+difficulty of sepsis onset prediction on MIMIC-IV is not that the physiology is
+unreadable, and not that clinician behaviour is unpredictable. Both are
+readable. The difficulty lives in the \emph{conjunction} of the two, which is
+what the Sepsis-3 definition operationalises.
+
+\subsection{The Empty Pre-Treatment Window Is a Property of the Label}
+\label{sec:pretreatment_label}
+
+The single most consequential finding of this thesis so far has been H3: the
+treatment-anchored evaluation window --- the hours before the first culture or
+antibiotic --- contains \textbf{zero} Sepsis-3 onsets in 179,003 person-hours.
+That result was interpreted as showing that no patient develops sepsis before
+clinicians act, and therefore that a sepsis model can only ever predict
+clinician behaviour. Splitting the label shows that the interpretation needs
+narrowing.
+
+\begin{table}[H]
+    \centering\small
+    \begin{tabular}{llrrr}
+        \toprule
+        \textbf{Var} & \textbf{Label} & \textbf{Pre-treatment person-h}
+        & \textbf{Onsets} & \textbf{AUROC (primary / GBT)} \\
+        \midrule
+        B & Seymour-Std   & 179{,}003 & \textbf{0}       & undefined \\
+        E & Anchor-Only   & 179{,}003 & \textbf{0}       & undefined \\
+        D & Deterioration & 147{,}357 & \textbf{1{,}362} & 0.840 / 0.937 \\
+        \bottomrule
+    \end{tabular}
+    \caption{Events in the treatment-anchored (pre-treatment) evaluation window.
+    Variant E's zero is structural and exact: its onset \emph{is} the treatment
+    anchor, so no onset can precede it. Variant B's zero is the H3 finding.
+    Variant D, which uses no treatment timestamp, records 1,362 onsets in the
+    same kind of window.}
+    \label{tab:pretreatment_label}
+\end{table}
+
+Two of the three rows in Table~\ref{tab:pretreatment_label} carry no
+information. Variant E's zero is a tautology and can be stated without any
+data: E's onset is defined as the anchor, so the pre-anchor window is empty by
+construction.
+Variant B's zero is the same tautology one step removed --- B is a subset of E
+with identical onset times, so if E cannot fire before the anchor, neither can
+B.
+
+Variant D's 1,362 onsets are the informative number. \textbf{Patients do
+deteriorate before clinicians act.} It happens 1,362 times in a comparable
+pre-treatment window, and a model identifies those hours at 0.840 AUROC
+(0.937 for GBT). The pre-treatment window is not empty of physiological signal;
+it is empty of \emph{Sepsis-3 labels}, because Sepsis-3 cannot place an onset
+there.
+
+This does not weaken contribution C2 --- it sharpens it. The correct claim is
+not that nothing predictable happens before treatment, but that the Sepsis-3
+label is incapable of recording anything that does. A model trained on that
+label is therefore not merely predicting clinician behaviour by accident; it is
+prevented, by the definition, from doing anything else. The remedy is the one
+Chapter~\ref{ch:conclusion} identifies: change the label, not the model.
+
+The caveat of Section~\ref{sec:alt_labels} still applies to the 0.840 --- D's
+label is a threshold function of physiology of which most components are model
+inputs, so the level is optimistic. It does not apply to the event count. That
+1,362 pre-treatment deterioration onsets exist where Sepsis-3 records none is a
+property of the two label definitions, not of any model.
+
+\subsection{What Variant D Does and Does Not Establish}
+
+Variant D's high AUROC must be read with the limitation stated in advance in
+Section~\ref{sec:alt_labels}. Its label is a threshold function of recorded
+physiology, and five of the six SOFA components are themselves model inputs, so
+its discrimination is partly self-fulfilling. The \emph{level} of 0.842 (0.915
+for GBT) is not evidence that deterioration prediction is a solved problem, and
+it is not comparable with Variant B's 0.607.
+
+Three things it does establish:
+
+\begin{enumerate}
+    \item \textbf{The label sensitivity is not wholly definitional.} At
+    $\kappa = 0.057$ and a 6.4\% onset match, a treatment-independent label
+    disagrees with Sepsis-3 about both membership and timing. Had D closely
+    tracked B, the H1 result would have been an artefact of how one definition
+    is read; it is not.
+
+    \item \textbf{Clinical failure is label-invariant.} The Utility Score
+    remains negative under both alternative labels for every model --- $-1.000$
+    for the primary model under D and under E, and $-0.218$ at best (GBT under
+    D). Alert burden under D's best model is 17.7 false alerts per true alert,
+    an order of magnitude better than Variant B's 201.7 but still more than ten
+    times the 1.4 benchmark of Moor et al.\ \cite{moor2023review}. Contribution
+    C3 survives the change of label, which the pre-registered variants alone
+    could not show.
+
+    \item \textbf{Discrimination and utility still disagree.} GBT wins on AUROC
+    under all three labels and loses on Utility Score under B and E. The
+    metric-choice finding (H5) is not an artefact of the Sepsis-3 label either.
+\end{enumerate}
+
+\subsection{Exploratory Family E3: Intervals and Correction}
+
+\begin{table}[H]
+    \centering\small
+    \begin{tabular}{llrlrl}
+        \toprule
+        \textbf{Var} & \textbf{Model} & \textbf{AUROC} & \textbf{95\% CI}
+        & \textbf{$\Delta$ vs B} & \textbf{95\% CI ($\Delta$), $q_{\text{BH}}$} \\
+        \midrule
+        E & Primary & 0.756 & [0.747, 0.766] & $+0.149$ & [0.131, 0.168], $q < 0.001$ \\
+        E & GBT     & 0.766 & [0.757, 0.775] & $+0.024$ & [0.009, 0.038], $q < 0.001$ \\
+        D & Primary & 0.842 & [0.837, 0.847] & $+0.235$ & [0.216, 0.255], $q < 0.001$ \\
+        D & GBT     & 0.915 & [0.911, 0.918] & $+0.173$ & [0.155, 0.189], $q < 0.001$ \\
+        \midrule
+        B & Primary & 0.607 & [0.588, 0.625] & --- & --- \\
+        B & GBT     & 0.742 & [0.726, 0.760] & --- & --- \\
+        \bottomrule
+    \end{tabular}
+    \caption{Exploratory family E3: AUROC under each limb of the Sepsis-3
+    conjunction with 95\% stay-level cluster-bootstrap intervals, and the
+    paired difference against Variant B corrected by Benjamini--Hochberg across
+    the family of $m = 4$ contrasts. All variants are labelled on the same test
+    stays, so each difference is evaluated within replicate.}
+    \label{tab:e3_contrasts}
+\end{table}
+
+Every contrast is positive, every interval excludes zero, and all four survive
+correction at the smallest reportable p-value. The claim that Sepsis-3 is the
+hardest of the three labels is not a margin that sampling noise could produce.
+
+The anchor-attributable fraction is $\phi_{\text{anchor}} = 2.40$
+(95\% CI 2.06--2.89) for the primary model and $1.10$ (95\% CI 1.04--1.17) for
+GBT. Both intervals lie entirely above 1, so the conclusion does not depend on
+the point estimate: for both model classes the treatment anchor on its own is
+\emph{more} discriminable than the Sepsis-3 label built on top of it. The
+interpretable model shows the effect far more strongly, which is consistent with
+H6 --- GBT recovers some of the Sepsis-3 signal that the additive multinomial
+cannot, narrowing but not closing the gap.
+
+One caution on reading these intervals. They quantify sampling uncertainty
+only. They say nothing about the construct differences between the labels ---
+prevalence differs by a factor of 2.9 (E) and 4.6 (D), and Variant D's label
+overlaps the model's own inputs. The intervals establish that the ordering is
+stable, not that the labels are measuring comparable things.
+
 
 %===========================================================================
 
@@ -1015,10 +1315,14 @@ values; these are not interpreted.
 
 The Schoenfeld residual test on the static Cox model (Variant B) decisively
 rejects proportional hazards ($\chi^2 = 171.8$, df = 11,
-$p = 5.0 \times 10^{-31}$). Five covariates violate the assumption
-individually: temperature ($p = 2.4 \times 10^{-12}$), GCS
-($p = 5.2 \times 10^{-19}$), creatinine ($p = 8.9 \times 10^{-5}$),
-bilirubin ($p = 7.6 \times 10^{-6}$), and platelets ($p = 0.002$). This
+$p = 5.0 \times 10^{-31}$). Six of the eleven covariates violate the assumption
+individually at $\alpha = 0.05$: GCS ($p = 5.2 \times 10^{-19}$), temperature
+($p = 2.4 \times 10^{-12}$), bilirubin ($p = 7.6 \times 10^{-6}$), creatinine
+($p = 8.9 \times 10^{-5}$), platelets ($p = 0.0015$), and MAP
+($p = 0.014$). These are per-covariate tests reported without multiplicity
+adjustment; the global test alone is sufficient for the pre-registered check,
+and the four smallest p-values survive Bonferroni correction over the eleven
+covariates by many orders of magnitude. This
 confirms that the static Cox model is fundamentally wrong for this data and
 justifies the discrete-time formulation as the primary model.
 
@@ -1035,16 +1339,16 @@ justifies the discrete-time formulation as the primary model.
         \toprule
         \textbf{Feature}         & \textbf{Gain} & \textbf{Cover} & \textbf{Frequency} \\
         \midrule
-        MAP slope (6\,h)         & 0.176         & 0.133          & 0.088              \\
-        Temperature ($^\circ$C)  & 0.160         & 0.168          & 0.087              \\
-        Resp.\ rate slope (6\,h) & 0.124         & 0.125          & 0.086              \\
-        GCS                      & 0.091         & 0.084          & 0.068              \\
-        WBC                      & 0.060         & 0.098          & 0.083              \\
-        Creatinine               & 0.053         & 0.060          & 0.077              \\
-        Bilirubin                & 0.050         & 0.058          & 0.071              \\
-        Lactate                  & 0.048         & 0.054          & 0.065              \\
-        MAP (level)              & 0.048         & 0.038          & 0.103              \\
-        Platelets                & 0.041         & 0.045          & 0.079              \\
+        MAP slope (6\,h)         & 0.170         & 0.130          & 0.090              \\
+        Temperature ($^\circ$C)  & 0.164         & 0.161          & 0.089              \\
+        Resp.\ rate slope (6\,h) & 0.118         & 0.105          & 0.084              \\
+        GCS                      & 0.086         & 0.080          & 0.059              \\
+        WBC                      & 0.069         & 0.095          & 0.094              \\
+        Lactate                  & 0.053         & 0.053          & 0.073              \\
+        Bilirubin                & 0.053         & 0.066          & 0.075              \\
+        Creatinine               & 0.052         & 0.069          & 0.076              \\
+        MAP (level)              & 0.046         & 0.037          & 0.088              \\
+        Platelets                & 0.045         & 0.051          & 0.083              \\
         \bottomrule
     \end{tabular}
     \caption{Top-10 GBT features by information gain (Variant B). Trend features
@@ -1075,28 +1379,28 @@ on the length of the history window used for feature construction.
         \textbf{Racial group} & \textbf{Rows} & \textbf{Sep}
         & \textbf{GBT AUROC (95\% CI)} & \textbf{Primary AUROC (95\% CI)} \\
         \midrule
-        White               & 317{,}688 & 597 & 0.743 (0.722--0.764) & 0.614 (0.590--0.637) \\
-        Unknown             & 107{,}158 & 235 & 0.773 (0.743--0.803) & 0.587 (0.547--0.628) \\
-        Black/African Am.   & 31{,}716  & 58  & 0.743 (0.674--0.810) & 0.627 (0.542--0.706) \\
-        Other               & 22{,}825  & 35  & 0.655 (0.557--0.743) & 0.561 (0.453--0.672) \\
-        White -- Oth. Eur.  & 11{,}768  & 18  & 0.688 (0.574--0.794) & 0.664 (0.524--0.789) \\
-        Asian               & 6{,}543   & 16  & 0.793 (0.675--0.891) & 0.628 (0.455--0.788) \\
-        Hispanic/Latino (PR)& 6{,}462   & 16  & 0.641 (0.482--0.802) & 0.570 (0.411--0.735) \\
-        Asian -- Chinese    & 5{,}386   & 13  & 0.583 (0.360--0.795) & 0.710 (0.567--0.826) \\
+        White               & 317{,}688 & 597 & 0.737 (0.716--0.758) & 0.614 (0.590--0.637) \\
+        Unknown             & 107{,}158 & 235 & 0.772 (0.741--0.802) & 0.587 (0.547--0.628) \\
+        Black/African Am.   & 31{,}716  & 58  & 0.738 (0.665--0.807) & 0.627 (0.542--0.706) \\
+        Other               & 22{,}825  & 35  & 0.662 (0.566--0.750) & 0.561 (0.453--0.672) \\
+        White -- Oth. Eur.  & 11{,}768  & 18  & 0.687 (0.568--0.800) & 0.664 (0.524--0.789) \\
+        Asian               & 6{,}543   & 16  & 0.799 (0.675--0.896) & 0.628 (0.455--0.788) \\
+        Hispanic/Latino (PR)& 6{,}462   & 16  & 0.646 (0.480--0.802) & 0.570 (0.411--0.735) \\
+        Asian -- Chinese    & 5{,}386   & 13  & 0.623 (0.438--0.805) & 0.710 (0.567--0.826) \\
         \bottomrule
     \end{tabular}
     \caption{AUROC by racial subgroup (Variant B, temporal test) with 95\%
     stay-level cluster-bootstrap intervals, stratified within subgroup,
     $B = 2{,}000$. Interval width ranges from 0.042 (White, 597 onsets) to
-    0.435 (Asian -- Chinese, 13 onsets). \textbf{[E] exploratory.}}
+    0.367 (Asian -- Chinese, 13 onsets). \textbf{[E] exploratory.}}
     \label{tab:equity_performance}
 \end{table}
 
-The GBT point estimates span 0.583--0.793, a spread of 0.210 that exceeds both
-the model-class spread (0.145) and the label spread (0.153). Read without
+The GBT point estimates span 0.623--0.799, a spread of 0.176 that exceeds both
+the model-class spread (0.142) and the label spread (0.153). Read without
 intervals, that looks like the largest source of variance in the entire study.
 The intervals show it is not: the two extreme groups carry 13 and 16 sepsis
-onsets respectively, and their intervals are 0.435 and 0.216 wide. The apparent
+onsets respectively, and their intervals are 0.367 and 0.221 wide. The apparent
 spread is almost entirely a function of how few events the small subgroups
 contain.
 
@@ -1110,21 +1414,21 @@ against the largest group (White) on the same bootstrap replicates.
         \textbf{Racial group} & \textbf{Sep} & \textbf{Model}
         & \textbf{$\Delta$AUROC vs.\ White (95\% CI)} & \textbf{$p$} & \textbf{$q_{\text{BH}}$} \\
         \midrule
-        Other                    & 35 & GBT     & $-0.088$ ($-0.188$--$0.003$) & 0.065 & 0.325 \\
-        Unknown                  & 235& GBT     & $+0.031$ ($-0.006$--$0.067$) & 0.094 & 0.403 \\
-        Asian -- Chinese         & 13 & GBT     & $-0.159$ ($-0.388$--$0.056$) & 0.143 & 0.476 \\
-        Hispanic / Latino (PR)   & 16 & GBT     & $-0.102$ ($-0.262$--$0.062$) & 0.209 & 0.570 \\
-        White -- Other European  & 18 & GBT     & $-0.055$ ($-0.171$--$0.051$) & 0.318 & 0.636 \\
-        Asian                    & 16 & GBT     & $+0.051$ ($-0.069$--$0.152$) & 0.363 & 0.640 \\
-        Black / African American & 58 & GBT     & $+0.001$ ($-0.072$--$0.071$) & 0.963 & 0.963 \\
+        Unknown                  & 235& GBT     & $+0.035$ ($-0.001$--$0.073$) & 0.062 & 0.310 \\
+        Other                    & 35 & GBT     & $-0.074$ ($-0.172$--$0.015$) & 0.102 & 0.437 \\
+        Asian -- Chinese         & 13 & GBT     & $-0.114$ ($-0.303$--$0.072$) & 0.206 & 0.595 \\
+        Hispanic / Latino (PR)   & 16 & GBT     & $-0.091$ ($-0.256$--$0.067$) & 0.253 & 0.595 \\
+        Asian                    & 16 & GBT     & $+0.062$ ($-0.064$--$0.161$) & 0.273 & 0.595 \\
+        White -- Other European  & 18 & GBT     & $-0.050$ ($-0.171$--$0.064$) & 0.398 & 0.663 \\
+        Black / African American & 58 & GBT     & $+0.001$ ($-0.075$--$0.073$) & 0.943 & 0.943 \\
         \midrule
-        Asian -- Chinese         & 13 & Primary & $+0.096$ ($-0.049$--$0.215$) & 0.130 & 0.476 \\
-        Unknown                  & 235& Primary & $-0.027$ ($-0.074$--$0.019$) & 0.270 & 0.619 \\
-        Other                    & 35 & Primary & $-0.053$ ($-0.164$--$0.058$) & 0.362 & 0.640 \\
+        Asian -- Chinese         & 13 & Primary & $+0.096$ ($-0.049$--$0.215$) & 0.130 & 0.487 \\
+        Unknown                  & 235& Primary & $-0.027$ ($-0.074$--$0.019$) & 0.270 & 0.595 \\
+        Other                    & 35 & Primary & $-0.053$ ($-0.164$--$0.058$) & 0.362 & 0.663 \\
         White -- Other European  & 18 & Primary & $+0.050$ ($-0.097$--$0.181$) & 0.452 & 0.713 \\
         Hispanic / Latino (PR)   & 16 & Primary & $-0.044$ ($-0.203$--$0.121$) & 0.576 & 0.763 \\
-        Black / African American & 58 & Primary & $+0.013$ ($-0.074$--$0.094$) & 0.768 & 0.874 \\
-        Asian                    & 16 & Primary & $+0.014$ ($-0.160$--$0.174$) & 0.862 & 0.891 \\
+        Black / African American & 58 & Primary & $+0.013$ ($-0.074$--$0.094$) & 0.768 & 0.886 \\
+        Asian                    & 16 & Primary & $+0.014$ ($-0.160$--$0.174$) & 0.862 & 0.907 \\
         \bottomrule
     \end{tabular}
     \caption{Subgroup AUROC differences against the reference group (White, the
@@ -1132,13 +1436,13 @@ against the largest group (White) on the same bootstrap replicates.
     over exploratory family E1, which contains all 30 subgroup contrasts
     computed across race, language and insurance for both models --- not only
     the 14 shown here. \textbf{No racial contrast is significant}; the smallest
-    adjusted value for race is $q = 0.325$. \textbf{[E] exploratory.}}
+    adjusted value for race is $q = 0.310$. \textbf{[E] exploratory.}}
     \label{tab:equity_contrasts}
 \end{table}
 
 Only one contrast in the whole of family E1 survives correction, and it is not
 a racial one: GBT discriminates better for Haitian-speaking patients than for
-English-speaking patients ($\Delta = +0.149$, 95\% CI 0.041--0.232,
+English-speaking patients ($\Delta = +0.137$, 95\% CI 0.024--0.231,
 $q = 0.030$), on 12 sepsis onsets. On 12 events this is a hypothesis to test
 elsewhere, not a finding.
 
@@ -1146,10 +1450,10 @@ The correct reading of Table~\ref{tab:equity_contrasts} is that this study is
 \textbf{underpowered to detect subgroup disparities}, not that no disparities
 exist. Several intervals are wide enough to be compatible with a disparity
 larger than any effect reported anywhere else in this thesis: the GBT interval
-for Asian -- Chinese patients runs from $-0.388$ to $+0.056$, so the data are
+for Asian -- Chinese patients runs from $-0.303$ to $+0.072$, so the data are
 consistent with that group being served far worse than White patients, or
 slightly better. Reporting the point estimates alone would have invited the
-opposite conclusion --- that a spread of 0.210 constitutes evidence of
+opposite conclusion --- that a spread of 0.176 constitutes evidence of
 inequity, or that non-significance constitutes evidence of its absence. Neither
 is supported.
 
@@ -1309,6 +1613,9 @@ maintained by hand, so it cannot drift from what the code actually computes.
         Subgroup AUROC by demographic group       & [E] & \S9$^*$ & Benjamini--Hochberg, family E1         \\
         Subgroup label sensitivity                & [E] & \S9$^*$ & Benjamini--Hochberg, family E2         \\
         Label sensitivity vs.\ AUROC association  & [E] & ---     & none (visual, no test)                 \\
+        Alternative-label AUROC vs.\ Sepsis-3     & [E] & A2$^\dagger$ & Benjamini--Hochberg, family E3    \\
+        Anchor-attributable fraction $\phi$       & [E] & A2$^\dagger$ & none (ratio, no null at zero)     \\
+        Onset agreement between definitions       & [D] & A2$^\dagger$ & none (descriptive)                \\
         \bottomrule
     \end{tabular}
     \caption{Analysis register. [C] confirmatory, [E] exploratory,
@@ -1316,7 +1623,9 @@ maintained by hand, so it cannot drift from what the code actually computes.
     \texttt{00\_preregistration.md}. $^*$\S9 pre-registered the equity analysis
     in scope only: neither the subgroup levels, the reference level, nor the
     direction of any comparison was fixed in advance, so these analyses are
-    exploratory.}
+    exploratory. $^\dagger$A2 = Protocol Amendment 2 (\S\S16--17), written after
+    notebooks 02--12 had been run; these analyses are post-hoc and change no
+    pre-registered estimand.}
     \label{tab:register}
 \end{table}
 
@@ -1343,10 +1652,10 @@ preserved even as absolute calibration breaks.
 
 H1 (label dominance) and H6 (model-class null) are in productive tension, as
 designed, and the resolution is sharper than either hypothesis anticipated.
-H6 is decisively rejected: the GBT gap is 0.139 with the whole interval above
+H6 is decisively rejected: the GBT gap is 0.135 with the whole interval above
 the 0.02 equivalence bound. H1 is not confirmed: the margin by which the label
-spread (0.153) exceeds the model spread (0.145) is 0.007, with an interval from
-$-0.020$ to $+0.030$.
+spread (0.153) exceeds the model spread (0.142) is 0.011, with an interval from
+$-0.017$ to $+0.034$.
 
 The two results together say something more precise than the pre-registration
 allowed for. Both the label and the model contribute large variance --- around
@@ -1355,7 +1664,7 @@ literature, which fixes the label and reports model comparisons, is measuring
 one source of variance while ignoring another of at least equal size. That
 claim stands. The stronger claim, that the label matters \emph{more} than the
 model, does not, and would need a study designed to detect a difference of
-under 0.01 AUROC between two spreads.
+around 0.01 AUROC between two spreads.
 
 This is also the clearest illustration in the thesis of why the inference layer
 was necessary. On point estimates, H1 confirmed and the study told a tidy story
@@ -1390,9 +1699,32 @@ reports.
     ventilator settings were not included. Richer features might improve
     discrimination but would not change the treatment-constitutionality finding.
 
-    \item \textbf{Specific to Sepsis-3.} These findings apply to the Sepsis-3
-    definition on MIMIC-IV. Other sepsis definitions or databases may behave
-    differently.
+    \item \textbf{Part of the label-variant spread is definitional, not
+    empirical.} Variants A--C are three readings of one definition and all
+    three fire on the same culture-plus-antibiotic anchor. Sepsis-3 makes onset
+    a function of treatment timing, so moving the antibiotic--culture windows
+    \emph{must} move the onsets; some of the H1 label spread is guaranteed by
+    construction and would appear even if the physiology were identical across
+    patients. Section~\ref{sec:label_anchor_results} separates the two by
+    labelling each limb of the Sepsis-3 conjunction on its own, but the
+    separation is post-hoc (Protocol Amendment 2) and rests on two variants,
+    not on a systematic survey of alternative definitions.
+
+    \item \textbf{The treatment-independent label is not a validated construct.}
+    Variant D is an operational deterioration label built for this comparison,
+    not a consensus definition with an evidence base behind it, and its onsets
+    have no external adjudication. Its label is also a threshold function of
+    recorded physiology of which five of six components are model inputs, so
+    its discrimination \emph{level} is not comparable with Variant B's --- only
+    its disagreement with Variant B about which patients deteriorate, and when,
+    carries weight.
+
+    \item \textbf{Specific to Sepsis-3 and to MIMIC-IV.} These findings apply
+    to the Sepsis-3 definition on MIMIC-IV. SEP-1 and the CDC Adult Sepsis Event
+    were not implemented; both are defined on antibiotic days, so neither would
+    have tested treatment-independence, but each would give a different cohort
+    and might behave differently in other respects. Other databases may behave
+    differently again.
 
     \item \textbf{Operating points are not externally recalibrated.} The
     thresholds in Section~\ref{sec:clinical_utility} are derived on the test
@@ -1423,6 +1755,16 @@ reports.
     powered of the two equity analyses because it is a stay-level proportion
     rather than a discrimination metric, and does not depend on the small
     number of onsets in the test window.
+
+    \item \textbf{The novelty claims rest on a narrative, not systematic,
+    search.} The search protocol in Section~\ref{sec:search_strategy} is
+    documented and every included source was verified against a primary record,
+    but no title-and-abstract screening pass over a full de-duplicated yield was
+    performed and no second reviewer screened independently. The ``to the best
+    of our knowledge'' claims for contributions C1 and C5 are therefore bounded
+    by that coverage: a systematic review could surface a prior study combining
+    multi-variant label sensitivity with subgroup equity analysis, and this
+    search would not necessarily have found it.
 
     \item \textbf{The inference plan is a post-hoc amendment.} Confidence
     intervals and multiplicity control were added after the analyses had been

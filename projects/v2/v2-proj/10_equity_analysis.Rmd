@@ -151,8 +151,11 @@ if (!file.exists(prim_path)) {
     perf_df <- do.call(rbind, perf_results)
     save_parquet(perf_df, "10_subgroup_performance", DATA_DIR)
 
+    # 63 rows does not fit in a single float; longtable lets it break across
+    # pages instead of overflowing (LaTeX "Float too large for page").
     knitr::kable(
       perf_df[order(perf_df$subgroup_col, perf_df$subgroup_val), ],
+      longtable = TRUE,
       caption = "Subgroup performance (primary model, Variant B)"
     )
   }
@@ -264,7 +267,7 @@ if (length(label_sens_results) > 0) {
 
 Tests whether subgroups with higher label sensitivity also have lower AUROC. A negative trend would suggest label ambiguity compounds prediction difficulty.
 
-```{r label-sens-vs-auroc, fig.cap="Subgroup label sensitivity (x) vs. AUROC (y). Each point is a demographic subgroup; a downward trend suggests label ambiguity compounds prediction difficulty.", fig.width=8, fig.height=6}
+```{r label-sens-vs-auroc, fig.cap="Subgroup label sensitivity (x) vs. AUROC (y). Each point is a demographic subgroup; a downward trend suggests label ambiguity compounds prediction difficulty.", fig.width=8, fig.height=4.8}
 if (length(label_sens_results) > 0 && !is.null(perf_df)) {
   merged_eq <- merge(ls_df,
                      perf_df[perf_df$model == "pred_sepsis",

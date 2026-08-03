@@ -8,6 +8,14 @@
 #   ./run_pipeline.sh 01 02 03     # render only matching prefixes
 #   ./run_pipeline.sh --phase 2    # render by phase group (see PHASES below)
 #
+# Environment:
+#   V2_VARIANTS=D,E ./run_pipeline.sh 02 03 05 06 07
+#     Restricts the per-variant loops in stages 02-07 to the named label
+#     variants. Use it to add or refresh a variant without refitting the
+#     others: XGBoost is not bit-stable across runs, so an incidental refit of
+#     A/B/C would silently move every GBT-dependent number in the thesis.
+#     Unset (the default) runs every variant.
+#
 # Output:
 #   PDF reports   → output/
 #   Full run log  → pipeline_run.log
@@ -152,9 +160,20 @@ done
 
 # ---------------------------------------------------------------------------
 # Cleanup temporary / stale files
+#
+# xelatex writes its .log into the working directory, and tinytex only keeps it
+# when the LaTeX run emitted warnings — which is why stray logs appeared for
+# some scripts and not others. The R logs we care about are already in
+# output/logs/, so the LaTeX build artefacts are removed here (mirrors the
+# cleanup block in run_pipeline.R).
 # ---------------------------------------------------------------------------
 find "$SCRIPT_DIR" -maxdepth 1 -name '*.Rmd.tmp' -delete 2>/dev/null
 find "$PDF_DIR" -maxdepth 1 -name '*.html' -delete 2>/dev/null
+for ext in log tex aux toc out; do
+  find "$SCRIPT_DIR" -maxdepth 1 -name "*.${ext}" -delete 2>/dev/null
+  find "$PDF_DIR"    -maxdepth 1 -name "*.${ext}" -delete 2>/dev/null
+done
+find "$SCRIPT_DIR" -maxdepth 1 -name '*.knit.md' -delete 2>/dev/null
 
 # ---------------------------------------------------------------------------
 # Summary

@@ -41,9 +41,13 @@ Four mutually exclusive states at each hour:
 | Code | Event | Interpretation |
 |------|-------|----------------|
 | 0 | In-progress | Patient remains at risk (censored at this hour) |
-| 1 | Sepsis onset | Sepsis-3 criteria met in this hour |
-| 2 | Discharge alive | ICU discharge without developing sepsis |
-| 3 | Death without sepsis | In-ICU mortality without prior sepsis onset |
+| 1 | Label onset | The variant's onset criteria are met in this hour |
+| 2 | Discharge alive | ICU discharge without reaching onset |
+| 3 | Death without onset | In-ICU mortality without prior onset |
+
+For variants A--C, state 1 is Sepsis-3 onset. For the alternative-label variants
+of Protocol Amendment 2 it is that variant's own onset: suspicion of infection
+(E) or acute organ dysfunction (D).
 
 Treatment anchor timestamps (first antibiotic, first culture) are recorded for the treatment-anchored evaluation window (Kamran et al., 2024).
 
@@ -68,13 +72,13 @@ Cohort stay and admission IDs are collected so the large source tables can be fi
 ```{r load-cohort-ids}
 step("Loading cohort IDs for pre-filtering...")
 
-all_stay_ids <- unique(unlist(lapply(names(LABEL_VARIANTS), function(vid) {
+all_stay_ids <- unique(unlist(lapply(ALL_VARIANTS, function(vid) {
   p <- file.path(DATA_DIR, paste0("02_cohort_", vid, ".parquet"))
   if (!file.exists(p)) return(integer(0))
   as.integer(arrow::read_parquet(p, col_select = "stay_id")$stay_id)
 })))
 
-all_hadm_ids <- unique(unlist(lapply(names(LABEL_VARIANTS), function(vid) {
+all_hadm_ids <- unique(unlist(lapply(ALL_VARIANTS, function(vid) {
   p <- file.path(DATA_DIR, paste0("02_cohort_", vid, ".parquet"))
   if (!file.exists(p)) return(integer(0))
   as.integer(arrow::read_parquet(p, col_select = "hadm_id")$hadm_id)
@@ -282,14 +286,65 @@ build_hourly_covariates <- function(stays_dt) {
 }
 ```
 
+## Treatment-Independent Deterioration Onset (Variant D)
+
+Variant D (Protocol Amendment 2) has no suspicion anchor, so its onset cannot be
+assigned in `02_cohort_labels.Rmd`; it is derived here, where the hourly panel
+exists. Onset is the first hour after hour 1 at which the **physiology-only**
+SOFA score rises $\geq$ `r SOFA_INCREASE_THRESHOLD` points above the stay's
+admission baseline (hours 0--`r DETERIORATION_BASELINE_H`, mirroring the
+admission baseline used by variants A and B).
+
+"Physiology-only" means the vasopressor and catecholamine columns are withheld
+from `score_sofa()`, so the cardiovascular component is scored from MAP alone.
+The resulting label therefore contains no antibiotic order, no culture draw and
+no drug administration — nothing that records a clinician's decision to treat.
+
+```{r deterioration-onset-fn, code_folding="hide"}
+SOFA_PHYS_COMPONENTS <- c("pf_ratio", "platelets", "bilirubin", "map",
+                          "gcs", "creatinine")
+
+derive_deterioration_onsets <- function(panel) {
+  step("  Deriving treatment-independent deterioration onsets (Variant D)...")
+
+  d <- panel[, .SD, .SDcols = intersect(c("stay_id", "hour", "pf_ratio", "platelets",
+                                           "bilirubin_total", "map", "gcs", "creatinine"),
+                                         names(panel))]
+  if ("bilirubin_total" %in% names(d)) setnames(d, "bilirubin_total", "bilirubin")
+  comps <- intersect(SOFA_PHYS_COMPONENTS, names(d))
+
+  # Hourly physiology-only SOFA. score_sofa() only adds a vasopressor
+  # contribution when those columns are present, so omitting them is enough.
+  d[, sofa_phys := score_sofa(as.data.frame(d))$sofa_total]
+
+  # Admission baseline: component means over the baseline window, scored once.
+  base_dt <- d[hour <= DETERIORATION_BASELINE_H,
+               lapply(.SD, mean, na.rm = TRUE), by = stay_id, .SDcols = comps]
+  base_dt[, sofa_phys_base := score_sofa(as.data.frame(base_dt))$sofa_total]
+
+  d <- merge(d, base_dt[, .(stay_id, sofa_phys_base)], by = "stay_id", all.x = TRUE)
+  d[is.na(sofa_phys_base), sofa_phys_base := 0L]
+
+  onsets <- d[hour > MIN_OBS_HOURS &
+                (sofa_phys - sofa_phys_base) >= SOFA_INCREASE_THRESHOLD,
+              .(onset_hour = min(hour)), by = stay_id]
+
+  cat(sprintf("  Variant D: %s / %s stays deteriorate (%.1f%%), median onset hour %.1f\n",
+              format(nrow(onsets), big.mark = ","),
+              format(uniqueN(d$stay_id), big.mark = ","),
+              100 * nrow(onsets) / uniqueN(d$stay_id),
+              median(onsets$onset_hour)))
+  onsets
+}
+```
+
 ## Build Person-Hour Tables Per Variant
 
 For each label variant, the hourly panel is assembled, treatment anchors merged, competing events coded, and clinical scores (SOFA, NEWS2, qSOFA, SIRS) computed. Post-outcome rows are dropped. A temporal train/test split based on `anchor_year_group` follows Guo et al. (2022).
 
 ```{r build-person-hours}
-for (vid in names(LABEL_VARIANTS)) {
-  step(sprintf("=== Person-hours for Variant %s (%s) ===",
-               vid, LABEL_VARIANTS[[vid]]$name))
+for (vid in active_variants()) {
+  step(sprintf("=== Person-hours for Variant %s (%s) ===", vid, variant_name(vid)))
 
   cohort <- load_parquet(paste0("02_cohort_", vid), DATA_DIR)
   panel  <- build_hourly_covariates(cohort)
@@ -300,6 +355,13 @@ for (vid in names(LABEL_VARIANTS)) {
                              gender, anchor_age, race, language, insurance,
                              label_variant, label_name)],
                  by = "stay_id", all.x = TRUE)
+
+  # Variant D's onset is a property of the hourly panel, not of the cohort table
+  if (variant_type(vid) == "deterioration") {
+    panel[, onset_hour := NULL]
+    panel <- merge(panel, derive_deterioration_onsets(panel),
+                   by = "stay_id", all.x = TRUE)
+  }
 
   # Treatment anchor timestamps
   cohort_hadm_only <- unique(cohort[, .(hadm_id)])
@@ -368,6 +430,12 @@ for (vid in names(LABEL_VARIANTS)) {
               panel[event == 3, .N], panel[event == 0, .N]))
 
   save_parquet(panel, paste0("03_person_hours_", vid), DATA_DIR)
+
+  # Stay-level onsets, kept small so cross-label agreement can be computed in
+  # stage 09 without reopening the 80 MB panels.
+  save_parquet(unique(panel[, .(stay_id, onset_hour, temporal_split)]),
+               paste0("03_onsets_", vid), DATA_DIR)
+
   rm(panel, cohort); gc()
 }
 ```

@@ -1,5 +1,5 @@
 ---
-title: "02 Cohort Labels - Cohort Extraction Under 3 Label Variants"
+title: "02 Cohort Labels - Cohort Extraction Under Sepsis-3 and Alternative Label Variants"
 author: "Abdul Ahad. Student ID: G00486649"
 date: "`r format(Sys.Date(), '%d %B %Y')`"
 output:
@@ -38,6 +38,8 @@ This notebook applies three Sepsis-3 label variants to the same adult ICU cohort
 
 All three cohorts share the same inclusion criteria (adults $\geq$ 18, first ICU stay, LOS $\geq$ 4 h). The label-variance summary table produced here (M1 deliverable) quantifies these differences before any modelling.
 
+Because all three are Sepsis-3 readings anchored to the same culture-plus-antibiotic trigger, two further variants are built alongside them under Protocol Amendment 2: **E (Anchor-Only)**, the suspicion-of-infection time with the organ-dysfunction requirement removed, and **D (Deterioration)**, acute organ dysfunction with no infection criterion and no treatment timestamp. They are reported separately and never enter the pre-registered H1 comparison.
+
 ```{r load-deps}
 suppressPackageStartupMessages({
   library(data.table)
@@ -48,7 +50,8 @@ suppressPackageStartupMessages({
 source("config.R")
 source("utils.R")
 
-step("=== Phase 2a: Cohort extraction under 3 label variants ===")
+step(sprintf("=== Phase 2a: Cohort extraction under %d label variants ===",
+             length(active_variants())))
 ```
 
 ## Base Tables
@@ -313,8 +316,23 @@ Each variant applies its own antibiotic-culture time window and SOFA evaluation 
 
 ```{r build-cohorts}
 build_cohort_for_variant <- function(variant_id) {
-  v    <- LABEL_VARIANTS[[variant_id]]
+  v    <- variant_def(variant_id)
+  ty   <- variant_type(variant_id)
   step(sprintf("Building cohort for Variant %s (%s)...", variant_id, v$name))
+
+  # Variant D carries no suspicion anchor at all: onset is derived per hour from
+  # physiology in 03_person_hours.Rmd, where the hourly panel exists. The cohort
+  # is the same base cohort with an empty onset column.
+  if (ty == "deterioration") {
+    cohort <- copy(stays)
+    cohort[, `:=`(t_susp = as.POSIXct(NA), onset_time = as.POSIXct(NA),
+                  onset_hour = NA_integer_,
+                  died_in_hosp = hospital_expire_flag == 1L,
+                  label_variant = variant_id, label_name = v$name)]
+    cat(sprintf("Variant %s: %d total stays, onsets derived in stage 03\n",
+                variant_id, nrow(cohort)))
+    return(cohort)
+  }
 
   susp <- suspicion_raw[
     (dt_abx_before_cul >= 0 & dt_abx_before_cul <= v$abx_before_culture_h) |
@@ -328,12 +346,19 @@ build_cohort_for_variant <- function(variant_id) {
 
   cohort <- merge(stays, susp_first[, .(hadm_id, t_susp)],
                   by = "hadm_id", all.x = TRUE)
-  cohort[, sofa_window_start := t_susp - lubridate::hours(v$sofa_window_before_h)]
-  cohort[, sofa_window_end   := t_susp + lubridate::hours(v$sofa_window_after_h)]
 
   v2_log(sprintf("  Stays with suspected infection: %s / %s",
                  format(cohort[!is.na(t_susp), .N], big.mark = ","),
                  format(nrow(cohort), big.mark = ",")))
+
+  # Variant E is the anchor limb on its own: the suspicion time *is* the onset,
+  # with no organ-dysfunction requirement.
+  if (ty == "anchor_only") {
+    cohort[, onset_time := t_susp]
+  } else {
+
+  cohort[, sofa_window_start := t_susp - lubridate::hours(v$sofa_window_before_h)]
+  cohort[, sofa_window_end   := t_susp + lubridate::hours(v$sofa_window_after_h)]
 
   susp_idx <- which(!is.na(cohort$t_susp))
   if (length(susp_idx) > 0) {
@@ -346,6 +371,8 @@ build_cohort_for_variant <- function(variant_id) {
     cohort[susp_idx,
            onset_time := fifelse(sofa_delta >= SOFA_INCREASE_THRESHOLD,
                                  t_susp, as.POSIXct(NA))]
+  }
+
   }
 
   cohort[!is.na(onset_time) & (onset_time < intime | onset_time > outtime),
@@ -366,8 +393,9 @@ build_cohort_for_variant <- function(variant_id) {
   cohort
 }
 
-cohorts       <- lapply(names(LABEL_VARIANTS), build_cohort_for_variant)
-names(cohorts) <- names(LABEL_VARIANTS)
+run_variants   <- active_variants()
+cohorts        <- lapply(run_variants, build_cohort_for_variant)
+names(cohorts) <- run_variants
 
 for (vid in names(cohorts))
   save_parquet(cohorts[[vid]], paste0("02_cohort_", vid), DATA_DIR)
@@ -380,11 +408,11 @@ The label-variance table summarises cohort size, event count, event rate, and on
 ```{r label-variance-table}
 step("Building M1 label-variance table...")
 
-label_variance <- do.call(rbind, lapply(names(cohorts), function(vid) {
+summarise_variant <- function(vid) {
   c_dt <- cohorts[[vid]]
   data.frame(
     variant         = vid,
-    name            = LABEL_VARIANTS[[vid]]$name,
+    name            = variant_name(vid),
     n_stays         = nrow(c_dt),
     n_sepsis_onsets = c_dt[!is.na(onset_time), .N],
     pct_sepsis      = round(100 * c_dt[!is.na(onset_time), .N] / nrow(c_dt), 1),
@@ -394,10 +422,36 @@ label_variance <- do.call(rbind, lapply(names(cohorts), function(vid) {
     iqr_onset_h_lo  = round(quantile(c_dt[!is.na(onset_hour), onset_hour], 0.25, na.rm = TRUE), 1),
     iqr_onset_h_hi  = round(quantile(c_dt[!is.na(onset_hour), onset_hour], 0.75, na.rm = TRUE), 1)
   )
-}))
+}
 
-knitr::kable(label_variance, caption = "M1 Label-Variance Table (cohort size × event count × onset timing)")
+prereg_run <- intersect(names(cohorts), names(LABEL_VARIANTS))
+if (length(prereg_run) > 0) {
+  label_variance <- do.call(rbind, lapply(prereg_run, summarise_variant))
+  knitr::kable(label_variance, caption = "M1 Label-Variance Table (cohort size × event count × onset timing)")
+  save_parquet(label_variance, "02_label_variance_table", DATA_DIR)
+  cat("\nSaved: 02_label_variance_table.parquet\n")
+}
+```
 
-save_parquet(label_variance, "02_label_variance_table", DATA_DIR)
-cat("\nSaved: 02_label_variance_table.parquet\n")
+## Alternative-Label Variance Table (Protocol Amendment 2)
+
+Variants A--C are three readings of one definition and share a single
+culture-plus-antibiotic anchor, so part of their disagreement is definitional
+rather than empirical. Variant E keeps that anchor and drops the
+organ-dysfunction requirement; Variant D keeps organ dysfunction and drops the
+anchor entirely. Variant D's onsets are assigned per hour in
+`03_person_hours.Rmd` and so are not counted here.
+
+```{r alt-label-variance-table}
+alt_run <- intersect(names(cohorts), names(ALT_LABEL_VARIANTS))
+if (length(alt_run) > 0) {
+  alt_variance <- do.call(rbind, lapply(alt_run, summarise_variant))
+  alt_variance$label_family <- vapply(alt_run, variant_type, character(1))
+  knitr::kable(alt_variance,
+               caption = "Alternative (non-Sepsis-3) label variants; Variant D onsets are assigned in stage 03")
+  save_parquet(alt_variance, "02_alt_label_variance_table", DATA_DIR)
+  cat("\nSaved: 02_alt_label_variance_table.parquet\n")
+} else {
+  cat("No alternative-label variants selected in this run.\n")
+}
 ```

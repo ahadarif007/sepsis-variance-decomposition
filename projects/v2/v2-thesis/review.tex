@@ -19,6 +19,19 @@ sepsis prediction with a focus on label sensitivity, evaluation methodology,
 and fairness/equity analysis. Table~\ref{tab:search_strategy} documents the
 search protocol.
 
+\paragraph{What kind of review this is.} This is a \textbf{structured narrative
+critical review, not a PRISMA-conformant systematic review}. Searches were
+executed to a documented protocol and every included source was verified
+against a primary record, but title-and-abstract screening was not conducted
+against a full de-duplicated yield, and no second reviewer independently
+screened. The distinction matters for the novelty claims in
+Section~\ref{sec:contrib}: those claims are stated as ``to the best of our
+knowledge'' and are bounded by the coverage this method achieves, which is
+deliberate depth on the methodological literature that constrains this study
+rather than exhaustive coverage of the MIMIC-IV sepsis corpus. An exhaustive
+systematic review could surface a prior study combining the two analyses in
+contribution C5; this search did not.
+
 \begin{table}[H]
     \centering\small
     \begin{tabular}{p{3.2cm}p{9.5cm}}
@@ -29,12 +42,17 @@ search protocol.
         PubMed/MEDLINE, Embase, Scopus, Web of Science, IEEE Xplore,
         ACM Digital Library, Google Scholar, Cochrane Library,
         ScienceDirect, SpringerLink, Wiley Online Library, Nature
-        Portfolio, JAMA Network, BMJ Journals (15 sources; see
-        \texttt{search\_strategy\_queries.xlsx} for database-specific
-        query syntax) \\
+        Portfolio, JAMA Network, BMJ Journals, arXiv/medRxiv \\
+        \addlinespace
+        Searches executed &
+        35 structured searches across the domains listed under ``Search
+        terms'' \\
         \addlinespace
         Date range &
-        January 2015 -- July 2026 \\
+        Primary sepsis-prediction literature: January 2015 -- July 2026.
+        Methodological and definitional foundations (e.g.\ pooled logistic
+        regression, decision-curve analysis) were searched without a date
+        limit, and the earliest source retained dates from 1990 \\
         \addlinespace
         Search terms &
         \texttt{(sepsis OR ``sepsis prediction'' OR ``sepsis detection'') AND
@@ -60,22 +78,38 @@ search protocol.
         prediction);
         (4)~Studies on paediatric or neonatal populations exclusively \\
         \addlinespace
-        Total screened &
-        \textbf{TODO: fill in after completing search} \\
+        Verification standard &
+        Every included source was checked against a publisher record, PubMed or
+        PMC record, or institutional repository entry, with journal, volume,
+        year and DOI confirmed. Every numerical claim attributed to a source
+        was located in that source's own abstract, results text or
+        publisher-hosted record, never inferred from a secondary citation \\
         \addlinespace
         Total included &
-        \textbf{TODO: fill in after completing search} \\
+        50 sources in the companion critical review (46 newly verified in this
+        pass, 4 carried forward from the base review of 19 sources); 33 are
+        cited in this thesis \\
+        \addlinespace
+        Excluded at verification &
+        4 items encountered in secondary citation lists could not be verified
+        to the standard above and were excluded; 1 further item is retained
+        with an explicit note of incomplete metadata \\
         \bottomrule
     \end{tabular}
     \caption{Literature search strategy. This search supports the novelty claims
     for contributions C1 and C5: no identified study combines multi-variant
     label sensitivity analysis with subgroup equity evaluation for a sepsis
-    prediction model.}
+    prediction model. Because the review is narrative rather than systematic,
+    those claims are bounded by the coverage stated above.}
     \label{tab:search_strategy}
 \end{table}
 
-Figure~\ref{fig:prisma} summarises the screening process following the
-PRISMA 2020 guidelines \cite{page2021prisma}.
+Figure~\ref{fig:prisma} summarises the identification, verification and
+inclusion process. It follows the reporting logic of PRISMA 2020
+\cite{page2021prisma} --- an auditable count at every stage --- but is
+presented as a search-and-verification flow rather than as a PRISMA flow
+diagram, because the screening stage a PRISMA diagram reports was not
+performed in this form.
 
 \begin{figure}[H]
 \centering
@@ -93,55 +127,57 @@ PRISMA 2020 guidelines \cite{page2021prisma}.
 ]
 
 % --- Identification ---
-\node[box] (db) {Records identified through\\database searching (15 sources)\\
-  ($n=\textbf{TODO}$ total)};
+\node[box] (db) {35 structured searches across\\15 bibliographic sources\\
+  (10 methodological domains)};
 
-\node[box, below=of db] (dedup) {Records after duplicates removed\\
-  ($n=\textbf{TODO}$)};
-\draw[arr] (db) -- (dedup);
+\node[box, below=of db] (base) {Sources in the base review\\
+  ($n = 19$: 18 studies + 1 review)};
+\draw[arr] (db) -- (base);
 
-\node[excl, right=1cm of dedup] (e1) {Duplicates removed\\($n=\textbf{TODO}$)};
-\draw[exarr] (db.east) -- ++(0.5,0) |- (e1.west);
+% --- Extension ---
+\node[box, below=of base] (cand) {Candidates carried into the\\
+  extended critical review};
+\draw[arr] (base) -- (cand);
 
-% --- Screening ---
-\node[box, below=of dedup] (screen) {Records screened\\(title and abstract)\\
-  ($n=\textbf{TODO}$)};
-\draw[arr] (dedup) -- (screen);
+\node[excl, right=1cm of cand] (e2) {Excluded at verification\\
+  ($n = 4$): could not be traced\\to a primary record};
+\draw[exarr] (cand.east) -- (e2.west);
 
-\node[excl, right=1cm of screen] (e2) {Excluded at screening\\($n=\textbf{TODO}$)};
-\draw[exarr] (screen.east) -- (e2.west);
+% --- Verification ---
+\node[box, below=of cand] (verif) {Verified against publisher /\\
+  PubMed / PMC / repository record\\
+  ($n = 46$ newly verified)};
+\draw[arr] (cand) -- (verif);
 
-% --- Eligibility ---
-\node[box, below=of screen] (elig) {Full-text articles assessed\\for eligibility\\
-  ($n=\textbf{TODO}$)};
-\draw[arr] (screen) -- (elig);
-
-\node[excl, right=1cm of elig] (e3) {
-  Full-text exclusions ($n=\textbf{TODO}$):\\[2pt]
+\node[excl, right=1cm of verif] (e3) {
+  Retained with caveat ($n = 1$):\\[2pt]
   \begin{minipage}{4.8cm}\raggedright\scriptsize
-    Not onset prediction ($n=\textbf{TODO}$)\\
-    Paediatric only ($n=\textbf{TODO}$)\\
-    No quantitative metric ($n=\textbf{TODO}$)\\
-    Editorial/commentary ($n=\textbf{TODO}$)
+    incomplete metadata, flagged\\in the companion review
   \end{minipage}
 };
-\draw[exarr] (elig.east) -- (e3.west);
+\draw[exarr] (verif.east) -- (e3.west);
 
 % --- Included ---
-\node[box, below=of elig, fill=ATUGreen!15, draw=ATUGreen!80!black]
-  (incl) {Studies included in review\\($n=\textbf{TODO}$)};
-\draw[arr] (elig) -- (incl);
+\node[box, below=of verif, fill=ATUGreen!15, draw=ATUGreen!80!black]
+  (incl) {Sources in the companion review\\
+  ($n = 50$; 4 carried forward)\\
+  of which cited in this thesis: 33};
+\draw[arr] (verif) -- (incl);
 
 % --- Phase labels ---
-\node[phase, left=1.2cm of db]     {Identification};
-\node[phase, left=1.2cm of screen] {Screening};
-\node[phase, left=1.2cm of elig]   {Eligibility};
-\node[phase, left=1.2cm of incl]   {Included};
+\node[phase, left=1.2cm of db]    {Identification};
+\node[phase, left=1.2cm of cand]  {Selection};
+\node[phase, left=1.2cm of verif] {Verification};
+\node[phase, left=1.2cm of incl]  {Included};
 
 \end{tikzpicture}
-\caption{PRISMA 2020 flow diagram of the literature search and screening
-  process. All \textbf{TODO} values should be replaced with actual counts
-  after completing the search.}
+\caption{Search, verification and inclusion flow. Counts are auditable at every
+  stage, following the reporting logic of PRISMA 2020 \cite{page2021prisma},
+  but this is not a PRISMA flow diagram: no title-and-abstract screening pass
+  over a full de-duplicated yield was performed, and screening was not
+  duplicated by a second reviewer. The review is narrative and critical, and
+  the novelty claims it supports are bounded accordingly
+  (Section~\ref{sec:contrib}).}
 \label{fig:prisma}
 \end{figure}
 
@@ -490,6 +526,11 @@ that supports it.
         Cohen et al.\ \cite{cohen2024subtle} \\
         Subgroup label sens. & Equity literature omits label-by-subgroup &
         Wang et al.\ \cite{wang2022equity} \\
+        Treatment-independent label & Sepsis-3, SEP-1 and CDC ASE all key on
+        treatment timing, so a within-family comparison cannot separate
+        definitional from empirical label variance &
+        Kamran et al.\ \cite{kamran2024evaluation};
+        Dutta et al.\ \cite{dutta2026performance} \\
         \bottomrule
     \end{tabular}
     \caption{Design decisions and their evidence warrants.}
