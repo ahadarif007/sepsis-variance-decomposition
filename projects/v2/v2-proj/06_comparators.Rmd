@@ -92,6 +92,7 @@ fit_comparators <- function(vid) {
   test  <- ph[temporal_split == "test"]
 
   avail_feats <- intersect(BASE_FEATURES, names(ph))
+  require_features(BASE_FEATURES, available = names(ph))
   for (f in avail_feats) {
     if (is.numeric(train[[f]])) train[is.na(get(f)), (f) := 0]
     if (is.logical(train[[f]])) train[is.na(get(f)), (f) := FALSE]
@@ -277,6 +278,7 @@ if ("random_split" %in% names(ph)) {
   test_r  <- ph[random_split == "test"]
 
   avail_feats <- intersect(BASE_FEATURES, names(ph))
+  require_features(BASE_FEATURES, available = names(ph))
   for (f in avail_feats) {
     if (is.numeric(train_r[[f]])) train_r[is.na(get(f)), (f) := 0]
     if (is.logical(train_r[[f]])) train_r[is.na(get(f)), (f) := FALSE]

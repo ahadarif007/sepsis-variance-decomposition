@@ -105,6 +105,7 @@ fit_primary_model <- function(vid) {
   avail_base  <- intersect(BASE_FEATURES,        names(train))
   avail_miss  <- intersect(MISSINGNESS_FEATURES, names(train))
   all_features <- c(avail_base, avail_miss)
+  require_features(BASE_FEATURES, MISSINGNESS_FEATURES, available = names(train))
 
   for (f in all_features) {
     if (is.numeric(train[[f]])) train[is.na(get(f)), (f) := 0]
@@ -123,15 +124,19 @@ fit_primary_model <- function(vid) {
   )
   mod_formula <- as.formula(formula_str)
 
-  v2_log("  Fitting multinomial logistic regression...")
+  v2_log(sprintf("  Fitting multinomial logistic regression (ridge decay = %g)...",
+                 PRIMARY_MODEL_DECAY))
   fit <- tryCatch(
     nnet::multinom(mod_formula, data = as.data.frame(train),
-                   trace = FALSE, MaxNWts = 50000, maxit = 500),
+                   trace = FALSE, MaxNWts = 50000, maxit = PRIMARY_MODEL_MAXIT,
+                   decay = PRIMARY_MODEL_DECAY),
     error = function(e) {
       v2_log("  nnet::multinom failed: ", e$message, level = "ERROR")
       NULL
     }
   )
+
+  check_multinom_fit(fit, vid)
 
   if (is.null(fit)) {
     v2_log("  Fallback: binary logistic for sepsis onset only")
@@ -195,7 +200,16 @@ fit_primary_model <- function(vid) {
   saveRDS(fit, file.path(DATA_DIR, paste0("05_model_primary_", vid, ".rds")))
 
   cat(sprintf("  Variant %s model saved.\n", vid))
-  list(fit = fit, coef_table = coef_table, vcov_robust = vcov_robust)
+
+  # Deliberately do NOT return the fit. A multinom object on 2.3 M person-hours
+  # carries its fitted values and residuals (~1.5 GB live, 450 MB on disk), and
+  # the caller keeps one per variant for the whole chunk. With five variants
+  # that retained ~7 GB and made the random-split re-fit below hit R's 16 GB
+  # vector limit. Only `coef_table` is used downstream (the H2 chunk); the fit
+  # itself is already persisted to `05_model_primary_<vid>.rds`.
+  out <- list(coef_table = coef_table, vcov_robust = vcov_robust)
+  rm(fit, train, test, ph); invisible(gc(FALSE))
+  out
 }
 ```
 
@@ -232,6 +246,7 @@ fit_primary_random <- function(vid = "B") {
   avail_base  <- intersect(BASE_FEATURES,        names(train))
   avail_miss  <- intersect(MISSINGNESS_FEATURES, names(train))
   all_features <- c(avail_base, avail_miss)
+  require_features(BASE_FEATURES, MISSINGNESS_FEATURES, available = names(train))
 
   for (f in all_features) {
     if (is.numeric(train[[f]])) train[is.na(get(f)), (f) := 0]
@@ -251,12 +266,15 @@ fit_primary_random <- function(vid = "B") {
 
   fit <- tryCatch(
     nnet::multinom(mod_formula, data = as.data.frame(train),
-                   trace = FALSE, MaxNWts = 50000, maxit = 500),
+                   trace = FALSE, MaxNWts = 50000, maxit = PRIMARY_MODEL_MAXIT,
+                   decay = PRIMARY_MODEL_DECAY),
     error = function(e) {
       v2_log("  Random-split multinom failed: ", e$message, level = "ERROR")
       NULL
     }
   )
+
+  check_multinom_fit(fit, paste0(vid, " (random split)"))
 
   if (is.null(fit)) {
     v2_log("  Fallback: binary logistic for random split")
@@ -292,10 +310,15 @@ fit_primary_random <- function(vid = "B") {
                paste0("05_predictions_primary_random_", vid), DATA_DIR)
   saveRDS(fit, file.path(DATA_DIR, paste0("05_model_primary_random_", vid, ".rds")))
   cat(sprintf("  Random-split model for Variant %s saved.\n", vid))
-  fit
+  rm(fit, train, test, ph); invisible(gc(FALSE))
+  invisible(TRUE)
 }
 
-random_model_B <- if ("B" %in% run_variants) fit_primary_random("B") else {
+# Release whatever the per-variant loop still holds before the random-split fit
+# allocates its own design matrix.
+invisible(gc(FALSE))
+
+random_split_done <- if ("B" %in% run_variants) fit_primary_random("B") else {
   cat("Variant B not selected in this run; keeping the existing random-split fit.\n")
   NULL
 }

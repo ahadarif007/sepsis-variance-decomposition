@@ -176,6 +176,25 @@ done
 find "$SCRIPT_DIR" -maxdepth 1 -name '*.knit.md' -delete 2>/dev/null
 
 # ---------------------------------------------------------------------------
+# Thesis alignment
+#
+# Regenerate ../v2-thesis/pipeline_constants.tex from the result tables and
+# sync output/figures -> ../v2-thesis/images. This is what keeps the thesis
+# from drifting away from the pipeline (HANDOFF section 4). Skipped when a
+# stage failed, because half-written results would produce a constants file
+# that looks authoritative but is not.
+# ---------------------------------------------------------------------------
+if [ $FAILED -eq 0 ]; then
+  echo "" | tee -a "$LOG_FILE"
+  echo "Regenerating thesis constants..." | tee -a "$LOG_FILE"
+  Rscript "$SCRIPT_DIR/thesis_constants.R" 2>&1 | tee -a "$LOG_FILE"
+else
+  echo "" | tee -a "$LOG_FILE"
+  echo "Skipping thesis-constants regeneration (a stage failed)." | tee -a "$LOG_FILE"
+  echo "Run 'Rscript thesis_constants.R' by hand once the run is clean." | tee -a "$LOG_FILE"
+fi
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 END_TS=$(date '+%Y-%m-%d %H:%M:%S')

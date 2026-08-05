@@ -402,3 +402,60 @@ stream_agg_by_stay <- function(path, itemids, windows,
                  result[, uniqueN(itemid)]))
   result
 }
+
+# --------------------------------------------------------------------------- #
+# Model-fit guards
+# --------------------------------------------------------------------------- #
+
+#' Fail loudly when a declared feature is absent from the data
+#'
+#' Every stage used to select its predictors with `intersect(FEATURES, names(dt))`,
+#' which silently drops any feature whose name does not match a column. That is
+#' how heart rate and `hr_slope6h` disappeared from the primary model, the GBT
+#' and the Cox model without a single line of output. Selection still uses
+#' `intersect()`; this check simply makes the drop visible.
+#'
+#' @param ... one or more character vectors of required column names
+#' @param available column names actually present
+#' @param strict when TRUE, stop instead of warning
+require_features <- function(..., available, strict = TRUE) {
+  wanted  <- unique(unlist(list(...)))
+  missing <- setdiff(wanted, available)
+  if (length(missing) == 0) {
+    cat(sprintf("  Feature check: all %d declared features present.\n", length(wanted)))
+    return(invisible(TRUE))
+  }
+  msg <- sprintf("Declared features absent from the data: %s",
+                 paste(missing, collapse = ", "))
+  if (isTRUE(strict)) stop(msg, call. = FALSE)
+  v2_log(paste0("  ", msg), level = "WARN")
+  invisible(FALSE)
+}
+
+#' Report convergence and separation diagnostics for a multinom fit
+#'
+#' `nnet::multinom` reports `convergence = 0` whenever its BFGS stopping rule is
+#' met, which on a separated likelihood happens at an essentially arbitrary
+#' point: the optimum is at infinity, so "converged" carries no information
+#' about identification. The unpenalised 2026-07-30 fits returned
+#' `convergence = 0` for every variant while Variant B's fit was degenerate
+#' (test predictions reaching 1.0 at a 0.19% hourly event rate). Large
+#' coefficients are the observable symptom, so log them explicitly.
+#'
+#' @param fit  a multinom fit (or NULL / a glm fallback, both passed through)
+#' @param tag  label used in the log lines
+#' @param warn_at absolute coefficient size above which separation is flagged
+check_multinom_fit <- function(fit, tag = "", warn_at = 20) {
+  if (is.null(fit) || !inherits(fit, "multinom")) return(invisible(NULL))
+  cm  <- coef(fit)
+  mx  <- max(abs(cm))
+  cat(sprintf("  Fit diagnostics [%s]: convergence=%d  deviance=%.1f  max|coef|=%.3f\n",
+              tag, fit$convergence, fit$deviance, mx))
+  if (!identical(as.integer(fit$convergence), 0L))
+    v2_log(sprintf("  [%s] multinom did NOT converge (maxit reached).", tag), level = "WARN")
+  if (mx > warn_at)
+    v2_log(sprintf(paste0("  [%s] max|coef| = %.1f exceeds %g - the likelihood may be ",
+                          "separated and the fit not identified. Check PLAUSIBLE_RANGES ",
+                          "and PRIMARY_MODEL_DECAY."), tag, mx, warn_at), level = "WARN")
+  invisible(list(convergence = fit$convergence, max_abs_coef = mx))
+}

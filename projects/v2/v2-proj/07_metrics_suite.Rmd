@@ -63,42 +63,165 @@ step("=== Full Evaluation Metric Suite ===")
 Standalone metric functions, reused across internal, external, and subgroup evaluations.
 
 ```{r metric-fns}
-# PhysioNet Utility Score
-compute_utility_score <- function(ph_pred, pred_col, threshold = 0.5) {
-  dt <- copy(as.data.table(ph_pred))
-  dt[, .alert := as.integer(get(pred_col) >= threshold)]
+# --------------------------------------------------------------------------- #
+# PhysioNet Utility Score (Reyna et al., 2020), stay-level operationalisation
+# --------------------------------------------------------------------------- #
+# Raw utility, per stay:
+#   sepsis stay alerted in the reward window [onset + UTILITY_TP_MIN, onset]
+#       + lead / PREDICTION_HORIZON_H, where lead is the warning time of the
+#       *earliest* alert in that window. A full-horizon warning scores 1; an
+#       alert that only coincides with onset scores 0.
+#   sepsis stay alerted only in (onset, onset + UTILITY_TP_MAX]
+#       UTILITY_FP per late alert hour.
+#   sepsis stay never alerted in either window
+#       UTILITY_FN.
+#   any alert hour outside a reward window, on any stay
+#       UTILITY_FP.
+#
+# The raw total is referenced to the two strategies of Reyna et al. (2020):
+#   U_inaction = UTILITY_FN            x n_sepsis_stays   (never alert)
+#   U_optimal  = UTILITY_TP_MAX_REWARD x n_sepsis_stays   (perfect, no false alarms)
+#   normalised = (U - U_inaction) / (U_optimal - U_inaction)
+# so that 1 is a perfect forecaster, 0 is exactly the no-alert strategy, and a
+# negative score is worse than issuing no alerts at all. Without the inaction
+# baseline in both numerator and denominator a model that raises no alert scores
+# -1 rather than 0, which contradicts the definition of the metric.
+#
+# `utility_curve()` evaluates the whole threshold grid in one pass: the per-stay
+# reward is monotone in a falling threshold, so the sweep costs no more than a
+# single sort plus one traversal of the reward-window rows.
+utility_curve <- function(ph_pred, pred_col, thresholds) {
+  dt <- as.data.table(ph_pred)
+  p  <- as.numeric(dt[[pred_col]])
+  ok <- is.finite(p)
 
-  stay_results <- dt[, {
-    onset_h <- onset_hour[!is.na(onset_hour)]
-    onset_h <- if (length(onset_h) > 0) onset_h[1] else NA_real_
-    alert_h <- hour[.alert == 1L]
+  p     <- p[ok]
+  stay  <- dt$stay_id[ok]
+  hour  <- as.numeric(dt$hour)[ok]
+  onset <- as.numeric(dt$onset_hour)[ok]
+  y_hr  <- as.integer(dt$event)[ok] == 1L
 
-    if (!is.na(onset_h)) {
-      tp_early <- alert_h[alert_h >= (onset_h + UTILITY_TP_MIN) & alert_h <= onset_h]
-      tp_late  <- alert_h[alert_h > onset_h & alert_h <= (onset_h + UTILITY_TP_MAX)]
-      fp_pre   <- alert_h[alert_h < (onset_h + UTILITY_TP_MIN)]
-      if (length(tp_early) > 0) {
-        lead <- onset_h - min(tp_early)
-        u    <- max(0, (PREDICTION_HORIZON_H - lead) / PREDICTION_HORIZON_H)
-      } else if (length(tp_late) > 0) {
-        u <- -0.05 * length(tp_late)
+  thresholds <- sort(unique(as.numeric(thresholds)), decreasing = TRUE)
+  sep_stays  <- unique(stay[!is.na(onset)])
+  n_sep      <- length(sep_stays)
+
+  if (n_sep == 0L || length(thresholds) == 0L || length(p) == 0L)
+    return(data.table(threshold = thresholds, n_alerts = NA_integer_,
+                      alert_rate = NA_real_, n_sepsis_stays = n_sep,
+                      n_detected_stays = NA_integer_, detection_rate = NA_real_,
+                      utility_total = NA_real_, utility_normalised = NA_real_,
+                      alert_burden = NA_real_))
+
+  in_early <- !is.na(onset) & hour >= (onset + UTILITY_TP_MIN) & hour <= onset
+  in_late  <- !is.na(onset) & hour >  onset & hour <= (onset + UTILITY_TP_MAX)
+  n_early  <- sum(in_early)
+  n_late   <- sum(in_late)
+
+  # Reward-window rows only, sorted by descending score: these are the rows
+  # whose status changes as the threshold falls.
+  ev <- data.table(
+    si   = c(match(stay[in_early], sep_stays), match(stay[in_late], sep_stays)),
+    p    = c(p[in_early], p[in_late]),
+    v    = c((onset[in_early] - hour[in_early]) / PREDICTION_HORIZON_H,
+             rep(NA_real_, n_late)),
+    late = c(rep(FALSE, n_early), rep(TRUE, n_late))
+  )
+  setorder(ev, -p)
+
+  p_all <- sort(p)
+  p_tp  <- sort(p[y_hr])
+  count_ge <- function(sorted_x, tau)
+    length(sorted_x) - findInterval(tau, sorted_x, left.open = TRUE)
+
+  best       <- rep(NA_real_, n_sep)  # best TP reward so far, per sepsis stay
+  late_cnt   <- integer(n_sep)        # late alerts so far, per sepsis stay
+  sum_best   <- 0                     # sum of best[] over detected stays
+  n_det      <- 0L                    # sepsis stays with a reward-window alert
+  late_undet <- 0L                    # late alerts on stays not (yet) detected
+  n_undet_late <- 0L                  # undetected stays carrying >= 1 late alert
+  n_reward_alerts <- 0L               # alert hours inside a reward window
+
+  j   <- 1L
+  res <- vector("list", length(thresholds))
+
+  for (k in seq_along(thresholds)) {
+    tau <- thresholds[k]
+    while (j <= nrow(ev) && ev$p[j] >= tau) {
+      si <- ev$si[j]
+      if (ev$late[j]) {
+        late_cnt[si] <- late_cnt[si] + 1L
+        if (is.na(best[si])) {
+          late_undet <- late_undet + 1L
+          if (late_cnt[si] == 1L) n_undet_late <- n_undet_late + 1L
+        }
       } else {
-        u <- -1.0
+        v <- ev$v[j]
+        if (is.na(best[si])) {
+          best[si] <- v
+          sum_best <- sum_best + v
+          n_det    <- n_det + 1L
+          if (late_cnt[si] > 0L) {
+            late_undet   <- late_undet - late_cnt[si]
+            n_undet_late <- n_undet_late - 1L
+          }
+        } else if (v > best[si]) {
+          sum_best <- sum_best + (v - best[si])
+          best[si] <- v
+        }
       }
-      u     <- u - 0.05 * length(fp_pre)
-      u_max <- 1.0
-    } else {
-      u     <- -0.05 * length(alert_h)
-      u_max <- 0.0
+      n_reward_alerts <- n_reward_alerts + 1L
+      j <- j + 1L
     }
-    .(u_stay = u, u_max_stay = u_max)
-  }, by = stay_id]
 
-  U_total <- sum(stay_results$u_stay)
-  U_max   <- sum(stay_results$u_max_stay)
-  list(utility_total      = U_total,
-       utility_max        = U_max,
-       utility_normalised = if (U_max > 0) U_total / U_max else NA_real_)
+    n_alerts <- count_ge(p_all, tau)
+    n_tp_hr  <- count_ge(p_tp,  tau)
+
+    u_raw <- sum_best +
+             UTILITY_FP * late_undet +
+             UTILITY_FN * (n_sep - n_det - n_undet_late) +
+             UTILITY_FP * (n_alerts - n_reward_alerts)
+
+    u_inaction <- UTILITY_FN            * n_sep
+    u_optimal  <- UTILITY_TP_MAX_REWARD * n_sep
+
+    res[[k]] <- data.table(
+      threshold          = tau,
+      n_alerts           = n_alerts,
+      alert_rate         = n_alerts / length(p),
+      n_sepsis_stays     = n_sep,
+      n_detected_stays   = n_det,
+      detection_rate     = n_det / n_sep,
+      utility_total      = u_raw,
+      utility_normalised = (u_raw - u_inaction) / (u_optimal - u_inaction),
+      alert_burden       = if (n_tp_hr == 0L) Inf else (n_alerts - n_tp_hr) / n_tp_hr
+    )
+  }
+
+  out <- rbindlist(res)
+  setorder(out, threshold)
+  out[]
+}
+
+# Threshold grid, defined on the alert rate so that it adapts to each model's
+# calibration. At an hourly event rate below 0.5 per cent no model's predicted
+# probability approaches 0.5, so a grid on the probability scale would evaluate
+# nothing but the no-alert strategy. The default 0.5 cut-off is appended so the
+# sweep table always contains the operating point used elsewhere.
+utility_threshold_grid <- function(p) {
+  p <- p[is.finite(p)]
+  if (length(p) == 0L) return(numeric(0))
+  rates <- exp(seq(log(UTILITY_SWEEP_MIN_RATE), log(UTILITY_SWEEP_MAX_RATE),
+                   length.out = UTILITY_SWEEP_N_GRID))
+  taus  <- as.numeric(quantile(p, probs = 1 - rates, names = FALSE, type = 1))
+  sort(unique(c(taus, 0.5)))
+}
+
+# Single-threshold wrapper, used for the default 0.5 operating point.
+compute_utility_score <- function(ph_pred, pred_col, threshold = 0.5) {
+  row <- utility_curve(ph_pred, pred_col, threshold)
+  list(utility_total      = row$utility_total[1],
+       utility_max        = UTILITY_TP_MAX_REWARD * row$n_sepsis_stays[1],
+       utility_normalised = row$utility_normalised[1])
 }
 
 # Calibration
@@ -171,6 +294,7 @@ MODEL_NAMES <- c(primary = "pred_sepsis", news2 = "pred_news2",
                   qsofa = "pred_qsofa", sirs = "pred_sirs")
 
 all_results <- list()
+all_sweeps  <- list()
 
 run_variants <- active_variants()
 
@@ -233,6 +357,25 @@ for (vid in run_variants) {
         error = function(e) NA_real_
       )
 
+      # Threshold sweep. Every Utility Score above is read off the default 0.5
+      # cut-off, which no deployment would use; the sweep reports what each
+      # model can achieve at its best operating point.
+      sweep <- tryCatch(
+        utility_curve(data_win[valid], pred_col,
+                      utility_threshold_grid(pred[valid])),
+        error = function(e) NULL
+      )
+      best <- if (!is.null(sweep)) {
+        cand <- sweep[n_alerts > 0 & is.finite(utility_normalised)]
+        if (nrow(cand) > 0) cand[which.max(utility_normalised)] else NULL
+      } else NULL
+
+      if (!is.null(sweep)) {
+        sweep[, `:=`(variant = vid, model = mod_name, eval_window = win_name,
+                     split_type = "temporal")]
+        all_sweeps[[paste(vid, mod_name, win_name, sep = "-")]] <- sweep
+      }
+
       result_row <- data.frame(
         variant            = vid,
         variant_name       = variant_name(vid),
@@ -247,7 +390,12 @@ for (vid in run_variants) {
         calib_slope        = round(calib$slope, 4),
         utility_normalised = round(utility$utility_normalised, 4),
         alert_burden       = round(burden, 2),
-        lead_time_h        = round(lead_t, 2)
+        lead_time_h        = round(lead_t, 2),
+        utility_max        = if (is.null(best)) NA_real_ else round(best$utility_normalised, 4),
+        utility_opt_threshold = if (is.null(best)) NA_real_ else signif(best$threshold, 4),
+        utility_opt_alert_rate = if (is.null(best)) NA_real_ else signif(best$alert_rate, 4),
+        utility_opt_burden  = if (is.null(best)) NA_real_ else round(best$alert_burden, 2),
+        utility_opt_detection = if (is.null(best)) NA_real_ else round(best$detection_rate, 4)
       )
       all_results[[paste(vid, mod_name, win_name, sep = "-")]] <- result_row
     }
@@ -280,7 +428,7 @@ Central performance comparison. Key checks: (i) primary vs. GBT Utility Score (H
 
 ```{r show-results}
 display_cols <- c("variant", "model", "eval_window", "auroc", "auprc",
-                  "utility_normalised", "alert_burden", "lead_time_h")
+                  "utility_normalised", "utility_max", "alert_burden", "lead_time_h")
 
 results_df <- if (length(all_results) > 0) do.call(rbind, all_results) else NULL
 
@@ -300,6 +448,100 @@ if (!is.null(prereg_df) && nrow(prereg_df) > 0) {
   cat("\nSaved: 07_metric_results.parquet\n")
 } else {
   cat("No pre-registered-variant results in this run; 07_metric_results.parquet left unchanged.\n")
+}
+```
+
+## Utility Score Across the Threshold Grid
+
+Every Utility Score in the table above is read at the default 0.5 cut-off. At an
+hourly event rate below 0.5 per cent no model's predicted probability comes near
+0.5, so that cut-off measures the no-alert strategy for some models and an
+arbitrary point for the others. The full grid is written to
+`07_utility_sweep.csv`; the maximum over all thresholds that raise at least one
+alert is the honest statement of what each model can achieve.
+
+Two invariants are checked here rather than asserted: a threshold above every
+predicted probability must score exactly 0 (it *is* the no-alert strategy), and
+the normalised score must never exceed 1.
+
+```{r utility-sweep}
+sweep_df <- if (length(all_sweeps) > 0) rbindlist(all_sweeps, fill = TRUE) else NULL
+
+if (!is.null(sweep_df) && nrow(sweep_df) > 0) {
+  setcolorder(sweep_df, c("variant", "model", "eval_window", "split_type",
+                          "threshold"))
+  save_csv(as.data.frame(sweep_df), "07_utility_sweep", DATA_DIR)
+
+  # Invariant 1: no alerts => exactly the inaction strategy => score 0.
+  no_alert <- sweep_df[n_alerts == 0]
+  if (nrow(no_alert) > 0) {
+    worst <- max(abs(no_alert$utility_normalised), na.rm = TRUE)
+    if (worst > 1e-12)
+      stop(sprintf("Utility normalisation broken: no-alert score is %.6f, not 0", worst))
+    cat(sprintf("Check: %d no-alert operating points all score exactly 0.\n",
+                nrow(no_alert)))
+  }
+  # Invariant 2: the optimal strategy is the upper bound.
+  if (any(sweep_df$utility_normalised > 1 + 1e-12, na.rm = TRUE))
+    stop("Utility normalisation broken: a score exceeds the optimal strategy")
+  cat("Check: no operating point exceeds the optimal-strategy bound of 1.\n\n")
+
+  best_df <- sweep_df[n_alerts > 0 & is.finite(utility_normalised),
+                      .SD[which.max(utility_normalised)],
+                      by = .(variant, model, eval_window, split_type)]
+  save_csv(as.data.frame(best_df), "07_utility_max", DATA_DIR)
+
+  knitr::kable(
+    best_df[eval_window == "unrestricted"][order(variant, model),
+            .(variant, model, threshold = signif(threshold, 3),
+              alert_rate = signif(alert_rate, 3),
+              detection_rate = round(detection_rate, 3),
+              alert_burden = round(alert_burden, 1),
+              utility_max = round(utility_normalised, 4))],
+    caption = "Maximum achievable Utility Score over the threshold grid (unrestricted window)"
+  )
+  cat("\nSaved: 07_utility_sweep.csv, 07_utility_max.csv\n")
+} else {
+  cat("No threshold sweeps computed in this run.\n")
+}
+```
+
+```{r utility-sweep-figure, fig.width=7, fig.height=4.2, out.width="90%"}
+if (!is.null(sweep_df) && nrow(sweep_df) > 0) {
+  plot_dt <- sweep_df[eval_window == "unrestricted" &
+                        variant %in% names(LABEL_VARIANTS) &
+                        n_alerts > 0 & is.finite(utility_normalised)]
+  if (nrow(plot_dt) > 0) {
+    # The curves plunge to below -5 at high alert rates, which would compress
+    # everything of interest onto the zero line. The axis is clipped to a window
+    # around the decision boundary; the omitted tails are monotone downwards.
+    y_hi   <- max(plot_dt$utility_normalised, na.rm = TRUE)
+    y_span <- c(-4 * max(y_hi, 0.02), y_hi + 0.02)
+
+    best_pts <- plot_dt[, .SD[which.max(utility_normalised)], by = .(variant, model)]
+
+    p_sweep <- ggplot(plot_dt, aes(x = alert_rate, y = utility_normalised,
+                                   colour = model)) +
+      geom_hline(yintercept = 0, linetype = "dashed", colour = "grey40") +
+      geom_line(linewidth = 0.6) +
+      geom_point(data = best_pts, size = 1.4) +
+      facet_wrap(~ variant, nrow = 1) +
+      scale_x_log10(labels = function(x) paste0(signif(100 * x, 2), "%")) +
+      coord_cartesian(ylim = y_span) +
+      labs(x = "Alert rate (per cent of person-hours alerted, log scale)",
+           y = "Normalised Utility Score",
+           colour = "Model",
+           title = "Utility Score across the threshold grid",
+           subtitle = paste("0 is the no-alert strategy; points mark each model's best",
+                            "operating point.\nThe axis is clipped -- every curve",
+                            "continues monotonically downwards to the right.")) +
+      theme_minimal(base_size = 10) +
+      theme(legend.position = "bottom",
+            plot.subtitle = element_text(size = 8))
+    ggsave(file.path(FIGURES_DIR, "07_utility_threshold_sweep.png"), p_sweep,
+           width = 9, height = 4.6, dpi = 150)
+    print(p_sweep)
+  }
 }
 ```
 
@@ -392,6 +634,16 @@ if (file.exists(prim_random_path)) {
         error = function(e) NA_real_
       )
 
+      sweep_r <- tryCatch(
+        utility_curve(data_win_r[valid], pred_col,
+                      utility_threshold_grid(pred[valid])),
+        error = function(e) NULL
+      )
+      best_r <- if (!is.null(sweep_r)) {
+        cand_r <- sweep_r[n_alerts > 0 & is.finite(utility_normalised)]
+        if (nrow(cand_r) > 0) cand_r[which.max(utility_normalised)] else NULL
+      } else NULL
+
       result_row <- data.frame(
         variant            = vid,
         variant_name       = LABEL_VARIANTS[[vid]]$name,
@@ -406,7 +658,12 @@ if (file.exists(prim_random_path)) {
         calib_slope        = round(calib$slope, 4),
         utility_normalised = round(utility$utility_normalised, 4),
         alert_burden       = round(burden, 2),
-        lead_time_h        = round(lead_t, 2)
+        lead_time_h        = round(lead_t, 2),
+        utility_max        = if (is.null(best_r)) NA_real_ else round(best_r$utility_normalised, 4),
+        utility_opt_threshold = if (is.null(best_r)) NA_real_ else signif(best_r$threshold, 4),
+        utility_opt_alert_rate = if (is.null(best_r)) NA_real_ else signif(best_r$alert_rate, 4),
+        utility_opt_burden  = if (is.null(best_r)) NA_real_ else round(best_r$alert_burden, 2),
+        utility_opt_detection = if (is.null(best_r)) NA_real_ else round(best_r$detection_rate, 4)
       )
       random_results[[paste(vid, mod_name, win_name, "random", sep = "-")]] <- result_row
     }
@@ -419,7 +676,8 @@ if (file.exists(prim_random_path)) {
     knitr::kable(
       random_results_df[order(random_results_df$eval_window, random_results_df$model),
                         c("variant", "model", "eval_window", "auroc", "auprc",
-                          "utility_normalised", "alert_burden", "lead_time_h")],
+                          "utility_normalised", "utility_max", "alert_burden",
+                          "lead_time_h")],
       caption = "Evaluation results: random split (Variant B only, H4)"
     )
     cat("\nSaved: 07_metric_results_random.parquet\n")

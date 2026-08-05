@@ -142,6 +142,15 @@ if (length(stray_logs) > 0) {
   v2_log(sprintf("Cleaned up %d stray .log files from project root", length(stray_logs)))
 }
 
+# Regenerate the thesis constants file and sync figures, so the LaTeX document
+# tracks pipeline output instead of hardcoding it (HANDOFF section 4).
+tc <- file.path(script_dir, "thesis_constants.R")
+if (file.exists(tc)) {
+  v2_log("Regenerating thesis constants...")
+  st <- system2("Rscript", tc, stdout = TRUE, stderr = TRUE)
+  v2_log(paste(st, collapse = "\n"))
+}
+
 v2_log("\n======================================================")
 v2_log("  Pipeline complete.")
 v2_log(sprintf("  Results and PDF reports in: %s", OUTPUT_DIR))

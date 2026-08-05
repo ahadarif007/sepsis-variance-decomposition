@@ -46,8 +46,10 @@ Four mutually exclusive states at each hour:
 | 3 | Death without onset | In-ICU mortality without prior onset |
 
 For variants A--C, state 1 is Sepsis-3 onset. For the alternative-label variants
-of Protocol Amendment 2 it is that variant's own onset: suspicion of infection
-(E) or acute organ dysfunction (D).
+it is that variant's own onset: suspicion of infection (E) or acute organ
+dysfunction (D) under Protocol Amendment 2, and Sepsis-3 onset under the
+standard $\min(t_{\text{susp}}, t_{\text{SOFA}})$ timing (F) under Protocol
+Amendment 4.
 
 Treatment anchor timestamps (first antibiotic, first culture) are recorded for the treatment-anchored evaluation window (Kamran et al., 2024).
 
@@ -207,6 +209,14 @@ build_hourly_covariates <- function(stays_dt) {
   } else if ("sbp_invasive"    %in% names(chart_hr)) { setnames(chart_hr, "sbp_invasive",    "sbp") }
   else if   ("sbp_noninvasive" %in% names(chart_hr)) { setnames(chart_hr, "sbp_noninvasive", "sbp") }
 
+  # CHART_ITEMIDS names the heart-rate column `heart_rate`, but every feature
+  # list downstream (05, 06, 08) and the eICU panel in 08 call it `hr`. The
+  # mismatch used to be swallowed by `intersect()`, which silently dropped heart
+  # rate from the primary model, the GBT and the Cox model, left `hr_slope6h`
+  # uncomputed, and made the NEWS2 heart-rate component and the SIRS heart-rate
+  # criterion constant. Normalise to `hr` here so there is one name.
+  if ("heart_rate" %in% names(chart_hr)) setnames(chart_hr, "heart_rate", "hr")
+
   chart_hr <- merge(chart_hr, gcs_hr, by = c("stay_id", "obs_hour"), all = TRUE)
 
   # Lab values → hourly mean
@@ -263,6 +273,10 @@ build_hourly_covariates <- function(stays_dt) {
     panel <- merge(panel, unique(vaso_norepi), by = c("stay_id", "obs_hour"), all.x = TRUE)
     panel[is.na(norepi_epi_any), norepi_epi_any := FALSE]
   } else { panel[, norepi_epi_any := FALSE] }
+
+  # Physiological plausibility filter. Runs BEFORE the forward-fill so that a
+  # transcription error is never carried forward as if it were a real reading.
+  apply_plausibility(panel, label = "hourly panel")
 
   # Forward-fill within stay
   fill_cols <- intersect(c("hr", "resp_rate", "spo2", "map", "sbp", "temp_c", "fio2",
@@ -338,6 +352,96 @@ derive_deterioration_onsets <- function(panel) {
 }
 ```
 
+## Standard Sepsis-3 Onset Timing (Variant F, Protocol Amendment 4)
+
+Variants A--C take the onset to be the suspicion time $t_{\text{susp}}$ whenever
+the SOFA criterion is met anywhere in the evaluation window. The standard
+operationalisation of Seymour et al. (2016), followed by the PhysioNet/CinC 2019
+Challenge (Reyna et al., 2020), instead takes
+
+$$t_{\text{onset}} = \min\!\left(t_{\text{susp}},\, t_{\text{SOFA}}\right),$$
+
+where $t_{\text{SOFA}}$ is the first hour inside the evaluation window
+$[t_{\text{susp}} - `r LABEL_VARIANTS$B$sofa_window_before_h`\,\text{h},\;
+t_{\text{susp}} + `r LABEL_VARIANTS$B$sofa_window_after_h`\,\text{h}]$ at which
+the SOFA score is already $\geq$ `r SOFA_INCREASE_THRESHOLD` points above the
+admission baseline. That branch is what allows an onset to precede the first
+antibiotic or culture; dropping it makes the pre-treatment window empty as a
+matter of definition rather than of fact.
+
+Variant F restores it. Membership is **identical to Variant B** --- the
+conjunction is unchanged, so exactly the same stays are septic --- and only the
+onset timestamp moves, always weakly earlier. F therefore isolates the timing
+branch and nothing else.
+
+Unlike Variant D, the SOFA score here is the full score, vasopressor components
+included, because that is what Seymour et al. specify. Vasopressor
+administration is itself a treatment, so an onset placed by the cardiovascular
+component is not treatment-free; it is only free of the *antibiotic-and-culture*
+anchor that defines the pre-treatment window. Variant D remains the fully
+treatment-independent comparison.
+
+```{r early-onset-fn, code_folding="hide"}
+SOFA_FULL_COMPONENTS <- c("pf_ratio", "platelets", "bilirubin", "map",
+                          "gcs", "creatinine")
+
+derive_early_onsets <- function(panel, vid) {
+  v <- variant_def(vid)
+  step(sprintf("  Deriving standard Sepsis-3 onset timing min(t_susp, t_SOFA) (Variant %s)...",
+               vid))
+
+  keep <- intersect(c("stay_id", "hour", "onset_hour", "pf_ratio", "platelets",
+                      "bilirubin_total", "map", "gcs", "creatinine",
+                      "vaso_any", "norepi_epi_any"), names(panel))
+  d <- panel[, .SD, .SDcols = keep]
+  if ("bilirubin_total" %in% names(d)) d[, bilirubin := bilirubin_total]
+  comps <- intersect(SOFA_FULL_COMPONENTS, names(d))
+
+  # Hourly full SOFA (vasopressor terms included, per Seymour et al.)
+  d[, sofa_total := score_sofa(as.data.frame(d))$sofa_total]
+
+  # Admission baseline: component means over hours 0..DETERIORATION_BASELINE_H,
+  # scored once, with vasopressor exposure taken as "any during the window" so
+  # a patient already on pressors at admission does not register a spurious rise.
+  base_dt <- d[hour <= DETERIORATION_BASELINE_H,
+               lapply(.SD, mean, na.rm = TRUE), by = stay_id, .SDcols = comps]
+  for (vc in intersect(c("vaso_any", "norepi_epi_any"), names(d))) {
+    vb <- d[hour <= DETERIORATION_BASELINE_H,
+            .(x = any(get(vc) %in% TRUE)), by = stay_id]
+    setnames(vb, "x", vc)
+    base_dt <- merge(base_dt, vb, by = "stay_id", all.x = TRUE)
+  }
+  base_dt[, sofa_base := score_sofa(as.data.frame(base_dt))$sofa_total]
+
+  d <- merge(d, base_dt[, .(stay_id, sofa_base)], by = "stay_id", all.x = TRUE)
+  d[is.na(sofa_base), sofa_base := 0L]
+
+  # t_SOFA: earliest qualifying hour inside the evaluation window around t_susp.
+  t_sofa <- d[!is.na(onset_hour) &
+                hour > MIN_OBS_HOURS &
+                hour >= onset_hour - v$sofa_window_before_h &
+                hour <= onset_hour + v$sofa_window_after_h &
+                (sofa_total - sofa_base) >= SOFA_INCREASE_THRESHOLD,
+              .(t_sofa_hour = min(hour)), by = stay_id]
+
+  res <- unique(d[, .(stay_id, onset_hour_susp = onset_hour)])
+  res <- merge(res, t_sofa, by = "stay_id", all.x = TRUE)
+  res[, onset_hour := pmin(onset_hour_susp, t_sofa_hour, na.rm = TRUE)]
+  res[is.na(onset_hour_susp), onset_hour := NA_integer_]   # membership is B's
+
+  pos     <- res[!is.na(onset_hour)]
+  moved   <- pos[onset_hour < onset_hour_susp]
+  cat(sprintf("  Variant %s: %s onsets (membership identical to B); %s moved earlier (%.1f%%), median shift %s h, max %s h\n",
+              vid, format(nrow(pos), big.mark = ","),
+              format(nrow(moved), big.mark = ","),
+              100 * nrow(moved) / max(nrow(pos), 1),
+              if (nrow(moved)) format(median(moved$onset_hour - moved$onset_hour_susp)) else "n/a",
+              if (nrow(moved)) format(min(moved$onset_hour - moved$onset_hour_susp)) else "n/a"))
+
+  res
+}
+```
+
 ## Build Person-Hour Tables Per Variant
 
 For each label variant, the hourly panel is assembled, treatment anchors merged, competing events coded, and clinical scores (SOFA, NEWS2, qSOFA, SIRS) computed. Post-outcome rows are dropped. A temporal train/test split based on `anchor_year_group` follows Guo et al. (2022).
@@ -360,6 +464,16 @@ for (vid in active_variants()) {
   if (variant_type(vid) == "deterioration") {
     panel[, onset_hour := NULL]
     panel <- merge(panel, derive_deterioration_onsets(panel),
+                   by = "stay_id", all.x = TRUE)
+  }
+
+  # Variant F keeps B's membership and moves the onset to min(t_susp, t_SOFA),
+  # which also needs the hourly panel.
+  if (variant_type(vid) == "sepsis3_early") {
+    early <- derive_early_onsets(panel, vid)
+    panel[, onset_hour := NULL]
+    panel <- merge(panel, early[, .(stay_id, onset_hour, onset_hour_susp,
+                                     t_sofa_hour)],
                    by = "stay_id", all.x = TRUE)
   }
 
@@ -394,7 +508,18 @@ for (vid in active_variants()) {
 
   # NEWS2
   nr <- nrow(panel)
-  get_panel_col <- function(col) { v <- panel[[col]]; if (is.null(v)) rep(NA_real_, nr) else v }
+  # A missing column here silently turns a clinical-score component into a
+  # constant (this is how the dead NEWS2 heart-rate term went unnoticed), so
+  # warn loudly rather than returning an all-NA vector without comment.
+  get_panel_col <- function(col) {
+    v <- panel[[col]]
+    if (is.null(v)) {
+      v2_log(sprintf("  Panel column '%s' is absent - clinical-score component will be constant.",
+                     col), level = "WARN")
+      return(rep(NA_real_, nr))
+    }
+    v
+  }
   suppl_o2   <- { fio2_v <- get_panel_col("fio2"); !is.na(fio2_v) & fio2_v > 0.21 }
   avpu_alert <- { gcs_v  <- get_panel_col("gcs");  !is.na(gcs_v)  & gcs_v >= 14 }
   news2_scores <- news2(get_panel_col("resp_rate"), get_panel_col("spo2"),
@@ -419,6 +544,39 @@ for (vid in active_variants()) {
   cat(sprintf("Random split: %d train stays, %d test stays (seed=%d, frac=%.2f)\n",
               length(unique_stays) - length(test_stays), length(test_stays),
               RANDOM_SPLIT_SEED, RANDOM_SPLIT_TEST_FRAC))
+
+  # Onset-shift summary (Variant F). The question the summary answers is the
+  # one the conjunction definition cannot: with standard min(t_susp, t_SOFA)
+  # timing, how many Sepsis-3 onsets actually fall before the first antibiotic
+  # or culture? Under variants A-C that count is zero by construction.
+  if (variant_type(vid) == "sepsis3_early") {
+    sl <- unique(panel[, .(stay_id, onset_hour, onset_hour_susp, t_sofa_hour,
+                            first_abx_hour, first_culture_hour, temporal_split)])
+    sl[, anchor_hour := pmin(first_abx_hour, first_culture_hour, na.rm = TRUE)]
+    pos <- sl[!is.na(onset_hour)]
+    mv  <- pos[onset_hour < onset_hour_susp]
+    shift_summary <- data.table(
+      variant                = vid,
+      label                  = variant_name(vid),
+      n_onsets               = nrow(pos),
+      n_moved_earlier        = nrow(mv),
+      pct_moved_earlier      = round(100 * nrow(mv) / max(nrow(pos), 1), 1),
+      median_shift_h         = if (nrow(mv)) as.numeric(median(mv$onset_hour - mv$onset_hour_susp)) else NA_real_,
+      q25_shift_h            = if (nrow(mv)) as.numeric(quantile(mv$onset_hour - mv$onset_hour_susp, 0.25)) else NA_real_,
+      max_shift_h            = if (nrow(mv)) as.numeric(min(mv$onset_hour - mv$onset_hour_susp)) else NA_real_,
+      n_before_anchor        = pos[!is.na(anchor_hour) & onset_hour < anchor_hour, .N],
+      n_before_anchor_susp   = pos[!is.na(anchor_hour) & onset_hour_susp < anchor_hour, .N],
+      n_before_anchor_test   = pos[temporal_split == "test" &
+                                     !is.na(anchor_hour) & onset_hour < anchor_hour, .N]
+    )
+    knitr::kable(shift_summary,
+                 caption = "Variant F: effect of standard min(t\\_susp, t\\_SOFA) onset timing")
+    save_parquet(shift_summary, "03_early_onset_shift", DATA_DIR)
+    save_csv(shift_summary,     "03_early_onset_shift", DATA_DIR)
+    cat(sprintf("Variant F: %d of %d onsets fall before the treatment anchor (was %d under conjunction timing)\n",
+                shift_summary$n_before_anchor, shift_summary$n_onsets,
+                shift_summary$n_before_anchor_susp))
+  }
 
   drop_cols <- intersect(c("max_hour", "intime.x", "intime.y"), names(panel))
   if (length(drop_cols) > 0) panel[, (drop_cols) := NULL]

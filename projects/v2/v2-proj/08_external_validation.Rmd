@@ -244,6 +244,11 @@ if (nrow(lab_hr) > 0) {
   grid <- merge(grid, lab_hr, by = c("stay_id", "hour"), all.x = TRUE)
 }
 
+# Same plausibility filter as the MIMIC panel in 03, applied before the
+# forward-fill, so the external cohort is pre-processed identically to the
+# training cohort rather than on its own terms.
+apply_plausibility(grid, label = "eICU panel")
+
 fill_cols <- intersect(c("hr","resp_rate","spo2","map","sbp","temp_c",
                           "lactate","creatinine","bilirubin_total","platelets",
                           "wbc","pf_ratio"), names(grid))
@@ -322,6 +327,7 @@ for (vid in names(LABEL_VARIANTS)) {
 
   eicu_pred   <- copy(grid)
   avail_feats <- intersect(BASE_FEATURES, names(eicu_pred))
+  require_features(BASE_FEATURES, available = names(eicu_pred))
   for (f in avail_feats) {
     if (is.numeric(eicu_pred[[f]])) eicu_pred[is.na(get(f)), (f) := 0]
     if (is.logical(eicu_pred[[f]])) eicu_pred[is.na(get(f)), (f) := FALSE]

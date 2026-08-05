@@ -38,7 +38,9 @@ This notebook applies three Sepsis-3 label variants to the same adult ICU cohort
 
 All three cohorts share the same inclusion criteria (adults $\geq$ 18, first ICU stay, LOS $\geq$ 4 h). The label-variance summary table produced here (M1 deliverable) quantifies these differences before any modelling.
 
-Because all three are Sepsis-3 readings anchored to the same culture-plus-antibiotic trigger, two further variants are built alongside them under Protocol Amendment 2: **E (Anchor-Only)**, the suspicion-of-infection time with the organ-dysfunction requirement removed, and **D (Deterioration)**, acute organ dysfunction with no infection criterion and no treatment timestamp. They are reported separately and never enter the pre-registered H1 comparison.
+Because all three are Sepsis-3 readings anchored to the same culture-plus-antibiotic trigger, two further variants are built alongside them under Protocol Amendment 2: **E (Anchor-Only)**, the suspicion-of-infection time with the organ-dysfunction requirement removed, and **D (Deterioration)**, acute organ dysfunction with no infection criterion and no treatment timestamp.
+
+Protocol Amendment 4 adds a third, **F (Sepsis-3 Early-Onset)**. Its cohort is built here exactly as Variant B's --- same suspicion windows, same SOFA criterion, therefore the same septic stays --- and only the onset *timestamp* differs: `03_person_hours.Rmd` moves it back to $\min(t_{\text{susp}}, t_{\text{SOFA}})$, the standard operationalisation of Seymour et al. (2016) and the PhysioNet/CinC 2019 Challenge. All three are reported separately and never enter the pre-registered H1 comparison.
 
 ```{r load-deps}
 suppressPackageStartupMessages({

@@ -339,6 +339,21 @@ if (!is.na(h3_upper))
   cat(sprintf("H3: %d sepsis onsets in %s pre-treatment person-hours; exact 95%% upper bound on the per-hour onset rate = %.3g (1 in %s)\n",
               h3_n_events, format(h3_n_hours, big.mark = ","), h3_upper,
               format(round(1 / h3_upper), big.mark = ",")))
+
+# The bound above is exact but it is a bound on a quantity the label definition
+# fixes at zero (see the proposition in 09_variance_decomposition.Rmd), so it
+# carries no information about MIMIC-IV. The informative counterpart is the
+# same window under standard min(t_susp, t_SOFA) onset timing, which is Variant
+# F: identical membership, timing branch restored. Reported here so the two
+# numbers appear side by side.
+alt_mt <- if (file.exists(file.path(DATA_DIR, "07_metric_results_altlabel.parquet")))
+            as.data.table(read_parquet(file.path(DATA_DIR, "07_metric_results_altlabel.parquet"))) else NULL
+h3_f <- if (!is.null(alt_mt))
+          alt_mt[eval_window == "treatment_anchored" & variant == "F" & model == "primary"] else NULL
+if (!is.null(h3_f) && nrow(h3_f) == 1)
+  cat(sprintf("H3 (empirical counterpart, Variant F): %d sepsis onsets in %s pre-treatment person-hours, AUROC %s\n",
+              h3_f$n_sepsis_events[1], format(h3_f$n_rows[1], big.mark = ","),
+              if (is.na(h3_f$auroc[1])) "undefined" else sprintf("%.4f", h3_f$auroc[1])))
 ```
 
 ### Corrected Confirmatory Verdicts
@@ -398,10 +413,12 @@ if (!is.null(boot_h5)) {
   rows[["H5"]] <- mk("H5", "Metric divergence",
                      "Internal - external AUROC (primary, Variant B, eICU-CRD)",
                      obs_h5, ci_h5, "theta <= 0", p_h5,
-                     sprintf("external AUROC %.4f; Utility Score arm not testable because the internal Utility Score is already negative (%.3f), leaving a proportional decline undefined",
+                     sprintf("external AUROC %.4f; Utility Score arm not testable: the internal score is %.3f at the default cut-off and %.3f at its best threshold, so a proportional decline has no baseline to be proportional to",
                              ext_auroc,
                              mt[variant == "B" & model == "primary" & eval_window == "unrestricted",
-                                utility_normalised][1]))
+                                utility_normalised][1],
+                             mt[variant == "B" & model == "primary" & eval_window == "unrestricted",
+                                utility_max][1]))
 }
 
 # H6: equivalence bound 0.02; rejecting H6 requires evidence that |delta| > 0.02
@@ -732,10 +749,15 @@ Families E1 and E2 vary the label only *within* Sepsis-3, so they cannot say
 whether the label sensitivity is empirical or definitional. This family attaches
 intervals to the Protocol Amendment 2 comparison: Variant E is Sepsis-3's
 treatment anchor with the organ-dysfunction requirement removed, Variant D is
-the organ-dysfunction limb with no treatment timestamp at all.
+the organ-dysfunction limb with no treatment timestamp at all. Protocol
+Amendment 4 adds Variant F, which keeps the Sepsis-3 conjunction intact and
+changes only the onset timestamp to the standard
+$\min(t_{\text{susp}}, t_{\text{SOFA}})$; its contrast against B is therefore a
+pure timing effect. Adding it enlarges family E3, so every BH-adjusted p-value
+in this family is computed over the larger set and is correspondingly stricter.
 
 All variants are labelled on the same test stays, so one replicate draw applies
-to all three and each contrast is paired within replicate. Reported alongside
+to all of them and each contrast is paired within replicate. Reported alongside
 the differences is the **anchor-attributable fraction**
 $\phi = (\mathrm{AUROC}_E - 0.5)/(\mathrm{AUROC}_B - 0.5)$, the share of Variant
 B's above-chance discrimination that the treatment anchor reproduces on its own.
@@ -743,13 +765,14 @@ $\phi$ is a ratio with no meaningful null at zero, so it is reported as an
 interval and is not part of the corrected family.
 
 ```{r alt-label-ci}
-alt_tab <- lapply(c(D = "D", E = "E"), load_test_table)
+alt_ids <- setNames(names(ALT_LABEL_VARIANTS), names(ALT_LABEL_VARIANTS))
+alt_tab <- lapply(alt_ids, load_test_table)
 alt_tab <- Filter(Negate(is.null), alt_tab)
 
 alt_ci <- data.table(); alt_delta <- data.table()
 
 if (length(alt_tab) == 0) {
-  cat("No alternative-label predictions found; run 05-07 with variants D and E.\n")
+  cat("No alternative-label predictions found; run 05-07 with the alternative-label variants.\n")
 } else {
   ALT_MODELS <- c(primary = "pred_sepsis", gbt = "pred_gbt")
 
@@ -975,6 +998,14 @@ register <- rbindlist(list(
              prereg = "Protocol Amendment 2 (post hoc; §16-17)",
              correction = "Benjamini-Hochberg within family E3",
              reported_in = "Table: altlabel_contrasts"),
+  data.table(analysis = "Standard onset timing min(t_susp, t_SOFA) (variant F)", status = "exploratory",
+             prereg = "Protocol Amendment 4 (post hoc; §18)",
+             correction = "Benjamini-Hochberg within family E3 (family enlarged)",
+             reported_in = "Table: altlabel_contrasts, H3 section"),
+  data.table(analysis = "Pre-treatment onsets under standard onset timing",     status = "descriptive",
+             prereg = "Protocol Amendment 4 (post hoc; §18)",
+             correction = "none (event count and window size, not a test)",
+             reported_in = "Table: pretreatment_onsets"),
   data.table(analysis = "Anchor-attributable fraction of discrimination", status = "exploratory",
              prereg = "Protocol Amendment 2 (post hoc; §16-17)",
              correction = "none (ratio reported as an interval, no null at zero)",

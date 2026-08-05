@@ -8,57 +8,93 @@ This thesis asked one question: in real-time sepsis prediction on MIMIC-IV, how
 much of the reported performance comes from the model versus the researcher's
 choices about the label, the data split, and the evaluation metric?
 
-The answer is clear: the researcher's choices matter as much as the model, and
-the sepsis label itself has a fundamental problem: it contains no signal that
-is independent of clinical action.
+The answer is not the one the study anticipated. Model class dominates
+discrimination; the label definition contributes an order of magnitude less;
+the split design and external transport contribute nothing detectable. What the
+label determines is not how well a cohort can be predicted but \emph{which
+cohort exists at all} --- and, through its onset rule, whether prediction ahead
+of clinical action can be measured in the first place.
 
-\paragraph{H1 (Label dominance): Not confirmed under correction.}
-Changing the sepsis definition (while keeping the model fixed) changes AUROC by
-0.153 (95\% CI 0.136--0.177). Changing the model (while keeping the label
-fixed) changes AUROC by 0.142 (95\% CI 0.130--0.161). Both are large relative
-to typical performance differences reported in the literature, but the margin
-between them is 0.011 (95\% CI $-0.017$--$0.034$, $p = 0.21$, Holm-adjusted
-$p = 0.63$), so the label cannot be shown to dominate the model. Cohen et al.'s
-\cite{cohen2024subtle} MIMIC-III finding is supported on MIMIC-IV in its weaker
-form: label choice contributes variance comparable to model choice.
+\paragraph{H1 (Label dominance): Not confirmed, and reversed.}
+Changing the sepsis definition while keeping the model fixed changes AUROC by
+\pcSpreadLabel. Changing the model while keeping the label fixed changes it by
+\pcSpreadModelClass{} --- more than tenfold --- and the interval on the
+difference, [\pcHOneCiLo, \pcHOneCiHi], excludes zero. Cohen et al.'s
+\cite{cohen2024subtle} MIMIC-III finding does not reproduce on MIMIC-IV as a
+\emph{discrimination} effect. It does reproduce as a cohort effect: the two
+narrowest readings agree on which stays are septic at only
+$\kappa = \pcKappaVsBA$ despite near-identical prevalence, so the label still
+determines who is counted --- it simply does not determine how learnable they
+are.
 
-\paragraph{H2 (Coefficient instability): Confirmed, descriptively.}
-Ten of the 20 shared covariates, including MAP, temperature, bilirubin,
-platelet count, and vasopressor indicators, reverse sign across label variants;
-18 reverse sign or change magnitude at least twofold. H2 is a stability
-criterion rather than a contrast, so no test statistic is defined for it.
-Published hazard ratios from MIMIC-IV sepsis models are not interpretable
-without knowing which label definition was used.
+\paragraph{H2 (Coefficient instability): Criterion met, descriptively.}
+\pcHTwoEst{} of the \pcHTwoNTerms{} shared covariates are unstable across label
+variants: \pcHTwoNSign{} reverse sign --- bilirubin and, more consequentially,
+vasopressor exposure --- and \pcHTwoNMag{} change magnitude at least twofold,
+three of those being missingness indicators rather than physiological values.
+H2 is a stability criterion rather than a contrast, so no test statistic is
+defined for it. The instability is narrower than a bare count suggests, but it
+is sufficient that a published hazard ratio for a treatment indicator from a
+model of this kind cannot be interpreted without knowing the exact label
+definition.
 
-\paragraph{H3 (Treatment leakage): Structural finding.}
-The pre-treatment window contains zero sepsis onset events across 179,003
-person-hours (exact one-sided 95\% upper bound on the per-hour onset rate:
-$1.7\times10^{-5}$). The Sepsis-3 label on MIMIC-IV does not contain any event that
-occurs before the clinical action that defines it. Every published MIMIC-IV
-real-time sepsis model measures the ability to predict clinician suspicion, not
-physiological deterioration.
+\paragraph{H3 (Treatment leakage): Definitional, plus its empirical counterpart.}
+The pre-treatment window contains \pcPreTreatOnsetsVarB{} sepsis onset events
+across \pcPreTreatPersonHoursVarB{} person-hours --- but that zero is entailed by
+the onset rule the pre-registered variants use, not measured
+(Proposition~\ref{prop:h3}), so the pre-registered contrast was never testable.
+The empirical question was answered instead by relabelling the identical stays
+under the standard $\min(t_{\text{susp}}, t_{\text{SOFA}})$ onset of Seymour et
+al.\ and the PhysioNet/CinC 2019 Challenge (Variant F, Protocol Amendment 4):
+\pcFNMovedEarlier{} onsets move earlier and \pcPreTreatOnsetsVarF{} fall before
+treatment, identified at \pcPreTreatAurocPrimaryF{} AUROC. A published MIMIC-IV
+real-time sepsis model measures anticipation of physiological deterioration only
+to the extent its onset rule allows an onset to precede clinical action; under a
+conjunction rule, it cannot.
 
-\paragraph{H4 (Split optimism): Confirmed.}
-The random split inflates AUROC by 0.123 (95\% CI 0.100--0.147) compared to the
-temporal split for the primary model (0.730 vs.\ 0.607), far exceeding the 0.02
-threshold (Holm-adjusted $p = 0.003$). Studies
-using random splits substantially overestimate real-world performance.
+\paragraph{H4 (Split optimism): Not confirmed.}
+The random split does not flatter the model. For the primary model it scores
+\pcAurocRandomPrimaryB{} against \pcAurocPrimaryB{} on the temporal split, a
+difference of \pcHFourEst{} (95\% CI \pcHFourCiLo--\pcHFourCiHi) in the
+direction opposite to the hypothesis, and every model fitted under both splits
+shows the same sign. The two test sets differ in composition as well as in
+design --- the temporal arm is a single admission era, the random arm a sample
+across all of them --- so this is not a clean optimism estimate; what it does
+establish is that a random split cannot be assumed to be the more permissive
+choice.
 
-\paragraph{H5 (Metric divergence): Confirmed.}
-The Utility Score is negative for every model and every label variant in the
-temporal test set. The utility collapse documented by Wang et al.\
-\cite{wang2025srpm} across ninety-one models appears \textit{internally}
-on MIMIC-IV under an honest time-based split. External AUROC falls by 0.170
-(95\% CI 0.102--0.242, Holm-adjusted $p = 0.004$) to 0.436, an interval whose
-upper limit reaches chance. Alert burdens range from 91 to over 340 false
-alerts per true alert (benchmark: 1.4, Moor et al.\ \cite{moor2023review}).
+\paragraph{H5 (Metric divergence): Not confirmed --- and superseded by a starker
+finding.}
+Neither arm supports the hypothesis. External AUROC does not degrade at all:
+\pcExtAurocPrimaryB{} on eICU-CRD against \pcAurocPrimaryB{} internally, a
+difference of \pcHFiveEst{} (95\% CI \pcHFiveCiLo--\pcHFiveCiHi) centred on
+zero, well inside the 0.085 degradation anticipated from Moor et al.\
+\cite{moor2023review}. And the proportional utility decline the hypothesis
+asked for cannot be formed, because there is no internal utility to decline
+from: swept across sixty thresholds, the best any configuration achieves under
+the primary label is \pcUtilityMaxGbtB{}, at \pcUtilityOptBurdenGbtB{} false
+alerts per true one against a benchmark of 1.4. The utility collapse Wang et
+al.\ \cite{wang2025srpm} documented across ninety-one models therefore has its
+counterpart \emph{internally} on MIMIC-IV under an honest time-based split ---
+there was scarcely any margin left to collapse. Their broader point survives in
+strengthened form: AUROC and clinical utility are close to uncorrelated here,
+with discrimination transporting intact across two hundred hospitals while
+usable clinical value never materialises in either.
 
-\paragraph{H6 (Model-class null): Rejected.}
-GBT outperforms the primary model by 0.135 AUROC (0.742 vs.\ 0.607), 95\% CI
-0.113--0.156, entirely above the 0.02 equivalence bound (Holm-adjusted
-$p = 0.003$). But the clinical ordering reverses: the primary model has a less
-negative Utility Score ($-1.004$ vs.\ $-5.059$). The ``better'' model by AUROC
-produces more harmful alerts.
+\paragraph{H6 (Model-class null): Not rejected --- equivalence holds.}
+The interpretable hazard model matches gradient-boosted trees:
+\pcAurocPrimaryB{} against \pcAurocGbtB, a difference of \pcHSixEst{} whose
+interval [\pcHSixCiLo, \pcHSixCiHi] lies entirely inside the pre-registered
+0.02 equivalence margin, with the interpretable model marginally ahead on point
+estimates. This is the strongest positive result in the study: on tabular ICU
+time-series of this kind the accuracy case for preferring an opaque model is
+not supported. What little AUROC separates them buys nothing clinically: at their
+respective
+best thresholds the two models are separated by less than one hundredth of a
+Utility Score point (\pcUtilityMaxGbtB{} against \pcUtilityMaxPrimaryB{}), both
+within a few per cent of the no-alert strategy. Discrimination and clinical
+value part company here not by re-ordering the models but by disagreeing about
+whether the difference matters.
 
 
 \section{The Central Lesson}
@@ -67,14 +103,25 @@ The utility collapse documented by Wang et al.\ \cite{wang2025srpm} is
 not a model problem. It is a label problem. The Sepsis-3 label on MIMIC-IV:
 
 \begin{enumerate}
-    \item \textbf{Depends on clinical action:} no patient is \emph{labelled}
-    septic before doctors order antibiotics and cultures. A deterioration label
-    that uses no treatment timestamp records 1,362 onsets in the same window, so
-    the emptiness belongs to the definition, not to the patients.
+    \item \textbf{Depends on clinical action for membership:} no patient is
+    \emph{labelled} septic without a qualifying antibiotic-culture pair, under
+    any timing rule. The further claim that no onset can \emph{precede} that
+    pair is a property of the conjunction-based onset rule alone: timed as the
+    standard specifies, Sepsis-3 records \pcPreTreatOnsetsVarF{} pre-treatment
+    onsets on the same stays, and a treatment-independent deterioration label
+    records \pcPreTreatOnsetsVarD{}. The emptiness belonged to the
+    implementation, not to the patients.
     \item \textbf{Is sensitive to how it is defined:} the number of sepsis
-    cases nearly doubles across plausible Sepsis-3 interpretations.
-    \item \textbf{Produces harmful alert behaviour:} every model, under every
-    label variant, has a negative Utility Score.
+    cases nearly doubles across plausible Sepsis-3 interpretations, and the two
+    narrowest readings agree on which stays are septic at only
+    $\kappa = \pcKappaVsBA$. Discrimination is largely insensitive to this
+    (\pcSpreadLabel{} of AUROC); every count, rate and denominator built on the
+    label is not.
+    \item \textbf{Produces unusable alert behaviour:} no model, under any label
+    variant, has a threshold at which it both beats the no-alert strategy by a
+    clinically meaningful margin and raises an alarm volume a ward could
+    absorb. The best configuration under the primary label reaches
+    \pcUtilityMaxGbtB{} at \pcUtilityOptBurdenGbtB{} false alerts per true one.
 \end{enumerate}
 
 These three problems are independent of model complexity. A better model
@@ -83,43 +130,63 @@ supposed to predict ahead of. The solution requires changing the label.
 
 Splitting the definition sharpens point (2) and qualifies it
 (Section~\ref{sec:label_anchor_results}). It is qualified because the onset
-\emph{time} under every Sepsis-3 variant is fixed entirely by the treatment
-anchor --- the organ-dysfunction criterion decides which stays are labelled and
-moves no onset by an hour --- so part of the variation between variants is
-guaranteed by the definition rather than found in the data. It is sharpened
-because a label built from physiology alone, owing nothing to treatment timing,
-agrees with Sepsis-3 barely better than chance ($\kappa = 0.057$). The label
-effect is therefore real, not merely definitional.
+\emph{time} under every pre-registered Sepsis-3 variant is fixed entirely by the
+treatment anchor --- the organ-dysfunction criterion decides which stays are
+labelled and moves no onset by an hour --- so part of the variation between
+variants is guaranteed by the definition rather than found in the data. It is
+sharpened because a label built from physiology alone, owing nothing to
+treatment timing, agrees with Sepsis-3 barely better than chance
+($\kappa = \pcKappaVsBD$). The label effect is therefore real, not merely
+definitional.
 
-The same comparison relocates the difficulty. Sepsis-3 is \emph{harder} to
-predict than either of the limbs it is built from: the treatment anchor alone
-reaches 0.756 AUROC and physiological deterioration alone 0.842, against 0.607
-for the conjunction. Neither clinician behaviour nor patient physiology is
-unreadable. What resists prediction is the requirement that both occur
-together, which is what Sepsis-3 operationalises.
+The same comparison relocates the difficulty, and not where the conjunction
+framing expected. The treatment anchor on its own is as predictable as Sepsis-3
+built on top of it --- the anchor-attributable fraction is
+\pcPhiAnchorPrimary{} with an interval
+[\pcPhiAnchorCiLoPrimary, \pcPhiAnchorCiHiPrimary] that includes 1 --- so
+requiring both limbs is not what makes the label hard. Physiological
+deterioration alone is \emph{easier} (\pcAltAurocFullPrimaryD{} against
+\pcAurocPrimaryB), and Sepsis-3 with a better clock is easier again
+(\pcAltAurocFullPrimaryF). What resists prediction is not the conjunction but
+the moment at which the conjunction is stamped: the clinician's action rather
+than the patient's deterioration.
 
 
 \section{Contributions}
 
 \begin{enumerate}
-    \item \textbf{C1 (Label variance):} To the best of our knowledge, the first
-    three-variant label sensitivity analysis for a dynamic survival model on
-    MIMIC-IV, confirming Cohen et al.\ at a larger scale (65,078 stays vs.\
-    3,186).
+    \item \textbf{C1 (Label variance, separated from discrimination):} To the
+    best of our knowledge, the first three-variant label sensitivity analysis
+    for a dynamic survival model on MIMIC-IV (\pcNStays{} stays against Cohen
+    et al.'s 3,186), and the first to show that the two effects come apart:
+    label choice moves cohort membership substantially ($\kappa = \pcKappaVsBA$
+    between the narrowest readings) while moving AUROC by only \pcSpreadLabel.
 
-    \item \textbf{C2 (Treatment leakage exposed):} Demonstration that the
-    pre-treatment window contains zero onset events, providing the strongest
-    available confirmation of Kamran et al.'s \cite{kamran2024evaluation}
-    finding.
+    \item \textbf{C2 (Treatment leakage located in the onset rule):} A proof that
+    the conjunction-based Sepsis-3 onset rule makes the pre-treatment window
+    empty by construction, paired with the measurement that the standard
+    $\min(t_{\text{susp}}, t_{\text{SOFA}})$ rule recovers
+    \pcPreTreatOnsetsVarF{} pre-treatment onsets on the identical stays at
+    \pcPreTreatAurocPrimaryF{} AUROC. This confirms Kamran et al.'s
+    \cite{kamran2024evaluation} concern for label membership and corrects its
+    over-extension to label timing.
 
-    \item \textbf{C3 (Utility collapse):} Negative Utility Score for every model
-    and label variant, extending Wang et al.'s \cite{wang2025srpm}
-    meta-analytic finding to a controlled single-study comparison.
+    \item \textbf{C3 (Utility ceiling):} A threshold-swept Utility Score for
+    every model and label variant, establishing that the ceiling --- not merely
+    the score at a conventional cut-off --- sits within a few per cent of the
+    no-alert strategy under the primary label, and that reaching even that
+    ceiling costs
+    \pcUtilityOptBurdenGbtB{} false alerts per true one. This extends Wang et
+    al.'s \cite{wang2025srpm} meta-analytic finding to a controlled
+    single-study comparison and removes the operating-point objection that
+    would otherwise apply to it.
 
-    \item \textbf{C4 (Coefficient instability):} Ten of the 20 shared covariates
-    reverse sign across labels and 18 reverse sign or change magnitude at least
-    twofold, confirming Lauritsen et al.'s
-    \cite{lauritsen2021framing} framing-instability claim on MIMIC-IV.
+    \item \textbf{C4 (Coefficient instability):} \pcHTwoEst{} of the
+    \pcHTwoNTerms{} shared covariates are unstable across labels ---
+    \pcHTwoNSign{} by sign, including vasopressor exposure, and \pcHTwoNMag{}
+    by magnitude --- supporting Lauritsen et al.'s
+    \cite{lauritsen2021framing} framing-instability claim on MIMIC-IV for
+    specific effect estimates, measured against an identified fit.
 
     \item \textbf{C5 (Equity-by-label):} To the best of our knowledge, the first
     study combining subgroup performance disparities with subgroup label
@@ -137,13 +204,18 @@ together, which is what Sepsis-3 operationalises.
     \item \textbf{C7 (Definitional vs.\ empirical label variance separated):}
     A treatment-independent deterioration label, tested alongside the three
     Sepsis-3 variants, shows that the label effect is not an artefact of how one
-    definition is read: it agrees with Sepsis-3 at $\kappa = 0.057$ and matches
-    its onset hour in 6.4\% of shared stays. The same comparison shows that
-    Sepsis-3 is harder to predict than either of the limbs it is built from,
-    and that the pre-treatment window empty of Sepsis-3 onsets contains 1,362
-    treatment-independent deterioration onsets identified at 0.840 AUROC. This
-    relocates the difficulty of sepsis prediction from the physiology to the
-    definition (Section~\ref{sec:label_anchor_results}).
+    definition is read: it agrees with Sepsis-3 at $\kappa = \pcKappaVsBD$ and
+    matches its onset hour in \pcPctExactMatchD\% of shared stays. The same
+    comparison shows that the treatment anchor alone is as predictable as
+    Sepsis-3 built on top of it ($\phi_{\text{anchor}} = \pcPhiAnchorPrimary$,
+    interval including 1), and that the pre-treatment window empty of Sepsis-3
+    onsets contains
+    \pcPreTreatOnsetsVarD{} treatment-independent deterioration onsets
+    identified at \pcPreTreatAurocPrimaryD{} AUROC --- and
+    \pcPreTreatOnsetsVarF{} Sepsis-3 onsets once the standard onset timing is
+    restored. This relocates the difficulty of sepsis prediction from the
+    physiology to the definition, and within the definition to the onset rule
+    (Section~\ref{sec:label_anchor_results}).
 \end{enumerate}
 
 
@@ -173,16 +245,23 @@ together, which is what Sepsis-3 operationalises.
     settings where sepsis onset can be determined by a protocol-blinded assessor,
     independent of treatment decisions.
 
-    \item \textbf{Utility-optimised thresholds.} Choose alert thresholds that
-    maximise the Utility Score directly, rather than maximising AUROC. None of
-    the evaluated models was optimised for clinical utility; a direct
-    utility-maximising threshold search may recover positive utility at
-    restricted operating points.
+    \item \textbf{Utility-optimised training.} The thresholds reported here are
+    optimised post hoc, but the models themselves are not: each is fitted to a
+    likelihood or a squared-error surrogate and only afterwards read at the
+    threshold that happens to maximise utility. Training directly against the
+    Utility Score --- as a differentiable surrogate loss, or through a
+    cost-sensitive reweighting of the person-hour rows --- would change what the
+    model learns rather than only how it is read, and is the natural next step
+    given how shallow the swept optima proved to be. The gap between such a
+    model and the post-hoc ceiling in Table~\ref{tab:utility_optimum} would also
+    quantify how much of the failure is representational rather than
+    operational.
 
-    \item \textbf{Multi-hospital evaluation.} The alert burden (over 90 false
-    alerts per true alert under the best model) is a deployment problem, not a
-    statistical one. Determining whether any model can be deployed at a
-    practically acceptable burden requires prospective multi-centre testing with
+    \item \textbf{Multi-hospital evaluation.} The alert burden ---
+    \pcUtilityOptBurdenGbtB{} false alerts per true alert even at the best
+    model's best operating point --- is a deployment problem, not a statistical
+    one. Determining whether any model can be deployed at a practically
+    acceptable burden requires prospective multi-centre testing with
     clinical-staff feedback.
 \end{enumerate}
 
@@ -198,10 +277,13 @@ The central finding, that the Sepsis-3 label on MIMIC-IV is constituted by
 clinical action, is not a failure of the model. It is a finding about the label
 itself, and it is the most important contribution this study makes.
 
-The final chapter of that finding is the one that took a label outside Sepsis-3
-to see. The pre-treatment window is not empty of predictable deterioration ---
-it contains 1,362 onsets under a treatment-independent label, identified at
-0.840 AUROC. It is empty of \emph{Sepsis-3}, because Sepsis-3 cannot place an
-onset before the treatment it is anchored to. The signal clinicians would want a
-model to find is present in the data. The definition the field has agreed to
-train on is what cannot represent it.
+The last part of that finding required looking outside the pre-registered
+variants. The pre-treatment window is not empty of predictable deterioration ---
+it contains \pcPreTreatOnsetsVarD{} onsets under a treatment-independent label
+at \pcPreTreatAurocPrimaryD{} AUROC, and \pcPreTreatOnsetsVarF{} onsets under
+Sepsis-3 itself once the onset is timed as
+$\min(t_{\text{susp}}, t_{\text{SOFA}})$ rather than as the suspicion time
+alone. It was empty here because of an onset rule, and that rule is not
+peculiar to this thesis. The signal clinicians would want a model to find is
+present in the data; a widely used way of writing the label down is what makes
+it unrepresentable.

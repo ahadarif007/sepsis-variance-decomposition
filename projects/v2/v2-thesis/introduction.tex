@@ -128,19 +128,31 @@ states plainly that it was written after the analyses had been run.
     \cite{dutta2026performance} (see Section~\ref{sec:search_strategy} for the
     search strategy supporting this claim).
 
-    \item \textbf{C2 (Treatment leakage exposed).} A treatment-anchored evaluation
-    showing that the Sepsis-3 label has zero predictable events before clinical
-    action, confirming Kamran et al.\ \cite{kamran2024evaluation} on MIMIC-IV.
+    \item \textbf{C2 (Treatment leakage located in the onset rule).} A proof that
+    a conjunction-based Sepsis-3 onset rule --- the rule used here and widely in
+    the MIMIC-IV literature --- makes pre-treatment prediction structurally
+    impossible, together with the measurement that the standard
+    $\min(t_{\text{susp}}, t_{\text{SOFA}})$ rule applied to the identical stays
+    recovers \pcPreTreatOnsetsVarF{} pre-treatment onsets at
+    \pcPreTreatAurocPrimaryF{} AUROC. Kamran et al.'s
+    \cite{kamran2024evaluation} concern is confirmed for label \emph{membership}
+    and narrowed for label \emph{timing}.
 
-    \item \textbf{C3 (Utility collapse documented).} The Utility Score is negative
-    for every model and every label variant, extending Wang et al.'s
-    \cite{wang2025srpm} meta-analytic finding to a controlled single-study
-    comparison.
+    \item \textbf{C3 (Utility ceiling documented).} Swept across the whole
+    threshold grid rather than scored at a conventional cut-off, no model
+    exceeds \pcUtilityMaxGbtB{} under the primary label or
+    \pcUtilityMaxGbtC{} under any pre-registered variant --- a few per cent
+    above the strategy of issuing no alerts, on a scale whose upper bound is 1
+    --- and reaching even that costs tens of false alerts per true one. This
+    extends Wang et al.'s \cite{wang2025srpm} meta-analytic finding to a
+    controlled single-study comparison and settles it against the
+    operating-point objection.
 
-    \item \textbf{C4 (Coefficient instability).} Ten of the twenty shared
-    clinical covariates reverse sign across label variants, and eighteen either
-    reverse sign or change magnitude at least twofold, validating Lauritsen et
-    al.'s \cite{lauritsen2021framing} framing-instability finding on MIMIC-IV.
+    \item \textbf{C4 (Coefficient instability).} \pcHTwoEst{} of the
+    \pcHTwoNTerms{} shared clinical covariates are unstable across label
+    variants, \pcHTwoNSign{} of them by direction --- including vasopressor
+    exposure, a treatment indicator --- supporting Lauritsen et al.'s
+    \cite{lauritsen2021framing} framing-instability finding on MIMIC-IV.
 
     \item \textbf{C5 (Equity-by-label analysis).} To the best of our knowledge,
     the first study to examine both model performance disparities and label
@@ -155,16 +167,20 @@ states plainly that it was written after the analyses had been run.
     The Sepsis-3 conjunction is split into its two limbs and each is labelled
     separately, so that the part of the label effect guaranteed by the
     definition can be told apart from the part discovered in the data. Two
-    results follow. The onset \emph{time} under every Sepsis-3 variant is fixed
-    entirely by the treatment anchor --- the organ-dysfunction criterion filters
-    which stays are labelled and moves no onset by a single hour --- while a
-    treatment-independent deterioration label agrees with Sepsis-3 at
-    $\kappa = 0.057$, close to chance. And Sepsis-3 is \emph{harder} to predict
-    than either limb alone, so the difficulty lies in the conjunction rather
-    than in the physiology or in clinician behaviour taken separately. The same
+    results follow. The onset \emph{time} under every pre-registered Sepsis-3
+    variant is fixed entirely by the treatment anchor --- the organ-dysfunction
+    criterion filters which stays are labelled and moves no onset by a single
+    hour --- while a treatment-independent deterioration label agrees with
+    Sepsis-3 at $\kappa = \pcKappaVsBD$, close to chance. And the treatment
+    anchor alone is as predictable as the Sepsis-3 conjunction built on top of
+    it ($\phi_{\text{anchor}} = \pcPhiAnchorPrimary$, interval including 1), so
+    the difficulty lies neither in the conjunction nor in the physiology but in
+    when the label is stamped. The same
     comparison shows the empty pre-treatment window of C2 to be a property of
-    the definition: a treatment-independent label records 1,362 onsets there,
-    at 0.840 AUROC (Section~\ref{sec:label_anchor_results}).
+    the onset rule, not of the patients: a treatment-independent label records
+    \pcPreTreatOnsetsVarD{} onsets there at \pcPreTreatAurocPrimaryD{} AUROC,
+    and Sepsis-3 itself records \pcPreTreatOnsetsVarF{} once its onset is timed
+    as the standard specifies (Section~\ref{sec:label_anchor_results}).
 \end{enumerate}
 
 

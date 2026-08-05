@@ -383,3 +383,97 @@ stay.
 `07_metric_results_altlabel`, `09_label_anchor_attribution`,
 `09_label_agreement`, `12_altlabel_auroc_ci`, `12_altlabel_contrasts`,
 `12_anchor_attribution_ci`, and figure `09_label_anchor_attribution.png`.
+
+---
+
+# Amendment 3 — Fit Identification and Data Plausibility
+
+**Date:** 2026-08-03
+**Status:** **POST-HOC.** See `../feedback/v2.md` for the full diagnosis.
+
+Three defects found while responding to supervisory review, all affecting every
+result: (i) no physiological plausibility filter existed anywhere in the
+pipeline, (ii) the primary multinomial specification is completely separated and
+was fitted unpenalised, so its MLE does not exist and `nnet::multinom`'s
+`convergence = 0` was uninformative, (iii) `heart_rate`/`hr` naming mismatch
+silently dropped heart rate from every fitted model via `intersect()`.
+
+Fixes: `PLAUSIBLE_RANGES` + `apply_plausibility()` applied in stages 03 and 08
+before forward-fill; `PRIMARY_MODEL_DECAY = 1e-4` with `check_multinom_fit()`
+guards; `require_features()` errors on any declared-but-absent feature. The
+penalty value is **not tuned** — test AUROC moves < 0.02 across a 20-point ridge
+path for every variant, and that insensitivity is the justification. It must
+never be presented as optimised.
+
+---
+
+# Amendment 4 — Standard Sepsis-3 Onset Timing (Variant F)
+
+**Date:** 2026-08-05
+**Status:** **POST-HOC.** Written in response to supervisory review of the H3
+result. Like Amendments 1–3, it is *not* pre-specified and must not be described
+as such anywhere in the thesis.
+
+**Motivation.** §2 assigns onset as `t_susp` for variants A–C whenever the SOFA
+criterion is met somewhere in the evaluation window; the SOFA criterion gates
+*membership* and contributes no timing information. Because `t_susp` is by
+construction the later element of a qualifying antibiotic–culture pair, it
+follows analytically that no onset can precede the first antibiotic or culture.
+**H3's zero is therefore entailed by the implementation, not measured**, and the
+thesis's claim that "no patient develops sepsis before doctors begin treatment"
+was an over-reading of it. External evidence contradicts the absolute claim
+directly (Epic Sepsis Model v2: median lead times 1.4–7.1 h ahead of clinician
+recognition at encounter AUROC 0.80–0.90).
+
+The standard operationalisation — Seymour et al. (2016) and the PhysioNet/CinC
+2019 Challenge — assigns `t_onset = min(t_susp, t_SOFA)`, which permits an onset
+to precede treatment whenever the SOFA rise is detected first. Amendment 2
+considered and rejected that operationalisation as a *treatment-independent*
+comparator, correctly (its membership is still anchored). That was not a reason
+to omit it as a *timing* comparator, and this amendment adds it.
+
+**Scope.** Adds nothing to §§1–17. No hypothesis, estimand, threshold,
+direction, subgroup or model is changed. H1, the variance decomposition and
+families E1/E2 are computed from exactly the same inputs. Variant F is held
+outside `LABEL_VARIANTS` in `config.R` and its metrics go to the alternative-label
+files.
+
+## 18. Variant F — Sepsis-3 Early-Onset
+
+| Variant | Membership | Onset time | Uses treatment timing? |
+|---------|-----------|------------|------------------------|
+| B | Sepsis-3 conjunction, B's windows | `t_susp` | membership **and** timing |
+| F | **identical to B** | `min(t_susp, t_SOFA)` | membership only |
+
+`t_SOFA` is the first hour in the evaluation window
+`[t_susp - 48 h, t_susp + 24 h]`, after `MIN_OBS_HOURS`, at which the full SOFA
+score is already ≥ `SOFA_INCREASE_THRESHOLD` points above the admission baseline
+(component means over hours 0–`DETERIORATION_BASELINE_H`, with vasopressor
+exposure taken as *any* during that window). Derived in `03_person_hours.Rmd`
+because it needs the hourly panel.
+
+**18.1 Two stated limits.** (a) The SOFA score used is the *full* score,
+vasopressor terms included, as Seymour et al. specify. Vasopressor
+administration is a treatment, so an F onset is free of the
+antibiotic-and-culture anchor but not of treatment in general; Variant D remains
+the fully treatment-independent label. (b) `t_SOFA` is searched only inside the
+72 h modelled panel, so a rise occurring earlier in the admission is not
+detected.
+
+**18.2 Estimands.** Descriptive: number and percentage of onsets moved earlier,
+median and extreme shift, and the count of onsets falling before
+`min(first_abx_hour, first_culture_hour)` — the number the conjunction rule
+fixes at zero. Exploratory: F's AUROC and its ΔAUROC against B join family
+**E3**, which is thereby enlarged, making every Benjamini–Hochberg adjustment in
+that family stricter than before this amendment.
+
+**18.3 Agreement.** F and B label the same stays septic, so stay-level
+membership is identical and the informative agreement statistic for F is the
+onset *shift*. κ(F, B) is nonetheless < 1 on the modelled horizon: moving an
+onset earlier can move it *into* the 72 h window, so F ⊇ B there and the
+difference is the count of stays whose `t_susp` fell past hour 72 but whose
+`t_SOFA` did not. Report that count; it is a property of the onset rule.
+
+**Deliverables:** `03_early_onset_shift`, `09_pretreatment_onsets`, F rows in
+`07_metric_results_altlabel`, `09_label_agreement`, `12_altlabel_auroc_ci`,
+`12_altlabel_contrasts`.

@@ -116,17 +116,23 @@ and reports their sizes. The pipeline stops if any table is missing.
     chartevents, labevents, inputevents, and outputevents. A SOFA rise
     $\geq 2$ within each variant's windows defines organ dysfunction.
 
-    \item \textbf{Onset time:} The hour when both criteria (infection + SOFA rise)
-    are simultaneously met.
+    \item \textbf{Onset time:} For the pre-registered variants A--C, the
+    suspicion time $t_{\text{susp}}$, provided the SOFA rise occurs somewhere in
+    the evaluation window. The SOFA criterion therefore gates \emph{membership}
+    and contributes no timing information --- an implementation choice with
+    consequences developed in Section~\ref{sec:variant_f}.
 
-    \item \textbf{Alternative labels (Protocol Amendment 2):} The Sepsis-3
+    \item \textbf{Alternative labels (Protocol Amendments 2 and 4):} The Sepsis-3
     conjunction is also split into its two limbs
     (Section~\ref{sec:alt_labels}). Variant E keeps the suspicion anchor and
     drops the SOFA criterion; Variant D keeps organ dysfunction and drops the
     anchor, so its onsets are derived from physiology in Stage 03 rather than
-    here. Both are held outside the pre-registered variant set in
-    \texttt{config.R} and their outputs are written to separate files so they
-    cannot enter H1 or the decomposition table.
+    here. Variant F (Amendment 4) keeps the conjunction intact and re-times the
+    onset to $\min(t_{\text{susp}}, t_{\text{SOFA}})$, also in Stage 03 because
+    it needs the hourly SOFA trajectory. All three are held outside the
+    pre-registered variant set in \texttt{config.R} and their outputs are
+    written to separate files so they cannot enter H1 or the decomposition
+    table.
 \end{enumerate}
 
 Outputs: \texttt{cohort\_A/B/C.parquet},
@@ -198,12 +204,24 @@ test results.
 
 \texttt{07\_metrics\_suite.Rmd} evaluates all models on all splits (temporal,
 random, treatment-anchored) using the full metric set: AUROC, AUPRC, calibration
-intercept and slope, PhysioNet Utility Score (via Python module
-\texttt{utility\_score.py}), alert burden, lead time, and decision-curve net
-benefit.
+intercept and slope, PhysioNet Utility Score, alert burden, lead time, and
+decision-curve net benefit.
+
+The Utility Score is computed at the default 0.5 cut-off and swept across a
+sixty-point grid of alert rates, in a single pass: the per-stay reward is
+monotone in a falling threshold, so the whole grid costs one sort plus one
+traversal of the reward-window rows. Two invariants are asserted at run time
+rather than assumed --- a threshold above every predicted probability must
+return exactly zero, since it \emph{is} the no-alert strategy, and no operating
+point may exceed the optimal strategy's score of one. A stand-alone Python
+implementation of the same scoring rule, \texttt{utility\_score.py}, is kept in
+step with the notebook so that prediction tables outside the pipeline can be
+scored and the two implementations cross-checked.
 
 Output: \texttt{07\_metric\_results.parquet} (and
-\texttt{07\_metric\_results\_random.parquet} for the random-split arm).
+\texttt{07\_metric\_results\_random.parquet} for the random-split arm),
+\texttt{07\_utility\_sweep.csv} for the full threshold grid and
+\texttt{07\_utility\_max.csv} for the attaining operating points.
 
 
 \section{Stage 08: External Validation on eICU-CRD}

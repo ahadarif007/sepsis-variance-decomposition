@@ -154,6 +154,18 @@ SOFA_INCREASE_THRESHOLD <- 2   # >= 2 SOFA points = organ dysfunction
 #                              components (vasopressors) excluded. Contains no
 #                              treatment timestamp of any kind.
 #
+# Protocol Amendment 4 adds a third:
+#
+#   F  early-onset timing    — Variant B's membership exactly (the Sepsis-3
+#                              conjunction is unchanged, so the same stays are
+#                              septic), but the onset *time* is the standard
+#                              min(t_susp, t_SOFA) of Seymour et al. (2016) and
+#                              the PhysioNet/CinC 2019 Challenge (Reyna et al.,
+#                              2020) instead of t_susp alone. It isolates the
+#                              timing branch that variants A-C drop, and it is
+#                              the only variant in the Sepsis-3 family whose
+#                              onset can precede the treatment anchor.
+#
 # They are deliberately held OUTSIDE LABEL_VARIANTS: H1 and the variance
 # decomposition are defined on the pre-registered A/B/C family and must not
 # absorb post-hoc variants.
@@ -174,10 +186,27 @@ ALT_LABEL_VARIANTS <- list(
     # Identical suspicion windows to Variant B, so E is exactly B's anchor limb.
     abx_before_culture_h = 72,
     culture_before_abx_h = 24
+  ),
+  # Quoted so the name can never be confused with R's `F` (FALSE).
+  "F" = list(
+    name                 = "Sepsis-3 Early-Onset",
+    type                 = "sepsis3_early",
+    # Suspicion and SOFA windows identical to Variant B: membership is B's,
+    # only the onset timestamp differs. Stage 02 builds the cohort exactly as
+    # for B; stage 03 then moves each onset back to the first hour inside the
+    # SOFA evaluation window at which the >= 2-point rise is already present.
+    abx_before_culture_h = 72,
+    culture_before_abx_h = 24,
+    sofa_window_before_h = 48,
+    sofa_window_after_h  = 24,
+    sofa_baseline        = "admission"
   )
 )
 
-# Hours 0..DETERIORATION_BASELINE_H form the Variant D baseline window.
+# Hours 0..DETERIORATION_BASELINE_H form the ICU-admission SOFA baseline window
+# for every variant whose onset is derived on the hourly panel (D and F). Four
+# hours of panel time is the same span stage 02 uses for its "admission"
+# baseline (intime .. intime + 4 h), so the two agree by construction.
 DETERIORATION_BASELINE_H <- 3
 
 # Every variant the pipeline knows about, pre-registered first.
@@ -294,6 +323,76 @@ URINE_OUTPUT_ITEMIDS <- c(226559L, 226560L, 226561L, 226584L, 226563L,
                            226565L, 226567L, 226557L, 226558L)
 
 # --------------------------------------------------------------------------- #
+# Physiological plausibility ranges
+# --------------------------------------------------------------------------- #
+# MIMIC-IV chartevents carries transcription errors of several orders of
+# magnitude (observed maxima before this filter: heart rate 5,113,280;
+# respiratory rate 7,000,400; SpO2 9,765,430; MAP 8,999,090 with 662 negative
+# values; temperature 2,686 C). Left in place these are infinite-leverage rows
+# that make the primary model's likelihood completely separated, so the
+# unpenalised MLE diverges and the fitted coefficients are not identified.
+# Values outside the range are set to NA *before* forward-fill, so an
+# implausible reading is treated as a missing reading rather than a real one.
+PLAUSIBLE_RANGES <- list(
+  hr              = c(20,   300),
+  resp_rate       = c(0,     80),
+  spo2            = c(50,   100),
+  map             = c(10,   250),
+  sbp             = c(30,   300),
+  dbp_invasive    = c(10,   200),
+  dbp_noninvasive = c(10,   200),
+  temp_c          = c(25,    45),
+  fio2            = c(0.21,   1),
+  gcs             = c(3,     15),
+  lactate         = c(0,     40),
+  creatinine      = c(0,     30),
+  bilirubin_total = c(0,     70),
+  platelets       = c(0,  2000),
+  wbc             = c(0,   500),
+  pao2            = c(20,  700),
+  pf_ratio        = c(10,  1000),
+  sodium          = c(80,   200),
+  potassium       = c(1,     12)
+)
+
+#' Set implausible values to NA in place, and report how many were dropped.
+#'
+#' @param dt      data.table holding the columns
+#' @param ranges  named list of c(lo, hi); only names present in `dt` are used
+#' @param label   text used in the log line
+apply_plausibility <- function(dt, ranges = PLAUSIBLE_RANGES, label = "panel") {
+  hit <- 0L
+  for (col in intersect(names(ranges), names(dt))) {
+    lo <- ranges[[col]][1]; hi <- ranges[[col]][2]
+    bad <- which(!is.na(dt[[col]]) & (dt[[col]] < lo | dt[[col]] > hi))
+    if (length(bad)) {
+      data.table::set(dt, i = bad, j = col, value = NA_real_)
+      hit <- hit + length(bad)
+      cat(sprintf("    %-16s %d values outside [%g, %g] -> NA\n",
+                  col, length(bad), lo, hi))
+    }
+  }
+  cat(sprintf("  Plausibility filter (%s): %d values set to NA\n", label, hit))
+  invisible(dt)
+}
+
+# --------------------------------------------------------------------------- #
+# Primary-model fitting (Protocol Amendment 3)
+# --------------------------------------------------------------------------- #
+# The unpenalised specification is completely separated: driven to a tight
+# tolerance the MLE diverges (|beta| ~ 1e15 under every label variant), so the
+# point at which nnet's BFGS stops is arbitrary and the fitted coefficients are
+# not identified. Under Variant B it stopped in a degenerate region and returned
+# a temporal-test AUROC of 0.607 against 0.746 for an identified fit.
+#
+# A small ridge penalty makes the penalised log-likelihood strictly concave, so
+# the maximum is unique and the fit is reproducible. The value is deliberately
+# small: across a 20-point ridge path the test AUROC moved by less than 0.02 for
+# every variant, so no result depends on this constant.
+PRIMARY_MODEL_DECAY <- 1e-4
+PRIMARY_MODEL_MAXIT <- 1000
+
+# --------------------------------------------------------------------------- #
 # Prediction framing (pre-registered; Lauritsen et al., 2021)
 # --------------------------------------------------------------------------- #
 PREDICTION_HORIZON_H <- 6     # predict onset within next 6h (matches Reyna et al., 2020)
@@ -303,6 +402,28 @@ SLOPE_WINDOW_H       <- 6     # rolling slope window
 UTILITY_TP_MIN  <- -6   # earliest true-positive offset (hours before onset)
 UTILITY_TP_MAX  <-  3   # latest true-positive offset (hours after onset)
 UTILITY_FN_LATE <- -6   # for late FN penalty calculation
+UTILITY_FP      <- -0.05  # per false-alert hour
+UTILITY_FN      <- -1.0   # per undetected sepsis stay
+
+# The reported Utility Score is normalised against the two reference strategies
+# of Reyna et al. (2020): the inaction strategy (never alert), which earns
+# UTILITY_FN per sepsis stay, and the optimal strategy, which earns the maximum
+# true-positive reward on every sepsis stay and raises no false alert. After
+#   (U - U_inaction) / (U_optimal - U_inaction)
+# a score of 1 is a perfect forecaster, 0 is exactly the no-alert strategy, and
+# a negative score is worse than issuing no alerts at all.
+UTILITY_TP_MAX_REWARD <- 1.0
+
+# Threshold sweep. The default 0.5 cut-off is not an operating point any
+# deployment would choose at an hourly event rate below 0.5 per cent, so the
+# Utility Score is also reported at its maximum over a grid of thresholds. The
+# grid is defined on the *alert rate* (fraction of person-hours alerted) rather
+# than on the probability scale, so it adapts to each model's calibration and
+# spans everything from one alert in 10^5 person-hours to alerting on half of
+# them.
+UTILITY_SWEEP_MIN_RATE <- 1e-5
+UTILITY_SWEEP_MAX_RATE <- 0.5
+UTILITY_SWEEP_N_GRID   <- 60
 
 # Alert burden benchmark (Moor et al., 2023): 1.4 false alerts per true alert
 ALERT_BURDEN_BENCHMARK <- 1.4

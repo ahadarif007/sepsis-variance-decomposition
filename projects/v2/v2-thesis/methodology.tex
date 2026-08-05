@@ -211,14 +211,18 @@ split and each limb is labelled on its own
         \textbf{ID} & \textbf{Name} & \textbf{Suspicion anchor}
         & \textbf{Organ dysfunction} & \textbf{Uses treatment timing?} \\
         \midrule
-        B & Seymour-Std    & required     & required     & yes \\
+        B & Seymour-Std    & required     & required     & yes, for membership and timing \\
         E & Anchor-Only    & required     & not required & yes \\
         D & Deterioration  & not required & required     & \textbf{no} \\
+        F & Sepsis-3 Early-Onset & required & required   & membership only \\
         \bottomrule
     \end{tabular}
-    \caption{The two limbs of the Sepsis-3 conjunction, labelled separately.
-    Variant E is Variant B's suspicion anchor with the SOFA criterion removed;
-    Variant D is acute organ dysfunction with the infection criterion removed.}
+    \caption{The two limbs of the Sepsis-3 conjunction, labelled separately
+    (Protocol Amendment 2), and the standard onset timing applied to the intact
+    conjunction (Variant F, Protocol Amendment 4). Variant E is Variant B's
+    suspicion anchor with the SOFA criterion removed; Variant D is acute organ
+    dysfunction with the infection criterion removed; Variant F has Variant B's
+    membership exactly and differs only in when the onset is placed.}
     \label{tab:alt_label_variants}
 \end{table}
 
@@ -247,12 +251,13 @@ specification, feature set and temporal split, so the label is the only thing
 that changes.
 
 The PhysioNet/CinC 2019 operationalisation \cite{reyna2020utility} was
-considered as the alternative label and rejected for this purpose. It sets
-onset to $\min(t_{\text{suspicion}}, t_{\text{SOFA}})$ with the same
-culture-plus-antibiotic trigger, so it is anchored to treatment timing by
-construction and would not have broken the circularity. The same objection
-applies to SEP-1 and to the CDC Adult Sepsis Event
-\cite{dutta2026performance}, both of which are defined on antibiotic days.
+considered as the \emph{treatment-independent} alternative label and rejected
+for that purpose. It sets onset to
+$\min(t_{\text{susp}}, t_{\text{SOFA}})$ with the same
+culture-plus-antibiotic trigger, so membership is still anchored to treatment
+timing and it would not have broken the circularity. The same objection applies
+to SEP-1 and to the CDC Adult Sepsis Event \cite{dutta2026performance}, both of
+which are defined on antibiotic days.
 
 Two limits on interpretation are stated here and carried through the results.
 Variant~E is not a sepsis model and its AUROC is not a sepsis result. Variant~D
@@ -264,9 +269,67 @@ selects different patients at different hours --- reported as onset agreement
 (Cohen's $\kappa$) and median onset shift in
 Section~\ref{sec:label_anchor_results}.
 
-Variants D and E are post-hoc and are never pooled with A--C. They take no part
-in H1 or in the variance decomposition table, which are computed from exactly
-the same inputs as before the amendment; their contrasts form their own
+\subsection{Standard Onset Timing (Variant F, Protocol Amendment 4)}
+\label{sec:variant_f}
+
+That rejection settles the circularity question and no more. The $\min$ rule
+does not break the anchor --- membership still requires the
+antibiotic-culture pair --- but it does change something the pre-registered
+family holds fixed and never examines: \emph{when} the onset is placed. Anchored
+\emph{membership} and anchored \emph{timing} are separable properties, and only
+the second is what the treatment-anchored evaluation window tests.
+
+Variants A--C assign onset $= t_{\text{susp}}$ whenever the SOFA criterion is
+satisfied anywhere in the evaluation window, so the SOFA criterion gates
+membership and contributes no timing information. Seymour et al.\ \cite{seymour2016assessment} and the PhysioNet/CinC 2019 Challenge
+\cite{reyna2020utility} instead assign
+\begin{equation}
+    t_{\text{onset}} = \min\bigl(t_{\text{susp}},\, t_{\text{SOFA}}\bigr),
+    \label{eq:early_onset}
+\end{equation}
+with $t_{\text{SOFA}}$ the first hour in the evaluation window at which the
+$\geq 2$-point rise over the admission baseline is already present. Equation
+\eqref{eq:early_onset} is the branch that permits an onset to precede the first
+antibiotic or culture; dropping it makes the pre-treatment window empty as a
+matter of arithmetic (Proposition~\ref{prop:h3} in
+Chapter~\ref{ch:evaluation}).
+
+\textbf{Variant F (Sepsis-3 Early-Onset)} restores it and changes nothing else.
+The suspicion windows, SOFA threshold, evaluation window and baseline are
+Variant B's, so the two variants label exactly the same stays; only the
+timestamp moves, and only ever earlier. Variant F therefore isolates the timing
+branch as cleanly as Variants D and E isolate the two limbs.
+
+Three properties are worth stating in advance. First, the SOFA score used for
+$t_{\text{SOFA}}$ is the \emph{full} score, vasopressor components included, as
+Seymour et al.\ specify; vasopressor administration is itself a treatment, so an
+onset placed by the cardiovascular component is free of the
+antibiotic-and-culture anchor that defines the pre-treatment window but is not
+free of treatment in general. Variant D remains the fully treatment-independent
+comparison.
+
+Second, F and B label the same stays septic --- membership is identical at the
+level of the stay --- so the informative agreement statistic for F is the onset
+\emph{shift}, not the overlap. Agreement is nonetheless not perfect once
+restricted to the modelled horizon, which leads to the third property.
+
+Third, moving an onset earlier can move it \emph{into} the 72-hour prediction
+window. A stay whose $t_{\text{susp}}$ falls after hour 72 contributes no
+labelled event to any model here, but if its SOFA rise occurred inside the
+window, Variant F places the onset there and the stay becomes a modellable
+event. This is a one-directional effect: $F \supseteq B$ within the horizon, and
+the extra stays are reported in Section~\ref{sec:pretreatment_label}. It means
+the choice of onset rule determines not only \emph{when} events are recorded but
+\emph{how many} are visible to a real-time model at all.
+
+Variant F is post-hoc, is never pooled with A--C, and takes no part in H1 or the
+variance decomposition. Its contrast against B joins exploratory family E3,
+which enlarges that family and makes every Benjamini--Hochberg adjustment within
+it stricter than before the amendment.
+
+Variants D, E and F are post-hoc and are never pooled with A--C. They take no
+part in H1 or in the variance decomposition table, which are computed from
+exactly the same inputs as before the amendments; their contrasts form their own
 exploratory family (E3), corrected by Benjamini--Hochberg.
 
 
@@ -338,6 +401,7 @@ used.
 \label{sec:models}
 
 \subsection{Primary Model: Dynamic Discrete-Time Competing-Risks Hazard Model}
+\label{sec:primary_model_spec}
 
 The primary model is a multinomial pooled logistic regression over person-hours,
 following D'Agostino et al.\ \cite{dagostino1990pooled} and Heyard et al.\
@@ -352,13 +416,53 @@ following D'Agostino et al.\ \cite{dagostino1990pooled} and Heyard et al.\
 
 where $r \in \{1=\text{sepsis},\, 2=\text{discharge},\, 3=\text{death}\}$.
 The baseline hazard $\alpha_r(t)$ uses a restricted natural cubic spline with
-5 knots. Standard errors are cluster-robust, grouped by patient stay.
+5 knots, placed at quantiles of training-set hour within each variant.
 
 This model predicts the risk of sepsis every hour. Under short intervals
 and low per-interval event probabilities (both conditions met for hourly ICU
 data with onset probability below 1\%), it is mathematically equivalent to
 time-dependent Cox regression, without requiring the proportional-hazards
 assumption.
+
+\paragraph{Identification: the specification is penalised, and must be.}
+The unpenalised version of Equation~\eqref{eq:primary_model} is
+\textbf{completely separated} on this design. Driven to a tight tolerance by
+iteratively reweighted least squares, the whole coefficient vector diverges
+together --- $|\beta|$ of order $10^{15}$ under \emph{every} label variant ---
+which is the signature of separation along a direction in covariate space rather
+than of one badly behaved predictor; the design matrix is full rank, so this is
+not aliasing. A separated likelihood has no finite maximiser, so the fitted
+coefficients are not identified and the point at which a quasi-Newton optimiser
+stops is arbitrary.
+
+This is a trap worth naming, because the standard diagnostic does not catch it:
+\texttt{nnet::multinom} returns \texttt{convergence = 0} for every variant here.
+That flag reports only that BFGS's relative-change stopping rule fired; it says
+nothing about whether an optimum exists. A ridge penalty of
+$\lambda = 10^{-4}$ is therefore applied, which makes the penalised
+log-likelihood strictly concave and the maximiser unique. The value is
+\textbf{not tuned}: across a 20-point ridge path the temporal-test AUROC moves
+by less than 0.02 for every variant, and that insensitivity --- not an
+optimisation --- is the justification for the constant. Every fit is checked
+after estimation and flagged if $\max|\beta|$ exceeds 20.
+
+Penalisation is not a refinement here; it is a precondition. Coefficient
+comparisons across label variants (H2, Section~\ref{sec:h2}) are only meaningful
+against a unique maximiser, and an unpenalised fit can land in a degenerate
+region under one label and a benign region under another, manufacturing an
+apparent label effect where none exists.
+
+\paragraph{Uncertainty for this model comes from the bootstrap, not from the fit.}
+A cluster-robust sandwich estimator clustered on stay would be the natural
+choice for standard errors, since person-hours are nested within stays. It is
+not available: \texttt{sandwich}'s score-function method is not defined for
+\texttt{multinom} objects, so no analytic variance is computed for the primary
+model at all. All uncertainty reported for it therefore comes from the
+stay-level cluster bootstrap of Section~\ref{sec:inference}, which resamples
+whole stays and so respects the same clustering the sandwich estimator would
+have. The one quantity this cannot supply is a per-coefficient standard error,
+which is why H2 is reported as a descriptive count rather than a test
+(Section~\ref{sec:h2}).
 
 \subsection{Comparator: Gradient-Boosted Trees (GBT)}
 
@@ -411,10 +515,51 @@ NEWS2 is the headline comparator following Evans et al.\
 \subsection{Primary Metrics}
 
 \textbf{PhysioNet Utility Score} \cite{reyna2020utility} is the primary
-metric. It rewards early true alerts (within 6 hours before onset), penalises
-late and false alerts. A score of 0 means no better than no alerts; negative
-means actively harmful. AUROC is reported only for comparison, because it
-hides the clinical failure mode \cite{wang2025srpm}.
+metric. It rewards early true alerts and penalises late and false ones. AUROC
+is reported only for comparison, because it hides the clinical failure mode
+\cite{wang2025srpm}.
+
+Each stay contributes a raw utility. A septic stay first alerted at hour $t$
+within the reward window $[t_{\mathrm{onset}} - 6,\ t_{\mathrm{onset}}]$ earns
+$(t_{\mathrm{onset}} - t)/6$, so a full-horizon warning earns 1 and an alert
+that merely coincides with onset earns nothing; a septic stay alerted only in
+$(t_{\mathrm{onset}},\ t_{\mathrm{onset}} + 3]$ earns $-0.05$ per late alert
+hour; a septic stay never alerted in either window earns $-1$; and every alert
+hour outside a reward window, on any stay, costs $-0.05$.
+
+The raw total $U$ is then referenced to the two strategies that bound it. The
+\emph{inaction} strategy never alerts and therefore earns $U_{\text{inact}} =
+-1$ per septic stay; the \emph{optimal} strategy earns the full reward on every
+septic stay and raises no false alarm, giving $U_{\text{opt}} = +1$ per septic
+stay. The reported score is
+\begin{equation}
+    \widetilde{U} = \frac{U - U_{\text{inact}}}
+                         {U_{\text{opt}} - U_{\text{inact}}},
+    \label{eq:utility_norm}
+\end{equation}
+so that $\widetilde{U} = 1$ is a perfect forecaster, $\widetilde{U} = 0$ is
+\emph{exactly} the no-alert strategy, and $\widetilde{U} < 0$ is worse than
+issuing no alerts at all. The inaction baseline has to appear in both numerator
+and denominator: normalising by the optimum alone would score a model that
+raises no alert at $-1$ rather than at $0$, contradicting the meaning of the
+metric. Equation~\eqref{eq:utility_norm} is verified against both bounds at run
+time --- a threshold above every predicted probability is required to return
+exactly zero, and no operating point may exceed one.
+
+\textbf{Operating points.} A score of this kind is a property of a model
+\emph{and} a threshold. At an hourly event rate below 0.5 per cent no model's
+predicted probability approaches the conventional 0.5 cut-off, so that cut-off
+measures the no-alert strategy for a well-calibrated model and an arbitrary
+point for a poorly calibrated one. The Utility Score is therefore reported
+twice: at the 0.5 cut-off, for comparability with the literature, and at its
+maximum over a threshold grid. The grid is defined on the \emph{alert rate} ---
+the fraction of person-hours alerted --- rather than on the probability scale,
+spanning $10^{-5}$ to $0.5$ over sixty logarithmically spaced points, so that
+it adapts to each model's calibration and covers every operating point a ward
+could contemplate. The maximum is taken over thresholds that raise at least one
+alert, and the alert burden, alert rate and per-stay detection rate that attain
+it are reported alongside, because a utility maximum bought at an unusable
+alarm volume is not a deployable operating point.
 
 \textbf{Calibration} is assessed via calibration intercept and slope, following
 Heyard et al.\ \cite{heyard2020evaluation}, and, following Van Calster et al.\

@@ -89,7 +89,8 @@ coef_table <- if (file.exists(coef_path)) as.data.table(arrow::read_parquet(coef
 
 cat(sprintf("Metric results loaded: %d rows\n", nrow(metrics)))
 knitr::kable(metrics[, .(variant, model, eval_window, auroc, auprc,
-                           utility_normalised, alert_burden, lead_time_h)],
+                           utility_normalised, utility_max, alert_burden,
+                           lead_time_h)],
              caption = "All evaluation results (from 07\\_metrics\\_suite.Rmd)")
 ```
 
@@ -101,12 +102,16 @@ Each factor's spread is the range of AUROC (or Utility Score) across that factor
 # Factor 1: MODEL CLASS - label=B, temporal, unrestricted
 model_class_rows   <- metrics[variant == "B" & eval_window == "unrestricted"]
 model_spread_auroc   <- if (nrow(model_class_rows) > 0) diff(range(model_class_rows$auroc, na.rm = TRUE)) else NA
-model_spread_utility <- if (nrow(model_class_rows) > 0) diff(range(model_class_rows$utility_normalised, na.rm = TRUE)) else NA
+# Utility spread is taken over the swept maximum, not over the 0.5 cut-off. At
+# this event rate the cut-off separates models by how far their probabilities
+# happen to be inflated rather than by anything clinical, so a spread computed
+# there measures calibration, not the factor under study.
+model_spread_utility <- if (nrow(model_class_rows) > 0) diff(range(model_class_rows$utility_max, na.rm = TRUE)) else NA
 
 # Factor 2: LABEL VARIANT - model=primary, temporal, unrestricted
 label_rows         <- metrics[model == "primary" & eval_window == "unrestricted"]
 label_spread_auroc   <- if (nrow(label_rows) > 0) diff(range(label_rows$auroc, na.rm = TRUE)) else NA
-label_spread_utility <- if (nrow(label_rows) > 0) diff(range(label_rows$utility_normalised, na.rm = TRUE)) else NA
+label_spread_utility <- if (nrow(label_rows) > 0) diff(range(label_rows$utility_max, na.rm = TRUE)) else NA
 
 # Factor 3: PREDICTION-TIME ANCHORING - model=primary, variant=B, temporal
 anchor_rows_B  <- metrics[model == "primary" & variant == "B"]
@@ -348,15 +353,16 @@ alt_res  <- if (file.exists(alt_path)) as.data.table(arrow::read_parquet(alt_pat
 
 attrib <- NULL
 if (is.null(alt_res)) {
-  cat("07_metric_results_altlabel.parquet not found; run 07 with variants D and E.\n")
+  cat("07_metric_results_altlabel.parquet not found; run 07 with the alternative-label variants.\n")
 } else {
   ref <- metrics[eval_window == "unrestricted" & variant == "B",
                  .(model, auroc_B = auroc, auprc_B = auprc,
-                   utility_B = utility_normalised, n_events_B = n_sepsis_events)]
+                   utility_B = utility_normalised, utility_max_B = utility_max,
+                   n_events_B = n_sepsis_events)]
 
   alt <- alt_res[eval_window == "unrestricted",
                  .(variant, variant_name, model, auroc, auprc,
-                   utility_normalised, n_sepsis_events)]
+                   utility_normalised, utility_max, n_sepsis_events)]
 
   attrib <- merge(alt, ref, by = "model")
   attrib[, `:=`(
@@ -444,6 +450,22 @@ if (length(ons) < 2 || is.null(load_onsets("B"))) {
       sensitivity_to_B = round(sum(both) / max(sum(pos_B), 1), 3),
       median_shift_h   = if (sum(both) > 0)
                            round(median(wide[[oc]][both] - wide$onset_B[both]), 1)
+                         else NA_real_,
+      # Among stays both labels call septic, how often they agree on the hour,
+      # and how far apart they are when they do not. The pre-registered variants
+      # all write t_susp, so exact agreement there is near-total by construction;
+      # it is the variants that disagree which carry information.
+      pct_exact_match  = if (sum(both) > 0)
+                           round(100 * mean(wide[[oc]][both] == wide$onset_B[both]), 1)
+                         else NA_real_,
+      median_abs_shift_h = if (sum(both) > 0)
+                             round(median(abs(wide[[oc]][both] - wide$onset_B[both])), 1)
+                           else NA_real_,
+      iqr_shift_lo_h   = if (sum(both) > 0)
+                           round(quantile(wide[[oc]][both] - wide$onset_B[both], 0.25), 1)
+                         else NA_real_,
+      iqr_shift_hi_h   = if (sum(both) > 0)
+                           round(quantile(wide[[oc]][both] - wide$onset_B[both], 0.75), 1)
                          else NA_real_
     )
   }))
@@ -454,7 +476,87 @@ if (length(ons) < 2 || is.null(load_onsets("B"))) {
 }
 ```
 
-```{r anchor-attribution-plot, fig.cap="Discrimination under each limb of the Sepsis-3 conjunction. Variant B requires suspected infection and organ dysfunction; E keeps only the treatment anchor; D keeps only the physiological deterioration and contains no treatment timestamp.", fig.width=7, fig.height=4}
+## The Pre-Treatment Window (H3), Analytically and Empirically
+
+H3 asks what happens when evaluation is restricted to the hours before the first
+antibiotic or culture. Under variants A--C the answer is fixed before any data
+are seen, and it is worth stating the argument as a proposition rather than as a
+result.
+
+> **Proposition.** Let $t_{\text{anchor}}$ be the first qualifying antibiotic
+> order or culture draw of the admission and let $t_{\text{onset}}$ be the onset
+> assigned by variants A, B, C or E. Then $t_{\text{onset}} \geq t_{\text{anchor}}$
+> for every labelled stay, so the pre-anchor window contains no onsets.
+>
+> *Proof.* Under E, $t_{\text{onset}} = t_{\text{susp}}$, and $t_{\text{susp}}$
+> is by definition the later of a qualifying antibiotic-culture pair, hence
+> $t_{\text{susp}} \geq t_{\text{anchor}}$. Under A, B and C the SOFA criterion
+> gates *membership* only; the assigned onset is still $t_{\text{susp}}$. The
+> inequality therefore carries over unchanged. $\square$
+>
+> The observed zero is a consequence of this implementation of the label, not a
+> statement about MIMIC-IV.
+
+The empirical question is what a definition *without* that property records in
+the same window. Two variants supply it. Variant D drops the infection anchor
+entirely. Variant F (Protocol Amendment 4) keeps the Sepsis-3 conjunction exactly
+--- identical membership to Variant B --- and restores only the standard
+$\min(t_{\text{susp}}, t_{\text{SOFA}})$ timing of Seymour et al. (2016) and the
+PhysioNet/CinC 2019 Challenge, under which an onset may precede the anchor
+whenever the organ-dysfunction rise is detected first.
+
+```{r pretreatment-onsets}
+step("Pre-treatment (treatment-anchored) window across all label variants...")
+
+pre_cols <- c("variant", "model", "n_rows", "n_sepsis_events", "auroc")
+pre_src  <- list(metrics)
+if (!is.null(alt_res)) pre_src <- c(pre_src, list(alt_res))
+
+pretreat <- rbindlist(lapply(pre_src, function(d) {
+  if (is.null(d) || !nrow(d)) return(NULL)
+  d[eval_window == "treatment_anchored", ..pre_cols]
+}), use.names = TRUE, fill = TRUE)
+
+if (nrow(pretreat) == 0) {
+  cat("No treatment-anchored rows found; re-run 07_metrics_suite.Rmd.\n")
+} else {
+  pretreat[, label        := vapply(variant, variant_name, character(1))]
+  pretreat[, label_family := vapply(variant, variant_type, character(1))]
+  # Zero by construction wherever the onset is the anchor (or gated by it)
+  pretreat[, structural_zero := label_family %in% c("sepsis3", "anchor_only")]
+  setcolorder(pretreat, c("variant", "label", "label_family", "model"))
+  setorder(pretreat, variant, model)
+
+  shift <- if (file.exists(file.path(DATA_DIR, "03_early_onset_shift.parquet")))
+             as.data.table(arrow::read_parquet(
+               file.path(DATA_DIR, "03_early_onset_shift.parquet"))) else NULL
+
+  knitr::kable(
+    pretreat[model %in% c("primary", "gbt"),
+             .(variant, label, model, person_hours = n_rows,
+               onsets = n_sepsis_events, auroc = round(auroc, 4),
+               structural_zero)],
+    caption = "Onsets and discrimination in the pre-treatment window, by label variant"
+  )
+  save_parquet(pretreat, "09_pretreatment_onsets", DATA_DIR)
+  save_csv(pretreat,     "09_pretreatment_onsets", DATA_DIR)
+
+  f_row <- pretreat[variant == "F" & model == "primary"]
+  b_row <- pretreat[variant == "B" & model == "primary"]
+  if (nrow(f_row) == 1 && nrow(b_row) == 1)
+    cat(sprintf("\nPre-treatment onsets — B (conjunction timing): %d in %s person-h; F (standard min(t_susp, t_SOFA) timing, same stays): %d in %s person-h, AUROC %s\n",
+                b_row$n_sepsis_events, format(b_row$n_rows, big.mark = ","),
+                f_row$n_sepsis_events, format(f_row$n_rows, big.mark = ","),
+                if (is.na(f_row$auroc)) "undefined" else sprintf("%.4f", f_row$auroc)))
+  if (!is.null(shift) && nrow(shift) == 1)
+    cat(sprintf("Variant F moved %s of %s onsets earlier (%.1f%%), median shift %s h.\n",
+                format(shift$n_moved_earlier, big.mark = ","),
+                format(shift$n_onsets, big.mark = ","),
+                shift$pct_moved_earlier, format(shift$median_shift_h)))
+}
+```
+
+```{r anchor-attribution-plot, fig.cap="Discrimination under each limb of the Sepsis-3 conjunction. Variant B requires suspected infection and organ dysfunction; E keeps only the treatment anchor; D keeps only the physiological deterioration and contains no treatment timestamp; F keeps the full conjunction but times the onset as min(t\\_susp, t\\_SOFA).", fig.width=7, fig.height=4}
 if (!is.null(attrib) && nrow(attrib) > 0) {
   tryCatch({
     plot_dt <- rbind(
@@ -464,8 +566,9 @@ if (!is.null(attrib) && nrow(attrib) > 0) {
     )
     plot_dt[, label := factor(
       variant,
-      levels = c("E", "B", "D"),
+      levels = c("E", "B", "F", "D"),
       labels = c("E: anchor only\n(treatment)", "B: Sepsis-3\n(anchor AND dysfunction)",
+                 "F: Sepsis-3\n(standard onset timing)",
                  "D: deterioration only\n(treatment-independent)"))]
     plot_dt <- plot_dt[!is.na(label) & !is.na(auroc)]
 
