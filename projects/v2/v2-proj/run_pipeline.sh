@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Abdul Ahad
 # run_pipeline.sh
 # Run all numbered Rmd scripts in the pipeline in order.
 # Each Rmd is rendered to PDF and the full R log is captured.

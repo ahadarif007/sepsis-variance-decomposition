@@ -1,4 +1,6 @@
 #!/usr/bin/env Rscript
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Abdul Ahad
 # run_pipeline.R — Master pipeline runner for V2
 #
 # Usage:

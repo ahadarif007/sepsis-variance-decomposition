@@ -30,8 +30,15 @@
 \usepackage{colortbl}
 \usepackage{array}
 \usepackage{geometry}
-\usepackage{hyperref}
+\usepackage[pdfpagelabels,plainpages=false,hypertexnames=true]{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=ATUGreen,
+    citecolor=ATUGreen,
+    urlcolor=ATUGreen
+}
 \usepackage{csquotes}
+
 \usepackage[style=ieee,backend=biber]{biblatex}
 \addbibresource{references.bib}
 \usepackage{booktabs}
@@ -69,7 +76,7 @@
 % Source-code repository. Cited in Appendix A and in the Code Availability
 % section of Chapter 4. Set once here so the two can never disagree.
 %------------------------------------------------------------------------------------------------------
-\newcommand{\repourl}{https://github.com/REPLACE-ME}
+\newcommand{\repourl}{https://github.com/ahadarif007/RESEARCH}
 \newcommand{\repolicence}{Apache License 2.0}
 
 %------------------------------------------------------------------------------------------------------
@@ -137,9 +144,9 @@
     \restoregeometry
     \pagenumbering{roman}
     \tableofcontents
-    \setcounter{page}{1}
     \listoffigures
     \listoftables
+
 
 \input{abstract}
 \input{acknowledgments}

@@ -176,4 +176,28 @@ configured so that no patient-derived file can be committed.
 
 ## Licence
 
-See `LICENSE`.
+The pipeline source code written for this study is released under the
+**Apache License 2.0** — see [`LICENSE`](LICENSE).
+
+The grant is scoped, and [`NOTICE`](NOTICE) states the boundary in full. In
+short:
+
+- **Covered** — everything under `projects/v2/v2-proj/` and
+  `projects/v1/v1-project/`, plus the repository documentation. All of it was
+  written for this study.
+- **Not covered** — the ATU thesis template and brand assets in
+  `projects/v2/v2-thesis/` (reproduced only so the thesis will typeset; ATU's
+  rights, not mine), and the MIMIC-IV and eICU-CRD databases, which are not in
+  this repository and cannot be redistributed under any licence.
+- **Thesis text and figures** are scholarly prose, not software. They are
+  available for reading, citation and academic reuse with attribution, and are
+  not placed under Apache-2.0. Please cite rather than reproduce.
+- **Published methods** (SOFA, Sepsis-3 criteria, NEWS2, qSOFA, SIRS, the
+  PhysioNet Utility Score, Riley's sample-size criteria, pooled logistic
+  regression, decision-curve analysis) are implemented here from their published
+  definitions. The implementations are original and Apache-2.0; the methods
+  belong to their authors and are cited in `NOTICE` and in the thesis. Nothing
+  was copied or adapted from a third party's source.
+
+This is research software. It is not a medical device, has not been validated
+for clinical use, and must not be used to inform the care of any patient.

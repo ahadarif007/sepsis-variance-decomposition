@@ -6,7 +6,95 @@ The pipeline consists of twelve numbered, single-purpose scripts in
 (\texttt{00\_preregistration.md}). Each script reads from upstream outputs and
 writes its own results to \texttt{v2-proj/output/}. No script modifies the
 original source data. All random seeds are fixed for reproducibility.
-Figure~\ref{fig:pipeline_dag} shows the data flow.
+Figure~\ref{fig:pipeline_dag} shows the data flow, and
+Appendix~\ref{app:stages} tabulates each stage's inputs and outputs in full.
+
+This chapter describes what each stage does. It opens with why the architecture
+takes this shape, because the structure is not incidental: a study whose
+headline claim is that analyst decisions move results is obliged to make its own
+analyst decisions inspectable, and several of the choices below exist to make a
+specific class of silent error impossible rather than merely unlikely.
+
+
+\section{Design Principles}
+\label{sec:design_principles}
+
+Four constraints shaped the architecture. Each is stated here with the decision
+it forced and what that decision rules out.
+
+\paragraph{The source data does not fit in memory, and must not be modified.}
+MIMIC-IV's \texttt{chartevents} table is 3.5\,GB compressed and
+\texttt{labevents} 2.6\,GB; expanded, either exceeds the working memory of the
+machine this study ran on. Both are therefore read through a DuckDB streaming
+layer that pushes the cohort filter and the item-identifier filter down into the
+scan, so only rows belonging to the analysis cohort are ever materialised. The
+alternative --- extracting a reduced copy once and working from it --- was
+rejected because it makes the extraction step invisible to everything
+downstream: a defect in the filter becomes indistinguishable from a property of
+the data. Reading from the original tables on every run keeps the extraction
+inside the reproducible chain.
+
+The corollary is that the source directories are treated as strictly read-only.
+No stage writes to \texttt{data/}, and every stage writes only to
+\texttt{output/}. Reproduction is therefore a matter of deleting
+\texttt{output/} and re-running, with no possibility that a previous run has
+left the inputs in a state the next run depends on.
+
+\paragraph{Every clinical constant must have exactly one definition.}
+The study varies label definitions deliberately, which means the same quantity
+--- an antibiotic--culture window, a SOFA threshold, an evaluation horizon ---
+is read by several stages and must mean the same thing in all of them. A
+constant duplicated across two scripts is a constant that can silently diverge,
+and in a study about definitional sensitivity such a divergence would be
+indistinguishable from a finding. \texttt{config.R} is therefore the single
+source of truth for every path, identifier, window, threshold, seed, family size
+and event floor in the pipeline, and no other file hard-codes any of them. The
+same discipline extends to the thesis: \texttt{thesis\_constants.R} writes the
+reported numbers into the document from the result tables, so a value cannot
+disagree between the code and the text either.
+
+\paragraph{An interface between stages must fail loudly or not at all.}
+The pipeline's most dangerous failure mode is not a crash but a stage that
+quietly does less than it was asked to. Selecting predictors by intersecting a
+declared feature list with the columns actually present, for instance, silently
+drops any predictor whose name does not match --- the model still fits, the
+metrics still compute, and nothing in the output indicates that a variable is
+missing. Interfaces are therefore declared rather than inferred:
+\texttt{require\_features()} raises an error when a declared predictor is absent
+instead of proceeding without it, and the fit diagnostics record convergence
+status alongside the coefficient magnitudes that reveal an unidentified
+likelihood, because a convergence flag alone does not distinguish the two.
+
+The same principle governs the run-time invariants. Where a computation has a
+property that must hold by construction, the pipeline asserts it and halts:
+a threshold above every predicted probability must score exactly zero on the
+Utility Score, because it \emph{is} the no-alert strategy; no operating point may
+exceed the optimal strategy's score of one; and the three label variants must
+produce three distinct sets of external onsets, since a label that was never
+varied would otherwise present as a label that has no effect. These are stops,
+not warnings. A warning in a sixty-minute batch run is a line in a log nobody
+reads.
+
+\paragraph{Expensive fits must be refreshable without disturbing the others.}
+Fitting is the dominant cost, and gradient-boosted tree fitting is not
+bit-stable across runs, so an incidental refit changes numbers throughout the
+document without any change of substance. Two environment variables scope a run
+accordingly: \texttt{V2\_VARIANTS} restricts the per-variant loops to a named
+subset, and \texttt{V2\_ARMS} restricts the fitting arm
+(Section~\ref{sec:ablation_method}). Adding an alternative label or an ablated
+specification therefore does not re-execute the fits that every headline number
+rests on, and the outputs of the additional arms are written to separate files
+so they cannot overwrite a pre-registered result.
+
+\paragraph{Why twelve scripts rather than one program.} The stage boundaries
+follow the analysis, not the code: each corresponds to a step that has to be
+separately inspectable because a claim in Chapter~\ref{ch:evaluation} rests on
+it. The inference layer is the clearest case --- Stage 12 reads only the stored
+predictions of earlier stages, so intervals and multiplicity corrections can be
+recomputed without refitting anything, and the correction applied to a result is
+verifiable independently of the model that produced it. The cost of this
+granularity is intermediate storage, which is paid in Parquet; the benefit is
+that any single stage can be re-run and checked against the rest.
 
 \begin{figure}[H]
     \centering
@@ -107,7 +195,7 @@ and reports their sizes. The pipeline stops if any table is missing.
 
 \begin{enumerate}
     \item \textbf{Base cohort:} Adult first ICU stays with LOS $\geq 4$\,h
-    (65,078 stays). Equity variables (race, language, insurance) are attached.
+    (\pcNStays{} stays). Equity variables (race, language, insurance) are attached.
 
     \item \textbf{Suspected infection:} Qualifying antibiotic-culture pairs
     within each variant's time windows. Surveillance cultures are excluded.
@@ -134,11 +222,6 @@ and reports their sizes. The pipeline stops if any table is missing.
     written to separate files so they cannot enter H1 or the decomposition
     table.
 \end{enumerate}
-
-Outputs: \texttt{cohort\_A/B/C.parquet},
-\texttt{label\_variance\_table.parquet},
-\texttt{cohort\_D/E.parquet}, and
-\texttt{alt\_label\_variance\_table.parquet}.
 
 A single environment variable, \texttt{V2\_VARIANTS}, restricts the per-variant
 loops in Stages 02--07 to a named subset. Adding the alternative labels
@@ -167,23 +250,44 @@ memory. For each person-hour:
     recorded.
 \end{itemize}
 
-Outputs: \texttt{person\_hours\_A/B/C.parquet}.
+This is the pipeline's most expensive stage after model fitting, and the only
+one that reads the full-size source tables; it is also the stage whose outputs
+every later stage depends on, which is why the streaming and read-only
+disciplines of Section~\ref{sec:design_principles} matter most here.
 
 
 \section{Stage 04: Sample Size Calculation}
 
 \texttt{04\_sample\_size.Rmd} applies the Riley et al.\
-\cite{riley2019sample} criteria to the training portion of each
-person-hour table (2008--2016). Sufficiency is evaluated per label variant.
+\cite{riley2019sample} criteria to the training portion (2008--2016) of each
+label variant. The criteria assume independent observations, so the calculation
+is parameterised on the \emph{stay} rather than the person-hour: the outcome
+proportion supplied is the fraction of training stays labelled septic, and the
+resulting minimum is compared against the number of training stays. The
+per-person-hour parameterisation is computed alongside and retained as a
+labelled reference, so that the two cannot be substituted for one another.
 
 
 \section{Stage 05: Primary Model}
 
 \texttt{05\_primary\_model.Rmd} fits the multinomial discrete-time
 competing-risks model (Equation~\ref{eq:primary_model}) for each label variant
-on the temporal training split. Baseline hazard splines use 5 knots. Standard
-errors are cluster-robust (grouped by stay). A random patient-level 75/25 split
+on the temporal training split. Baseline hazard splines use 5 knots, placed at
+quantiles of the training hour distribution. A random patient-level 75/25 split
 is also fitted to support H4.
+
+The fit carries two guards that are part of the specification rather than
+defensive extras. The declared predictor set is required rather than
+intersected, so a name mismatch stops the stage instead of producing a model
+with fewer terms than specified. And because the unpenalised likelihood for this
+design is completely separated --- its maximum lies at infinity, while the
+optimiser's stopping rule reports success regardless
+(Section~\ref{sec:primary_model_spec}) --- the fit is ridge-penalised and the
+stage logs the largest fitted coefficient alongside the convergence flag, since
+only the former distinguishes an identified solution from an arbitrary stopping
+point. No analytic variance is available for the fitted object, so all
+uncertainty for this model comes from the stay-level cluster bootstrap of
+Stage 12.
 
 Both stages 05 and 06 run two \textbf{arms}: the pre-registered specification
 and the ablated one of Protocol Amendment 5
@@ -191,10 +295,6 @@ and the ablated one of Protocol Amendment 5
 The ablated arm writes to its own files and never overwrites a pre-registered
 fit, so it can be added or refreshed without re-executing the fits every
 headline number rests on.
-
-Outputs: \texttt{model\_primary\_A/B/C.rds}, coefficient tables,
-\texttt{predictions\_primary\_A/B/C.parquet}, and the corresponding
-\texttt{\_ablated} files.
 
 
 \section{Stage 06: Comparator Models}
@@ -208,9 +308,6 @@ The gradient-boosted comparator is additionally fitted on the ablated feature
 set with identical hyperparameters. NEWS2, qSOFA and SIRS never used the
 ablated features, and the Cox comparator's role here is the
 proportional-hazards check rather than discrimination, so neither is ablated.
-
-Outputs: model objects, predictions, feature importance tables, Schoenfeld
-test results, and the ablated GBT predictions.
 
 
 \section{Stage 07: Metrics Suite}
@@ -232,11 +329,6 @@ point may exceed the optimal strategy's score of one. A stand-alone Python
 implementation of the same scoring rule, \texttt{utility\_score.py}, is kept in
 step with the notebook so that prediction tables outside the pipeline can be
 scored and the two implementations cross-checked.
-
-Output: \texttt{07\_metric\_results.parquet} (and
-\texttt{07\_metric\_results\_random.parquet} for the random-split arm),
-\texttt{07\_utility\_sweep.csv} for the full threshold grid and
-\texttt{07\_utility\_max.csv} for the attaining operating points.
 
 
 \section{Stage 08: External Validation on eICU-CRD}
@@ -278,9 +370,6 @@ performance under each limb of the Sepsis-3 conjunction, the
 anchor-attributable fraction of Equation~\ref{eq:anchor_fraction}, and onset
 agreement (Cohen's $\kappa$, median onset shift) between every label variant
 and Variant B.
-
-Outputs: decomposition tables, hypothesis verdicts, comparison plots,
-\texttt{label\_anchor\_attribution}, and \texttt{label\_agreement}.
 
 
 \section{Stage 10: Equity Analysis}
@@ -359,7 +448,9 @@ The complete pipeline --- the twelve numbered scripts, \texttt{config.R},
 \texttt{utility\_score.py}, the pre-registration document and the orchestration
 scripts --- is held in a public version-controlled repository at
 \url{\repourl}, released under the \repolicence. Appendix~\ref{app:code}
-describes the layout and the reproduction procedure.
+describes the layout, the reproduction procedure, and the boundary of that
+licence, which covers the source written for this study and neither the
+databases nor the institutional template.
 
 The repository contains \textbf{code only}. No MIMIC-IV or eICU-CRD record,
 derived person-hour table, or fitted model object is included: the

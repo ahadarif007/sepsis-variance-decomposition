@@ -1,4 +1,6 @@
 #!/usr/bin/env Rscript
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Abdul Ahad
 # ===========================================================================
 #  thesis_constants.R - emit pipeline results as LaTeX macros
 # ===========================================================================
@@ -51,6 +53,8 @@ DATA_DIR   <- file.path(SCRIPT_DIR, "output", "processed_data")
 FIG_DIR    <- file.path(SCRIPT_DIR, "output", "figures")
 THESIS_DIR <- normalizePath(file.path(SCRIPT_DIR, "..", "v2-thesis"), mustWork = FALSE)
 OUT_TEX    <- file.path(THESIS_DIR, "pipeline_constants.tex")
+source(file.path(SCRIPT_DIR, "config.R"))
+
 
 # --------------------------------------------------------------------------- #
 # Collection machinery
@@ -790,7 +794,7 @@ local({
     x <- sc[significant_bh %in% c(TRUE, "TRUE")]
     if (nrow(x)) x[order(p_bh)][1] else NULL
   }
-  g <- function(col) if (is.null(top)) structure(NA, row_found = FALSE) else top[[col]][1]
+  g <- function(col) if (is.null(sc)) structure(NA, row_found = FALSE) else if (is.null(top)) structure(NA, row_found = TRUE) else top[[col]][1]
   put("EquityTopDelta",   g("delta_auroc"), digits = 3)
   put("EquityTopCiLo",    g("ci_lo"),       digits = 3)
   put("EquityTopCiHi",    g("ci_hi"),       digits = 3)

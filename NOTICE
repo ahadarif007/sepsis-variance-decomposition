@@ -1,0 +1,139 @@
+Model, Label, or Analyst? A Variance Decomposition of Real-Time Sepsis
+Onset Prediction on MIMIC-IV
+
+Copyright 2026 Abdul Ahad
+Atlantic Technological University (ATU), Galway — M.Sc. in Computing
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not
+use the files in this repository except in compliance with the License. You
+may obtain a copy of the License in the accompanying LICENSE file or at
+http://www.apache.org/licenses/LICENSE-2.0
+
+
+================================================================================
+SCOPE OF THE APACHE-2.0 GRANT
+================================================================================
+
+The Apache-2.0 licence in LICENSE applies to the author's own original work in
+this repository. It does NOT purport to license material the author does not
+own. The boundary is set out below so that a downstream user can tell the two
+apart.
+
+
+--------------------------------------------------------------------------------
+1. COVERED BY APACHE-2.0 — the author's original work
+--------------------------------------------------------------------------------
+
+  projects/v2/v2-proj/       all source code, in full:
+                             config.R, utils.R, clinical_scores.R,
+                             thesis_constants.R, run_pipeline.R,
+                             run_pipeline.sh, utility_score.py,
+                             01_setup.Rmd .. 12_inference.Rmd,
+                             00_preregistration.md
+  projects/v1/v1-project/    earlier project source code and the reports
+                             knitted from it, on the same terms
+  README.md, CLAUDE.md       repository documentation
+  .gitignore, .gitattributes
+
+Everything above was written for this study. Where a routine implements a
+published method, the implementation is original and the method is cited — see
+section 3.
+
+
+--------------------------------------------------------------------------------
+2. NOT COVERED — third-party material, all rights reserved by its owners
+--------------------------------------------------------------------------------
+
+  Atlantic Technological University thesis template and brand assets
+  ----------------------------------------------------------------------------
+  projects/v2/v2-thesis/index.tex  (title-page layout, ATU colour definitions,
+                                    page furniture — the template supplied by
+                                    the institution)
+  projects/v2/v2-thesis/images/atu-logo-green.png
+  projects/v2/v2-thesis/images/atu-logo-navy.png
+  projects/v2/v2-thesis/images/atu-logo-teal.png
+  projects/v2/v2-thesis/images/leftbar.png
+
+  These are ATU's template and trade marks, reproduced here only because the
+  thesis will not typeset without them. They are NOT licensed under Apache-2.0
+  and confer no right to use ATU's name, logo or branding. Anyone reusing this
+  code should substitute their own institutional template.
+
+  Clinical and research data
+  ----------------------------------------------------------------------------
+  No MIMIC-IV or eICU-CRD record, derived table, or fitted model object is
+  included in this repository, and none may be added to it. Both databases are
+  distributed by PhysioNet under the Credentialed Health Data Use Agreement,
+  which prohibits redistribution. Obtain them through your own PhysioNet
+  credentialing. The Apache-2.0 grant covers the code that processes the data
+  and confers no rights whatsoever in the data itself.
+
+  Third-party R and Python packages
+  ----------------------------------------------------------------------------
+  This repository declares dependencies but vendors no third-party source.
+  Each package remains under its own licence.
+
+
+--------------------------------------------------------------------------------
+3. ORIGINAL IMPLEMENTATIONS OF PUBLISHED METHODS
+--------------------------------------------------------------------------------
+
+Several routines are the author's own implementations of methods defined in the
+published literature. The code is original and is licensed under Apache-2.0; the
+underlying methods are the work of their authors and are cited in the thesis.
+No implementation in this repository was copied or adapted from a third party's
+source code.
+
+  SOFA score                     Singer et al., JAMA 2016;315(8):801-810
+                                 doi:10.1001/jama.2016.0287
+  Sepsis-3 operational criteria  Seymour et al., JAMA 2016;315(8):762-774
+                                 doi:10.1001/jama.2016.0288
+  NEWS2                          Royal College of Physicians (UK) national
+                                 early warning score, 2017 revision
+  qSOFA, SIRS                    standard published definitions
+  Utility Score                  Reyna et al., Crit Care Med 2020;48(2):210-217
+                                 doi:10.1097/CCM.0000000000004145
+                                 (scoring rule reimplemented from the published
+                                 definition, in R and mirrored in Python)
+  Sample-size criteria           Riley et al., Stat Med 2019;38(7):1276-1296
+                                 doi:10.1002/sim.7992
+                                 (invoked via the pmsampsize package)
+  Pooled logistic regression     D'Agostino et al., Stat Med 1990;9(12):1501-1515
+                                 doi:10.1002/sim.4780091214
+  Decision-curve analysis        Vickers & Elkin, Med Decis Making
+                                 2006;26(6):565-574
+                                 doi:10.1177/0272989X06295361
+
+
+--------------------------------------------------------------------------------
+4. THE THESIS ITSELF
+--------------------------------------------------------------------------------
+
+  projects/v2/v2-thesis/*.tex   (excluding the ATU template elements in §2)
+  projects/v2/v2-thesis/index.pdf
+  projects/v2/v2-thesis/images/*.png  (excluding the ATU assets in §2)
+  projects/v2/v2-lr-rp/
+  projects/v2/v2-GENAI/
+
+The thesis text, its generated figures, and the companion literature review are
+the author's original scholarly work. A software licence is not the appropriate
+instrument for prose, so these are made available for reading, citation and
+academic reuse with attribution, and are not placed under Apache-2.0. Please
+cite the thesis rather than reproducing it. Rights in the work may also be
+subject to Atlantic Technological University's student intellectual property
+policy.
+
+The generated LaTeX artefacts (pipeline_constants.tex, table_*.tex) are outputs
+of Apache-2.0 code and follow the code licence.
+
+
+--------------------------------------------------------------------------------
+5. NO WARRANTY, AND NOT A MEDICAL DEVICE
+--------------------------------------------------------------------------------
+
+This is retrospective research software. It is provided "AS IS", without
+warranties or conditions of any kind, as set out in section 7 of the Apache
+License. It is not a medical device, has not been validated for clinical use,
+and must not be used to inform the care of any patient. The study's own
+conclusion is that no configuration examined reaches a deployable operating
+point.

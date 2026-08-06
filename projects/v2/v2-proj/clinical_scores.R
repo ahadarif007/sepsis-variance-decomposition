@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Abdul Ahad
 # clinical_scores.R — Clinical scoring functions for V2 pipeline
 #
 # Implements: SOFA, NEWS2 (primary rule-based comparator), SIRS, qSOFA

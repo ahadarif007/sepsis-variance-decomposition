@@ -9,6 +9,8 @@ tension the pre-registration deliberately built between H1 and H6.
 Sections~\ref{sec:external_interpretability} to~\ref{sec:ablation_establishes}
 bound the three analyses whose readings are most easily over-extended --- the
 external estimate, the treatment-independent label, and the feature ablation.
+Section~\ref{sec:implications} draws out what the findings imply for how
+studies of this kind should be reported, and
 Section~\ref{sec:limitations} sets out the limitations in full.
 
 
@@ -206,12 +208,121 @@ the division is made in advance rather than fitted, and the two behave
 differently under a change of label. That is a testable version of the claim,
 and it is tested here rather than asserted.
 
+It could have failed, and the form of the result matters as much as its
+direction. Had discrimination fallen substantially, the finding would have been
+that the models lean on clinician behaviour --- supportive of the same argument,
+but a concern about what reported performance is measuring, belonging as much in
+the limitations as in the results. Had stability been unchanged, the
+concentration of instability in the action-derived features would have been
+small-sample noise and the reading would have had to be withdrawn. Neither
+happened. Discrimination is essentially unaffected
+(\pcAblDeltaAurocPrimaryB{} for the primary model under the primary label) while
+the unstable count falls from \pcHTwoEst{} to \pcAblHTwoNUnstable, which is the
+one outcome that separates the two hypotheses cleanly: features contributing
+almost nothing to discrimination cannot be carrying the model's predictive
+weight, and features whose removal takes five of six unstable terms with them
+are where the label sensitivity lives.
+
+The reading this licenses is bounded and worth stating exactly. It is
+\emph{not} that the action-derived features are unimportant --- a feature that
+moves AUROC by less than 0.01 may still be the reason a particular alert fires.
+It is that on this cohort the discrimination such a model reports does not
+depend on them, while its cross-label stability does. A published effect
+estimate for a treatment indicator from a model of this kind is therefore
+reporting something about the labelling regime as much as about the patient, and
+the cheapest available remedy --- dropping the explicit action features --- costs
+almost nothing in the metric the field reports.
+
 The corresponding limitation is stated in Section~\ref{sec:limitations}: the
 retained laboratory values are themselves forward-filled from tests somebody
 chose to order, so the boundary drawn here is conservative rather than clean. A
 model with no trace of clinician behaviour in it is not constructible from this
 data, and the ablation measures the effect of removing the explicit traces, not
 all of them.
+
+
+\section{Implications for How These Studies Are Reported}
+\label{sec:implications}
+
+The preceding sections bound what this study establishes. This one states what
+follows for the design of the next one, because the findings bear less on which
+model to build than on what a sepsis prediction study has to report before its
+headline number can be read at all.
+
+\paragraph{A label variant is not a sensitivity analysis.}
+Section~\ref{sec:label_object} observed that the literature demonstrates
+\emph{that} the label matters without attaching an interval to how much. The
+result here sharpens the reason that gap is costly. Label choice moves AUROC by
+\pcSpreadLabel{} and cohort membership by far more --- the two narrowest
+readings agree at $\kappa = \pcKappaVsBA$ at near-identical prevalence --- so a
+study that reports one definition's AUROC has reported a number that would
+barely move under a different definition while every count, rate and
+denominator beneath it moved substantially. The consequence is that reporting a
+second variant as a robustness check answers the wrong question. What needs
+reporting is the agreement between the variants, because that is where the
+variation is, and it is invisible in the metric the field publishes.
+
+\paragraph{An onset rule is a claim about what can be predicted, and belongs in
+the methods.}
+Section~\ref{sec:label_action} recorded Kamran et al.'s finding that models
+partly learn to predict clinician behaviour, and this study locates the
+mechanism one level down: not in the feature set but in the timestamp. Two
+studies can share a cohort, a definition and a model and still differ on
+whether pre-onset prediction is measurable, purely through the choice between
+$t_{\text{susp}}$ and $\min(t_{\text{susp}}, t_{\text{SOFA}})$. That choice is
+routinely left implicit in a sentence about Sepsis-3. It should be stated
+explicitly, with its consequence for the evaluation window stated alongside it,
+because under a conjunction rule an empty pre-treatment window is not evidence
+of anything (Proposition~\ref{prop:h3}).
+
+\paragraph{Discrimination and clinical value must both be reported, and neither
+substitutes.}
+Section~\ref{sec:auroc_illusion} set out why AUROC conceals the failure Wang et
+al.\ documented: it is monotone-invariant and dominated by true negatives.
+This study adds the observation that a single threshold conceals it a second
+way. At the event rate here the conventional 0.5 cut-off separates models by
+calibration rather than by clinical value, and the primary model's zero at that
+cut-off is an artefact of never alerting there. A threshold-dependent metric is
+interpretable only as a swept ceiling with the attaining operating point
+reported beside it, and the alert burden at that point ---
+\pcUtilityOptBurdenGbtB{} false alerts per true one here, against the 1.4
+benchmark of Moor et al.\ \cite{moor2023review} --- is the number that decides
+deployability. It appears in almost none of the ninety-one models Wang et al.\
+\cite{wang2025srpm} reviewed.
+
+\paragraph{An external cohort should be characterised before it is scored.}
+Section~\ref{sec:generalisation} assembled the published external penalties
+into a single frame and treated them as comparable. The experience here is that
+they are not automatically so. The binding constraint on the external estimate
+in this study is not sample size but whether the label's inputs exist in the
+destination database at all, and that constraint is invisible in a reported
+AUROC and in a reported cohort size alike. A study transporting a
+treatment-anchored label should report the coverage of each labelling input in
+the destination cohort before it reports any performance number, and should
+state the event count the estimate rests on rather than the stay count.
+
+\paragraph{Model-class comparisons are the least informative axis available.}
+Section~\ref{sec:false_dichotomy} argued that the statistics-versus-machine-learning
+partition does not carve the field. The decomposition supports a stronger
+version: within the family of flexible estimators the choice is free to within
+\pcHSixEst{} AUROC, so a study comparing one flexible model against another is
+measuring the axis with the least room left in it, while the label choice that
+sets its cohort goes unreported. The reporting recommendation follows directly
+--- fit any flexible estimator, report which one and stop defending the choice,
+and spend the space on the label and the onset rule instead.
+
+\paragraph{A subgroup analysis needs an interpretability floor declared in
+advance.}
+Section~\ref{sec:equity_lit} noted that the nearest prior work measures
+subgroup disparity for mortality among already-septic patients rather than for
+onset. Extending it to onset prediction exposed a problem that is structural
+rather than particular to this cohort: at a low event rate most demographic
+strata carry too few events for a subgroup AUROC to mean anything, and an
+interval reaching the chance line is easily read as a null result rather than
+as an absent measurement. Declaring the floor before estimation, tabulating the
+below-floor strata rather than suppressing them, and excluding them from the
+corrected family is what keeps the distinction visible. Without it, a study
+underpowered for a fairness question can report one as answered.
 
 
 \section{Limitations}
@@ -258,6 +369,23 @@ all of them.
     an artefact of culture coverage --- but a proper attribution would require
     a destination database with equivalent labelling inputs, which is precisely
     what was unavailable.
+
+    \item \textbf{The NEWS2 comparator is not scored identically in the two
+    cohorts.} NEWS2 charges three points for a patient who is not alert and
+    none for a patient whose consciousness was not assessed. In MIMIC-IV the
+    flag is derived from the recorded Glasgow Coma Scale with an unmeasured
+    value treated as ``not alert'', so the small minority of person-hours
+    carrying no GCS after forward-fill are charged those three points; in
+    eICU-CRD, where the variable is absent from the periodic vitals table
+    altogether, an unmeasured value is propagated as unmeasured and charged
+    nothing. AUROC is a ranking statistic and the internal effect is confined
+    to that minority of rows, but the two cohorts' NEWS2 \emph{thresholds} are
+    not on a common scale, so the internal and external specificity and
+    alert-burden figures for that comparator should be read within a cohort and
+    not across the pair. Nothing in the decomposition, the hypothesis verdicts
+    or the primary-model results depends on this: NEWS2 enters the study as a
+    deliberately weak reference point, and the internal-versus-external
+    contrast that H5 tests is computed on the primary model.
 
     \item \textbf{The feature set cannot be fully purged of clinician action.}
     The ablation in Section~\ref{sec:ablation} removes the

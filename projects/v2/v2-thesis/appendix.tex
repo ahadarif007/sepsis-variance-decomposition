@@ -11,10 +11,27 @@ public repository:
 \fbox{\parbox{0.88\textwidth}{\centering\vspace{2pt}
 \textbf{Source code repository}\\[4pt]
 \url{\repourl}\\[4pt]
-\small Licence: \repolicence\ (code). Released for inspection and reuse;
-no patient data is included.
+\small Source code licensed under the \repolicence.\\
+No patient data is included.
 \vspace{2pt}}}
 \end{center}
+
+The Apache-2.0 grant covers the pipeline source written for this study. It does
+not extend to material this work does not own, and the repository's
+\texttt{NOTICE} file draws that boundary explicitly: the institutional thesis
+template and its brand assets are reproduced under their owner's rights and are
+excluded; the two clinical databases are excluded absolutely, being redistributed
+by neither this repository nor its licence; and the thesis text and its figures,
+being scholarly prose rather than software, are made available for citation and
+academic reuse with attribution rather than under a software licence.
+
+Where a routine implements a published method --- the SOFA score, the Sepsis-3
+operational criteria, NEWS2, qSOFA, SIRS, the PhysioNet Utility Score, the
+sample-size criteria, pooled logistic regression, decision-curve analysis --- the
+implementation is original to this work and written from the published
+definition, and the method is attributed to its authors both in \texttt{NOTICE}
+and at the point of use in this thesis. No implementation was copied or adapted
+from a third party's source.
 
 The repository contains \textbf{code only}. No MIMIC-IV or eICU-CRD record,
 derived person-hour table, or fitted model object is included: the
@@ -120,3 +137,108 @@ intervention, and required no additional ethical approval beyond the data use
 agreement, whose terms --- including the prohibition on redistribution and on
 attempted re-identification --- were observed throughout.
 Section~\ref{sec:ethics} sets out the full statement.
+
+
+\chapter{Pipeline Stage Reference}
+\label{app:stages}
+
+Chapter~\ref{ch:design} describes what each stage does and why the architecture
+takes the shape it does. This appendix records the file-level interface: what
+each stage reads, what it writes, and which result in Chapter~\ref{ch:evaluation}
+depends on it. Paths are relative to \texttt{v2-proj/}; all intermediate tables
+are Parquet, with a CSV mirror written for any result table small enough to read
+directly.
+
+\begin{table}[H]
+    \centering\scriptsize\setlength{\tabcolsep}{4pt}
+    \begin{tabularx}{\textwidth}{p{0.9cm}p{3.5cm}Xp{2.7cm}}
+        \toprule
+        \textbf{Stage} & \textbf{Reads} & \textbf{Writes} & \textbf{Supports} \\
+        \midrule
+        01 & MIMIC-IV source tables &
+        --- (validation only; halts on a missing table) &
+        Run integrity \\
+        \addlinespace
+        02 & \texttt{hosp/}, \texttt{icu/} source tables &
+        \texttt{02\_cohort\_\{A..F\}}, \texttt{02\_label\_variance\_table},
+        \texttt{02\_alt\_label\_variance\_table} &
+        Table~\ref{tab:cohort} \\
+        \addlinespace
+        03 & \texttt{02\_cohort\_*}; \texttt{chartevents}, \texttt{labevents},
+        \texttt{inputevents}, \texttt{outputevents} (streamed) &
+        \texttt{03\_person\_hours\_\{A..F\}}, \texttt{03\_early\_onset\_shift} &
+        All modelling \\
+        \addlinespace
+        04 & \texttt{03\_person\_hours\_*} (three columns) &
+        \texttt{04\_sample\_size} &
+        Table~\ref{tab:sample_size} \\
+        \addlinespace
+        05 & \texttt{03\_person\_hours\_*} &
+        \texttt{05\_model\_primary\_*}, \texttt{05\_coef\_all\_variants},
+        \texttt{05\_predictions\_primary\_*}, \texttt{05\_h2\_stability\_*};
+        \texttt{*\_ablated} counterparts &
+        H2, H4, H6 \\
+        \addlinespace
+        06 & \texttt{03\_person\_hours\_*} &
+        \texttt{06\_model\_gbt\_*}, \texttt{06\_predictions\_comparators\_*},
+        \texttt{06\_gbt\_importance\_*}, \texttt{06\_schoenfeld\_*};
+        ablated GBT counterparts &
+        H1, H6,
+        Section~\ref{sec:schoenfeld} \\
+        \addlinespace
+        07 & \texttt{05\_*}, \texttt{06\_*} predictions &
+        \texttt{07\_metric\_results}, \texttt{\_random}, \texttt{\_altlabel},
+        \texttt{07\_utility\_sweep}, \texttt{07\_utility\_max},
+        \texttt{07\_ablation\_metrics} &
+        Tables~\ref{tab:internal_results}, \ref{tab:utility_optimum},
+        \ref{tab:ablation} \\
+        \addlinespace
+        08 & eICU-CRD source tables; frozen \texttt{05\_}/\texttt{06\_} models &
+        \texttt{08\_external\_validation\_results}, \texttt{\_abxonly},
+        \texttt{08\_eicu\_predictions\_*}, \texttt{08\_eicu\_coverage},
+        \texttt{08\_event\_rate\_reconciliation},
+        \texttt{08\_h5\_internal\_external} &
+        H5,
+        Section~\ref{sec:external_validation} \\
+        \addlinespace
+        09 & \texttt{07\_metric\_results*} &
+        \texttt{09\_variance\_decomposition\_table},
+        \texttt{09\_hypothesis\_verdicts},
+        \texttt{09\_label\_anchor\_attribution},
+        \texttt{09\_label\_agreement}, \texttt{09\_pretreatment\_onsets} &
+        H1, H3,
+        Section~\ref{sec:label_anchor_results} \\
+        \addlinespace
+        10 & \texttt{03\_person\_hours\_*}, \texttt{05\_}/\texttt{06\_}
+        predictions &
+        Per-stratum performance and label-sensitivity tables &
+        Section~\ref{sec:equity} \\
+        \addlinespace
+        11 & \texttt{05\_}/\texttt{06\_}/\texttt{08\_} predictions &
+        \texttt{11\_calibration\_summary}, \texttt{11\_operating\_points},
+        \texttt{11\_net\_benefit\_at\_prevalence},
+        \texttt{11\_patient\_level\_metrics},
+        \texttt{11\_lead\_time\_summary}, external counterparts &
+        Section~\ref{sec:clinical_utility} \\
+        \addlinespace
+        12 & Stored predictions only (refits nothing) &
+        \texttt{12\_confirmatory\_tests}, \texttt{12\_internal\_ci},
+        \texttt{12\_subgroup\_auroc\_ci}, \texttt{\_contrasts},
+        \texttt{12\_subgroup\_labelsens\_*}, \texttt{12\_altlabel\_*},
+        \texttt{12\_h2\_*}, \texttt{12\_analysis\_register} &
+        Every interval and adjusted $p$-value in this thesis \\
+        \bottomrule
+    \end{tabularx}
+    \caption{Stage inputs, outputs, and the results each supports. Stage 03 is
+    the only stage that reads the full-size source tables, and Stage 12 is the
+    only one that reads nothing but stored predictions --- which is what allows
+    the inference layer to be re-run and checked without refitting any model.}
+    \label{tab:stage_reference}
+\end{table}
+
+\paragraph{Naming conventions.} A file's numeric prefix is the stage that wrote
+it. A \texttt{\_\{A..F\}} suffix denotes the label variant; \texttt{\_ablated}
+denotes the Protocol Amendment 5 feature arm; \texttt{\_random} denotes the
+random-split arm used only for H4. Files without a variant suffix are pooled
+across variants by construction. No stage overwrites a file written by another
+stage.

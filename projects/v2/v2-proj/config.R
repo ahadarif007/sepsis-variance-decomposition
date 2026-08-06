@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Abdul Ahad
 # config.R — V2 pipeline configuration
 # Single source of truth for all paths, parameters, and label variant definitions.
 #

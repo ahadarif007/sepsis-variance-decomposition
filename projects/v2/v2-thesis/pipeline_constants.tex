@@ -16,8 +16,8 @@
 
 
 % --- Provenance ---
-\newcommand{\pcGeneratedAt}{2026-08-06 01:30}
-\newcommand{\pcPipelineRunDate}{2026-08-06 00:24}
+\newcommand{\pcGeneratedAt}{2026-08-06 04:30}
+\newcommand{\pcPipelineRunDate}{2026-08-06 03:55}
 
 % --- Cohort and label variants ---
 \newcommand{\pcNStays}{\ensuremath{65{,}078}}
@@ -39,21 +39,33 @@
 \newcommand{\pcNDeathsNoSepC}{\ensuremath{4{,}956}}
 \newcommand{\pcIqrOnsetLoHC}{\ensuremath{4}}
 \newcommand{\pcIqrOnsetHiHC}{\ensuremath{30}}
-\newcommand{\pcNTrainPersonHA}{\ensuremath{2{,}304{,}923}}
-\newcommand{\pcMinNRileyA}{\ensuremath{52{,}201}}
-\newcommand{\pcEpvA}{\ensuremath{185.9}}
+\newcommand{\pcMinNRileyStayA}{\ensuremath{1{,}491}}
+\newcommand{\pcStayPrevalenceA}{\ensuremath{0.0878}}
+\newcommand{\pcRileyMarginA}{\ensuremath{35.51}}
 \newcommand{\pcNOnsetEventsA}{\ensuremath{4{,}647}}
+\newcommand{\pcEpvA}{\ensuremath{185.9}}
+\newcommand{\pcNTrainPersonHA}{\ensuremath{2{,}304{,}923}}
 \newcommand{\pcPerHourRateA}{\ensuremath{0.00202}}
-\newcommand{\pcNTrainPersonHB}{\ensuremath{2{,}301{,}842}}
-\newcommand{\pcMinNRileyB}{\ensuremath{51{,}012}}
-\newcommand{\pcEpvB}{\ensuremath{193.9}}
+\newcommand{\pcMinNRileyPerHourA}{\ensuremath{52{,}201}}
+\newcommand{\pcMinNRileyStayB}{\ensuremath{1{,}437}}
+\newcommand{\pcStayPrevalenceB}{\ensuremath{0.0916}}
+\newcommand{\pcRileyMarginB}{\ensuremath{36.84}}
 \newcommand{\pcNOnsetEventsB}{\ensuremath{4{,}847}}
+\newcommand{\pcEpvB}{\ensuremath{193.9}}
+\newcommand{\pcNTrainPersonHB}{\ensuremath{2{,}301{,}842}}
 \newcommand{\pcPerHourRateB}{\ensuremath{0.00211}}
-\newcommand{\pcNTrainPersonHC}{\ensuremath{2{,}120{,}376}}
-\newcommand{\pcMinNRileyC}{\ensuremath{24{,}069}}
-\newcommand{\pcEpvC}{\ensuremath{376.1}}
+\newcommand{\pcMinNRileyPerHourB}{\ensuremath{51{,}012}}
+\newcommand{\pcMinNRileyStayC}{\ensuremath{855}}
+\newcommand{\pcStayPrevalenceC}{\ensuremath{0.1776}}
+\newcommand{\pcRileyMarginC}{\ensuremath{61.93}}
 \newcommand{\pcNOnsetEventsC}{\ensuremath{9{,}403}}
+\newcommand{\pcEpvC}{\ensuremath{376.1}}
+\newcommand{\pcNTrainPersonHC}{\ensuremath{2{,}120{,}376}}
 \newcommand{\pcPerHourRateC}{\ensuremath{0.00443}}
+\newcommand{\pcMinNRileyPerHourC}{\ensuremath{24{,}069}}
+\newcommand{\pcNTrainStays}{\ensuremath{52{,}946}}
+\newcommand{\pcAnticipatedAuc}{\ensuremath{0.846}}
+\newcommand{\pcNCandidatePredictors}{\ensuremath{25}}
 
 % --- Label agreement (kappa vs Variant B) ---
 \newcommand{\pcKappaVsBA}{\ensuremath{0.267}}
@@ -419,7 +431,7 @@
 
 % --- Random-split arm (H4) ---
 \newcommand{\pcAurocRandomPrimaryB}{\ensuremath{0.7424}}
-\newcommand{\pcAurocRandomGbtB}{\ensuremath{0.7161}}
+\newcommand{\pcAurocRandomGbtB}{\ensuremath{0.7209}}
 \newcommand{\pcAurocRandomNewsB}{\ensuremath{0.6088}}
 \newcommand{\pcAurocRandomCoxB}{\ensuremath{0.6310}}
 \newcommand{\pcAurocRandomQsofaB}{\pcNotApplicable}
@@ -900,17 +912,17 @@
 % --- External validation (eICU-CRD) ---
 \newcommand{\pcExtAurocPrimaryA}{\ensuremath{0.6913}}
 \newcommand{\pcExtAurocNewsA}{\ensuremath{0.5866}}
-\newcommand{\pcExtAurocGbtA}{\pcMissing}
+\newcommand{\pcExtAurocGbtA}{\ensuremath{0.7197}}
 \newcommand{\pcExtNRowsA}{\ensuremath{162{,}070}}
 \newcommand{\pcExtNEventsA}{\ensuremath{27}}
 \newcommand{\pcExtAurocPrimaryB}{\ensuremath{0.6960}}
 \newcommand{\pcExtAurocNewsB}{\ensuremath{0.5259}}
-\newcommand{\pcExtAurocGbtB}{\pcMissing}
+\newcommand{\pcExtAurocGbtB}{\ensuremath{0.6812}}
 \newcommand{\pcExtNRowsB}{\ensuremath{161{,}992}}
 \newcommand{\pcExtNEventsB}{\ensuremath{29}}
 \newcommand{\pcExtAurocPrimaryC}{\ensuremath{0.7370}}
 \newcommand{\pcExtAurocNewsC}{\ensuremath{0.5074}}
-\newcommand{\pcExtAurocGbtC}{\pcMissing}
+\newcommand{\pcExtAurocGbtC}{\ensuremath{0.7043}}
 \newcommand{\pcExtNRowsC}{\ensuremath{159{,}580}}
 \newcommand{\pcExtNEventsC}{\ensuremath{73}}
 \newcommand{\pcExtNRows}{\ensuremath{161{,}992}}
@@ -992,58 +1004,58 @@
 \newcommand{\pcHTwoNMag}{\ensuremath{5}}
 
 % --- H2 instability by feature kind (Amendment 5) ---
-\newcommand{\pcHTwoNAction}{\pcMissing}
-\newcommand{\pcHTwoNUnstableAction}{\pcMissing}
-\newcommand{\pcHTwoPctUnstableAction}{\pcMissing}
-\newcommand{\pcHTwoNPhysio}{\pcMissing}
-\newcommand{\pcHTwoNUnstablePhysio}{\pcMissing}
-\newcommand{\pcHTwoPctUnstablePhysio}{\pcMissing}
+\newcommand{\pcHTwoNAction}{\ensuremath{8}}
+\newcommand{\pcHTwoNUnstableAction}{\ensuremath{4}}
+\newcommand{\pcHTwoPctUnstableAction}{\ensuremath{50.0}}
+\newcommand{\pcHTwoNPhysio}{\ensuremath{14}}
+\newcommand{\pcHTwoNUnstablePhysio}{\ensuremath{2}}
+\newcommand{\pcHTwoPctUnstablePhysio}{\ensuremath{14.3}}
 
 % --- Feature ablation (Protocol Amendment 5) ---
-\newcommand{\pcAblNDropped}{\pcMissing}
-\newcommand{\pcAblAurocPrimaryA}{\pcMissing}
-\newcommand{\pcAblDeltaAurocPrimaryA}{\pcMissing}
-\newcommand{\pcAblAuprcPrimaryA}{\pcMissing}
-\newcommand{\pcAblDeltaAuprcPrimaryA}{\pcMissing}
-\newcommand{\pcAblUtilityMaxPrimaryA}{\pcMissing}
-\newcommand{\pcAblDeltaUtilityPrimaryA}{\pcMissing}
-\newcommand{\pcAblAurocGbtA}{\pcMissing}
-\newcommand{\pcAblDeltaAurocGbtA}{\pcMissing}
-\newcommand{\pcAblAuprcGbtA}{\pcMissing}
-\newcommand{\pcAblDeltaAuprcGbtA}{\pcMissing}
-\newcommand{\pcAblUtilityMaxGbtA}{\pcMissing}
-\newcommand{\pcAblDeltaUtilityGbtA}{\pcMissing}
-\newcommand{\pcAblAurocPrimaryB}{\pcMissing}
-\newcommand{\pcAblDeltaAurocPrimaryB}{\pcMissing}
-\newcommand{\pcAblAuprcPrimaryB}{\pcMissing}
-\newcommand{\pcAblDeltaAuprcPrimaryB}{\pcMissing}
-\newcommand{\pcAblUtilityMaxPrimaryB}{\pcMissing}
-\newcommand{\pcAblDeltaUtilityPrimaryB}{\pcMissing}
-\newcommand{\pcAblAurocGbtB}{\pcMissing}
-\newcommand{\pcAblDeltaAurocGbtB}{\pcMissing}
-\newcommand{\pcAblAuprcGbtB}{\pcMissing}
-\newcommand{\pcAblDeltaAuprcGbtB}{\pcMissing}
-\newcommand{\pcAblUtilityMaxGbtB}{\pcMissing}
-\newcommand{\pcAblDeltaUtilityGbtB}{\pcMissing}
-\newcommand{\pcAblAurocPrimaryC}{\pcMissing}
-\newcommand{\pcAblDeltaAurocPrimaryC}{\pcMissing}
-\newcommand{\pcAblAuprcPrimaryC}{\pcMissing}
-\newcommand{\pcAblDeltaAuprcPrimaryC}{\pcMissing}
-\newcommand{\pcAblUtilityMaxPrimaryC}{\pcMissing}
-\newcommand{\pcAblDeltaUtilityPrimaryC}{\pcMissing}
-\newcommand{\pcAblAurocGbtC}{\pcMissing}
-\newcommand{\pcAblDeltaAurocGbtC}{\pcMissing}
-\newcommand{\pcAblAuprcGbtC}{\pcMissing}
-\newcommand{\pcAblDeltaAuprcGbtC}{\pcMissing}
-\newcommand{\pcAblUtilityMaxGbtC}{\pcMissing}
-\newcommand{\pcAblDeltaUtilityGbtC}{\pcMissing}
+\newcommand{\pcAblNDropped}{\ensuremath{8}}
+\newcommand{\pcAblAurocPrimaryA}{\ensuremath{0.7633}}
+\newcommand{\pcAblDeltaAurocPrimaryA}{\ensuremath{-0.0080}}
+\newcommand{\pcAblAuprcPrimaryA}{\ensuremath{0.0075}}
+\newcommand{\pcAblDeltaAuprcPrimaryA}{\ensuremath{-0.0018}}
+\newcommand{\pcAblUtilityMaxPrimaryA}{\ensuremath{0.013}}
+\newcommand{\pcAblDeltaUtilityPrimaryA}{\ensuremath{-0.013}}
+\newcommand{\pcAblAurocGbtA}{\ensuremath{0.7443}}
+\newcommand{\pcAblDeltaAurocGbtA}{\ensuremath{-0.0005}}
+\newcommand{\pcAblAuprcGbtA}{\ensuremath{0.0100}}
+\newcommand{\pcAblDeltaAuprcGbtA}{\ensuremath{0.0007}}
+\newcommand{\pcAblUtilityMaxGbtA}{\ensuremath{0.037}}
+\newcommand{\pcAblDeltaUtilityGbtA}{\ensuremath{-0.003}}
+\newcommand{\pcAblAurocPrimaryB}{\ensuremath{0.7514}}
+\newcommand{\pcAblDeltaAurocPrimaryB}{\ensuremath{-0.0076}}
+\newcommand{\pcAblAuprcPrimaryB}{\ensuremath{0.0081}}
+\newcommand{\pcAblDeltaAuprcPrimaryB}{\ensuremath{-0.0015}}
+\newcommand{\pcAblUtilityMaxPrimaryB}{\ensuremath{0.014}}
+\newcommand{\pcAblDeltaUtilityPrimaryB}{\ensuremath{-0.011}}
+\newcommand{\pcAblAurocGbtB}{\ensuremath{0.7397}}
+\newcommand{\pcAblDeltaAurocGbtB}{\ensuremath{-0.0063}}
+\newcommand{\pcAblAuprcGbtB}{\ensuremath{0.0098}}
+\newcommand{\pcAblDeltaAuprcGbtB}{\ensuremath{0.0008}}
+\newcommand{\pcAblUtilityMaxGbtB}{\ensuremath{0.030}}
+\newcommand{\pcAblDeltaUtilityGbtB}{\ensuremath{-0.009}}
+\newcommand{\pcAblAurocPrimaryC}{\ensuremath{0.7602}}
+\newcommand{\pcAblDeltaAurocPrimaryC}{\ensuremath{-0.0093}}
+\newcommand{\pcAblAuprcPrimaryC}{\ensuremath{0.0177}}
+\newcommand{\pcAblDeltaAuprcPrimaryC}{\ensuremath{-0.0024}}
+\newcommand{\pcAblUtilityMaxPrimaryC}{\ensuremath{0.092}}
+\newcommand{\pcAblDeltaUtilityPrimaryC}{\ensuremath{-0.003}}
+\newcommand{\pcAblAurocGbtC}{\ensuremath{0.7535}}
+\newcommand{\pcAblDeltaAurocGbtC}{\ensuremath{-0.0024}}
+\newcommand{\pcAblAuprcGbtC}{\ensuremath{0.0182}}
+\newcommand{\pcAblDeltaAuprcGbtC}{\ensuremath{-0.0009}}
+\newcommand{\pcAblUtilityMaxGbtC}{\ensuremath{0.097}}
+\newcommand{\pcAblDeltaUtilityGbtC}{\ensuremath{-0.015}}
 
 % --- Ablated-arm coefficient stability (Amendment 5) ---
-\newcommand{\pcAblHTwoNTerms}{\pcMissing}
-\newcommand{\pcAblHTwoNSign}{\pcMissing}
-\newcommand{\pcAblHTwoNMag}{\pcMissing}
-\newcommand{\pcAblHTwoNUnstable}{\pcMissing}
-\newcommand{\pcAblHTwoPctUnstable}{\pcMissing}
+\newcommand{\pcAblHTwoNTerms}{\ensuremath{14}}
+\newcommand{\pcAblHTwoNSign}{\ensuremath{0}}
+\newcommand{\pcAblHTwoNMag}{\ensuremath{1}}
+\newcommand{\pcAblHTwoNUnstable}{\ensuremath{1}}
+\newcommand{\pcAblHTwoPctUnstable}{\ensuremath{7.1}}
 
 % --- Per-model AUROC intervals, Variant B ---
 \newcommand{\pcAurocCiLoPrimaryB}{\ensuremath{0.7434}}
@@ -1264,91 +1276,96 @@
 \newcommand{\pcRaceContrastGbtOneDelta}{\ensuremath{0.031}}
 \newcommand{\pcRaceContrastGbtOneCi}{\ensuremath{-0.006\text{--}0.068}}
 \newcommand{\pcRaceContrastGbtOneP}{\ensuremath{0.081}}
-\newcommand{\pcRaceContrastGbtOneQ}{\ensuremath{0.347}}
+\newcommand{\pcRaceContrastGbtOneQ}{\ensuremath{0.162}}
 \newcommand{\pcRaceContrastGbtOneNEvents}{\ensuremath{235}}
-\newcommand{\pcRaceContrastGbtTwoName}{ASIAN - CHINESE}
-\newcommand{\pcRaceContrastGbtTwoDelta}{\ensuremath{-0.151}}
-\newcommand{\pcRaceContrastGbtTwoCi}{\ensuremath{-0.364\text{--}0.053}}
-\newcommand{\pcRaceContrastGbtTwoP}{\ensuremath{0.135}}
-\newcommand{\pcRaceContrastGbtTwoQ}{\ensuremath{0.450}}
-\newcommand{\pcRaceContrastGbtTwoNEvents}{\ensuremath{13}}
-\newcommand{\pcRaceContrastGbtThreeName}{HISPANIC/LATINO - PUERTO RICAN}
-\newcommand{\pcRaceContrastGbtThreeDelta}{\ensuremath{-0.122}}
-\newcommand{\pcRaceContrastGbtThreeCi}{\ensuremath{-0.296\text{--}0.042}}
-\newcommand{\pcRaceContrastGbtThreeP}{\ensuremath{0.163}}
-\newcommand{\pcRaceContrastGbtThreeQ}{\ensuremath{0.489}}
-\newcommand{\pcRaceContrastGbtThreeNEvents}{\ensuremath{16}}
-\newcommand{\pcRaceContrastGbtFourName}{OTHER}
-\newcommand{\pcRaceContrastGbtFourDelta}{\ensuremath{-0.055}}
-\newcommand{\pcRaceContrastGbtFourCi}{\ensuremath{-0.151\text{--}0.026}}
-\newcommand{\pcRaceContrastGbtFourP}{\ensuremath{0.228}}
-\newcommand{\pcRaceContrastGbtFourQ}{\ensuremath{0.577}}
-\newcommand{\pcRaceContrastGbtFourNEvents}{\ensuremath{35}}
-\newcommand{\pcRaceContrastGbtFiveName}{WHITE - OTHER EUROPEAN}
-\newcommand{\pcRaceContrastGbtFiveDelta}{\ensuremath{-0.065}}
-\newcommand{\pcRaceContrastGbtFiveCi}{\ensuremath{-0.182\text{--}0.047}}
-\newcommand{\pcRaceContrastGbtFiveP}{\ensuremath{0.250}}
-\newcommand{\pcRaceContrastGbtFiveQ}{\ensuremath{0.577}}
-\newcommand{\pcRaceContrastGbtFiveNEvents}{\ensuremath{18}}
-\newcommand{\pcRaceContrastGbtSixName}{BLACK/AFRICAN AMERICAN}
-\newcommand{\pcRaceContrastGbtSixDelta}{\ensuremath{0.012}}
-\newcommand{\pcRaceContrastGbtSixCi}{\ensuremath{-0.059\text{--}0.080}}
-\newcommand{\pcRaceContrastGbtSixP}{\ensuremath{0.716}}
-\newcommand{\pcRaceContrastGbtSixQ}{\ensuremath{0.892}}
-\newcommand{\pcRaceContrastGbtSixNEvents}{\ensuremath{58}}
-\newcommand{\pcRaceContrastGbtSevenName}{ASIAN}
-\newcommand{\pcRaceContrastGbtSevenDelta}{\ensuremath{0.016}}
-\newcommand{\pcRaceContrastGbtSevenCi}{\ensuremath{-0.141\text{--}0.146}}
-\newcommand{\pcRaceContrastGbtSevenP}{\ensuremath{0.799}}
-\newcommand{\pcRaceContrastGbtSevenQ}{\ensuremath{0.892}}
-\newcommand{\pcRaceContrastGbtSevenNEvents}{\ensuremath{16}}
-\newcommand{\pcRaceContrastPrimaryOneName}{ASIAN}
-\newcommand{\pcRaceContrastPrimaryOneDelta}{\ensuremath{0.085}}
-\newcommand{\pcRaceContrastPrimaryOneCi}{\ensuremath{-0.027\text{--}0.175}}
-\newcommand{\pcRaceContrastPrimaryOneP}{\ensuremath{0.070}}
-\newcommand{\pcRaceContrastPrimaryOneQ}{\ensuremath{0.347}}
-\newcommand{\pcRaceContrastPrimaryOneNEvents}{\ensuremath{16}}
-\newcommand{\pcRaceContrastPrimaryTwoName}{UNKNOWN}
-\newcommand{\pcRaceContrastPrimaryTwoDelta}{\ensuremath{0.017}}
-\newcommand{\pcRaceContrastPrimaryTwoCi}{\ensuremath{-0.022\text{--}0.055}}
-\newcommand{\pcRaceContrastPrimaryTwoP}{\ensuremath{0.387}}
-\newcommand{\pcRaceContrastPrimaryTwoQ}{\ensuremath{0.820}}
-\newcommand{\pcRaceContrastPrimaryTwoNEvents}{\ensuremath{235}}
-\newcommand{\pcRaceContrastPrimaryThreeName}{HISPANIC/LATINO - PUERTO RICAN}
-\newcommand{\pcRaceContrastPrimaryThreeDelta}{\ensuremath{-0.054}}
-\newcommand{\pcRaceContrastPrimaryThreeCi}{\ensuremath{-0.214\text{--}0.090}}
-\newcommand{\pcRaceContrastPrimaryThreeP}{\ensuremath{0.452}}
-\newcommand{\pcRaceContrastPrimaryThreeQ}{\ensuremath{0.820}}
-\newcommand{\pcRaceContrastPrimaryThreeNEvents}{\ensuremath{16}}
-\newcommand{\pcRaceContrastPrimaryFourName}{OTHER}
-\newcommand{\pcRaceContrastPrimaryFourDelta}{\ensuremath{-0.032}}
-\newcommand{\pcRaceContrastPrimaryFourCi}{\ensuremath{-0.126\text{--}0.054}}
-\newcommand{\pcRaceContrastPrimaryFourP}{\ensuremath{0.468}}
-\newcommand{\pcRaceContrastPrimaryFourQ}{\ensuremath{0.820}}
-\newcommand{\pcRaceContrastPrimaryFourNEvents}{\ensuremath{35}}
-\newcommand{\pcRaceContrastPrimaryFiveName}{ASIAN - CHINESE}
-\newcommand{\pcRaceContrastPrimaryFiveDelta}{\ensuremath{-0.055}}
-\newcommand{\pcRaceContrastPrimaryFiveCi}{\ensuremath{-0.246\text{--}0.117}}
-\newcommand{\pcRaceContrastPrimaryFiveP}{\ensuremath{0.547}}
-\newcommand{\pcRaceContrastPrimaryFiveQ}{\ensuremath{0.820}}
-\newcommand{\pcRaceContrastPrimaryFiveNEvents}{\ensuremath{13}}
-\newcommand{\pcRaceContrastPrimarySixName}{WHITE - OTHER EUROPEAN}
-\newcommand{\pcRaceContrastPrimarySixDelta}{\ensuremath{-0.026}}
-\newcommand{\pcRaceContrastPrimarySixCi}{\ensuremath{-0.156\text{--}0.091}}
-\newcommand{\pcRaceContrastPrimarySixP}{\ensuremath{0.666}}
-\newcommand{\pcRaceContrastPrimarySixQ}{\ensuremath{0.892}}
-\newcommand{\pcRaceContrastPrimarySixNEvents}{\ensuremath{18}}
-\newcommand{\pcRaceContrastPrimarySevenName}{BLACK/AFRICAN AMERICAN}
-\newcommand{\pcRaceContrastPrimarySevenDelta}{\ensuremath{0.003}}
-\newcommand{\pcRaceContrastPrimarySevenCi}{\ensuremath{-0.072\text{--}0.074}}
-\newcommand{\pcRaceContrastPrimarySevenP}{\ensuremath{0.934}}
-\newcommand{\pcRaceContrastPrimarySevenQ}{\ensuremath{0.966}}
-\newcommand{\pcRaceContrastPrimarySevenNEvents}{\ensuremath{58}}
-\newcommand{\pcEquityNContrastsEOne}{\ensuremath{30}}
+\newcommand{\pcRaceContrastGbtTwoName}{\pcNotApplicable}
+\newcommand{\pcRaceContrastGbtTwoDelta}{\pcNotApplicable}
+\newcommand{\pcRaceContrastGbtTwoCi}{\pcNotApplicable}
+\newcommand{\pcRaceContrastGbtTwoP}{\pcNotApplicable}
+\newcommand{\pcRaceContrastGbtTwoQ}{\pcNotApplicable}
+\newcommand{\pcRaceContrastGbtTwoNEvents}{\pcNotApplicable}
+\newcommand{\pcRaceContrastGbtThreeName}{\pcNotApplicable}
+\newcommand{\pcRaceContrastGbtThreeDelta}{\pcNotApplicable}
+\newcommand{\pcRaceContrastGbtThreeCi}{\pcNotApplicable}
+\newcommand{\pcRaceContrastGbtThreeP}{\pcNotApplicable}
+\newcommand{\pcRaceContrastGbtThreeQ}{\pcNotApplicable}
+\newcommand{\pcRaceContrastGbtThreeNEvents}{\pcNotApplicable}
+\newcommand{\pcRaceContrastGbtFourName}{\pcNotApplicable}
+\newcommand{\pcRaceContrastGbtFourDelta}{\pcNotApplicable}
+\newcommand{\pcRaceContrastGbtFourCi}{\pcNotApplicable}
+\newcommand{\pcRaceContrastGbtFourP}{\pcNotApplicable}
+\newcommand{\pcRaceContrastGbtFourQ}{\pcNotApplicable}
+\newcommand{\pcRaceContrastGbtFourNEvents}{\pcNotApplicable}
+\newcommand{\pcRaceContrastGbtFiveName}{\pcNotApplicable}
+\newcommand{\pcRaceContrastGbtFiveDelta}{\pcNotApplicable}
+\newcommand{\pcRaceContrastGbtFiveCi}{\pcNotApplicable}
+\newcommand{\pcRaceContrastGbtFiveP}{\pcNotApplicable}
+\newcommand{\pcRaceContrastGbtFiveQ}{\pcNotApplicable}
+\newcommand{\pcRaceContrastGbtFiveNEvents}{\pcNotApplicable}
+\newcommand{\pcRaceContrastGbtSixName}{\pcNotApplicable}
+\newcommand{\pcRaceContrastGbtSixDelta}{\pcNotApplicable}
+\newcommand{\pcRaceContrastGbtSixCi}{\pcNotApplicable}
+\newcommand{\pcRaceContrastGbtSixP}{\pcNotApplicable}
+\newcommand{\pcRaceContrastGbtSixQ}{\pcNotApplicable}
+\newcommand{\pcRaceContrastGbtSixNEvents}{\pcNotApplicable}
+\newcommand{\pcRaceContrastGbtSevenName}{\pcNotApplicable}
+\newcommand{\pcRaceContrastGbtSevenDelta}{\pcNotApplicable}
+\newcommand{\pcRaceContrastGbtSevenCi}{\pcNotApplicable}
+\newcommand{\pcRaceContrastGbtSevenP}{\pcNotApplicable}
+\newcommand{\pcRaceContrastGbtSevenQ}{\pcNotApplicable}
+\newcommand{\pcRaceContrastGbtSevenNEvents}{\pcNotApplicable}
+\newcommand{\pcRaceContrastPrimaryOneName}{UNKNOWN}
+\newcommand{\pcRaceContrastPrimaryOneDelta}{\ensuremath{0.017}}
+\newcommand{\pcRaceContrastPrimaryOneCi}{\ensuremath{-0.022\text{--}0.055}}
+\newcommand{\pcRaceContrastPrimaryOneP}{\ensuremath{0.387}}
+\newcommand{\pcRaceContrastPrimaryOneQ}{\ensuremath{0.580}}
+\newcommand{\pcRaceContrastPrimaryOneNEvents}{\ensuremath{235}}
+\newcommand{\pcRaceContrastPrimaryTwoName}{\pcNotApplicable}
+\newcommand{\pcRaceContrastPrimaryTwoDelta}{\pcNotApplicable}
+\newcommand{\pcRaceContrastPrimaryTwoCi}{\pcNotApplicable}
+\newcommand{\pcRaceContrastPrimaryTwoP}{\pcNotApplicable}
+\newcommand{\pcRaceContrastPrimaryTwoQ}{\pcNotApplicable}
+\newcommand{\pcRaceContrastPrimaryTwoNEvents}{\pcNotApplicable}
+\newcommand{\pcRaceContrastPrimaryThreeName}{\pcNotApplicable}
+\newcommand{\pcRaceContrastPrimaryThreeDelta}{\pcNotApplicable}
+\newcommand{\pcRaceContrastPrimaryThreeCi}{\pcNotApplicable}
+\newcommand{\pcRaceContrastPrimaryThreeP}{\pcNotApplicable}
+\newcommand{\pcRaceContrastPrimaryThreeQ}{\pcNotApplicable}
+\newcommand{\pcRaceContrastPrimaryThreeNEvents}{\pcNotApplicable}
+\newcommand{\pcRaceContrastPrimaryFourName}{\pcNotApplicable}
+\newcommand{\pcRaceContrastPrimaryFourDelta}{\pcNotApplicable}
+\newcommand{\pcRaceContrastPrimaryFourCi}{\pcNotApplicable}
+\newcommand{\pcRaceContrastPrimaryFourP}{\pcNotApplicable}
+\newcommand{\pcRaceContrastPrimaryFourQ}{\pcNotApplicable}
+\newcommand{\pcRaceContrastPrimaryFourNEvents}{\pcNotApplicable}
+\newcommand{\pcRaceContrastPrimaryFiveName}{\pcNotApplicable}
+\newcommand{\pcRaceContrastPrimaryFiveDelta}{\pcNotApplicable}
+\newcommand{\pcRaceContrastPrimaryFiveCi}{\pcNotApplicable}
+\newcommand{\pcRaceContrastPrimaryFiveP}{\pcNotApplicable}
+\newcommand{\pcRaceContrastPrimaryFiveQ}{\pcNotApplicable}
+\newcommand{\pcRaceContrastPrimaryFiveNEvents}{\pcNotApplicable}
+\newcommand{\pcRaceContrastPrimarySixName}{\pcNotApplicable}
+\newcommand{\pcRaceContrastPrimarySixDelta}{\pcNotApplicable}
+\newcommand{\pcRaceContrastPrimarySixCi}{\pcNotApplicable}
+\newcommand{\pcRaceContrastPrimarySixP}{\pcNotApplicable}
+\newcommand{\pcRaceContrastPrimarySixQ}{\pcNotApplicable}
+\newcommand{\pcRaceContrastPrimarySixNEvents}{\pcNotApplicable}
+\newcommand{\pcRaceContrastPrimarySevenName}{\pcNotApplicable}
+\newcommand{\pcRaceContrastPrimarySevenDelta}{\pcNotApplicable}
+\newcommand{\pcRaceContrastPrimarySevenCi}{\pcNotApplicable}
+\newcommand{\pcRaceContrastPrimarySevenP}{\pcNotApplicable}
+\newcommand{\pcRaceContrastPrimarySevenQ}{\pcNotApplicable}
+\newcommand{\pcRaceContrastPrimarySevenNEvents}{\pcNotApplicable}
+\newcommand{\pcEquityNContrastsEOne}{\ensuremath{6}}
+\newcommand{\pcEquityNSigEOne}{\ensuremath{0}}
+
+% --- Subgroup interpretability floor ---
+\newcommand{\pcMinSubgroupEvents}{\ensuremath{100}}
+\newcommand{\pcNSubgroupsAboveFloor}{\ensuremath{2}}
 
 % --- Equity (BH-adjusted subgroup contrasts) ---
-\newcommand{\pcEquityAurocMinQ}{\ensuremath{0.030}}
-\newcommand{\pcEquityAurocNSig}{\ensuremath{1}}
+\newcommand{\pcEquityAurocMinQ}{\ensuremath{0.066}}
+\newcommand{\pcEquityAurocNSig}{\ensuremath{0}}
 \newcommand{\pcLabelSensTopOneName}{race UNKNOWN}
 \newcommand{\pcLabelSensTopOneDelta}{\ensuremath{3.01}}
 \newcommand{\pcLabelSensTopOneQ}{\ensuremath{0.006}}
@@ -1364,25 +1381,25 @@
 \newcommand{\pcLabelSensNSig}{\ensuremath{4}}
 
 % --- Spread confidence intervals (decomposition table) ---
-\newcommand{\pcSpreadLabelCiLo}{\pcMissing}
-\newcommand{\pcSpreadLabelCiHi}{\pcMissing}
-\newcommand{\pcSpreadModelClassCiLo}{\pcMissing}
-\newcommand{\pcSpreadModelClassCiHi}{\pcMissing}
+\newcommand{\pcSpreadLabelCiLo}{\ensuremath{0.003}}
+\newcommand{\pcSpreadLabelCiHi}{\ensuremath{0.032}}
+\newcommand{\pcSpreadModelClassCiLo}{\ensuremath{0.134}}
+\newcommand{\pcSpreadModelClassCiHi}{\ensuremath{0.171}}
 
 % --- Split optimism: random - temporal by model (Variant B) ---
 \newcommand{\pcSplitDeltaPrimaryB}{\ensuremath{-0.017}}
-\newcommand{\pcSplitDeltaGbtB}{\ensuremath{-0.030}}
+\newcommand{\pcSplitDeltaGbtB}{\ensuremath{-0.025}}
 \newcommand{\pcSplitDeltaCoxB}{\ensuremath{-0.013}}
 \newcommand{\pcSplitDeltaNewsB}{\ensuremath{-0.033}}
 \newcommand{\pcSplitDeltaMinAbs}{\ensuremath{0.013}}
 \newcommand{\pcSplitDeltaMaxAbs}{\ensuremath{0.033}}
 
 % --- Equity: the one surviving E1 contrast, and the label-sensitivity range ---
-\newcommand{\pcEquityTopDelta}{\ensuremath{0.136}}
-\newcommand{\pcEquityTopCiLo}{\ensuremath{0.022}}
-\newcommand{\pcEquityTopCiHi}{\ensuremath{0.228}}
-\newcommand{\pcEquityTopQ}{\ensuremath{0.030}}
-\newcommand{\pcEquityTopNEvents}{\ensuremath{12}}
+\newcommand{\pcEquityTopDelta}{\pcNotApplicable}
+\newcommand{\pcEquityTopCiLo}{\pcNotApplicable}
+\newcommand{\pcEquityTopCiHi}{\pcNotApplicable}
+\newcommand{\pcEquityTopQ}{\pcNotApplicable}
+\newcommand{\pcEquityTopNEvents}{\pcNotApplicable}
 \newcommand{\pcLabelSensUnknownPp}{\ensuremath{3.01}}
 \newcommand{\pcLabelSensUnknownQ}{\ensuremath{0.006}}
 \newcommand{\pcLabelSensUnablePp}{\ensuremath{3.49}}

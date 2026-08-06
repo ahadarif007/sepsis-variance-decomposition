@@ -5,12 +5,16 @@
 > Only open a data file when you need a number that is *not* here, and then open
 > the single file named in §5 — never dump the whole `processed_data/` directory.
 
-Last updated: **2026-08-06** — feedback round 7 patched into source and thesis,
-**nothing executed**. Structural changes: the thesis gained a **Discussion
-chapter** (now 7 chapters + an appendix), Chapter 2 was rewritten as a critical
-review, and the subgroup analysis gained a 100-event interpretability floor that
-**changes family E1's size**. Three runs are now pending (§9). Results in §3 are
-unchanged and current — the run of 2026-08-06 00:42, 12/12 stages.
+Last updated: **2026-08-06** — feedback round 7 complete **and executed**.
+All three previously-pending runs (§9a eICU GBT, §9b ablation, §9c round 7) have
+now run. `pipeline_constants.tex` carries **1,330 macros, 0 missing** and
+`index.pdf` builds at 0 errors / 0 undefined refs / 0 undefined citations /
+**151 pages**. Structural changes: the thesis gained a **Discussion chapter**
+(7 chapters + appendix), Chapter 2 was rewritten as a critical review, and the
+subgroup analysis gained a 100-event interpretability floor. Licence decided
+(Apache-2.0, scoped — §7). The confirmatory canary held: H1–H6 bit-identical.
+Rounds 8–9 added Chapter 4's design-principles section and Appendix B; the
+presentation decks are **deliberately untouched** (§7a).
 Work by Claude (Anthropic) with **Abdul Ahad** (ATU MSc, student ID G00486649).
 
 > ## Where things stand
@@ -207,6 +211,35 @@ second on the point estimate without being established at that confidence.
 - Equity: **no** race contrast survives BH (smallest q=0.347). Label-sensitivity
   contrasts do: race-Unknown +3.01 pp (q=0.006), Unable-to-obtain +3.49 pp
   (q=0.009), Spanish +2.61 pp (q=0.006), Private insurance −1.76 pp (q=0.006).
+- **Sample size, on the correct unit (stage 04, rewritten round 7).** Riley
+  assumes independent observations, so the criterion is parameterised on the
+  **stay**: min-N **1,491 / 1,437 / 855** stays (A/B/C) at stay-level prevalence
+  8.78 / 9.16 / 17.76 %, against **52,946** training stays — margins
+  **35.5x / 36.8x / 61.9x**. The per-hour minima (52,201 / 51,012 / 24,069) are
+  retained as a labelled reference only. **Never compare a per-hour minimum
+  against the 2.3 M row count.**
+- **Equity, after the 100-event interpretability floor (round 7).** Family E1
+  shrank from **30 contrasts to 6**, and **none survives BH** (was one: the
+  Haitian-language contrast on 12 events, now below the floor and out of the
+  family). Only **2 of 8 racial strata** clear the floor — White (597 events) and
+  **Unknown (235)**, a missingness category — so *the study contains no
+  sufficiently powered comparison between two racial strata that both record an
+  actual demographic answer*. That sentence is in the thesis and should not be
+  softened. Label-sensitivity contrasts are unaffected (stay-level proportions,
+  no floor): race-Unknown +3.01 pp (q=0.006), Unable-to-obtain +3.49 pp
+  (q=0.009), Spanish +2.61 pp (q=0.006), Private insurance -1.76 pp (q=0.006) —
+  and **both significant racial strata are missingness categories**, which is why
+  the thesis reads this as a finding about documentation, not race.
+- **eICU GBT comparator now exists** (§9a fix took): external AUROC **0.6812**
+  under Variant B, against the primary model's 0.6960.
+- **Ablation (Amendment 5) landed on the strongest decision-table row.**
+  Dropping the 8 action-derived covariates costs **-0.0076** AUROC (primary, B)
+  and **-0.0063** (GBT, B) — under 0.01 everywhere — while the cross-label
+  unstable count falls from **6 of 22 to 1 of 14** (27.3 % -> 7.1 %). By kind in
+  the full fit: action-derived **4/8 = 50 %** unstable, physiological
+  **2/14 = 14.3 %**. Reading, now written into the thesis: the features that
+  record clinician behaviour contribute almost nothing to discrimination and
+  carry most of the label sensitivity.
 
 ### Amendment 2 — label-anchor attribution
 
@@ -304,6 +337,27 @@ Three further defects lived in the same chunk and are fixed together:
   threshold rejects on *missingness*, which biases hardest in the database with
   sparser labs. It also nulled a stay-level `onset_hour` row by row, corrupting
   the at-risk set.
+
+### Documentation that contradicts the code — now three instances
+This is the project's most repeated defect, and every instance ran in the
+direction that flattered the study. Recorded together so the pattern is visible:
+
+1. **`evaluation.tex` explained an identical eICU NEWS2 AUROC as "NEWS2 is
+   label-invariant"** — a true sentence about the wrong object, which concealed
+   a label that was never varied (§22.3).
+2. **`evaluation.tex` and this file both said eICU "triggers infection on
+   antibiotics alone"** while stage 08 did an *inner* merge requiring both limbs.
+   The documented mitigation was never implemented (§4, eICU bullet).
+3. **`design.tex` Stage 05 claimed "Standard errors are cluster-robust (grouped
+   by stay)"** while `methodology.tex` correctly said no analytic variance
+   exists for a `multinom` fit and all uncertainty comes from the bootstrap. The
+   two chapters contradicted each other and the false one came first. Fixed in
+   round 9 (`feedback/v2.md` §30.4).
+
+**Generalise:** when a chapter states what the code does, check the code, not
+another chapter. Chapter 4 §Design Principles now states this as an explicit
+architectural principle — interfaces fail loudly or not at all — precisely
+because the failures above were all silent.
 
 ### `news2()` scores a FALSE consciousness flag as 3, and NA as 0
 `avpu_alert <- !is.na(gcs) & gcs >= 14` maps "unmeasured" to `FALSE`, which
@@ -593,35 +647,33 @@ insurance. Top 8 levels each.
 
 ## 7. Open items / known weaknesses
 
-- **Licence: STILL UNDECIDED, and the thesis now names one.** No `LICENSE` file
-  exists → code is currently *all rights reserved*. `index.tex` sets
-  `\repolicence` to **Apache-2.0** on the strength of the standing
-  recommendation (patent grant, stronger warranty disclaimer for
-  clinical-adjacent code, NOTICE for citation; CC BY 4.0 for prose), and the
-  appendix and `design.tex` both print it. **Confirm against ATU student-IP
-  policy and add a `LICENSE` file** — `README.md` points at one that does not
-  exist yet.
-- **The repo-visibility position REVERSED in feedback round 7.** It was private
-  with the URL deliberately omitted; the submission page penalises a missing
-  repository link as a failure to submit, so `design.tex` §Code Availability and
-  the new Appendix A now state a **public** repository at `\repourl`. Two
-  consequences: (1) `\repourl` in `index.tex` is a **placeholder**
-  (`https://github.com/REPLACE-ME`) because the author is supplying a URL that
-  is not this tree's `origin` — one line to set; (2) **the thesis asserts the
-  repo is public, so it must actually be public before submission or that
-  sentence is false.** Code-only + PhysioNet DUA forbids data redistribution is
-  unchanged. `.gitignore` verified: 0 patient-data files tracked.
-- **Feedback round 7 — all eight items closed in source; two runs pending.**
-  Full write-up in `feedback/v2.md` §26. Summary: appendix + README + screencast
-  plan; Chapter 2 rewritten as a critical review around four disputes (14 sources
-  drawn in from the companion); Figure 2.1's invented AUROCs replaced with Cohen
-  et al.'s own reported numbers; **nine miscited references corrected and every
-  DOI in the bibliography verified to resolve** (the feedback named four; five
-  more were found, including one paper that does not exist); Riley applied on the
-  stay; subgroup event floor + non-disjoint-strata statement; novelty claims made
-  precise about *what* is new; Discussion promoted to its own chapter.
-  Two positions were **reversed** and both are recorded above: repo visibility,
-  and the equity reading (documentation, not race).
+- **Licence: DECIDED (2026-08-06). Apache-2.0, deliberately scoped.**
+  `LICENSE` (Apache-2.0 verbatim, copyright line set to Abdul Ahad 2026) and
+  `NOTICE` now exist at the repo root, and the seven pipeline source files carry
+  `SPDX-License-Identifier: Apache-2.0` headers.
+  **The scoping is the point and must not be flattened.** `NOTICE` §1 covers
+  `v2-proj/` and `v1/v1-project/` source; §2 *excludes* the ATU thesis template
+  and brand assets (`index.tex` title page, `atu-logo-*.png`, `leftbar.png` ---
+  ATU's rights, reproduced only so the thesis typesets) and excludes both
+  databases absolutely; §3 lists the eight published methods implemented here
+  from their definitions, attributing each and stating that no implementation was
+  copied from third-party source; §4 puts the thesis prose, figures and the
+  companion review *outside* Apache-2.0 as scholarly work available for citation
+  with attribution, and notes ATU's student-IP policy may also apply; §5 is the
+  not-a-medical-device disclaimer. If a future round touches licensing, keep the
+  §2/§3 boundaries --- the author's instruction was Apache-2.0 "where it's my
+  original work and not others' work".
+- **Repo URL: `https://github.com/ahadarif007/RESEARCH`** (the tree's own
+  `origin`), set in `index.tex` as `\repourl`. The repo-visibility position
+  **reversed** in feedback round 7: it was private with the URL deliberately
+  omitted, but the submission page penalises a missing repository link as a
+  failure to submit, so `design.tex` §Code Availability and Appendix A now state
+  a public repository. **The thesis asserts the repo is public --- it must
+  actually be public before submission, or that sentence is false.** Code-only +
+  PhysioNet DUA forbids data redistribution is unchanged. `.gitignore` verified:
+  0 patient-data files tracked. **One hygiene item before going public:**
+  `.claude/settings.local.json` is tracked (it predates the `.claude/` ignore
+  rule) and exposes local paths under `/Users/arif/`; `git rm --cached` it.
 - **The literature review is narrative, not PRISMA-conformant.** The companion doc
   states this explicitly. The thesis previously carried a PRISMA flow diagram full
   of `TODO` placeholders and cited a nonexistent `search_strategy_queries.xlsx`;
@@ -650,6 +702,39 @@ insurance. Top 8 levels each.
   `feedback/v1.md` §7 lists what is still exposed at viva; keep it current if a
   later round changes any of it.
 - No deep survival comparator. Limited features (no notes/procedures/vent settings).
+
+---
+
+## 7a. Deadlines, and the presentation freeze
+
+| Item | Date / value |
+|---|---|
+| Thesis deadline | **17:00, 19 October** |
+| Viva schedule published | 21 October |
+| Vivas | **29–30 October** |
+| Presentation | 15 min + 15 min questions |
+
+**Do not work on `v2-presentation*/`.** This is a standing instruction, not an
+oversight: results moved in every feedback round, so any polish before the
+results settled would have been discarded. The skeleton (11 section files, same
+in both decks) is sound and is what October returns to. The current deck is
+**32 slides ≈ 28 s each — not deliverable**, and spends **six slides on
+background before any method**.
+
+**Before either deck is ever shown, it must be wired to
+`pipeline_constants.tex`.** Neither contains a single `\pc` macro and both
+predate several rounds of fixes. The critical one:
+
+> **The deck tags H6 as `\tagrejected`. H6 is NOT rejected** — its
+> non-rejection is the thesis's strongest positive result. Presenting the deck
+> as-is would contradict the headline finding in front of the panel.
+
+Also stale on the slides: primary AUROC 0.607 (now 0.7590), primary Utility
+−1.004, GBT Utility −4.849, model spread 0.145, and the withdrawn "Variant B
+showed a large performance drop"; plus Strict/Broad in `05.materials.tex`
+against Narrow/Seymour-Standard/Liberal in `07.results.tex`, and a deck title
+that differs from the thesis title. A 15-minute slide budget (16–18 slides) is
+drafted in `feedback/v2.md` §29.4.
 
 ---
 
@@ -684,54 +769,27 @@ insurance. Top 8 levels each.
 
 ---
 
-## 9. Pending runs
+## 9. Runs — all complete
 
-**Three** independent pieces of work are patched in source and **not executed**:
-9a and 9b from feedback round 5, and 9c from round 7. Together they account for
-72 missing macros. Unlike the earlier rounds, `index.pdf` currently **will not
-compile** — 9c's 21 macros do not exist at all yet, so they are undefined
-control sequences rather than red `??`. That is the loud-failure design working.
+**Nothing is pending.** The three pieces of work that were patched-but-unexecuted
+(9a eICU GBT comparator, 9b Protocol Amendment 5 ablation, 9c feedback round 7)
+have all run. `thesis_constants.R` reports **1,330 macros, 0 missing**;
+`index.pdf` builds at 0 errors, 0 undefined references, 0 undefined citations,
+147 pages. Results are folded into §3 above.
 
-### 9a. eICU GBT comparator — 3 macros
+Verification checks that were specified in advance and passed:
 
-`readRDS()` returns the stage-06 booster with an **empty** `feature_names`
-under this xgboost build. `lapply()` over an empty vector produced a
-zero-column DMatrix, `predict()` returned all-NA, and the metric loop discarded
-it as "fewer than 50 valid rows" — so the GBT row silently vanished from the
-external results. It had been absent for the whole project; it only became
-visible when the corrected external table asked for the number.
+| Check | Result |
+|---|---|
+| **Canary:** H1–H6 in `12_confirmatory_tests.csv` | **unchanged** — H1 −0.13755, H4 −0.01654, H6 −0.01293, bit-identical |
+| eICU GBT row present in the external table | yes, AUROC 0.6812 (B) |
+| `07_ablation_metrics.csv` | 6 rows, paired deltas, all \|ΔAUROC\| < 0.01 |
+| `12_h2_stability_by_kind.csv` | action-derived 4/8, physiological 2/14 |
+| `04_sample_size.parquet` | has `min_n_riley_stay` / `stay_prevalence` / `margin_stay`; `min_n_riley` gone |
+| `12_subgroup_auroc_ci.csv` | 36 rows (unchanged), gains `interpretable` + `min_events_interpret` |
+| `12_subgroup_auroc_contrasts.csv` | **6 rows** (was 30); every row `n_events >= 100` |
 
-Fixed by falling back to `BASE_FEATURES`, which is exact: stage 06 sets
-`gbt_feats <- intersect(BASE_FEATURES, names(ph))` with `require_features()`
-guaranteeing all 22 present, so the intersect is the declared vector unchanged.
-**Verified** against `06_predictions_comparators_B`: max absolute difference
-**0** across all 548,827 test rows. Guards added — `stop()` on a zero-column
-design matrix and on an all-NA prediction vector.
-
-### 9b. Protocol Amendment 5, the feature ablation — 48 macros
-
-New arm in 05/06, scored in 07, stability split in 12. See §6 rule 15.
-
-### 9c. Feedback round 7 — 21 macros, stages 04 and 12
-
-Two independent changes, both cheap and neither refitting anything.
-
-**Stage 04 — Riley on the independent unit.** `04_sample_size.Rmd` now calls
-`pmsampsize` twice, at the stay-level prevalence (the adequacy verdict) and at
-the per-hour prevalence (reference only). New columns `stay_prevalence`,
-`min_n_riley_stay`, `sufficient_stay`, `margin_stay`, `min_n_riley_perhour`;
-the old `min_n_riley` / `sufficient` are gone. Reads three columns of each
-`03_person_hours_*.parquet` — cheap, no 6 GB stream.
-
-**Stage 12 — the subgroup interpretability floor.** `elig` gains an
-`interpretable` flag; a contrast enters family E1 only if both the level and the
-reference clear `MIN_SUBGROUP_EVENTS_INTERPRET`. **This shrinks E1 and therefore
-moves every BH-adjusted q-value in it.** The confirmatory arm is untouched.
-
-Both are covered by `./run_pipeline.sh 04 12`, which can simply be folded into
-the command below by appending `04` to the stage list.
-
-### The run
+The command, recorded for the next time a stage needs re-running:
 
 ```bash
 cd projects/v2/v2-proj && V2_ARMS=ablated ./run_pipeline.sh 05 06 && ./run_pipeline.sh 04 07 08 11 12
@@ -741,49 +799,11 @@ cd projects/v2/v2-proj && V2_ARMS=ablated ./run_pipeline.sh 05 06 && ./run_pipel
 cd projects/v2/v2-proj && Rscript thesis_constants.R && cd ../v2-thesis && ./build.sh
 ```
 
-Roughly 40–45 min. Why this order and these stages:
-
-- `V2_ARMS=ablated` on **05 06** fits only the ablated arm. The main fits and
-  both random-split refits are skipped, so **no H1/H4/H6 input is touched** and
-  there is no GBT-drift exposure at all.
-- **07** must run unrestricted (it scores the ablation and rewrites the
-  alt-label table; see §8). It refits nothing — it re-scores existing
-  predictions, deterministically.
-- **08** picks up the GBT fallback of 9a; **11** picks up the resulting GBT
-  external operating points.
-- **12** is needed only for `12_h2_stability_by_kind`. Its bootstraps are
-  seeded and read unchanged prediction files, so its output should be identical
-  apart from the new table — which is a useful check in itself.
-
-### What to verify afterwards
-
-| Check | Expect |
-|---|---|
-| `Arms in this run: ablated` in the 05 and 06 logs | present |
-| `Ablated arm: 8 action-derived features dropped, 14 remain` | present |
-| `Full arm not selected; keeping the existing random-split fit.` | present in both 05 and 06 |
-| `GBT model carries no feature_names; reconstructing from BASE_FEATURES` | present in the 08 log |
-| **Canary:** internal AUROCs in `07_metric_results.csv` | unchanged (primary 0.7713 / 0.7590 / 0.7695, GBT 0.7448 / 0.7460 / 0.7559) |
-| `12_h2_coefficient_stability.csv` | unchanged, 22 rows, 6 unstable |
-| `[PRIMARY] Minimum independent observations (Riley, stay-level)` in the 04 log | present, three variants |
-| `04_sample_size.parquet` | has `min_n_riley_stay` / `stay_prevalence` / `margin_stay`; `min_n_riley` gone |
-| `N levels estimated, M above the 100-event interpretability floor` in the 12 log | present for race, language, insurance |
-| `12_subgroup_auroc_ci.csv` | gains `interpretable` + `min_events_interpret`; **row count unchanged** |
-| `12_subgroup_auroc_contrasts.csv` | **row count falls**; every surviving row has `n_events >= 100` |
-| `12_confirmatory_tests.csv` | **H1–H6 unchanged** — round 7 touches no confirmatory input |
-| `thesis_constants.R` | **0 missing macros**; writes real rows into `table_equityperformance.tex` and `table_equitycontrasts.tex` (currently `\pcMissing` placeholders) |
-
-If any internal AUROC moves, an ablation-only pass overwrote a main fit — stop
-and check the `V2_ARMS` guards before trusting anything downstream. If any
-H1–H6 value moves, the subgroup edit leaked into the shared bootstrap
-machinery — also stop.
-
-### Then align the thesis
-
-`feedback/v2.md` §24.5 holds the decision table. The ablation's *direction* is
-unknown until it runs, and the thesis text is written to survive either
-outcome; what changes with the numbers is the strength of the reading, not
-its direction.
+Why that order: `V2_ARMS=ablated` on 05/06 fits only the ablated arm, so no H1/H4/H6
+input is touched and there is no GBT-drift exposure; 07 must run **unrestricted**
+(it rewrites the alt-label table and scores the ablation); 08 picks up the GBT
+fallback; 11 the resulting external operating points; 12 the inference layer; 04
+is cheap and independent.
 
 ### Still open
 

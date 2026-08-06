@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Abdul Ahad
 """
 utility_score.py — PhysioNet 2019 Utility Score (Reyna et al., 2020)
 
