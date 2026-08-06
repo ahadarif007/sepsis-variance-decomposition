@@ -1,0 +1,122 @@
+\chapter{Source Code and Reproduction}
+\label{app:code}
+
+\section{Repository}
+\label{app:repo}
+
+The complete implementation of this study is held in a version-controlled
+public repository:
+
+\begin{center}
+\fbox{\parbox{0.88\textwidth}{\centering\vspace{2pt}
+\textbf{Source code repository}\\[4pt]
+\url{\repourl}\\[4pt]
+\small Licence: \repolicence\ (code). Released for inspection and reuse;
+no patient data is included.
+\vspace{2pt}}}
+\end{center}
+
+The repository contains \textbf{code only}. No MIMIC-IV or eICU-CRD record,
+derived person-hour table, or fitted model object is included: the
+\texttt{data/}, \texttt{processed\_data/} and \texttt{output/} directories are
+excluded from version control by design, because the PhysioNet Credentialed
+Data Use Agreement (Section~\ref{sec:ethics}) prohibits redistribution of the
+underlying data. Exclusion is enforced by \texttt{.gitignore} and was verified
+against the tracked file list before release.
+
+\section{Repository Layout}
+
+\begin{table}[H]
+    \centering\small
+    \begin{tabular}{p{4.6cm}p{8.4cm}}
+        \toprule
+        \textbf{Path} & \textbf{Contents} \\
+        \midrule
+        \texttt{00\_preregistration.md} &
+        The pre-registration, including the G0 analysis gate and Protocol
+        Amendments 1--5, each dated and disclosed as post-hoc \\
+        \addlinespace
+        \texttt{config.R} &
+        All constants: label-variant parameters, feature lists, plausibility
+        ranges, seeds, bootstrap sizes, multiplicity families, event floors.
+        No numeric constant is defined anywhere else \\
+        \addlinespace
+        \texttt{utils.R} &
+        Shared helpers, including \texttt{require\_features()} (errors on a
+        declared-but-absent predictor) and \texttt{check\_multinom\_fit()} \\
+        \addlinespace
+        \texttt{clinical\_scores.R} &
+        SOFA, NEWS2, qSOFA and SIRS implementations \\
+        \addlinespace
+        \texttt{01\_setup.Rmd} \dots\ \texttt{12\_inference.Rmd} &
+        The twelve pipeline stages described in Chapter~\ref{ch:design}, in
+        execution order \\
+        \addlinespace
+        \texttt{run\_pipeline.sh}, \texttt{run\_pipeline.R} &
+        Orchestration. Runs all stages, or a named subset, and regenerates the
+        thesis constants on success \\
+        \addlinespace
+        \texttt{thesis\_constants.R} &
+        Reads the result tables and emits every numerical value used in this
+        document as a \LaTeX{} macro (Section~\ref{app:repro}) \\
+        \addlinespace
+        \texttt{utility\_score.py} &
+        Reference implementation of the Utility Score, maintained as a mirror
+        of the R scoring rule and cross-checked against it \\
+        \addlinespace
+        \texttt{output/} &
+        Created at run time: \texttt{processed\_data/}, \texttt{figures/},
+        \texttt{logs/}. Not tracked \\
+        \bottomrule
+    \end{tabular}
+    \caption{Repository layout.}
+    \label{tab:repo_layout}
+\end{table}
+
+\section{Reproducing the Results}
+\label{app:repro}
+
+\paragraph{Prerequisites.} R 4.5 or later with the packages listed in the
+repository, Python 3.12 or later with \texttt{pandas} for the Utility Score
+mirror, and a \TeX{} distribution providing \texttt{xelatex} and
+\texttt{pdflatex}/\texttt{biber}. The two source databases must be obtained
+independently through PhysioNet credentialing: MIMIC-IV v3.1 and eICU-CRD
+v2.0. They are placed under \texttt{data/} and located automatically, or
+pointed at with the \texttt{MIMIC\_RESEARCH\_ROOT} environment variable.
+
+\paragraph{Full run.} A complete execution is a single command,
+
+\begin{center}\texttt{./run\_pipeline.sh}\end{center}
+
+\noindent
+which runs stages 01--12 in order and, on success, regenerates the thesis
+constants and figures. Individual stages or phases can be run by number. Every
+stochastic step is seeded, so a repeated run reproduces the reported estimates
+exactly; the one exception is noted below.
+
+\paragraph{How the thesis stays aligned with the pipeline.} No result value in
+this document is typed by hand. On completion, \texttt{thesis\_constants.R}
+reads the result tables and writes every reported quantity as a macro into
+\texttt{pipeline\_constants.tex}, which the thesis includes; it also copies the
+generated figures into the document's image directory. A quantity the pipeline
+did not produce typesets as a conspicuous marker rather than as a stale number,
+so a partial run cannot silently leave an outdated value in the text. This is
+the mechanism by which the numbers in Chapters~\ref{ch:evaluation}
+and~\ref{ch:discussion} are guaranteed to be the numbers the code produced.
+
+\paragraph{Determinism.} All seeds are fixed in \texttt{config.R} and the
+train/test partition is defined by admission year rather than by sampling, so
+it is invariant. Gradient-boosted tree fitting is the one step that is not
+bit-reproducible across differing library builds; the pipeline therefore
+reports the gradient-boosted results as an explicit consistency check on any
+re-run, and every other estimate is invariant to it.
+
+\section{Ethical and Data-Access Statement}
+
+Both databases are de-identified and publicly available to credentialed
+researchers under the PhysioNet Credentialed Health Data Use Agreement. The
+analysis is retrospective and observational, involves no patient contact and no
+intervention, and required no additional ethical approval beyond the data use
+agreement, whose terms --- including the prohibition on redistribution and on
+attempted re-identification --- were observed throughout.
+Section~\ref{sec:ethics} sets out the full statement.

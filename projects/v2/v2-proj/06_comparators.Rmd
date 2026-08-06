@@ -251,9 +251,99 @@ fit_comparators <- function(vid) {
 ```
 
 ```{r run-comparators}
-run_variants                <- active_variants()
-all_comparator_preds        <- lapply(run_variants, fit_comparators)
-names(all_comparator_preds) <- run_variants
+run_variants <- active_variants()
+run_arms     <- active_arms()
+v2_log(sprintf("Arms in this run: %s", paste(run_arms, collapse = ", ")))
+
+all_comparator_preds <- NULL
+if ("full" %in% run_arms) {
+  all_comparator_preds        <- lapply(run_variants, fit_comparators)
+  names(all_comparator_preds) <- run_variants
+} else {
+  cat("Full arm not selected; keeping the existing comparator fits.\n")
+}
+```
+
+## Ablated GBT (Protocol Amendment 5)
+
+The gradient-boosted comparator is re-fitted without the action-derived
+features, so the ablation is measured on both a linear and a flexible learner.
+Only XGBoost is ablated: NEWS2, qSOFA and SIRS never used these features, and
+the Cox comparator is a static single-row-per-stay specification whose role in
+the thesis is the proportional-hazards check rather than discrimination.
+
+```{r fit-gbt-ablated}
+fit_gbt_ablated <- function(vid) {
+  step(sprintf("--- Ablated GBT: Variant %s ---", vid))
+
+  ph <- as.data.table(arrow::read_parquet(
+    file.path(DATA_DIR, paste0("03_person_hours_", vid, ".parquet"))
+  ))
+  train <- ph[temporal_split == "train"]
+  test  <- ph[temporal_split == "test"]
+
+  require_features(BASE_FEATURES, available = names(ph))
+  gbt_feats <- arm_features(intersect(BASE_FEATURES, names(ph)), "ablated")
+  cat(sprintf("  Ablated arm: %d features (from %d)\n",
+              length(gbt_feats), length(intersect(BASE_FEATURES, names(ph)))))
+
+  for (f in gbt_feats) {
+    if (is.numeric(train[[f]])) train[is.na(get(f)), (f) := 0]
+    if (is.logical(train[[f]])) train[is.na(get(f)), (f) := FALSE]
+    if (is.numeric(test[[f]]))  test[is.na(get(f)),  (f) := 0]
+    if (is.logical(test[[f]]))  test[is.na(get(f)),  (f) := FALSE]
+  }
+  train[, event_bin := as.integer(event == 1)]
+  test[,  event_bin := as.integer(event == 1)]
+
+  X_train <- apply(as.matrix(train[, ..gbt_feats]), 2, as.numeric)
+  X_test  <- apply(as.matrix(test[,  ..gbt_feats]), 2, as.numeric)
+  X_train[is.na(X_train)] <- 0
+  X_test[is.na(X_test)]   <- 0
+  y_train <- train$event_bin
+  y_test  <- test$event_bin
+
+  dtrain <- xgboost::xgb.DMatrix(data = X_train, label = y_train)
+  dtest  <- xgboost::xgb.DMatrix(data = X_test,  label = y_test)
+
+  # Identical hyperparameters to the full arm. The ablation must isolate the
+  # feature set; re-tuning would confound it with a search-budget difference.
+  gbt_params <- list(
+    objective        = "binary:logistic",
+    eval_metric      = "aucpr",
+    max_depth        = 6,
+    eta              = 0.05,
+    subsample        = 0.8,
+    colsample_bytree = 0.8,
+    min_child_weight = 5,
+    scale_pos_weight = sum(!y_train) / max(sum(y_train, na.rm = TRUE), 1),
+    nthread          = 4
+  )
+
+  gbt_fit <- tryCatch(
+    xgboost::xgb.train(params = gbt_params, data = dtrain, nrounds = 300,
+                       evals = list(train = dtrain, test = dtest),
+                       early_stopping_rounds = 30, verbose = 0),
+    error = function(e) { v2_log("  XGBoost error: ", e$message, level = "WARN"); NULL }
+  )
+  if (is.null(gbt_fit)) return(NULL)
+
+  test[, pred_gbt := predict(gbt_fit, dtest)]
+  saveRDS(gbt_fit, file.path(DATA_DIR, paste0("06_model_gbt_ablated_", vid, ".rds")))
+  out <- test[, .(stay_id, hour, event, event_bin, onset_hour,
+                   anchor_year_group, temporal_split, pred_gbt)]
+  out[, variant := vid]
+  save_parquet(out, paste0("06_predictions_gbt_ablated_", vid), DATA_DIR)
+  cat(sprintf("  Ablated GBT fitted: best iteration %d\n", gbt_fit$best_iteration))
+  rm(X_train, X_test, dtrain, dtest, gbt_fit, train, test, ph); invisible(gc(FALSE))
+  invisible(TRUE)
+}
+
+if ("ablated" %in% run_arms) {
+  invisible(lapply(intersect(run_variants, names(LABEL_VARIANTS)), fit_gbt_ablated))
+} else {
+  cat("Ablated arm not selected.\n")
+}
 ```
 
 ## Random-Split Comparators (H4)
@@ -264,7 +354,13 @@ GBT and rule-based comparators are re-fitted on the random patient-level split f
 step("--- Random-split comparators for Variant B (H4) ---")
 
 vid <- "B"
-ph <- if ("B" %in% run_variants) {
+# Tied to the full arm, exactly as the random-split primary fit in stage 05 is:
+# H4 is defined on the pre-registered specification, so an ablation-only pass
+# must leave every random-split input untouched.
+ph <- if (!"full" %in% run_arms) {
+  cat("Full arm not selected; keeping the existing random-split comparators.\n")
+  data.table()
+} else if ("B" %in% run_variants) {
   as.data.table(arrow::read_parquet(
     file.path(DATA_DIR, paste0("03_person_hours_", vid, ".parquet"))
   ))

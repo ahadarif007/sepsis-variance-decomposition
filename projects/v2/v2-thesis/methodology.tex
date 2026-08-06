@@ -16,6 +16,22 @@ All code is implemented in R (v4.x) and Python (v3.11), with a single
 configuration module (\texttt{config.R}) as the sole source of truth for all
 paths, clinical identifiers, and thresholds.
 
+\paragraph{Literature search protocol.} The design decisions set out in this
+chapter are warranted by evidence identified through a documented search, and
+two of the contributions claimed in Section~\ref{sec:contrib} are claims about
+what that search did \emph{not} find. The protocol --- databases, date ranges,
+search strings, inclusion and exclusion criteria, verification standard, and
+yield --- is specified in Table~\ref{tab:search_strategy} and the
+identification-to-inclusion counts in Figure~\ref{fig:prisma}. It is a
+structured narrative search rather than a systematic review: searches followed
+a written protocol and every included source was verified against a primary
+publisher, PubMed, PMC or repository record, but no title-and-abstract
+screening pass was performed over a full de-duplicated yield and no second
+reviewer screened independently. Every claim of the form ``no identified study
+does $X$'' in this thesis is therefore stated as ``to the best of our
+knowledge'' and is bounded by that coverage, which is recorded as a limitation
+in Section~\ref{sec:limitations}.
+
 
 \section{Data Sources}
 \label{sec:data}
@@ -53,6 +69,61 @@ External validation uses eICU-CRD v2.0 \cite{pollard2018eicu}, a
 multi-centre database from over 200 US ICUs. It uses different electronic health
 record systems and covers a broader range of hospitals and patient populations
 than the single-centre MIMIC-IV, making it a meaningful external test.
+
+\subsubsection{Transporting the label, not just the model}
+\label{sec:label_transport}
+
+External validation of a sepsis model requires transporting two things: the
+model and the \emph{label}. The model transports trivially --- it is a frozen
+set of coefficients applied to harmonised features. The label does not, because
+Sepsis-3 onset is defined on documentation artefacts (an antibiotic order, a
+microbiology culture) whose recording conventions differ between databases far
+more than physiology does. Three properties of eICU-CRD govern how the label is
+constructed here.
+
+\textbf{Drugs are recorded across two tables.} eICU-CRD has no item
+dictionary; drugs are free-text \texttt{drugname} strings, and they are split
+between \texttt{medication} (physician orders) and \texttt{infusionDrug}
+(continuous infusions). Vasopressors and much of the intravenous antibiotic
+exposure appear only in the latter. Both tables are read and the antibiotic
+exposure is their union; vasopressor exposure is likewise taken from
+\texttt{infusionDrug} so that the SOFA cardiovascular component is not fixed at
+its no-pressor value.
+
+\textbf{Microbiology coverage is the binding constraint.} The Sepsis-3
+suspicion anchor requires a culture, and \texttt{microLab} covers
+\pcExtMicroCoverage\% of the analysis cohort (\pcExtNMicroStays{} of
+\pcExtNCohortStays{} unit stays). In the remaining stays the conjunction cannot
+fire under \emph{any} variant, whatever the patient's physiology. Including
+those person-hours in the denominator would not estimate a low sepsis
+incidence; it would report the coverage of one source table as though it were
+an epidemiological quantity. The primary external analysis is therefore
+restricted to the microbiology-covered sub-cohort, in which an onset is
+observable in principle, and the reported external event rate is compared
+directly against MIMIC-IV's on that basis.
+
+\textbf{The organ-dysfunction criterion is a rise, not a level.} Onset is
+gated on a SOFA increase of at least two points over a baseline, evaluated
+inside each variant's own window and against each variant's own baseline
+(admission for Variants A and B, rolling 24-hour for Variant C), exactly as in
+the development cohort. An absolute SOFA threshold would be a different
+criterion, and because missing components are scored at assumed-normal values
+it would reject stays for incomplete documentation rather than for intact organ
+function --- which in a database with sparser laboratory coverage than MIMIC-IV
+is a systematic bias towards the null.
+
+Each of the three label variants is applied to eICU-CRD with its own
+antibiotic--culture windows, so the external label sets differ from one another
+as they do internally. This is verified rather than assumed: a
+label-invariant comparator such as NEWS2 can only score an identical AUROC
+across variants if the underlying label sets are identical, so the pipeline
+asserts at run time that the three external onset sets are distinct and halts
+if they are not.
+
+A secondary \textbf{antibiotic-only} arm relaxes the culture requirement across
+the full cohort and is reported separately. It measures how much of the event
+count the culture requirement removes. Its target is not Sepsis-3, so it is
+never pooled with the primary arm and never substitutes for it.
 
 
 \section{Ethical Considerations}
@@ -616,10 +687,25 @@ external cohort.
 \label{sec:sample_size}
 
 Sample size is calculated using the Riley et al.\ \cite{riley2019sample}
-method, targeting a shrinkage factor $\geq 0.9$ with 25 predictors and an
-anticipated AUC of 0.846 from Moor et al.\ \cite{moor2023review}. Each
-label variant is evaluated separately; an underpowered variant is a finding,
-not a failure.
+method, targeting a shrinkage factor $\geq 0.9$ with 25 candidate predictors
+and an anticipated $C$-statistic of 0.846 from Moor et al.\
+\cite{moor2023review}. Each label variant is evaluated separately; an
+underpowered variant is a finding, not a failure.
+
+\paragraph{The unit the criterion applies to.} Riley et al.'s criteria are
+derived for a sample of \emph{independent} observations, and person-hours are
+not independent --- they are nested within ICU stays at roughly 45 correlated
+rows per stay, and one stay per patient. The adequacy calculation is therefore
+parameterised on the \textbf{stay}: the outcome proportion supplied to the
+criterion is the fraction of training stays labelled septic under that variant,
+and the resulting minimum is compared against the number of training stays. The
+person-hour count is reported alongside as the size of the design matrix and is
+never used as a sample size. This is the same unit that governs every interval
+in this thesis, for the same reason: the cluster bootstrap of
+Section~\ref{sec:inference} resamples stays, not rows. Reporting adequacy
+against 2.3 million person-hours would overstate the available information by
+roughly the mean number of at-risk hours per stay, and would do so in the
+direction that makes the study look better powered than it is.
 
 
 \section{Statistical Inference and Multiplicity}
@@ -725,6 +811,52 @@ or model. It attaches uncertainty to contrasts that were already pre-specified
 and imposes the multiplicity control the original protocol omitted. Where the
 correction changes a verdict recorded in the original protocol, the corrected
 verdict is the one reported, and the change is stated explicitly.
+
+\subsection{Feature Ablation: Action-Derived Predictors (Protocol Amendment 5)}
+\label{sec:ablation_method}
+
+The central argument of this thesis is that the Sepsis-3 label is constituted
+by clinician action rather than merely correlated with it. The same objection
+applies, with equal force, to part of the \emph{feature} set, and it would be
+inconsistent to press it against the outcome while leaving the predictors
+unexamined.
+
+Two kinds of predictor record clinician behaviour rather than patient
+physiology. \textbf{Vasopressor exposure} is a treatment: it is something done
+to the patient, not something measured in them. The \textbf{per-test order
+indicators} --- whether lactate, creatinine, bilirubin, platelets, white cells
+or a blood gas was obtained in a given hour --- record a decision to look. Their
+predictive value is well established and is usually read as evidence that
+measurement patterns encode clinical suspicion, which is precisely the problem:
+a model that leans on them is partly learning when clinicians became worried.
+
+\textbf{Protocol Amendment 5} (post-hoc, recorded as \S16 of
+\texttt{00\_preregistration.md}) therefore adds an ablated arm. The primary
+model and the gradient-boosted comparator are re-fitted on the same training
+rows, the same splits and the same hyperparameters, with the
+\pcAblNDropped{} action-derived features removed and every physiological
+measurement retained.
+
+Three properties make the contrast interpretable:
+
+\begin{itemize}
+    \item \textbf{The ablation is deliberately conservative.} Forward-filled
+          laboratory \emph{values} are retained even though a value exists only
+          because someone ordered the test. Dropping them as well would remove
+          most of the laboratory signal and confound the ablation with a loss
+          of physiological information. What is removed is the set of features
+          that encode \emph{only} clinician behaviour.
+    \item \textbf{Nothing is re-tuned.} The gradient-boosted arm keeps the
+          hyperparameters of the full fit. Re-tuning would confound the feature
+          set with the search budget.
+    \item \textbf{Both arms are scored by the same metric code on the same test
+          rows}, so the difference is attributable to the feature set alone.
+\end{itemize}
+
+The arm is exploratory. It enters no hypothesis, no confirmatory family and no
+variance decomposition; it is reported as estimation, and its two readings ---
+the change in discrimination and the change in cross-label coefficient
+stability --- are given in Section~\ref{sec:ablation}.
 
 
 \section{Pre-Registration and Reporting}

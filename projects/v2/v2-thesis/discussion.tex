@@ -1,0 +1,451 @@
+\chapter{Discussion}
+\label{ch:discussion}
+
+Chapter~\ref{ch:evaluation} reports what was measured. This chapter interprets
+it: what the six verdicts mean taken together, how far each estimate can be
+pushed, and what the study cannot support. Section~\ref{sec:discussion_core}
+states the central finding and Section~\ref{sec:discussion_h1h6} resolves the
+tension the pre-registration deliberately built between H1 and H6.
+Sections~\ref{sec:external_interpretability} to~\ref{sec:ablation_establishes}
+bound the three analyses whose readings are most easily over-extended --- the
+external estimate, the treatment-independent label, and the feature ablation.
+Section~\ref{sec:limitations} sets out the limitations in full.
+
+
+\section{The Core Finding}
+\label{sec:discussion_core}
+
+The most important finding is definitional, not numerical: under a
+conjunction-based onset rule the Sepsis-3 label on MIMIC-IV \emph{cannot}
+contain an event before clinical action begins (Proposition~\ref{prop:h3}), and
+under the standard $\min(t_{\text{susp}}, t_{\text{SOFA}})$ rule applied to the
+identical stays it contains \pcPreTreatOnsetsVarF{} of them at
+\pcPreTreatAurocPrimaryF{} AUROC. A published MIMIC-IV sepsis result is
+therefore only as informative about physiological deterioration as its onset
+rule permits, and a result reported without the timing branch is measuring
+anticipation of clinician behaviour inside a window that behaviour opened.
+The Utility Score stays close to the no-alert strategy for every model because
+the temporal split exposes them to a test population where the same
+treatment-related signals do not rescue performance as consistently as in the
+training years, and because the score charges for every false-alert hour while
+crediting only the first correct one. AUROC survives because the ordinal
+ranking of patients is preserved even as the achievable alert volume becomes
+unusable.
+
+That divergence is what Wang et al.\ \cite{wang2025srpm} documented across
+ninety-one models moving from internal to external validation, and what
+Section~\ref{sec:auroc_illusion} identified as the field's central evaluation
+failure. The result here locates it one step earlier. On MIMIC-IV, under an
+honest time-based split, discrimination and clinical value have already parted
+company \emph{internally}: there was scarcely any margin left for external
+validation to destroy.
+
+
+\section{H1 and H6 Together}
+\label{sec:discussion_h1h6}
+
+H1 (label dominance) and H6 (model-class null) are in productive tension, as
+designed, and the resolution is sharper than either hypothesis anticipated ---
+because both resolve in the same direction, which the pre-registration treated
+as unlikely.
+
+H6 is \emph{not} rejected: the two flexible estimators are equivalent to within
+\pcHSixEst{} AUROC, the whole interval inside the 0.02 bound. H1 is also not
+confirmed, and by a wide margin in the direction opposite to the one
+hypothesised: the model-class spread \pcSpreadModelClass{} exceeds the label
+spread \pcSpreadLabel{} by \pcHOneEst, with an interval
+[\pcHOneCiLo, \pcHOneCiHi] that excludes zero.
+
+Read together these are not in conflict; they locate the model-class effect
+precisely. The large model-class spread is the distance between \emph{families}
+of estimator --- a six-item bedside score against a fitted hazard model --- not
+between one fitted model and another. Within the family of flexible estimators
+the choice is free (H6), and across families it is the single largest factor in
+the decomposition (H1). The conventional literature, which fixes the label and
+compares flexible models to each other, is therefore measuring the one contrast
+that has almost no room left in it, while the choice that would move the number
+--- fit anything flexible at all, rather than deploy a score --- is not in
+dispute and the choice that moves the cohort --- the label --- is invisible to
+the metric being reported.
+
+The H6 result also settles, for this task and this dataset, the narrower
+version of the statistics-versus-machine-learning question left open in
+Section~\ref{sec:false_dichotomy}. Christodoulou et al.'s
+\cite{christodoulou2019cox} equivalence finding was established for binary
+outcomes on tabular data, and Fagerstr{\"o}m et al.\ \cite{fagerstrom2019lisep}
+showed it breaking on the temporal early-warning axis, where a deep model
+detected patients up to twenty hours earlier than a Cox baseline. Here, with
+the label, the split, the feature set and the evaluation held fixed, an
+interpretable discrete-time hazard model and gradient-boosted trees are
+statistically equivalent, and the interpretable model is marginally ahead on
+point estimates. That is not a contradiction of Fagerstr{\"o}m et al.: their
+comparison was against a static Cox specification, which is exactly the
+comparator this study retains as the deliberately weak one, and which loses by
+a wide margin here too (\pcAurocCoxB{} against \pcAurocPrimaryB). The
+equivalence holds between the primary model and the boosted trees; it does not
+hold between either of them and the field's default survival specification.
+
+This is also the clearest illustration in the thesis of why the inference layer
+was necessary. On point estimates, H1 confirmed and the study told a tidy story
+in which the label dominates. With intervals attached, that story is not
+supportable, and the defensible finding is the more interesting one: two
+sources of variance of comparable size, only one of which the field routinely
+reports.
+
+
+\section{What the External Estimate Can Support}
+\label{sec:external_interpretability}
+
+Discrimination is estimated on \pcExtNEventsA{}, \pcExtNEventsB{} and
+\pcExtNEventsC{} external events under Variants A, B and C
+(Section~\ref{sec:external_validation}). The interpretability floor adopted
+here is \pcExtMinEvents{} events, following the external-validation sample-size
+guidance of Riley et al.\ \cite{riley2019sample} and Collins et al.\
+\cite{collins2024tripodai}: below it the confidence interval on an external
+AUROC is wider than the degradation the study is trying to detect.
+\textbf{All three variants fall below it.} The degradations are accordingly
+stated as directions, not as magnitudes, and the H5 interval is the formal
+expression of that limit.
+
+Two further quantities are unavailable at this event count in any case. AUPRC is
+dominated by sampling noise at a few dozen positives, and the Utility Score
+requires enough septic stays for the timeliness reward to be estimated at all.
+Neither is interpreted externally.
+
+\paragraph{The antibiotic-only arm.} Relaxing the culture requirement across
+the full cohort raises the event count by two orders of magnitude ---
+\pcExtAbxNEventsA, \pcExtAbxNEventsB{} and \pcExtAbxNEventsC{} events across
+\pcExtAbxNRows{} person-hours --- and therefore clears the floor with room to
+spare. Under that anchor the primary model scores \pcExtAbxAurocPrimaryA,
+\pcExtAbxAurocPrimaryB{} and \pcExtAbxAurocPrimaryC.
+
+This arm labels a broader and less specific target: treated suspicion of
+infection, without the organ-dysfunction conjunction's culture limb. An AUROC
+computed against it therefore answers a different question and is never
+compared like-for-like with the internal Sepsis-3 estimates, nor pooled with the
+primary arm. What it does supply is a consistency check that the primary arm
+cannot supply for itself. The degradation it shows is of the same sign, the same
+label ordering and a somewhat larger magnitude than the Sepsis-3 arm's, on a
+sample large enough to resolve it. Two estimates that disagree by two orders of
+magnitude in event count and agree on direction are better evidence of a
+direction than either is alone --- which is the strongest statement the external
+analysis in this thesis supports, and deliberately weaker than a claim about how
+much discrimination is lost.
+
+Against the published record assembled in Section~\ref{sec:generalisation},
+the direction is unsurprising and the magnitude is unresolvable. Moor et al.\
+\cite{moor2023review} report an external penalty of 0.085 AUROC across four
+international databases; the point estimate here, \pcHFiveEst, is about
+three-quarters of that. Where this study cannot follow Moor et al.\ is in
+attributing the loss, because their harmonised databases shared labelling
+inputs and eICU-CRD does not.
+
+
+\section{What Variant D Does and Does Not Establish}
+\label{sec:variant_d_establishes}
+
+Variant D's high AUROC must be read with the limitation stated in advance in
+Section~\ref{sec:alt_labels}. Its label is a threshold function of recorded
+physiology, and five of the six SOFA components are themselves model inputs, so
+its discrimination is partly self-fulfilling. The \emph{level} of
+\pcAltAurocFullPrimaryD{} (\pcAltAurocFullGbtD{} for GBT) is not evidence that
+deterioration prediction is a solved problem, and it is not comparable with
+Variant B's \pcAurocPrimaryB.
+
+Three things it does establish:
+
+\begin{enumerate}
+    \item \textbf{The label sensitivity is not wholly definitional.} At
+    $\kappa = \pcKappaVsBD$ and a \pcPctExactMatchD\% onset match, a
+    treatment-independent label
+    disagrees with Sepsis-3 about both membership and timing. Had D closely
+    tracked B, the H1 result would have been an artefact of how one definition
+    is read; it is not.
+
+    \item \textbf{The alert burden is label-invariant; the utility ceiling is
+    not.} Both alternative labels are markedly more scoreable than Sepsis-3.
+    The best achievable Utility Score rises from \pcUtilityMaxGbtB{} under
+    Variant B to \pcUtilityMaxGbtE{} under E and \pcUtilityMaxGbtD{} under D,
+    with the primary model following the same pattern
+    (\pcUtilityMaxPrimaryE{} and \pcUtilityMaxPrimaryD). What does not improve
+    to a deployable level is the alarm volume: even D's best configuration
+    carries \pcUtilityOptBurdenGbtD{} false alerts per true alert, better than
+    Variant B's \pcUtilityOptBurdenGbtB{} but still nine times the 1.4
+    benchmark of Moor et al.\ \cite{moor2023review}. Contribution C3 survives
+    the change of label in its alarm-volume form --- which the pre-registered
+    variants alone could not show --- and does not survive in the form of a
+    utility ceiling near zero. The rise is itself expected from the caveat
+    above: a label built from recorded physiology is easier to alert on than
+    one built from a clinician's decision.
+
+    \item \textbf{The model-class ordering is label-invariant.} GBT leads on
+    AUROC under all three labels and, once each model is evaluated at its own
+    best threshold, on the Utility Score as well. A reversal appears only if
+    every model is scored at the same 0.5 cut-off, which rewards a model for
+    being too poorly calibrated to reach it. The
+    metric-choice finding (H5) rests on the gap between discrimination and
+    achievable utility, not on a re-ordering of models.
+\end{enumerate}
+
+
+\section{What the Ablation Establishes}
+\label{sec:ablation_establishes}
+
+The ablation is a small experiment and should not be asked to carry more than
+it can. It is exploratory, it is run on one cohort, and with \pcHTwoNTerms{}
+covariates the stability counts on either side are small enough that the
+comparison is descriptive rather than tested.
+
+What it does establish is a distinction the thesis needs and could not
+otherwise make. The argument that the sepsis label is constituted by clinician
+action invites an obvious objection: that the same is true of everything in an
+ICU dataset, so the observation is unfalsifiable and therefore empty. The
+ablation answers that objection empirically. The feature set divides into
+predictors that record the patient and predictors that record the clinician,
+the division is made in advance rather than fitted, and the two behave
+differently under a change of label. That is a testable version of the claim,
+and it is tested here rather than asserted.
+
+The corresponding limitation is stated in Section~\ref{sec:limitations}: the
+retained laboratory values are themselves forward-filled from tests somebody
+chose to order, so the boundary drawn here is conservative rather than clean. A
+model with no trace of clinician behaviour in it is not constructible from this
+data, and the ablation measures the effect of removing the explicit traces, not
+all of them.
+
+
+\section{Limitations}
+\label{sec:limitations}
+
+\begin{enumerate}
+    \item \textbf{Single-centre development.} All models were developed on
+    MIMIC-IV, which originates from a single academic medical centre (Beth
+    Israel Deaconess Medical Center, Boston). Clinical practices, patient
+    demographics, and EHR documentation patterns at BIDMC may not represent
+    those at other institutions. The equity and label-sensitivity findings in
+    particular should not be assumed to transfer to hospitals with different
+    patient populations or antibiotic prescribing cultures. The eICU-CRD
+    analysis is the only external evidence available here, and the limitation
+    below bounds how much it can carry.
+
+    \item \textbf{External validation is bounded by label transport, not by
+    cohort size.} eICU-CRD contains \pcExtNCohortStays{} unit stays, but the
+    Sepsis-3 suspicion anchor requires a microbiology culture and
+    \texttt{microLab} documents one for only \pcExtMicroCoverage\% of the
+    analysis cohort. The primary external analysis is confined to that
+    sub-cohort, because in the remaining stays no onset is observable under any
+    variant; the resulting \pcExtNEventsB{} events under the primary label sit
+    below the \pcExtMinEvents{}-event interpretability floor
+    (Section~\ref{sec:external_interpretability}). Adding person-hours from the
+    uncovered stays would enlarge the denominator without adding a single
+    observable onset, so this is not a limitation additional data of the same
+    kind would remove --- it would require a destination database whose
+    microbiology recording matches MIMIC-IV's. The consequence is specific and
+    should not be over-read in either direction: the study establishes that
+    discrimination degrades on transport, and cannot establish by how much.
+    External Utility Score and AUPRC are not interpreted at all. The
+    antibiotic-only sensitivity arm is well powered and agrees on direction,
+    but it labels a different target and cannot stand in for the Sepsis-3
+    comparison.
+
+    \item \textbf{The external degradation is not decomposed into its causes.}
+    An AUROC that falls on transport may reflect case-mix differences,
+    documentation and measurement-frequency differences, genuine differences in
+    how sepsis presents across two hundred hospitals, or residual imperfection
+    in the transported label. This study measures the total and attributes none
+    of it. The antibiotic-only arm bounds the label's contribution loosely ---
+    degradation persists when the culture limb is removed, so it is not solely
+    an artefact of culture coverage --- but a proper attribution would require
+    a destination database with equivalent labelling inputs, which is precisely
+    what was unavailable.
+
+    \item \textbf{The feature set cannot be fully purged of clinician action.}
+    The ablation in Section~\ref{sec:ablation} removes the
+    \pcAblNDropped{} predictors that record clinician behaviour explicitly ---
+    vasopressor exposure and the per-test order indicators --- but the
+    laboratory values it retains are forward-filled from tests somebody chose
+    to order, and even a vital sign is recorded on a schedule that reflects how
+    closely a patient is being watched. The boundary drawn is therefore
+    conservative rather than clean: what is measured is the effect of removing
+    the explicit traces of clinical attention, not of removing all of them. A
+    predictor set with no such trace is not constructible from routinely
+    collected ICU data, which is itself part of the thesis's argument rather
+    than only a limitation of it.
+
+    \item \textbf{Deep survival model not implemented.} A deep survival
+    comparator was planned but not built. Fagerstr{\"o}m et al.\
+    \cite{fagerstrom2019lisep} report a recurrent architecture detecting
+    septic-shock onset up to twenty hours earlier than a Cox baseline on the
+    same features and target, so the absence of a deep temporal comparator is
+    the one place where H6's equivalence result is genuinely incomplete: it
+    establishes equivalence between the primary model and gradient-boosted
+    trees, not between the primary model and every flexible estimator. This
+    does not affect the structural findings about the label.
+
+    \item \textbf{Limited feature set.} Clinical notes, procedure codes, and
+    ventilator settings were not included. Richer features might improve
+    discrimination but would not change the treatment-constitutionality finding.
+
+    \item \textbf{Part of the label-variant spread is definitional, not
+    empirical.} Variants A--C are three readings of one definition and all
+    three fire on the same culture-plus-antibiotic anchor. Sepsis-3 makes onset
+    a function of treatment timing, so moving the antibiotic--culture windows
+    \emph{must} move the onsets; some of the H1 label spread is guaranteed by
+    construction and would appear even if the physiology were identical across
+    patients. Section~\ref{sec:label_anchor_results} separates the two by
+    labelling each limb of the Sepsis-3 conjunction on its own, but the
+    separation is post-hoc (Protocol Amendment 2) and rests on two variants,
+    not on a systematic survey of alternative definitions.
+
+    \item \textbf{The primary model has no analytic standard errors.} A
+    cluster-robust sandwich estimator is not defined for the fitted multinomial
+    object, so no per-coefficient variance is available
+    (Section~\ref{sec:primary_model_spec}). Every interval reported for the
+    primary model comes from the stay-level cluster bootstrap, which respects
+    the same clustering but cannot supply a coefficient-level standard error.
+    H2 is reported as a descriptive count for this reason, and any effect
+    estimate from this model should be read as a point estimate without an
+    attached uncertainty.
+
+    \item \textbf{The specification requires a penalty to be identified at all.}
+    The unpenalised likelihood is completely separated on this design under
+    every label variant (Section~\ref{sec:primary_model_spec}), so the reported
+    fits are ridge-penalised. The penalty is small and no result depends on its
+    value --- test AUROC moves by less than 0.02 across a 20-point path --- but
+    the coefficients are shrunk estimates, not maximum-likelihood ones, and the
+    H2 stability counts are properties of the penalised solution. Reporting an
+    unpenalised fit here would have been worse, not better: its coefficients
+    have no unique maximiser, so cross-label comparison of them is undefined.
+
+    \item \textbf{Feature construction and data cleaning are single-analyst
+    work.} The covariate panel is assembled from raw chart and lab events by
+    one pipeline, with no independent re-implementation to check it against.
+    Two classes of defect are known to be possible in that setting and are
+    guarded rather than eliminated: a declared predictor silently failing to
+    reach a model because of a name mismatch, and implausible recorded values
+    entering the fit. The pipeline now errors on any declared-but-absent
+    feature rather than dropping it, and applies an explicit plausibility range
+    to all nineteen physiological variables before forward-fill --- MIMIC-IV
+    chartevents contains values several orders of magnitude outside the
+    physiological range, and such rows carry unbounded leverage. Neither guard
+    is a substitute for independent replication of the feature pipeline.
+
+    \item \textbf{The pre-registered onset rule is not the standard one.}
+    Variants A--C place the onset at $t_{\text{susp}}$ and use the SOFA
+    criterion only to gate membership, whereas Seymour et al.\
+    \cite{seymour2016assessment} and the PhysioNet/CinC 2019 Challenge
+    \cite{reyna2020utility} place it at
+    $\min(t_{\text{susp}}, t_{\text{SOFA}})$. The pre-registered family
+    therefore cannot address any question about onset \emph{timing} on its own,
+    H3 among them: under its rule an empty pre-treatment window is a theorem
+    rather than a result (Proposition~\ref{prop:h3}). Variant F supplies the
+    measurement the pre-registered design cannot, but it is post-hoc (Protocol
+    Amendment 4), it uses the full SOFA score including the vasopressor terms
+    --- so its onsets are free of the antibiotic-and-culture anchor but not of
+    treatment in general --- and its $t_{\text{SOFA}}$ is searched only inside
+    the 72-hour modelled panel, so a rise occurring earlier in the admission
+    cannot be detected. A design that pre-specified both timing rules across all
+    three variants would be stronger than one that adds the second afterwards.
+
+    \item \textbf{The treatment-independent label is not a validated construct.}
+    Variant D is an operational deterioration label built for this comparison,
+    not a consensus definition with an evidence base behind it, and its onsets
+    have no external adjudication. Its label is also a threshold function of
+    recorded physiology of which five of six components are model inputs, so
+    its discrimination \emph{level} is not comparable with Variant B's --- only
+    its disagreement with Variant B about which patients deteriorate, and when,
+    carries weight.
+
+    \item \textbf{Specific to Sepsis-3 and to MIMIC-IV.} These findings apply
+    to the Sepsis-3 definition on MIMIC-IV. SEP-1 and the CDC Adult Sepsis Event
+    were not implemented; both are defined on antibiotic days, so neither would
+    have tested treatment-independence, but each would give a different cohort
+    and might behave differently in other respects. Other databases may behave
+    differently again.
+
+    \item \textbf{Operating points are not externally recalibrated.} The
+    thresholds in Section~\ref{sec:clinical_utility} are derived on the test
+    set at which they are evaluated, so the reported PPV and false-alarm rates
+    are optimistic: a prospectively fixed threshold would perform no better.
+    The same applies to the maximum Utility Scores in
+    Table~\ref{tab:utility_optimum}, which take the best of sixty thresholds on
+    the test set and are therefore upper bounds rather than estimates of what a
+    deployed system would achieve; they are labelled exploratory for that
+    reason. Selecting the threshold on the training years and transferring it
+    would be the honest deployment estimate, and would be lower.
+    The external operating points in Table~\ref{tab:external_utility} are
+    likewise re-derived on eICU rather than transferred from MIMIC-IV, which
+    isolates the discrimination loss but hides the additional loss a
+    transferred threshold would incur.
+
+    \item \textbf{Alarm episodes are defined by contiguity, not by
+    acknowledgement.} False-alarm episodes are counted as contiguous runs of
+    alert hours. A real system would apply suppression, snoozing and
+    escalation logic, all of which would reduce the episode counts in
+    Table~\ref{tab:patient_level}. The alert-hour rates are the conservative
+    bound and the episode rates the optimistic one; the true burden lies
+    between them.
+
+    \item \textbf{The subgroup discrimination analysis is underpowered, and its
+    strata are administrative.} Two distinct limits apply and neither
+    substitutes for the other. On precision: only \pcNSubgroupsAboveFloor{} of
+    the racial strata carry at least \pcMinSubgroupEvents{} sepsis onsets, the
+    floor below which an AUROC is reported but not interpreted here
+    (Section~\ref{sec:equity}), and no contrast in family E1 survives
+    false-discovery correction. That is a statement about precision, not about
+    fairness: the data are consistent both with no disparity and with
+    disparities larger than any effect this thesis reports elsewhere. On
+    construct validity: MIMIC-IV's \texttt{race} field is a single
+    administrative code assigned at registration, so the strata compared are
+    documentation categories rather than populations. Broad and granular codes
+    drawn from the same population appear as separate levels --- ``White''
+    excludes stays coded ``White -- Other European'', and ``Asian'' excludes
+    those coded ``Asian -- Chinese'' --- so the reference level is a residual
+    category and the contrasts are not between disjoint groups. ``Unknown'' and
+    ``Unable to obtain'' record the absence of an answer. The
+    label-sensitivity result (Table~\ref{tab:equity_label}) is the better
+    powered of the two equity analyses because it is a stay-level proportion
+    rather than a discrimination metric, but it inherits the same construct
+    limitation, and its two significant strata are precisely the two
+    missingness categories --- which is why it is read in this thesis as a
+    finding about documentation completeness rather than about race.
+
+    \item \textbf{The novelty claims rest on a narrative, not systematic,
+    search.} The search protocol in Section~\ref{sec:search_strategy} is
+    documented and every included source was verified against a primary record,
+    but no title-and-abstract screening pass over a full de-duplicated yield was
+    performed and no second reviewer screened independently. The ``to the best
+    of our knowledge'' claims for contributions C1 and C5 are therefore bounded
+    by that coverage: a systematic review could surface a prior study combining
+    multi-variant label sensitivity with subgroup equity analysis, and this
+    search would not necessarily have found it. Both claims are claims about a
+    \emph{combination} of analyses; each component separately has clear
+    precedent, which Section~\ref{sec:search_strategy} identifies.
+
+    \item \textbf{Five protocol amendments are post-hoc.} The inference layer
+    (intervals and multiplicity control, Section~\ref{sec:inference}), the
+    alternative label limbs D and E (Section~\ref{sec:alt_labels}), the model
+    identification and data-plausibility changes
+    (Section~\ref{sec:primary_model_spec}), the standard onset timing of
+    Variant F (Section~\ref{sec:variant_f}) and the action-derived feature
+    ablation (Section~\ref{sec:ablation}) were all specified after the
+    pre-registered analyses had been run and inspected. None changes an
+    estimand, threshold, direction or hypothesis, and H1--H6 and families E1/E2
+    are computed from unchanged inputs; but a reader should treat the verdicts
+    as a pre-specified hypothesis set analysed under a retrospectively specified
+    error-control plan, and the amendment results as exploratory. Amendment 4 in
+    particular enlarges family E3, which tightens rather than relaxes the
+    correction applied within it.
+
+    \item \textbf{Two hypotheses admit no test statistic.} H2 is a stability
+    criterion rather than a contrast, and the fitted multinomial carries no
+    variance estimate; H3 is degenerate because its outcome is absent from the
+    evaluation window \emph{by construction} rather than by chance, so no test
+    of it could ever have been informative. Both are reported descriptively
+    while still consuming a slot in the family size, which makes the correction
+    on the remaining four hypotheses stricter, not weaker. For H1, H4 and H6
+    the correction determines nothing --- each carries an adjusted $p$-value of
+    1.000 and each fails on its point estimate. H5 is the exception: its
+    adjusted value is \pcHFivePHolm, and it fails on the width of its interval
+    rather than on its direction.
+\end{enumerate}

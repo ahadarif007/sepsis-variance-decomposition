@@ -1,12 +1,14 @@
 \chapter{Results}
 \label{ch:evaluation}
 
-This chapter presents the results in eleven sections: cohort description,
-sample size adequacy, model performance and calibration, clinical utility (net
-benefit, operating points, event-level detection and lead time), variance
-decomposition and the six hypothesis verdicts, external validation,
-proportional-hazards testing, GBT feature importance, equity analysis, the
-analysis register, and a closing discussion.
+This chapter reports the results: cohort description, sample size adequacy,
+model performance and calibration, clinical utility (net benefit, operating
+points, event-level detection and lead time), variance decomposition and the
+six hypothesis verdicts, label-anchor attribution, the action-derived feature
+ablation, external validation, proportional-hazards testing, GBT feature
+importance, equity analysis, and the analysis register.
+Chapter~\ref{ch:discussion} interprets them, states how far each estimate can
+be pushed, and sets out the limitations.
 
 Every result below carries an explicit status tag --- \textbf{[C]}
 confirmatory, \textbf{[E]} exploratory, \textbf{[D]} descriptive --- defined in
@@ -27,7 +29,7 @@ families are corrected by Benjamini--Hochberg at $q = 0.05$.
 %===========================================================================
 
 Table~\ref{tab:cohort} summarises the three cohorts. The base extraction
-identifies 65,078 adult first ICU stays. The database and patients are the
+identifies \pcNStays{} adult first ICU stays. The database and patients are the
 same across all three variants; only the sepsis definition differs.
 
 \begin{table}[H]
@@ -49,8 +51,8 @@ same across all three variants; only the sepsis definition differs.
     \label{tab:cohort}
 \end{table}
 
-The twofold difference in sepsis prevalence between Variant A (9.6\%) and
-Variant C (19.3\%) confirms the label-sensitivity finding from Johnson et al.\
+The twofold difference in sepsis prevalence between Variant A
+(\pcPctOnsetsA\%) and Variant C (\pcPctOnsetsC\%) confirms the label-sensitivity finding from Johnson et al.\
 \cite{johnson2018comparative} at MIMIC-IV scale.
 
 %===========================================================================
@@ -60,23 +62,57 @@ Variant C (19.3\%) confirms the label-sensitivity finding from Johnson et al.\
 \label{sec:sample_size_results}
 %===========================================================================
 
+Riley et al.'s criteria \cite{riley2019sample} are derived for a sample of
+\emph{independent} observations. The modelling unit here is the person-hour,
+and person-hours are not independent: they are nested within ICU stays, one per
+patient. The adequacy assessment is therefore stated on the unit that carries
+the information --- the stay --- and the person-hour count is reported
+alongside it as the size of the design matrix, not as a sample size.
+Table~\ref{tab:sample_size} keeps the two apart.
+
 \begin{table}[H]
     \centering\small
     \begin{tabular}{llrrrrr}
         \toprule
-        \textbf{Var} & \textbf{Name} & \textbf{Train h} & \textbf{Events}
-        & \textbf{EPH rate} & \textbf{Min-N} & \textbf{EPV} \\
+        \textbf{Var} & \textbf{Name} & \textbf{Train}
+        & \textbf{Sepsis} & \textbf{Stay}
+        & \textbf{Riley min-$N$} & \textbf{EPV} \\
+        & & \textbf{stays} & \textbf{stays} & \textbf{prev.}
+        & \textbf{(stays)} & \\
         \midrule
-        A & Narrow      & \pcNTrainPersonHA & \pcNOnsetEventsA & \pcPerHourRateA & \pcMinNRileyA & \pcEpvA \\
-        B & Seymour-Std & \pcNTrainPersonHB & \pcNOnsetEventsB & \pcPerHourRateB & \pcMinNRileyB & \pcEpvB \\
-        C & Liberal     & \pcNTrainPersonHC & \pcNOnsetEventsC & \pcPerHourRateC & \pcMinNRileyC & \pcEpvC \\
+        A & Narrow      & \pcNTrainStays & \pcNOnsetEventsA & \pcStayPrevalenceA & \pcMinNRileyStayA & \pcEpvA \\
+        B & Seymour-Std & \pcNTrainStays & \pcNOnsetEventsB & \pcStayPrevalenceB & \pcMinNRileyStayB & \pcEpvB \\
+        C & Liberal     & \pcNTrainStays & \pcNOnsetEventsC & \pcStayPrevalenceC & \pcMinNRileyStayC & \pcEpvC \\
         \bottomrule
     \end{tabular}
-    \caption{Sample size results (Riley et al., 2019). EPV: events per candidate
-    predictor variable (25 predictors). All three variants exceed the minimum
-    required (52{,}946 stays each). Sample size is not the bottleneck.}
+    \caption{Sample size adequacy on the independent unit. Every row is a count
+    of \emph{stays}: the training split contains \pcNTrainStays{} stays, of
+    which the given number are labelled septic under that variant. Riley
+    min-$N$ is the minimum number of independent observations required at that
+    variant's stay-level prevalence, an anticipated $C$-statistic of
+    \pcAnticipatedAuc{} \cite{moor2023review}, and
+    \pcNCandidatePredictors{} candidate predictors. EPV is events per candidate
+    predictor. All three variants exceed the requirement, and the margin is
+    smallest for the Narrow variant.}
     \label{tab:sample_size}
 \end{table}
+
+The corresponding design matrices contain \pcNTrainPersonHA{},
+\pcNTrainPersonHB{} and \pcNTrainPersonHC{} training person-hours, at per-hour
+event rates of \pcPerHourRateA{}, \pcPerHourRateB{} and \pcPerHourRateC{}. Those
+figures govern the computational cost of the fit and the precision of an hourly
+hazard estimate conditional on the clustering; they do not multiply the
+effective sample size, and reading 2.3 million rows as 2.3 million observations
+would overstate the available information by roughly the average number of
+at-risk hours per stay. The relevant denominator for every inferential
+statement in this thesis is the stay, which is why all intervals reported in
+later sections come from a stay-level cluster bootstrap rather than a row-level
+one.
+
+Sample size is not the binding constraint on this study. Precision is, and it
+binds where the events are --- in the external cohort
+(Section~\ref{sec:external_interpretability}) and in the smaller demographic
+strata (Section~\ref{sec:equity}), not in the development sample.
 
 %===========================================================================
 
@@ -520,6 +556,7 @@ constant 58--86 per cent of person-hours. The primary model is the only one of
 the six that can be operated as a threshold-based alert at all.
 
 \subsection{Operating Points at Fixed Sensitivity \texorpdfstring{[E]}{[E]}}
+\label{sec:operating_points}
 
 The default 0.5 cut-off used in Section~\ref{sec:internal_performance} is not
 how an alerting system is commissioned; a sensitivity target is chosen and the
@@ -767,32 +804,34 @@ once the false-alarm rate is controlled, and it is not controlled here.
     \end{tabular}
     \caption{eICU-CRD operating characteristics at the same 80\% target
     sensitivity, thresholds re-derived on the external cohort
-    (\pcExtNRows{} person-hours, \pcExtNStays{} stays, \pcExtNEvents{} event
+    (\pcExtNRowsB{} person-hours, \pcExtNStays{} stays, \pcExtNEventsB{} event
     hours).}
     \label{tab:external_utility}
 \end{table}
 
-Discrimination transports (Section~\ref{sec:h5}); the operating
-characteristics do not. PPV falls to roughly $10^{-5}$, requiring
-\pcExtNnePrimaryB{} to \pcExtNnePrimaryA{} alerted person-hours per true event
-hour, with \pcExtFaPerPtDayPrimaryB--\pcExtFaPerPtDayPrimaryA{} false-alert
-hours per patient-day. NEWS2 cannot reach 80 per cent sensitivity on eICU
-without alerting on every person-hour (specificity \pcExtSpecNewsB,
-\pcExtFaPerPtDayNewsB{} false-alert hours per patient-day). Patient-level PPV
-of \pcExtPatientPpvPrimaryB{} is again the cohort septic fraction
-(\pcExtNSepsisStays/\pcExtNStays). This is the clearest single demonstration in
-the thesis that a stable AUROC and a usable alert are different claims: the
-same model, ranking equally well in both databases, is unusable in one of them
-at any threshold.
+Operating characteristics on eICU-CRD are substantially worse than internal ones
+at the same target sensitivity. Reaching 80 per cent sensitivity requires
+\pcExtNnePrimaryC{} to \pcExtNnePrimaryA{} alerted person-hours per true event
+hour, at \pcExtFaPerPtDayPrimaryB--\pcExtFaPerPtDayPrimaryA{} false-alert hours
+per patient-day --- roughly one alert every two hours for every patient in the
+unit, indefinitely. NEWS2 cannot reach the target without alerting on nearly
+every person-hour (specificity \pcExtSpecNewsB, \pcExtFaPerPtDayNewsB{}
+false-alert hours per patient-day). Patient-level PPV of
+\pcExtPatientPpvPrimaryB{} is again the cohort septic fraction
+(\pcExtNSepsisStays/\pcExtNStays): at this threshold the model alerts on
+essentially every stay, so identifying a patient as alerted conveys nothing
+beyond the base rate.
 
-These external figures carry a substantial caveat. Only \pcExtNEvents{} event
-hours were identified in \pcExtNRows{} eICU person-hours, an apparent sepsis
-incidence far below MIMIC-IV's. A difference of that magnitude is not plausible
-as a difference in patient populations; it reflects incomplete recovery of the
-Sepsis-3 labelling inputs in eICU, discussed in
-Section~\ref{sec:external}. The external operating characteristics should
-therefore be read as an upper bound on how well the models transfer, not as a
-measurement of it.
+How much of this is attributable to the model and how much to the label is not
+separable at this event count. PPV, number-needed-to-evaluate and false-alarm
+rate all scale directly with the event rate, so any residual under-recovery of
+onsets depresses them mechanically, independently of how well the model ranks.
+The internal analysis already establishes the substantive point --- that a
+stable AUROC and a usable alert are different claims --- and establishes it on a
+cohort where the label is fully observed
+(Section~\ref{sec:operating_points}). The external operating characteristics
+are therefore reported as an upper bound on transferability and are not used to
+support any conclusion of their own.
 
 %===========================================================================
 
@@ -809,30 +848,38 @@ measurement of it.
         \toprule
         \textbf{Factor (others fixed)}         & \textbf{$\Delta$AUROC} & \textbf{95\% CI} & \textbf{H} \\
         \midrule
-        Model class (label B, temporal)        & \pcSpreadModelClass & 0.134--0.171 & H6 \\
-        Label definition (primary, temporal)   & \pcSpreadLabel      & 0.003--0.032 & H1 \\
+        Model class (label B, temporal)        & \pcSpreadModelClass & \pcSpreadModelClassCiLo--\pcSpreadModelClassCiHi & H6 \\
+        Label definition (primary, temporal)   & \pcSpreadLabel      & \pcSpreadLabelCiLo--\pcSpreadLabelCiHi & H1 \\
         Split method (primary, label B)        & \pcSpreadSplit      & \pcHFourCiLo--\pcHFourCiHi & H4 \\
         External transport (primary, label B)  & \pcSpreadMetric     & \pcHFiveCiLo--\pcHFiveCiHi & H5 \\
         \bottomrule
     \end{tabular}
     \caption{Variance decomposition with 95\% stay-level cluster-bootstrap
-    intervals. Only model class produces a large effect. The label contributes
-    an order of magnitude less, and neither the split method nor external
-    transport moves discrimination detectably at all --- both intervals cover
-    zero. Most studies fix three of these factors and compare only models.
-    \textbf{[C] confirmatory.}}
+    intervals. Model class produces the largest effect and the split method
+    none. External transport is second by point estimate but carries by far the
+    widest interval, because it is the only row not measured on the full test
+    cohort (Section~\ref{sec:external_interpretability}). Most studies fix three
+    of these factors and compare only models. \textbf{[C] confirmatory.}}
     \label{tab:decomposition}
 \end{table}
 
 The decomposition does not distribute variance evenly across the four analyst
-decisions, and the imbalance is the result. \textbf{Model class dominates}
-(\pcSpreadModelClass), the label definition contributes roughly a tenth as much
-(\pcSpreadLabel), and the two remaining factors --- split design and transport
-to an external database --- produce differences whose intervals include zero.
+decisions, and the imbalance is the result --- though not the imbalance the
+study anticipated. \textbf{Model class dominates} (\pcSpreadModelClass).
+\textbf{External transport is second} (\pcSpreadMetric), five times the label
+definition's contribution. The label itself moves discrimination by
+\pcSpreadLabel{} and the choice of split by \pcSpreadSplit{} --- both small,
+and the split's interval covers zero comfortably.
+
+The ranking matters more than the individual magnitudes. The two decisions this
+literature scrutinises most closely, how the label is read and how the data are
+split, are the two that move discrimination least. \emph{Where the model is
+deployed} moves it several times more than \emph{how sepsis is defined}, and
+that ordering is the opposite of the one the study was designed around.
 
 The study was designed on the expectation that these four would be comparable,
-and that expectation is what fails. Three qualifications keep the negative
-result from being read too broadly:
+and that expectation is what fails. Three qualifications keep the result from
+being read too broadly:
 
 \begin{itemize}
     \item The model-class spread compares six estimators ranging from a
@@ -846,17 +893,26 @@ result from being read too broadly:
           define different cohorts, different prevalences and different
           denominators for every clinical claim downstream. Discrimination is
           simply insensitive to that.
-    \item Split and transport being null is itself informative, and both
-          contradict a widely held expectation
-          (Sections~\ref{sec:h4_discussion} and \ref{sec:external_validation}).
+    \item The split result is a null with power behind it: both arms are
+          measured on the full MIMIC-IV test cohort, and it contradicts a
+          widely held expectation (Section~\ref{sec:h4_discussion}). The
+          transport row is the opposite case --- a substantial point estimate
+          with weak support. It rests on \pcExtNEventsB{} events, because the
+          Sepsis-3 anchor is recoverable in only \pcExtMicroCoverage\% of
+          eICU-CRD stays (Section~\ref{sec:external_coverage}), so its interval
+          [\pcHFiveCiLo, \pcHFiveCiHi] is wide enough to contain both zero and
+          a degradation twice the size of the label effect. It ranks second on
+          the point estimate; it is not established at the confidence the other
+          three rows carry.
 \end{itemize}
 
-What survives is therefore the weaker and more defensible version of the study's
-premise: analyst decisions vary widely in how much they move discrimination, and
-the ones the literature worries about most --- label reading, split design,
-external transport --- move it least on this cohort. That is a decomposition
-result, and it could not have been obtained by fixing three factors and varying
-one.
+What survives is therefore a sharper claim than the study's premise, pointing
+in a different direction. Analyst decisions vary widely in how much they move
+discrimination, and the two the literature scrutinises most --- label reading
+and split design --- move it least. The decision that appears to matter is the
+one this framing treats as a validation step rather than a choice: which
+population the model is asked to serve. That is a decomposition result, and it
+could not have been obtained by fixing three factors and varying one.
 
 \subsection{Corrected Confirmatory Verdicts}
 
@@ -886,16 +942,28 @@ one.
     \label{tab:confirmatory}
 \end{table}
 
-\textbf{None of the four testable hypotheses is confirmed}, and multiplicity
-control is not what does the work: every adjusted p-value is 1.000, so each
-would have failed at any correction and each fails on its uncorrected value too.
-What overturns them is quantifying uncertainty at all --- and, for H1 and H4,
-the estimate landing on the opposite side of zero from the one predicted.
+\textbf{None of the four testable hypotheses is confirmed}, and for three of
+them multiplicity control is not what does the work. H1, H4 and H6 return
+adjusted p-values of 1.000: each would have failed at any correction and each
+fails on its uncorrected value too. What overturns them is quantifying
+uncertainty at all --- and, for H1 and H4, the estimate landing on the opposite
+side of zero from the one predicted.
+
+H5 is the exception and is worth separating. Its estimate does fall on the
+predicted side of zero (\pcHFiveEst, in the direction of external degradation),
+and its uncorrected p-value is the only one in the family below 0.10. It
+nonetheless fails, on an interval that still covers zero and on an adjusted
+p-value of \pcHFivePHolm. The reason is resolution rather than direction: the
+external estimate rests on \pcExtNEventsB{} events
+(Section~\ref{sec:external_interpretability}), and an interval that wide cannot
+separate the pre-registered degradation of 0.085 from no degradation at all.
+H5 is the one hypothesis in this study that a better-powered external cohort
+might have confirmed.
 
 The pattern is worth stating plainly before the individual verdicts. H1 and H4
 fail \emph{directionally}: the label does not out-vary the model, and the random
-split does not flatter the model. H5 fails because the degradation it presumed
-does not occur. H6 alone ``fails'' in the study's favour --- its null of
+split does not flatter the model. H5 fails \emph{for want of precision}, not for
+want of an effect. H6 alone ``fails'' in the study's favour --- its null of
 equivalence is not rejected, which is a positive finding about interpretable
 models rather than a negative one. A pre-registered design that returns four
 non-confirmations is doing what pre-registration is for: the point estimates
@@ -1014,22 +1082,64 @@ and Section~\ref{sec:primary_model_spec} states the penalty used.
     \label{tab:coef_instability}
 \end{table}
 
-Two features of this list matter more than its length. The sign reversal on
-\emph{any vasopressor} is the most consequential: it is a treatment indicator,
-and its direction flipping across three readings of one definition means a
-published association between vasopressor exposure and sepsis hazard from a
-model of this kind cannot be interpreted without knowing the exact label. Three
-of the six unstable terms are \emph{missingness indicators} rather than
-physiological values, which points at the same mechanism from a different angle
---- what changes across label variants is largely which patients are counted,
-and measurement patterns track that more sensitively than the measurements do.
+\subsubsection{The instability is concentrated in the action-derived features}
+\label{sec:h2_action}
 
-The instability is real but narrower than a count alone would suggest:
-\pcHTwoEst{} of \pcHTwoNTerms{} covariates, most of them by magnitude rather
-than direction. That is enough to support Lauritsen et al.'s
-\cite{lauritsen2021framing} framing-instability concern for specific effect
-estimates, and not enough to support a claim that the fitted model is unstable
-as a whole.
+The composition of this list matters more than its length, and it is not
+arbitrary. The covariates fall into two kinds. \textbf{Action-derived}
+features record clinician behaviour: vasopressor exposure, which is a
+treatment, and the per-test order indicators, which record a decision to look.
+\textbf{Physiological} features record the patient: vital signs, laboratory
+values and their rolling slopes. Splitting the instability by kind separates
+them sharply.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{lrrr}
+        \toprule
+        \textbf{Feature kind} & \textbf{Covariates} & \textbf{Unstable}
+        & \textbf{\% unstable} \\
+        \midrule
+        Action-derived & \pcHTwoNAction & \pcHTwoNUnstableAction & \pcHTwoPctUnstableAction \\
+        Physiological  & \pcHTwoNPhysio & \pcHTwoNUnstablePhysio & \pcHTwoPctUnstablePhysio \\
+        \bottomrule
+    \end{tabular}
+    \caption{H2 instability by feature kind. Action-derived covariates are a
+    minority of the specification but a majority of the unstable terms.
+    \textbf{[E] exploratory.}}
+    \label{tab:instability_by_kind}
+\end{table}
+
+Action-derived covariates are a minority of the specification and a majority of
+the unstable terms. The reading this licenses is more specific, and more useful,
+than ``the model is unstable across labels'': what is unstable is the part of
+the model that encodes clinician behaviour, and the part that encodes
+physiology is comparatively stable.
+
+That distinction matters because it is the same mechanism the thesis identifies
+in the label, appearing now on the other side of the equation. Changing the
+label variant changes which treatment episodes count as sepsis. Features built
+from treatment and from measurement decisions are therefore re-anchored by a
+label change in a way that a heart rate is not. The sign reversal on \emph{any
+vasopressor} is the sharpest case: a published association between vasopressor
+exposure and sepsis hazard, estimated from a model of this kind, cannot be
+interpreted without knowing the exact label operationalisation --- and the
+same caution does not attach with equal force to the physiological terms.
+
+Two limits on this reading should be stated. With \pcHTwoNTerms{} covariates in
+total the counts are small, and the difference between the two rates is not
+established at any conventional level of confidence; H2 carries no test
+statistic (Section~\ref{sec:h2}) and the split inherits that limitation. And a
+concentration of instability is not by itself evidence that the model
+\emph{depends} on these features for its performance. Section~\ref{sec:ablation}
+addresses the second point directly by removing them and refitting.
+
+The instability is therefore real but narrower than a count alone would suggest:
+\pcHTwoEst{} of \pcHTwoNTerms{} covariates, most by magnitude rather than
+direction, and concentrated in features that are not measurements of the
+patient. That supports Lauritsen et al.'s \cite{lauritsen2021framing}
+framing-instability concern for specific effect estimates, and does not support
+a claim that the fitted model is unstable as a whole.
 
 \subsection{H3: Treatment Leakage --- Definitional and Empirical}
 \label{sec:h3}
@@ -1153,10 +1263,10 @@ treatment-independent deterioration label and reports both.
         \toprule
         \textbf{Model} & \textbf{Temporal} & \textbf{Random} & \textbf{Random $-$ temporal} \\
         \midrule
-        Primary & \pcAurocPrimaryB & \pcAurocRandomPrimaryB & $-0.017$ \\
-        GBT     & \pcAurocGbtB     & \pcAurocRandomGbtB     & $-0.030$ \\
-        Cox     & \pcAurocCoxB     & \pcAurocRandomCoxB     & $-0.013$ \\
-        NEWS2   & \pcAurocNewsB    & \pcAurocRandomNewsB    & $-0.033$ \\
+        Primary & \pcAurocPrimaryB & \pcAurocRandomPrimaryB & \pcSplitDeltaPrimaryB \\
+        GBT     & \pcAurocGbtB     & \pcAurocRandomGbtB     & \pcSplitDeltaGbtB \\
+        Cox     & \pcAurocCoxB     & \pcAurocRandomCoxB     & \pcSplitDeltaCoxB \\
+        NEWS2   & \pcAurocNewsB    & \pcAurocRandomNewsB    & \pcSplitDeltaNewsB \\
         \bottomrule
     \end{tabular}
     \caption{Temporal vs.\ random split comparison (Variant B). Every model
@@ -1169,7 +1279,7 @@ treatment-independent deterioration label and reports both.
 H4 anticipated that a random split would flatter the model by letting later
 patient patterns leak into training. It does not, and the direction is
 consistent across all four models fitted under both splits: each scores
-\emph{lower} on the random split, by 0.013 to 0.033. The interval on the primary
+\emph{lower} on the random split, by \pcSplitDeltaMinAbs{} to \pcSplitDeltaMaxAbs. The interval on the primary
 model's difference, [\pcHFourCiLo, \pcHFourCiHi], is centred below zero and
 excludes the 0.02 threshold the hypothesis required.
 
@@ -1199,8 +1309,9 @@ the limitations (Section~\ref{sec:limitations}).
 
     \textbf{Testable arm:} AUROC degradation internal $\to$ external (primary,
     Variant B) $= \pcHFiveEst$ (95\% CI \pcHFiveCiLo--\pcHFiveCiHi); internal
-    \pcAurocPrimaryB, eICU-CRD \pcExtAurocPrimaryB. Holm-adjusted
-    $p = \pcHFivePHolm$. \textbf{Discrimination does not degrade at all.}
+    \pcAurocPrimaryB, eICU-CRD \pcExtAurocPrimaryB{} on \pcExtNEventsB{}
+    external events. Holm-adjusted $p = \pcHFivePHolm$.
+    \textbf{Discrimination does degrade, but not measurably so.}
 
     \textbf{Non-testable arm:} the internal Utility Score is
     \pcUtilityPrimaryB{} at the default cut-off and \pcUtilityMaxPrimaryB{} at
@@ -1208,25 +1319,42 @@ the limitations (Section~\ref{sec:limitations}).
     \textbf{H5 NOT CONFIRMED.}
 \end{mdframed}
 
-Neither arm of H5 supports the hypothesis, and the reason differs between them.
+Neither arm of H5 supports the hypothesis, and the reason differs sharply
+between them.
 
-The AUROC arm fails because there is no degradation to compare against.
-External discrimination on eICU-CRD is \pcExtAurocPrimaryB{} against
-\pcAurocPrimaryB{} internally --- a difference of \pcHFiveEst{} with an interval
-[\pcHFiveCiLo, \pcHFiveCiHi] that is centred on zero. All three label variants
-transport (A \pcExtAurocPrimaryA, B \pcExtAurocPrimaryB, C \pcExtAurocPrimaryC),
-and the pre-registered expectation of 0.085 degradation from Moor et al.\
-\cite{moor2023review} sits outside the upper confidence bound. On
-discrimination alone, this model travels from a single Boston academic centre to
-a 200-hospital multi-centre database without measurable loss.
+The AUROC arm fails on precision rather than on direction. External
+discrimination on eICU-CRD is \pcExtAurocPrimaryB{} against \pcAurocPrimaryB{}
+internally, a degradation of \pcHFiveEst{} --- the sign H5 predicted, and
+roughly three-quarters of the 0.085 anticipated from Moor et al.\
+\cite{moor2023review}. But the interval [\pcHFiveCiLo, \pcHFiveCiHi] covers
+zero, so the estimate is equally consistent with no loss and with a loss twice
+as large. This is the only hypothesis in the family whose uncorrected p-value
+falls below 0.10, and the only one a better-powered external cohort might have
+confirmed.
 
-That result should be read with the transport caveat stated in
-Section~\ref{sec:external_validation} rather than as a generalisability
-success. eICU-CRD's microbiology coverage is too sparse to reproduce the
-Sepsis-3 anchor, so infection is triggered on antibiotics alone and the external
-cohort yields only \pcExtNEvents{} labelled events in \pcExtNRows{}
-person-hours. A stable AUROC across a label that did not survive transport
-intact is weaker evidence than the same number would be across a matched label.
+The precision is bounded by documentation coverage, not by cohort size.
+eICU-CRD contains \pcExtNCohortStays{} unit stays, but the Sepsis-3 conjunction
+is recoverable in \pcExtMicroCoverage\% of them, so the analysis rests on
+\pcExtNEventsB{} events against an interpretability floor of \pcExtMinEvents{}
+(Section~\ref{sec:external_interpretability}). Person-hours from the remaining
+stays would enlarge the denominator without contributing a single observable
+onset.
+
+Two independent observations nonetheless point the same way, which is why the
+degradation is reported as a direction rather than dismissed as noise. First,
+the effect is ordered across labels exactly as the internal results are: the
+Narrow label loses most (\pcAurocPrimaryA{} to \pcExtAurocPrimaryA) and the
+Liberal label least (\pcAurocPrimaryC{} to \pcExtAurocPrimaryC), which is not a
+pattern noise produces. Second, the antibiotic-only arm --- a different target,
+but one measured on \pcExtAbxNEventsB{} events and therefore well clear of the
+floor --- shows a degradation of the same sign and larger magnitude
+(\pcAurocPrimaryB{} to \pcExtAbxAurocPrimaryB) with the same ordering across
+labels. Two arms differing by two orders of magnitude in event count agree on
+sign, ordering and approximate size.
+
+The honest verdict is therefore neither ``discrimination transports'' nor
+``discrimination collapses'', but that this study can establish the direction of
+external degradation and not its magnitude.
 
 The Utility Score arm fails for a different and more consequential reason: the
 margin whose collapse Wang et al.\ \cite{wang2025srpm} documented ---
@@ -1234,15 +1362,30 @@ a median internal Utility Score of $+0.381$ falling to $-0.164$ --- does not
 exist here to begin with. The best internal score any configuration reaches
 under the primary label is \pcUtilityMaxGbtB, against internal AUROC in the high
 0.7s. A ratio of proportional declines is undefined against a baseline this
-close to zero, and the \pcExtNEvents{} external events are in any case too few
+close to zero, and the \pcExtNEventsB{} external events are in any case too few
 to estimate an external Utility Score reliably.
 
 The finding that replaces H5 is therefore not ``utility degrades faster than
-AUROC'' but something starker: \textbf{on this cohort, AUROC transports and
-clinical utility never arrives}. The gap Wang et al.\ identified between the two
-metrics is confirmed --- discrimination is a poor proxy for clinical value ---
-while their specific mechanism, external collapse of a healthy internal utility,
-is not what happens here.
+AUROC'' but something the internal results establish on their own, without
+needing the external arm at all: \textbf{clinical utility never arrives, at any
+threshold, on the cohort where the label is fully observed}. The gap Wang et
+al.\ identified between the two metrics is confirmed --- discrimination is a
+poor proxy for clinical value --- while their specific mechanism, external
+collapse of a healthy internal utility, is not what happens here. What the
+external arm adds is a qualification in their favour on the other metric: AUROC
+does appear to decline on transport, so the stability they observed in it
+(0.811 to 0.783) is not reproduced as stability here either.
+
+There is a methodological point in this that outlives the particular numbers.
+External validation is conventionally treated as a test of the model, and the
+label is assumed to travel with it. It does not. Sepsis-3 is defined on
+clinician actions and on the documentation of those actions, so transporting it
+requires the destination database to record the same actions in the same
+retrievable form. Where it does not, the failure presents as an implausibly low
+event rate rather than as an error, and an AUROC computed on the survivors is
+still a well-formed number --- which is precisely what makes it dangerous. The
+event-rate reconciliation in Table~\ref{tab:external_rates} exists so that this
+check is performed and reported rather than assumed.
 
 \subsection{H6: Model-Class Null (Not Rejected --- Equivalence Holds)}
 
@@ -1590,50 +1733,9 @@ level of which patients can ever enter the positive class. The remedy
 Chapter~\ref{ch:conclusion} identifies is unchanged in direction and weaker in
 force: change the label, and at minimum time it as the standard requires.
 
-\subsection{What Variant D Does and Does Not Establish}
-
-Variant D's high AUROC must be read with the limitation stated in advance in
-Section~\ref{sec:alt_labels}. Its label is a threshold function of recorded
-physiology, and five of the six SOFA components are themselves model inputs, so
-its discrimination is partly self-fulfilling. The \emph{level} of
-\pcAltAurocFullPrimaryD{} (\pcAltAurocFullGbtD{} for GBT) is not evidence that
-deterioration prediction is a solved problem, and it is not comparable with
-Variant B's \pcAurocPrimaryB.
-
-Three things it does establish:
-
-\begin{enumerate}
-    \item \textbf{The label sensitivity is not wholly definitional.} At
-    $\kappa = \pcKappaVsBD$ and a \pcPctExactMatchD\% onset match, a
-    treatment-independent label
-    disagrees with Sepsis-3 about both membership and timing. Had D closely
-    tracked B, the H1 result would have been an artefact of how one definition
-    is read; it is not.
-
-    \item \textbf{The alert burden is label-invariant; the utility ceiling is
-    not.} Both alternative labels are markedly more scoreable than Sepsis-3.
-    The best achievable Utility Score rises from \pcUtilityMaxGbtB{} under
-    Variant B to \pcUtilityMaxGbtE{} under E and \pcUtilityMaxGbtD{} under D,
-    with the primary model following the same pattern
-    (\pcUtilityMaxPrimaryE{} and \pcUtilityMaxPrimaryD). What does not improve
-    to a deployable level is the alarm volume: even D's best configuration
-    carries \pcUtilityOptBurdenGbtD{} false alerts per true alert, better than
-    Variant B's \pcUtilityOptBurdenGbtB{} but still nine times the 1.4
-    benchmark of Moor et al.\ \cite{moor2023review}. Contribution C3 survives
-    the change of label in its alarm-volume form --- which the pre-registered
-    variants alone could not show --- and does not survive in the form of a
-    utility ceiling near zero. The rise is itself expected from the caveat
-    above: a label built from recorded physiology is easier to alert on than
-    one built from a clinician's decision.
-
-    \item \textbf{The model-class ordering is label-invariant.} GBT leads on
-    AUROC under all three labels and, once each model is evaluated at its own
-    best threshold, on the Utility Score as well. A reversal appears only if
-    every model is scored at the same 0.5 cut-off, which rewards a model for
-    being too poorly calibrated to reach it. The
-    metric-choice finding (H5) rests on the gap between discrimination and
-    achievable utility, not on a re-ordering of models.
-\end{enumerate}
+Variant D's discrimination is not comparable with Variant B's, for reasons
+fixed in advance by its construction; what the comparison does and does not
+license is set out in Section~\ref{sec:variant_d_establishes}.
 
 \subsection{Exploratory Family E3: Intervals and Correction}
 
@@ -1697,10 +1799,160 @@ that the labels are measuring comparable things.
 %===========================================================================
 
 
+\section{Action-Derived Features: An Ablation \texorpdfstring{[E]}{[E]}}
+\label{sec:ablation}
+%===========================================================================
+
+The label is not the only place where clinician action enters this study.
+\pcAblNDropped{} of the \pcHTwoNTerms{} covariates record what clinicians did
+rather than what was measured in the patient: vasopressor exposure, and the
+per-test indicators of whether a laboratory value was obtained in a given hour.
+Section~\ref{sec:h2_action} showed that cross-label coefficient instability is
+concentrated in exactly these features. This section asks the sharper question
+that observation raises --- whether the models \emph{depend} on them --- by
+removing them and refitting.
+
+The specification is otherwise unchanged: same training rows, same temporal
+split, same hyperparameters, same metric code, and every physiological
+measurement retained (Section~\ref{sec:ablation_method}). The arm is
+exploratory and enters no hypothesis or decomposition.
+
+\begin{table}[H]
+    \centering\small
+    \begin{tabular}{llrrrrr}
+        \toprule
+        \textbf{Var} & \textbf{Model} & \textbf{AUROC full} & \textbf{AUROC ablated}
+        & \textbf{$\Delta$} & \textbf{Utility$_{\max}$ full}
+        & \textbf{Utility$_{\max}$ ablated} \\
+        \midrule
+        A & Primary & \pcAurocPrimaryA & \pcAblAurocPrimaryA & \pcAblDeltaAurocPrimaryA & \pcUtilityMaxPrimaryA & \pcAblUtilityMaxPrimaryA \\
+        A & GBT     & \pcAurocGbtA     & \pcAblAurocGbtA     & \pcAblDeltaAurocGbtA     & \pcUtilityMaxGbtA     & \pcAblUtilityMaxGbtA \\
+        \midrule
+        B & Primary & \pcAurocPrimaryB & \pcAblAurocPrimaryB & \pcAblDeltaAurocPrimaryB & \pcUtilityMaxPrimaryB & \pcAblUtilityMaxPrimaryB \\
+        B & GBT     & \pcAurocGbtB     & \pcAblAurocGbtB     & \pcAblDeltaAurocGbtB     & \pcUtilityMaxGbtB     & \pcAblUtilityMaxGbtB \\
+        \midrule
+        C & Primary & \pcAurocPrimaryC & \pcAblAurocPrimaryC & \pcAblDeltaAurocPrimaryC & \pcUtilityMaxPrimaryC & \pcAblUtilityMaxPrimaryC \\
+        C & GBT     & \pcAurocGbtC     & \pcAblAurocGbtC     & \pcAblDeltaAurocGbtC     & \pcUtilityMaxGbtC     & \pcAblUtilityMaxGbtC \\
+        \bottomrule
+    \end{tabular}
+    \caption{Discrimination and best-threshold Utility Score with and without
+    the \pcAblNDropped{} action-derived features. Both arms are fitted on the
+    same training rows and scored on the same test rows.
+    \textbf{[E] exploratory.}}
+    \label{tab:ablation}
+\end{table}
+
+\subsection{Coefficient Stability After Ablation}
+
+The second reading is the one that bears on Section~\ref{sec:h2_action}. If the
+cross-label instability were a property of the fitted model in general, removing
+eight covariates would leave the remainder roughly as unstable as before. If it
+were specific to the action-derived features, the remaining specification should
+be markedly more stable.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{lrrr}
+        \toprule
+        \textbf{Specification} & \textbf{Covariates} & \textbf{Unstable}
+        & \textbf{\% unstable} \\
+        \midrule
+        Full     & \pcHTwoNTerms     & \pcHTwoEst            & --- \\
+        Ablated  & \pcAblHTwoNTerms  & \pcAblHTwoNUnstable   & \pcAblHTwoPctUnstable \\
+        \bottomrule
+    \end{tabular}
+    \caption{Cross-label coefficient instability before and after removing the
+    action-derived features, under the identical stability rule
+    (sign reversal or magnitude change $\geq 2\times$ across Variants A, B
+    and C). \textbf{[E] exploratory.}}
+    \label{tab:ablation_stability}
+\end{table}
+
+Section~\ref{sec:ablation_establishes} states what this experiment can and
+cannot be asked to carry.
+
+%===========================================================================
+
+
 \section{External Validation on eICU-CRD \texorpdfstring{[C]}{[C]}}
 \label{sec:external_validation}
 \label{sec:external}
 %===========================================================================
+
+External validation asks whether a frozen model ranks person-hours as well in a
+different health system as it does in the one it was fitted on. Answering it
+requires transporting the label as well as the model, and in this pair of
+databases the label is by far the harder of the two. The section below
+therefore reports the labelling inputs before it reports any performance
+number, because the second is only readable in the light of the first.
+
+\subsection{What the Sepsis-3 Anchor Can Reach in eICU-CRD}
+\label{sec:external_coverage}
+
+Sepsis-3 onset is anchored on the co-occurrence of an antibiotic order and a
+microbiology culture. In eICU-CRD the culture limb is documented for
+\pcExtMicroCoverage\% of the analysis cohort (\pcExtNMicroStays{} of
+\pcExtNCohortStays{} unit stays), against near-universal coverage in MIMIC-IV,
+while antibiotic exposure --- pooled across the \texttt{medication} and
+\texttt{infusionDrug} tables --- reaches \pcExtAbxCoverage\% of stays. The
+asymmetry is decisive: in a stay with no culture record the Sepsis-3
+conjunction cannot fire under \emph{any} variant, whatever the patient's
+physiology.
+
+This has a direct consequence for how an external event rate may be read.
+Applying the conjunction across all \pcExtPanelHoursFull{} person-hours would
+place the overwhelming majority of the denominator in stays where the numerator
+is structurally zero, and the resulting rate would describe the completeness of
+one source table rather than the incidence of sepsis. The primary external
+analysis is therefore confined to the \pcExtPanelHoursMicro{} person-hours in
+which an onset is observable in principle.
+
+\begin{table}[H]
+    \centering\small
+    \begin{tabular}{llrrr}
+        \toprule
+        \textbf{Var} & \textbf{Cohort} & \textbf{Person-hours}
+        & \textbf{Events} & \textbf{Events / 1{,}000 person-h} \\
+        \midrule
+        A & MIMIC-IV temporal test        & \pcNTestRowsA & \pcNTestEventsA & \pcExtRateMimicA \\
+        A & eICU, microbiology-covered    & \pcExtNRowsA  & \pcExtNEventsA  & \pcExtRateEicuA \\
+        A & eICU, antibiotic-only anchor  & \pcExtAbxNRows & \pcExtAbxNEventsA & \pcExtRateEicuAbxA \\
+        \midrule
+        B & MIMIC-IV temporal test        & \pcNTestRowsB & \pcNTestEventsB & \pcExtRateMimicB \\
+        B & eICU, microbiology-covered    & \pcExtNRowsB  & \pcExtNEventsB  & \pcExtRateEicuB \\
+        B & eICU, antibiotic-only anchor  & \pcExtAbxNRows & \pcExtAbxNEventsB & \pcExtRateEicuAbxB \\
+        \midrule
+        C & MIMIC-IV temporal test        & \pcNTestRowsC & \pcNTestEventsC & \pcExtRateMimicC \\
+        C & eICU, microbiology-covered    & \pcExtNRowsC  & \pcExtNEventsC  & \pcExtRateEicuC \\
+        C & eICU, antibiotic-only anchor  & \pcExtAbxNRows & \pcExtAbxNEventsC & \pcExtRateEicuAbxC \\
+        \bottomrule
+    \end{tabular}
+    \caption{Event-rate reconciliation. The rate is stated for the development
+    cohort and for both external anchors so that the comparison is made
+    explicitly rather than inferred. The antibiotic-only anchor is not
+    Sepsis-3 and its rate is not interchangeable with the other two.}
+    \label{tab:external_rates}
+\end{table}
+
+On the restricted cohort the two databases fall within one order of magnitude
+of each other: \pcExtRateEicuB{} events per thousand person-hours against
+MIMIC-IV's \pcExtRateMimicB{} under the primary label, a ratio of
+\pcExtRateRatioB. Relaxing the culture requirement closes most of the remaining
+gap (\pcExtRateEicuAbxB{} per thousand, ratio \pcExtRateRatioAbxB),
+which locates the residual difference precisely: it is the culture limb, not
+the antibiotic limb and not the patients. eICU-CRD documents antibiotic
+exposure for \pcExtAbxCoverage\% of stays and cultures for
+\pcExtMicroCoverage\%, so the conjunction is throttled by one of its two
+inputs.
+
+A gap of this size is a substantive finding about how differently the two
+systems document infection, and it is the reason the restricted cohort is the
+right denominator. A gap of two or more orders of magnitude would not be a
+finding at all: no plausible difference in case mix separates two large adult
+ICU populations by that much, and such a gap would indicate that the labelling
+inputs, not the patients, differ.
+
+\subsection{Discrimination Under Transport}
 
 \begin{table}[H]
     \centering
@@ -1709,44 +1961,63 @@ that the labels are measuring comparable things.
         \textbf{Var} & \textbf{Model} & \textbf{N rows} & \textbf{N events}
         & \textbf{AUROC (eICU)} & \textbf{AUROC (MIMIC)} \\
         \midrule
-        A & Primary & \pcExtNRows & \pcExtNEvents & \pcExtAurocPrimaryA & \pcAurocPrimaryA \\
-        A & NEWS2   & \pcExtNRows & \pcExtNEvents & \pcExtAurocNewsA & \pcAurocNewsA \\
+        A & Primary & \pcExtNRowsA & \pcExtNEventsA & \pcExtAurocPrimaryA & \pcAurocPrimaryA \\
+        A & GBT     & \pcExtNRowsA & \pcExtNEventsA & \pcExtAurocGbtA  & \pcAurocGbtA \\
+        A & NEWS2   & \pcExtNRowsA & \pcExtNEventsA & \pcExtAurocNewsA & \pcAurocNewsA \\
         \midrule
-        B & Primary & \pcExtNRows & \pcExtNEvents & \pcExtAurocPrimaryB & \pcAurocPrimaryB \\
-        B & NEWS2   & \pcExtNRows & \pcExtNEvents & \pcExtAurocNewsB & \pcAurocNewsB \\
+        B & Primary & \pcExtNRowsB & \pcExtNEventsB & \pcExtAurocPrimaryB & \pcAurocPrimaryB \\
+        B & GBT     & \pcExtNRowsB & \pcExtNEventsB & \pcExtAurocGbtB  & \pcAurocGbtB \\
+        B & NEWS2   & \pcExtNRowsB & \pcExtNEventsB & \pcExtAurocNewsB & \pcAurocNewsB \\
         \midrule
-        C & Primary & \pcExtNRows & \pcExtNEvents & \pcExtAurocPrimaryC & \pcAurocPrimaryC \\
-        C & NEWS2   & \pcExtNRows & \pcExtNEvents & \pcExtAurocNewsC & \pcAurocNewsC \\
+        C & Primary & \pcExtNRowsC & \pcExtNEventsC & \pcExtAurocPrimaryC & \pcAurocPrimaryC \\
+        C & GBT     & \pcExtNRowsC & \pcExtNEventsC & \pcExtAurocGbtC  & \pcAurocGbtC \\
+        C & NEWS2   & \pcExtNRowsC & \pcExtNEventsC & \pcExtAurocNewsC & \pcAurocNewsC \\
         \bottomrule
     \end{tabular}
-    \caption{External validation on eICU-CRD (frozen models, no retraining).
-    Discrimination is preserved under all three labels; under Variant B the
-    external estimate is marginally the higher of the two. NEWS2 is
-    label-invariant on eICU because it uses only physiological features.}
+    \caption{External validation on eICU-CRD (frozen models, no retraining),
+    Sepsis-3 anchor on the microbiology-covered sub-cohort. Each variant
+    carries its own external label set, so the row counts and event counts
+    differ across variants as they do internally.}
     \label{tab:external}
 \end{table}
 
-Discrimination transfers intact under all three labels. The primary model
-scores \pcExtAurocPrimaryA, \pcExtAurocPrimaryB{} and \pcExtAurocPrimaryC{} on
-eICU-CRD against \pcAurocPrimaryA, \pcAurocPrimaryB{} and \pcAurocPrimaryC{}
-internally --- differences of a few thousandths in either direction, and under
-the Seymour-Standard label the external estimate is the higher of the two. This
-is the H5 result (Section~\ref{sec:h5}): there is no measurable
-discrimination penalty for moving a frozen model from one Boston academic
-centre to two hundred hospitals on a different EHR.
+\textbf{Discrimination degrades under transport, under every label.} The primary
+model falls from \pcAurocPrimaryA{} to \pcExtAurocPrimaryA{} (Narrow), from
+\pcAurocPrimaryB{} to \pcExtAurocPrimaryB{} (Seymour-Standard) and from
+\pcAurocPrimaryC{} to \pcExtAurocPrimaryC{} (Liberal). The Seymour-Standard
+drop of \pcHFiveEst{} is about three-quarters of the 0.085 that Moor et al.\
+\cite{moor2023review} report as typical, so the pre-registered expectation is
+approximately met on the point estimate. Section~\ref{sec:external_interpretability}
+sets out why it is not established at conventional confidence.
 
-NEWS2 is label-invariant (identical AUROC across all variants on eICU) because
-it uses only physiological signals, and it is the appropriate reference point
-here: the fitted model beats it externally by a wider margin
-(\pcExtAurocPrimaryB{} against \pcExtAurocNewsB) than it does internally, so
-what the model learned is not obviously site-specific.
+The degradation is ordered by label, and in the same direction as the internal
+results: the narrowest label transports worst and the most liberal transports
+best. That the ordering survives transport is a point in its own right --- the
+label determines not only which cohort exists but how well what is learned from
+it travels.
 
-That reading has to be qualified by the label-transport failure below, which is
-severe enough that the external estimates should be treated as an upper bound
-rather than a measurement.
+NEWS2 degrades further and faster, to \pcExtAurocNewsB{} under the primary
+label --- effectively chance. A model fitted on one database therefore retains
+more of its advantage over a bedside score externally than the score retains of
+its own internal performance, which is the one comparison in this section that
+favours the fitted model.
 
-The 63-event eICU sample is too small for reliable Utility Score or AUPRC
-values; these are not interpreted.
+Two further properties of the table are diagnostic rather than substantive, and
+both are worth stating because their violation would be invisible otherwise.
+First, the event counts differ across variants. They must: the variants differ
+in their antibiotic--culture windows, so they select different stays, and an
+external analysis reporting one event count for all three would be reporting a
+single label applied three times. Second, NEWS2's AUROC differs across
+variants. Its \emph{predictor} is label-invariant --- the score is a function of
+physiology alone and is computed once --- but its AUROC is not, because AUROC is
+a property of the predictor \emph{and} the outcome it is ranked against. An
+identical NEWS2 AUROC across variants is therefore a signature of an unvaried
+label, and the pipeline halts on it rather than reporting it.
+
+Every external event count above falls below the interpretability floor adopted
+in this study. Section~\ref{sec:external_interpretability} states what that
+permits the external estimates to support, and reports the antibiotic-only
+sensitivity arm that bounds them.
 
 %===========================================================================
 
@@ -1816,131 +2087,134 @@ vital sign in the ICU.
 \label{sec:equity}
 %===========================================================================
 
+\subsection{What the Subgroup Strata Are}
+\label{sec:equity_strata}
+
+Two properties of the stratifying variables govern how everything in this
+section may be read, and both are properties of MIMIC-IV's administrative
+record rather than of the analysis.
+
+\paragraph{The strata are documentation categories, not populations.}
+\texttt{race} in MIMIC-IV is a single code assigned at registration. Its levels
+mix broad categories with more granular ones drawn from the same population:
+``White'' and ``White -- Other European'' are separate levels, as are ``Asian''
+and ``Asian -- Chinese''. A stay carries exactly one code, so the levels
+partition the cohort, but they do not partition it into disjoint
+\emph{populations} --- the reference level ``White'' is a residual category
+comprising stays not assigned a more specific European code, and a contrast
+against it is a contrast against that residual, not against White patients in
+general. ``Unknown'' and ``Unable to obtain'' record the \emph{absence} of an
+answer. They are retained because the completeness of the demographic record is
+itself informative --- Section~\ref{sec:label_sens_subgroup} shows why --- but
+they are not demographic groups and no result concerning them is a result about
+a population.
+
+\paragraph{An event floor is applied before anything is interpreted.}
+A subgroup AUROC estimated on a few dozen onsets is not a quantity about which
+anything can be said. The floor adopted here is \pcMinSubgroupEvents{} sepsis
+onsets, the same threshold and the same warrant as the external-validation
+floor of Section~\ref{sec:external_interpretability}
+\cite{riley2019sample, collins2024tripodai}. Strata below it are estimated and
+tabulated, so that the reader can see which groups exist in the cohort and how
+few events they carry, but they are \textbf{not interpreted}, are excluded from
+every statement about spread, and are excluded from the exploratory contrast
+family E1 --- which therefore contains \pcEquityNContrastsEOne{} contrasts, not
+one per level. Of the racial strata, \pcNSubgroupsAboveFloor{} clear the floor.
+
 \subsection{Performance Disparities by Subgroup \texorpdfstring{[E]}{[E]}}
 
 \begin{table}[H]
-    \centering\footnotesize\setlength{\tabcolsep}{3.5pt}
-    \begin{tabular}{lrrcc}
-        \toprule
-        \textbf{Racial group} & \textbf{Rows} & \textbf{Sep}
-        & \textbf{GBT AUROC (95\% CI)} & \textbf{Primary AUROC (95\% CI)} \\
-        \midrule
-        \pcEquityRaceOneName & \pcEquityRaceOneNRows & \pcEquityRaceOneNEvents & \pcEquityRaceOneAurocGbt~(\pcEquityRaceOneCiGbt) & \pcEquityRaceOneAurocPrimary~(\pcEquityRaceOneCiPrimary) \\
-        \pcEquityRaceTwoName & \pcEquityRaceTwoNRows & \pcEquityRaceTwoNEvents & \pcEquityRaceTwoAurocGbt~(\pcEquityRaceTwoCiGbt) & \pcEquityRaceTwoAurocPrimary~(\pcEquityRaceTwoCiPrimary) \\
-        \pcEquityRaceThreeName & \pcEquityRaceThreeNRows & \pcEquityRaceThreeNEvents & \pcEquityRaceThreeAurocGbt~(\pcEquityRaceThreeCiGbt) & \pcEquityRaceThreeAurocPrimary~(\pcEquityRaceThreeCiPrimary) \\
-        \pcEquityRaceFourName & \pcEquityRaceFourNRows & \pcEquityRaceFourNEvents & \pcEquityRaceFourAurocGbt~(\pcEquityRaceFourCiGbt) & \pcEquityRaceFourAurocPrimary~(\pcEquityRaceFourCiPrimary) \\
-        \pcEquityRaceFiveName & \pcEquityRaceFiveNRows & \pcEquityRaceFiveNEvents & \pcEquityRaceFiveAurocGbt~(\pcEquityRaceFiveCiGbt) & \pcEquityRaceFiveAurocPrimary~(\pcEquityRaceFiveCiPrimary) \\
-        \pcEquityRaceSixName & \pcEquityRaceSixNRows & \pcEquityRaceSixNEvents & \pcEquityRaceSixAurocGbt~(\pcEquityRaceSixCiGbt) & \pcEquityRaceSixAurocPrimary~(\pcEquityRaceSixCiPrimary) \\
-        \pcEquityRaceSevenName & \pcEquityRaceSevenNRows & \pcEquityRaceSevenNEvents & \pcEquityRaceSevenAurocGbt~(\pcEquityRaceSevenCiGbt) & \pcEquityRaceSevenAurocPrimary~(\pcEquityRaceSevenCiPrimary) \\
-        \pcEquityRaceEightName & \pcEquityRaceEightNRows & \pcEquityRaceEightNEvents & \pcEquityRaceEightAurocGbt~(\pcEquityRaceEightCiGbt) & \pcEquityRaceEightAurocPrimary~(\pcEquityRaceEightCiPrimary) \\
-        \bottomrule
-    \end{tabular}
-    \caption{AUROC by racial subgroup (Variant B, temporal test) with 95\%
-    stay-level cluster-bootstrap intervals, stratified within subgroup,
+    \centering\footnotesize
+    \input{table_equityperformance}
+    \caption{AUROC by racial stratum (Variant B, temporal test) with 95\%
+    stay-level cluster-bootstrap intervals, stratified within stratum,
     $B = 2{,}000$. Levels are ordered by exposure; interval width grows by
-    roughly an order of magnitude from the largest group to the smallest.
-    \textbf{[E] exploratory.}}
+    roughly an order of magnitude from the largest stratum to the smallest.
+    Strata carrying fewer than \pcMinSubgroupEvents{} sepsis onsets are marked
+    $\dagger$: they are shown so that the composition of the cohort is visible,
+    and are neither interpreted nor entered into family E1
+    (Section~\ref{sec:equity_strata}). \textbf{[E] exploratory.}}
     \label{tab:equity_performance}
 \end{table}
 
-The subgroup point estimates span a range wider than the model-class spread
-(\pcSpreadModelClass) and far wider than the label spread (\pcSpreadLabel).
-Read without intervals, that looks like the largest source of variance in the
-entire study. The intervals show it is not: the smallest groups carry
-\pcEquityRaceEightNEvents{} and \pcEquityRaceSevenNEvents{} sepsis onsets, and
-their intervals are correspondingly wide. The apparent spread is almost
-entirely a function of how few events the small subgroups contain.
+Read as a list of point estimates the table appears to show a wide spread, and
+it is tempting to set that spread beside the model-class and label spreads of
+Section~\ref{sec:decomposition}. It should not be. The three quantities are not
+commensurable, for three reasons that are independent of each other. They are
+different estimands: the decomposition rows are contrasts computed on the whole
+test cohort with one factor varied and everything else held fixed, whereas a
+subgroup range is the extreme order statistic of a set of separate estimates
+computed on disjoint slices of that cohort. They rest on different amounts of
+information: the decomposition rows use every event in the test set, while the
+subgroup estimates divide those events between strata, the smallest of which
+carry a few dozen. And the range of a set of noisy estimates is biased upward
+by construction --- it grows with the number of strata and with their
+imprecision even when every underlying value is identical --- so it is not an
+effect size at all.
 
-Table~\ref{tab:equity_contrasts} makes this explicit by contrasting each group
-against the largest group (White) on the same bootstrap replicates.
+What the intervals show is that the apparent spread is largely a function of
+how few events the small strata contain. Of the racial strata,
+\pcNSubgroupsAboveFloor{} carry at least \pcMinSubgroupEvents{} onsets; the
+remainder are estimated on counts between \pcEquityRaceEightNEvents{} and
+\pcEquityRaceFourNEvents, and their intervals are correspondingly wide.
+
+Table~\ref{tab:equity_contrasts} therefore reports contrasts rather than
+ranges, each against the reference level on the same bootstrap replicates.
 
 \begin{table}[H]
     \centering\footnotesize
-    \begin{tabular}{lrrcrr}
-        \toprule
-        \textbf{Racial group} & \textbf{Sep} & \textbf{Model}
-        & \textbf{$\Delta$AUROC vs.\ White (95\% CI)} & \textbf{$p$} & \textbf{$q_{\text{BH}}$} \\
-        \midrule
-        \pcRaceContrastGbtOneName & \pcRaceContrastGbtOneNEvents & GBT & \pcRaceContrastGbtOneDelta~(\pcRaceContrastGbtOneCi) & \pcRaceContrastGbtOneP & \pcRaceContrastGbtOneQ \\
-        \pcRaceContrastGbtTwoName & \pcRaceContrastGbtTwoNEvents & GBT & \pcRaceContrastGbtTwoDelta~(\pcRaceContrastGbtTwoCi) & \pcRaceContrastGbtTwoP & \pcRaceContrastGbtTwoQ \\
-        \pcRaceContrastGbtThreeName & \pcRaceContrastGbtThreeNEvents & GBT & \pcRaceContrastGbtThreeDelta~(\pcRaceContrastGbtThreeCi) & \pcRaceContrastGbtThreeP & \pcRaceContrastGbtThreeQ \\
-        \pcRaceContrastGbtFourName & \pcRaceContrastGbtFourNEvents & GBT & \pcRaceContrastGbtFourDelta~(\pcRaceContrastGbtFourCi) & \pcRaceContrastGbtFourP & \pcRaceContrastGbtFourQ \\
-        \pcRaceContrastGbtFiveName & \pcRaceContrastGbtFiveNEvents & GBT & \pcRaceContrastGbtFiveDelta~(\pcRaceContrastGbtFiveCi) & \pcRaceContrastGbtFiveP & \pcRaceContrastGbtFiveQ \\
-        \pcRaceContrastGbtSixName & \pcRaceContrastGbtSixNEvents & GBT & \pcRaceContrastGbtSixDelta~(\pcRaceContrastGbtSixCi) & \pcRaceContrastGbtSixP & \pcRaceContrastGbtSixQ \\
-        \pcRaceContrastGbtSevenName & \pcRaceContrastGbtSevenNEvents & GBT & \pcRaceContrastGbtSevenDelta~(\pcRaceContrastGbtSevenCi) & \pcRaceContrastGbtSevenP & \pcRaceContrastGbtSevenQ \\
-        \midrule
-        \pcRaceContrastPrimaryOneName & \pcRaceContrastPrimaryOneNEvents & Primary & \pcRaceContrastPrimaryOneDelta~(\pcRaceContrastPrimaryOneCi) & \pcRaceContrastPrimaryOneP & \pcRaceContrastPrimaryOneQ \\
-        \pcRaceContrastPrimaryTwoName & \pcRaceContrastPrimaryTwoNEvents & Primary & \pcRaceContrastPrimaryTwoDelta~(\pcRaceContrastPrimaryTwoCi) & \pcRaceContrastPrimaryTwoP & \pcRaceContrastPrimaryTwoQ \\
-        \pcRaceContrastPrimaryThreeName & \pcRaceContrastPrimaryThreeNEvents & Primary & \pcRaceContrastPrimaryThreeDelta~(\pcRaceContrastPrimaryThreeCi) & \pcRaceContrastPrimaryThreeP & \pcRaceContrastPrimaryThreeQ \\
-        \pcRaceContrastPrimaryFourName & \pcRaceContrastPrimaryFourNEvents & Primary & \pcRaceContrastPrimaryFourDelta~(\pcRaceContrastPrimaryFourCi) & \pcRaceContrastPrimaryFourP & \pcRaceContrastPrimaryFourQ \\
-        \pcRaceContrastPrimaryFiveName & \pcRaceContrastPrimaryFiveNEvents & Primary & \pcRaceContrastPrimaryFiveDelta~(\pcRaceContrastPrimaryFiveCi) & \pcRaceContrastPrimaryFiveP & \pcRaceContrastPrimaryFiveQ \\
-        \pcRaceContrastPrimarySixName & \pcRaceContrastPrimarySixNEvents & Primary & \pcRaceContrastPrimarySixDelta~(\pcRaceContrastPrimarySixCi) & \pcRaceContrastPrimarySixP & \pcRaceContrastPrimarySixQ \\
-        \pcRaceContrastPrimarySevenName & \pcRaceContrastPrimarySevenNEvents & Primary & \pcRaceContrastPrimarySevenDelta~(\pcRaceContrastPrimarySevenCi) & \pcRaceContrastPrimarySevenP & \pcRaceContrastPrimarySevenQ \\
-        \bottomrule
-    \end{tabular}
-    \caption{Subgroup AUROC differences against the reference group (White, the
-    largest group). $q_{\text{BH}}$ is the Benjamini--Hochberg adjusted p-value
-    over exploratory family E1, which contains all \pcEquityNContrastsEOne{}
-    subgroup contrasts computed across race, language and insurance for both
-    models --- not only the 14 shown here. \textbf{No racial contrast is
-    significant}; the smallest adjusted value for race is
-    $q = \pcRaceContrastGbtOneQ$. \textbf{[E] exploratory.}}
+    \input{table_equitycontrasts}
+    \caption{Subgroup AUROC differences against the reference level, for the
+    racial strata clearing the \pcMinSubgroupEvents{}-event floor.
+    $q_{\text{BH}}$ is the Benjamini--Hochberg adjusted $p$-value over
+    exploratory family E1, which contains all \pcEquityNContrastsEOne{} eligible
+    subgroup contrasts across race, language and insurance for both models ---
+    not only those shown here. \textbf{No racial contrast is significant.}
+    The reference level is the largest stratum of its own variable and is a
+    residual administrative category, not a population
+    (Section~\ref{sec:equity_strata}). \textbf{[E] exploratory.}}
     \label{tab:equity_contrasts}
 \end{table}
 
-Only one contrast in the whole of family E1 survives correction, and it is not
-a racial one: GBT discriminates better for Haitian-speaking patients than for
-English-speaking patients ($\Delta = +0.136$, 95\% CI 0.022--0.228,
-$q = 0.030$), on 12 sepsis onsets. On 12 events this is a hypothesis to test
-elsewhere, not a finding.
+\pcEquityNSigEOne{} contrast in family E1 survives false-discovery correction.
 
 The correct reading of Table~\ref{tab:equity_contrasts} is that this study is
 \textbf{underpowered to detect subgroup disparities}, not that no disparities
-exist. Several intervals are wide enough to be compatible with a disparity
-larger than any effect reported anywhere else in this thesis: the widest GBT
-subgroup interval spans roughly 0.4 AUROC, so the data are consistent with that
-group being served far worse than the reference group, or slightly better.
-Reporting the point estimates alone would have invited the opposite conclusion
---- that a subgroup spread wider than the model-class spread constitutes
-evidence of inequity, or that non-significance constitutes evidence of its
-absence. Neither is supported.
+exist. Even among the strata clearing the event floor the intervals are wide
+enough to be compatible with a disparity larger than any effect reported
+elsewhere in this thesis, so the data are consistent both with a stratum being
+served materially worse than the reference and with its being served slightly
+better. Non-significance here is a statement about precision and nothing else.
 
 Wang et al.'s \cite{wang2022equity} finding of degraded performance for Asian,
 Hispanic and Spanish-speaking patients is therefore neither confirmed nor
-contradicted here. The point estimates for Hispanic/Latino (Puerto Rican) and
-Asian -- Chinese patients under GBT do fall below the White reference, in the
-direction Wang et al.\ report, but the intervals cover zero comfortably.
+contradicted. It could not be: that result concerns mortality prediction among
+patients already identified as septic, not onset prediction
+(Section~\ref{sec:equity_lit}), and the strata in which it would have to be
+checked here are precisely the ones that fall below the event floor. The point
+estimates for the smaller strata do sit below the reference under GBT, in the
+direction Wang et al.\ report, but they are not interpreted and no inference is
+drawn from them.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.92\textwidth]{images/12_subgroup_auroc_ci.png}
     \caption{AUROC by racial subgroup with 95\% stay-level cluster-bootstrap
     intervals (Variant B, temporal test); sepsis onset count in parentheses.
-    Interval width is governed almost entirely by the subgroup event count. The
-    two groups with the most extreme point estimates are also the two least
-    precisely estimated, and several intervals reach the 0.5 chance line.}
+    Interval width is governed almost entirely by the stratum event count. The
+    two strata with the most extreme point estimates are also the two least
+    precisely estimated, and several intervals reach the 0.5 chance line. The
+    figure is the argument for the event floor of
+    Section~\ref{sec:equity_strata}, and is shown in full for that reason.}
     \label{fig:auroc_by_race}
 \end{figure}
 
-\subsection{Label Sensitivity by Subgroup (Novel Finding) \texorpdfstring{[E]}{[E]}}
+\subsection{Label Sensitivity by Subgroup \texorpdfstring{[E]}{[E]}}
+\label{sec:label_sens_subgroup}
 
 \begin{table}[H]
     \centering\footnotesize
-    \begin{tabular}{lrcccc}
-        \toprule
-        \textbf{Racial group} & \textbf{Stays} & \textbf{A (\%)} & \textbf{B (\%)}
-        & \textbf{C (\%)} & \textbf{Range (pp, 95\% CI)} \\
-        \midrule
-        White                    & 40{,}212 & 9.4  & 9.6  & 18.6 & 9.3 (8.9--9.7)   \\
-        Unknown                  & 7{,}264  & 11.6 & 12.8 & 23.9 & 12.3 (11.3--13.3) \\
-        Black / African American & 4{,}929  & 9.3  & 9.1  & 19.0 & 9.9 (9.0--11.1)  \\
-        Other                    & 2{,}254  & 8.8  & 9.8  & 17.5 & 8.7 (7.1--10.2)  \\
-        Unable to obtain         & 1{,}629  & 9.7  & 11.1 & 22.5 & 12.8 (10.7--14.9) \\
-        White -- Other European  & 1{,}589  & 9.4  & 7.7  & 16.6 & 8.9 (7.2--10.7)  \\
-        Asian                    & 799      & 10.5 & 11.5 & 21.3 & 10.8 (8.3--13.8) \\
-        Asian -- Chinese         & 721      & 10.1 & 11.1 & 19.0 & 8.9 (6.4--11.9)  \\
-        \bottomrule
-    \end{tabular}
+    \input{table_equitylabel}
     \caption{Percentage of stays labelled as septic by racial subgroup and label
     variant, with a 95\% stratified cluster-bootstrap interval on the A--C
     range. The fraction roughly doubles from Variant A to C across all groups.
@@ -1949,59 +2223,69 @@ direction Wang et al.\ report, but the intervals cover zero comfortably.
     \label{tab:equity_label}
 \end{table}
 
-The fraction of patients labelled as septic changes by 8.7--12.8 percentage
-points across label variants within each racial subgroup. Unlike the
-discrimination analysis, this contrast \emph{does} survive correction. Because
-it is a stay-level proportion computed on the full 65,078-stay cohort rather
-than a discrimination metric computed on the small number of onsets in the test
-window, it is far better powered.
+The fraction of patients labelled as septic changes by
+\pcLabelSensRangeLo--\pcLabelSensRangeHi{} percentage points across label
+variants within each racial stratum. Unlike the discrimination analysis, this
+contrast \emph{does} survive correction, and the reason is arithmetic rather
+than substantive: it is a stay-level proportion computed on the full
+\pcNStays{}-stay cohort, whereas discrimination is computed on the few hundred
+onsets falling in the test window. The same strata that cannot support an AUROC
+support a proportion comfortably. No event floor is therefore applied to this
+analysis; the construct limitation of Section~\ref{sec:equity_strata} applies to
+it in full.
 
 \begin{table}[H]
     \centering\footnotesize
-    \begin{tabular}{lrcrr}
-        \toprule
-        \textbf{Racial group} & \textbf{Stays}
-        & \textbf{$\Delta$ range vs.\ White (pp, 95\% CI)} & \textbf{$p$}
-        & \textbf{$q_{\text{BH}}$} \\
-        \midrule
-        Unknown                  & 7{,}264 & $+3.01$ ($+1.93$--$+4.06$) & 0.001 & \textbf{0.006} \\
-        Unable to obtain         & 1{,}629 & $+3.49$ ($+1.38$--$+5.55$) & 0.002 & \textbf{0.009} \\
-        Black / African American & 4{,}929 & $+0.62$ ($-0.35$--$+1.87$) & 0.186 & 0.347 \\
-        Asian                    & 799     & $+1.48$ ($-1.04$--$+4.50$) & 0.249 & 0.407 \\
-        Other                    & 2{,}254 & $-0.63$ ($-2.26$--$+0.98$) & 0.425 & 0.510 \\
-        White -- Other European  & 1{,}589 & $-0.41$ ($-2.10$--$+1.41$) & 0.635 & 0.714 \\
-        Asian -- Chinese         & 721     & $-0.40$ ($-3.02$--$+2.61$) & 0.675 & 0.714 \\
-        \bottomrule
-    \end{tabular}
+    \input{table_equitylabelcontrasts}
     \caption{Difference in label sensitivity (A--C range) against the reference
     group (White). $q_{\text{BH}}$ is adjusted over exploratory family E2, all
     18 label-sensitivity contrasts across race, language and insurance. Two
-    racial contrasts survive at $q < 0.05$; across the full family, four do
-    (adding Spanish-speaking patients, $+2.61$ pp, $q = 0.006$, and privately
-    insured patients, $-1.76$ pp, $q = 0.006$). \textbf{[E] exploratory.}}
+    racial contrasts survive at $q < 0.05$; across the full family,
+    \pcLabelSensNSig{} do (adding Spanish-speaking patients,
+    $+\pcLabelSensSpanishPp$ pp, $q = \pcLabelSensSpanishQ$, and privately
+    insured patients, $\pcLabelSensPrivatePp$ pp,
+    $q = \pcLabelSensPrivateQ$). \textbf{[E] exploratory.}}
     \label{tab:equity_label_contrasts}
 \end{table}
 
-Two racial groups are significantly more label-sensitive than White patients
-after false-discovery correction: Unknown ($+3.01$ pp, $q = 0.006$) and Unable
-to obtain ($+3.49$ pp, $q = 0.009$). Both are groups whose race was not
-recorded. Across the full family, Spanish-speaking patients are also more
-label-sensitive than English-speaking patients ($+2.61$ pp, $q = 0.006$), and
-privately insured patients are \emph{less} label-sensitive than
-Medicare patients ($-1.76$ pp, $q = 0.006$).
+\pcLabelSensNSigRace{} racial strata are significantly more label-sensitive
+than the reference after false-discovery correction, and \emph{both of them are
+missingness categories}: Unknown ($+\pcLabelSensUnknownPp$ pp,
+$q = \pcLabelSensUnknownQ$) and Unable to obtain ($+\pcLabelSensUnablePp$ pp,
+$q = \pcLabelSensUnableQ$). No stratum recording an actual demographic answer
+differs from the reference. Across the full family, Spanish-speaking patients
+are more label-sensitive than English-speaking patients
+($+\pcLabelSensSpanishPp$ pp, $q = \pcLabelSensSpanishQ$), and privately
+insured patients are \emph{less} label-sensitive than Medicare patients
+($\pcLabelSensPrivatePp$ pp, $q = \pcLabelSensPrivateQ$).
 
-The pattern is coherent: the groups whose sepsis status moves most when the
-definition is loosened are those with the least complete documentation and the
-weakest access to the care pathway that generates the culture and antibiotic
-timestamps on which the label depends. Because the label is constituted by
-clinical action (Section~\ref{sec:decomposition}), differential documentation
-propagates directly into differential labelling --- and from there into who a
-model is trained to identify.
+That composition dictates the reading, and it is narrower than a
+racial-disparity reading would be. What varies with the label definition is
+concentrated in the stays whose demographic record is incomplete, together with
+two strata --- non-English language and insurance type --- that index access to
+the care pathway rather than the patient's physiology. The coherent
+interpretation is about \textbf{documentation}, not about race: a stay whose
+registration record is incomplete is a stay whose clinical record is also more
+likely to be incomplete, and because the Sepsis-3 label is constituted by two
+documented clinician actions (Section~\ref{sec:decomposition}), incomplete
+documentation propagates directly into unstable labelling. Loosening the
+definition recovers proportionally more of those stays than of well-documented
+ones.
 
-This is the equity result that survives scrutiny in this study. The
-discrimination disparity in Table~\ref{tab:equity_contrasts} does not: it is
-too imprecisely estimated to support any claim. Reporting only the first
-without the second would have inverted which of the two findings is defensible.
+This is a finding about the label's dependence on recording practice, and it is
+worth stating in that form because it is actionable in a way a racial-disparity
+finding computed on these strata would not be: it identifies the mechanism ---
+documentation completeness --- rather than the demographic correlate. Whether
+that mechanism is itself differentially distributed across patient populations
+is a question these strata cannot answer, for the reasons given in
+Section~\ref{sec:equity_strata}, and this thesis does not answer it.
+
+Of the two equity analyses, this is the one with the precision to support any
+claim at all. The discrimination analysis does not, and the pairing is the
+point: had only the discrimination analysis been reported, its wide intervals
+would have been read as an absence of disparity; had only the label analysis
+been reported, its significant contrasts would have been read as a demographic
+disparity. Reported together, each bounds how the other may be read.
 
 \begin{figure}[H]
     \centering
@@ -2015,12 +2299,17 @@ without the second would have inverted which of the two findings is defensible.
     \label{fig:label_sens_vs_auroc}
 \end{figure}
 
-To the best of our knowledge, this is the first published report combining
-subgroup model-performance disparities with subgroup label-sensitivity
-variation for any sepsis model, following Wang et al.'s \cite{wang2022equity}
-recommendation (see Section~\ref{sec:search_strategy} for the search strategy
-supporting this claim). The combination is also what makes the two results
-separable: only one of them is precise enough to act on.
+To the best of our knowledge --- bounded by the narrative search documented in
+Section~\ref{sec:search_strategy} --- subgroup model-performance disparity and
+subgroup label sensitivity have not previously been reported together, on the
+same strata and in the same cohort, for a sepsis \emph{onset} prediction model.
+Neither analysis is novel on its own: subgroup performance disparity is
+reported for sepsis mortality prediction by Wang et al.\
+\cite{wang2022equity}, who also report that competing sepsis criteria select
+demographically different sub-populations. What the search did not identify is
+the pairing, and the pairing is what makes the two results separable here: only
+one of them is precise enough to act on, and that is not knowable from either
+in isolation.
 
 %===========================================================================
 
@@ -2055,6 +2344,9 @@ maintained by hand, so it cannot drift from what the code actually computes.
         H5 metric divergence                      & [C] & \S7     & Holm ($m=6$)                           \\
         H6 model-class null                       & [C] & \S7     & Holm ($m=6$)                           \\
         External validation on eICU-CRD           & [C] & \S4     & none (estimation); feeds H5            \\
+        \quad antibiotic-only anchor (sensitivity) & [E] & ---     & none; different target, not pooled     \\
+        Action-derived feature ablation           & [E] & ---     & none (estimation); Amendment 5         \\
+        \quad instability by feature kind          & [E] & ---     & none (descriptive split of H2)         \\
         Variance decomposition table              & [C] & \S1     & none (assembly of H1--H6)              \\
         Proportional-hazards testing              & [C] & \S8     & none (single check)                    \\
         GBT feature importance                    & [E] & ---     & none (ranking, no inference)           \\
@@ -2081,237 +2373,3 @@ maintained by hand, so it cannot drift from what the code actually computes.
     would be without the amendment.}
     \label{tab:register}
 \end{table}
-
-%===========================================================================
-
-
-\section{Discussion}
-\label{sec:discussion}
-%===========================================================================
-
-\subsection{The Core Finding}
-
-The most important finding is definitional, not numerical: under a
-conjunction-based onset rule the Sepsis-3 label on MIMIC-IV \emph{cannot}
-contain an event before clinical action begins (Proposition~\ref{prop:h3}), and
-under the standard $\min(t_{\text{susp}}, t_{\text{SOFA}})$ rule applied to the
-identical stays it contains \pcPreTreatOnsetsVarF{} of them at
-\pcPreTreatAurocPrimaryF{} AUROC. A published MIMIC-IV sepsis result is
-therefore only as informative about physiological deterioration as its onset
-rule permits, and a result reported without the timing branch is measuring
-anticipation of clinician behaviour inside a window that behaviour opened.
-The Utility Score stays close to the no-alert strategy for every model because
-the temporal split exposes them to a test population where the same
-treatment-related signals do not rescue performance as consistently as in the
-training years, and because the score charges for every false-alert hour while
-crediting only the first correct one. AUROC survives because the ordinal
-ranking of patients is preserved even as the achievable alert volume becomes
-unusable.
-
-\subsection{H1 and H6 Together}
-
-H1 (label dominance) and H6 (model-class null) are in productive tension, as
-designed, and the resolution is sharper than either hypothesis anticipated ---
-because both resolve in the same direction, which the pre-registration treated
-as unlikely.
-
-H6 is \emph{not} rejected: the two flexible estimators are equivalent to within
-\pcHSixEst{} AUROC, the whole interval inside the 0.02 bound. H1 is also not
-confirmed, and by a wide margin in the direction opposite to the one
-hypothesised: the model-class spread \pcSpreadModelClass{} exceeds the label
-spread \pcSpreadLabel{} by \pcHOneEst, with an interval
-[\pcHOneCiLo, \pcHOneCiHi] that excludes zero.
-
-Read together these are not in conflict; they locate the model-class effect
-precisely. The large model-class spread is the distance between \emph{families}
-of estimator --- a six-item bedside score against a fitted hazard model --- not
-between one fitted model and another. Within the family of flexible estimators
-the choice is free (H6), and across families it is the single largest factor in
-the decomposition (H1). The conventional literature, which fixes the label and
-compares flexible models to each other, is therefore measuring the one contrast
-that has almost no room left in it, while the choice that would move the number
---- fit anything flexible at all, rather than deploy a score --- is not in
-dispute and the choice that moves the cohort --- the label --- is invisible to
-the metric being reported.
-
-This is also the clearest illustration in the thesis of why the inference layer
-was necessary. On point estimates, H1 confirmed and the study told a tidy story
-in which the label dominates. With intervals attached, that story is not
-supportable, and the defensible finding is the more interesting one: two
-sources of variance of comparable size, only one of which the field routinely
-reports.
-
-\subsection{Limitations}
-\label{sec:limitations}
-
-\begin{enumerate}
-    \item \textbf{Single-centre development.} All models were developed on
-    MIMIC-IV, which originates from a single academic medical centre (Beth
-    Israel Deaconess Medical Center, Boston). Clinical practices, patient
-    demographics, and EHR documentation patterns at BIDMC may not represent
-    those at other institutions. The equity and label-sensitivity findings in
-    particular should not be assumed to transfer to hospitals with different
-    patient populations or antibiotic prescribing cultures. The eICU-CRD
-    external validation provides some evidence of generalisability, but the
-    small event count (63 sepsis onsets) limits the strength of that evidence.
-
-    \item \textbf{Small external event count.} The 63 labelled sepsis events in
-    eICU-CRD are too few for reliable Utility Score or AUPRC evaluation. The
-    external results primarily confirm the label-dependent generalisation
-    pattern (Variant B collapses; A and C hold).
-
-    \item \textbf{Deep survival model not implemented.} A deep survival
-    comparator was planned but not built. This does not affect the structural
-    findings about the label.
-
-    \item \textbf{Limited feature set.} Clinical notes, procedure codes, and
-    ventilator settings were not included. Richer features might improve
-    discrimination but would not change the treatment-constitutionality finding.
-
-    \item \textbf{Part of the label-variant spread is definitional, not
-    empirical.} Variants A--C are three readings of one definition and all
-    three fire on the same culture-plus-antibiotic anchor. Sepsis-3 makes onset
-    a function of treatment timing, so moving the antibiotic--culture windows
-    \emph{must} move the onsets; some of the H1 label spread is guaranteed by
-    construction and would appear even if the physiology were identical across
-    patients. Section~\ref{sec:label_anchor_results} separates the two by
-    labelling each limb of the Sepsis-3 conjunction on its own, but the
-    separation is post-hoc (Protocol Amendment 2) and rests on two variants,
-    not on a systematic survey of alternative definitions.
-
-    \item \textbf{The primary model has no analytic standard errors.} A
-    cluster-robust sandwich estimator is not defined for the fitted multinomial
-    object, so no per-coefficient variance is available
-    (Section~\ref{sec:primary_model_spec}). Every interval reported for the
-    primary model comes from the stay-level cluster bootstrap, which respects
-    the same clustering but cannot supply a coefficient-level standard error.
-    H2 is reported as a descriptive count for this reason, and any effect
-    estimate from this model should be read as a point estimate without an
-    attached uncertainty.
-
-    \item \textbf{The specification requires a penalty to be identified at all.}
-    The unpenalised likelihood is completely separated on this design under
-    every label variant (Section~\ref{sec:primary_model_spec}), so the reported
-    fits are ridge-penalised. The penalty is small and no result depends on its
-    value --- test AUROC moves by less than 0.02 across a 20-point path --- but
-    the coefficients are shrunk estimates, not maximum-likelihood ones, and the
-    H2 stability counts are properties of the penalised solution. Reporting an
-    unpenalised fit here would have been worse, not better: its coefficients
-    have no unique maximiser, so cross-label comparison of them is undefined.
-
-    \item \textbf{Feature construction and data cleaning are single-analyst
-    work.} The covariate panel is assembled from raw chart and lab events by
-    one pipeline, with no independent re-implementation to check it against.
-    Two classes of defect are known to be possible in that setting and are
-    guarded rather than eliminated: a declared predictor silently failing to
-    reach a model because of a name mismatch, and implausible recorded values
-    entering the fit. The pipeline now errors on any declared-but-absent
-    feature rather than dropping it, and applies an explicit plausibility range
-    to all nineteen physiological variables before forward-fill --- MIMIC-IV
-    chartevents contains values several orders of magnitude outside the
-    physiological range, and such rows carry unbounded leverage. Neither guard
-    is a substitute for independent replication of the feature pipeline.
-
-    \item \textbf{The pre-registered onset rule is not the standard one.}
-    Variants A--C place the onset at $t_{\text{susp}}$ and use the SOFA
-    criterion only to gate membership, whereas Seymour et al.\
-    \cite{seymour2016assessment} and the PhysioNet/CinC 2019 Challenge
-    \cite{reyna2020utility} place it at
-    $\min(t_{\text{susp}}, t_{\text{SOFA}})$. The pre-registered family
-    therefore cannot address any question about onset \emph{timing} on its own,
-    H3 among them: under its rule an empty pre-treatment window is a theorem
-    rather than a result (Proposition~\ref{prop:h3}). Variant F supplies the
-    measurement the pre-registered design cannot, but it is post-hoc (Protocol
-    Amendment 4), it uses the full SOFA score including the vasopressor terms
-    --- so its onsets are free of the antibiotic-and-culture anchor but not of
-    treatment in general --- and its $t_{\text{SOFA}}$ is searched only inside
-    the 72-hour modelled panel, so a rise occurring earlier in the admission
-    cannot be detected. A design that pre-specified both timing rules across all
-    three variants would be stronger than one that adds the second afterwards.
-
-    \item \textbf{The treatment-independent label is not a validated construct.}
-    Variant D is an operational deterioration label built for this comparison,
-    not a consensus definition with an evidence base behind it, and its onsets
-    have no external adjudication. Its label is also a threshold function of
-    recorded physiology of which five of six components are model inputs, so
-    its discrimination \emph{level} is not comparable with Variant B's --- only
-    its disagreement with Variant B about which patients deteriorate, and when,
-    carries weight.
-
-    \item \textbf{Specific to Sepsis-3 and to MIMIC-IV.} These findings apply
-    to the Sepsis-3 definition on MIMIC-IV. SEP-1 and the CDC Adult Sepsis Event
-    were not implemented; both are defined on antibiotic days, so neither would
-    have tested treatment-independence, but each would give a different cohort
-    and might behave differently in other respects. Other databases may behave
-    differently again.
-
-    \item \textbf{Operating points are not externally recalibrated.} The
-    thresholds in Section~\ref{sec:clinical_utility} are derived on the test
-    set at which they are evaluated, so the reported PPV and false-alarm rates
-    are optimistic: a prospectively fixed threshold would perform no better.
-    The same applies to the maximum Utility Scores in
-    Table~\ref{tab:utility_optimum}, which take the best of sixty thresholds on
-    the test set and are therefore upper bounds rather than estimates of what a
-    deployed system would achieve; they are labelled exploratory for that
-    reason. Selecting the threshold on the training years and transferring it
-    would be the honest deployment estimate, and would be lower.
-    The external operating points in Table~\ref{tab:external_utility} are
-    likewise re-derived on eICU rather than transferred from MIMIC-IV, which
-    isolates the discrimination loss but hides the additional loss a
-    transferred threshold would incur.
-
-    \item \textbf{Alarm episodes are defined by contiguity, not by
-    acknowledgement.} False-alarm episodes are counted as contiguous runs of
-    alert hours. A real system would apply suppression, snoozing and
-    escalation logic, all of which would reduce the episode counts in
-    Table~\ref{tab:patient_level}. The alert-hour rates are the conservative
-    bound and the episode rates the optimistic one; the true burden lies
-    between them.
-
-    \item \textbf{The equity analysis is underpowered, not null.} The subgroup
-    intervals in Table~\ref{tab:equity_performance} are wide enough that most
-    groups cannot be distinguished from the reference group, and no contrast
-    survives false-discovery correction. This is a statement about precision,
-    not about fairness: the data are consistent both with no disparity and with
-    disparities larger than any effect this thesis reports elsewhere. Detecting
-    a subgroup AUROC gap of the size seen in the point estimates would require
-    on the order of ten times the event count available in the smaller groups.
-    The label-sensitivity result (Table~\ref{tab:equity_label}) is the better
-    powered of the two equity analyses because it is a stay-level proportion
-    rather than a discrimination metric, and does not depend on the small
-    number of onsets in the test window.
-
-    \item \textbf{The novelty claims rest on a narrative, not systematic,
-    search.} The search protocol in Section~\ref{sec:search_strategy} is
-    documented and every included source was verified against a primary record,
-    but no title-and-abstract screening pass over a full de-duplicated yield was
-    performed and no second reviewer screened independently. The ``to the best
-    of our knowledge'' claims for contributions C1 and C5 are therefore bounded
-    by that coverage: a systematic review could surface a prior study combining
-    multi-variant label sensitivity with subgroup equity analysis, and this
-    search would not necessarily have found it.
-
-    \item \textbf{Four protocol amendments are post-hoc.} The inference layer
-    (intervals and multiplicity control, Section~\ref{sec:inference}), the
-    alternative label limbs D and E (Section~\ref{sec:alt_labels}), the model
-    identification and data-plausibility changes
-    (Section~\ref{sec:primary_model_spec}) and the standard onset timing of
-    Variant F (Section~\ref{sec:variant_f}) were all specified after the
-    pre-registered analyses had been run and inspected. None changes an
-    estimand, threshold, direction or hypothesis, and H1--H6 and families E1/E2
-    are computed from unchanged inputs; but a reader should treat the verdicts
-    as a pre-specified hypothesis set analysed under a retrospectively specified
-    error-control plan, and the amendment results as exploratory. Amendment 4 in
-    particular enlarges family E3, which tightens rather than relaxes the
-    correction applied within it.
-
-    \item \textbf{Two hypotheses admit no test statistic.} H2 is a stability
-    criterion rather than a contrast, and the fitted multinomial carries no
-    variance estimate; H3 is degenerate because its outcome is absent from the
-    evaluation window \emph{by construction} rather than by chance, so no test
-    of it could ever have been informative. Both are reported descriptively
-    while still consuming a slot in the family size, which makes the correction
-    on the remaining four hypotheses stricter, not weaker. Since all four
-    testable hypotheses return adjusted $p$-values of 1.000, the correction is
-    not what determines any verdict here.
-\end{enumerate}

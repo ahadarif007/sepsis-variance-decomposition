@@ -521,6 +521,15 @@ for (vid in active_variants()) {
     v
   }
   suppl_o2   <- { fio2_v <- get_panel_col("fio2"); !is.na(fio2_v) & fio2_v > 0.21 }
+  # KNOWN INCONSISTENCY with 08_external_validation.Rmd, deliberately left in
+  # place. This expression maps an unmeasured GCS to FALSE, which news2() scores
+  # as 3 points rather than 0 (see avpu_alert_flag() in clinical_scores.R).
+  # 3.2% of MIMIC-IV person-hours have no GCS after the forward-fill, so this
+  # affects a small minority of rows here, whereas in eICU-CRD -- where GCS is
+  # absent from vitalPeriodic entirely -- it affected every row and was fixed.
+  # Switching to avpu_alert_flag() here moves every NEWS2-dependent number in
+  # the thesis and therefore requires a full 03-12 re-run; it is recorded as an
+  # open decision in feedback/v2.md rather than made as a side effect.
   avpu_alert <- { gcs_v  <- get_panel_col("gcs");  !is.na(gcs_v)  & gcs_v >= 14 }
   news2_scores <- news2(get_panel_col("resp_rate"), get_panel_col("spo2"),
                         suppl_o2, get_panel_col("sbp"), get_panel_col("hr"),

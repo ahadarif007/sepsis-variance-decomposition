@@ -8,8 +8,9 @@ Score collapses from $+0.381$ to $-0.164$, meaning these models cause more
 harm than benefit when deployed. This thesis investigates why: is the problem
 the model, the sepsis label, or the researcher's methodological choices?
 
-The study uses MIMIC-IV v3.1 (65,078 adult ICU stays) with external validation
-on eICU-CRD v2.0 (63 sepsis cases across 7.9 million person-hours). Three
+The study uses MIMIC-IV v3.1 (65,078 adult ICU stays), with external validation
+on eICU-CRD v2.0 restricted to the stays in which the Sepsis-3 anchor is
+recoverable at all. Three
 Sepsis-3 label variants (Narrow, Seymour-Standard, Liberal) are tested with a
 dynamic discrete-time competing-risks hazard model, gradient-boosted trees (GBT),
 a static Cox model, and rule-based scores (NEWS2, qSOFA, SIRS). Because all
@@ -31,9 +32,13 @@ cohort and the denominator of every downstream clinical claim without much
 affecting how learnable that cohort is. \pcHTwoEst{} of \pcHTwoNTerms{} shared
 covariates are unstable across labels, including a sign reversal on vasopressor
 exposure. Random data splits do \emph{not} inflate AUROC relative to time-based
-splits (\pcHFourEst, 95\% CI \pcHFourCiLo--\pcHFourCiHi), and discrimination
-transports to eICU-CRD without measurable loss (\pcHFiveEst,
-95\% CI \pcHFiveCiLo--\pcHFiveCiHi). An interpretable hazard model matches
+splits (\pcHFourEst, 95\% CI \pcHFourCiLo--\pcHFourCiHi). Discrimination does
+fall on transport to eICU-CRD, by \pcHFiveEst{} (95\% CI
+\pcHFiveCiLo--\pcHFiveCiHi) --- close to the 0.085 anticipated from the
+literature, but estimated on \pcExtNEventsB{} external events, because the
+Sepsis-3 anchor is recoverable in only \pcExtMicroCoverage\% of eICU-CRD stays.
+The direction is established and the magnitude is not. An interpretable hazard
+model matches
 gradient-boosted trees to within \pcHSixEst{} AUROC
 [\pcHSixCiLo, \pcHSixCiHi], inside the pre-registered equivalence margin. The
 pre-treatment evaluation window --- the hours before the first antibiotic or

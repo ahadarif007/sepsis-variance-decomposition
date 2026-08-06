@@ -156,6 +156,22 @@ news2_alert <- function(news2_total, threshold = 5L) {
   as.integer(!is.na(news2_total) & news2_total >= threshold)
 }
 
+#' NEWS2 consciousness flag from GCS, propagating unmeasured as unmeasured.
+#'
+#' `news2()` scores its `avpu_alert` argument asymmetrically: `NA` contributes 0
+#' points (the conservative "not assessed" reading) while `FALSE` contributes 3
+#' (an explicit "not alert"). The natural expression `!is.na(gcs) & gcs >= 14`
+#' collapses both cases to `FALSE`, so every row with an unmeasured GCS silently
+#' acquires 3 NEWS2 points. Where GCS is entirely absent from a data source that
+#' is a constant offset applied to every person-hour: harmless for AUROC, which
+#' is rank-based, but it moves the score distribution bodily and invalidates any
+#' threshold, specificity or alert-burden figure compared across sources.
+#'
+#' Callers that want the "not assessed scores 0" reading must use this helper.
+avpu_alert_flag <- function(gcs, alert_threshold = 14) {
+  ifelse(is.na(gcs), NA, gcs >= alert_threshold)
+}
+
 # --------------------------------------------------------------------------- #
 # qSOFA — retained for descriptive comparison only (NOT primary comparator)
 # Evans et al. (2021): strong recommendation AGAINST using as sole screening tool

@@ -36,7 +36,11 @@ knitr::opts_chunk$set(
 
 Riley et al. (2019) provide minimum sample size criteria for prediction models: (i) shrinkage $\geq 0.9$, (ii) Nagelkerke $R^2$ optimism $\leq 0.05$, and (iii) adequate event-rate precision.
 
-The calculation is repeated per label variant. The effective sample size depends on independent **onset events**, not total person-hour rows, because rows within a stay are correlated. Anticipated C-statistic = 0.846 (Moor et al., 2023).
+**The criteria assume independent observations, and person-hours are not independent** — they are nested within ICU stays at roughly 45 correlated rows per stay, one stay per patient. The adequacy assessment is therefore parameterised on the **stay**: the outcome proportion supplied to `pmsampsize` is the fraction of training *stays* labelled septic, and the resulting minimum is compared against the number of training stays.
+
+The per-person-hour parameterisation is also computed and retained, because it is the quantity that governs the precision of an hourly hazard estimate conditional on the clustering, and because reporting only one of the two invites the reader to compare a minimum derived at one prevalence against a count at the other. It is **not** an effective sample size and must never be compared against the 2.3M person-hour row count as though it were. The stay-level figure is the one the thesis reports as the adequacy verdict.
+
+The calculation is repeated per label variant. Anticipated C-statistic = 0.846 (Moor et al., 2023).
 
 ```{r load-deps}
 suppressPackageStartupMessages({
@@ -94,45 +98,72 @@ for (i in seq_len(nrow(lv))) {
   cat(sprintf("  Onset events (train):  %s\n", format(n_events,        big.mark = ",")))
   cat(sprintf("  Per-hour event rate:   %.4f%%\n", 100 * event_rate_ph))
 
-  ss_res <- tryCatch(
-    pmsampsize::pmsampsize(
-      type       = "b",
-      rsquared   = NULL,
-      parameters = P_CANDIDATE_PREDICTORS,
-      shrinkage  = 0.9,
-      prevalence = event_rate_ph,
-      cstatistic = ANTICIPATED_AUC,
-      seed       = 42
-    ),
-    error = function(e) {
-      v2_log(sprintf("  pmsampsize error: %s", e$message), level = "WARN")
-      NULL
-    }
-  )
+  # Stay-level prevalence: the fraction of INDEPENDENT units carrying the
+  # outcome. This is the parameterisation Riley et al.'s derivation assumes.
+  stay_prevalence <- n_events / n_stays
+  cat(sprintf("  Stay-level sepsis prevalence: %.4f%%\n", 100 * stay_prevalence))
 
-  if (!is.null(ss_res)) {
-    min_n_ph <- ss_res$sample_size
-    cat(sprintf("  Minimum person-hours (Riley): %s\n", format(min_n_ph, big.mark = ",")))
-    cat(sprintf("  Available person-hours:       %s\n", format(n_person_hours, big.mark = ",")))
-    cat(sprintf("  Sufficient (person-hours):    %s\n",
-                if (n_person_hours >= min_n_ph) "YES" else "NO - variant may be underpowered"))
-    cat(sprintf("  NOTE: effective information = onset EVENTS (%d), not person-hours.\n",
-                n_events))
+  riley <- function(prev) {
+    tryCatch(
+      pmsampsize::pmsampsize(
+        type       = "b",
+        rsquared   = NULL,
+        parameters = P_CANDIDATE_PREDICTORS,
+        shrinkage  = 0.9,
+        prevalence = prev,
+        cstatistic = ANTICIPATED_AUC,
+        seed       = 42
+      ),
+      error = function(e) {
+        v2_log(sprintf("  pmsampsize error at prevalence %.6f: %s", prev, e$message),
+               level = "WARN")
+        NULL
+      }
+    )
+  }
+
+  # PRIMARY: the independent unit is the stay. This is the adequacy verdict.
+  ss_stay <- riley(stay_prevalence)
+  # SECONDARY, reference only: the per-hour parameterisation. Retained so the
+  # two can be seen side by side and never confused. It is NOT an effective
+  # sample size and must not be compared against the person-hour row count.
+  ss_ph   <- riley(event_rate_ph)
+
+  if (!is.null(ss_stay)) {
+    min_n_stay <- ss_stay$sample_size
+    cat(sprintf("  [PRIMARY] Minimum independent observations (Riley, stay-level): %s\n",
+                format(min_n_stay, big.mark = ",")))
+    cat(sprintf("            Available independent units (training stays):        %s\n",
+                format(n_stays, big.mark = ",")))
+    cat(sprintf("            Sufficient: %s (margin %.2fx)\n",
+                if (n_stays >= min_n_stay) "YES" else "NO - variant may be underpowered",
+                n_stays / min_n_stay))
+  }
+  if (!is.null(ss_ph)) {
+    cat(sprintf("  [reference] Minimum at the per-hour prevalence: %s\n",
+                format(ss_ph$sample_size, big.mark = ",")))
+    cat("             Rows are clustered within stays, so the person-hour count\n")
+    cat("             does not supply that many independent observations.\n")
   }
 
   epv <- if (P_CANDIDATE_PREDICTORS > 0) n_events / P_CANDIDATE_PREDICTORS else NA
-  cat(sprintf("  Events-per-variable (EPV): %.1f (reference only)\n", epv))
+  cat(sprintf("  Events-per-variable (EPV): %.1f\n", epv))
 
   results[[vid]] <- data.frame(
     variant             = vid,
     name                = row$name,
-    n_train_person_h    = n_person_hours,
+    # --- independent unit = the stay; this is the adequacy verdict ---
     n_train_stays       = n_stays,
     n_onset_events      = n_events,
-    per_hour_event_rate = round(event_rate_ph, 5),
-    min_n_riley         = if (!is.null(ss_res)) ss_res$sample_size else NA,
-    sufficient          = if (!is.null(ss_res)) n_person_hours >= ss_res$sample_size else NA,
+    stay_prevalence     = round(stay_prevalence, 5),
+    min_n_riley_stay    = if (!is.null(ss_stay)) ss_stay$sample_size else NA,
+    sufficient_stay     = if (!is.null(ss_stay)) n_stays >= ss_stay$sample_size else NA,
+    margin_stay         = if (!is.null(ss_stay)) round(n_stays / ss_stay$sample_size, 2) else NA,
     epv                 = round(epv, 1),
+    # --- design-matrix size, reported alongside; NOT a sample size ---
+    n_train_person_h    = n_person_hours,
+    per_hour_event_rate = round(event_rate_ph, 5),
+    min_n_riley_perhour = if (!is.null(ss_ph)) ss_ph$sample_size else NA,
     anticipated_auc     = ANTICIPATED_AUC,
     n_candidate_preds   = P_CANDIDATE_PREDICTORS
   )
@@ -141,7 +172,7 @@ for (i in seq_len(nrow(lv))) {
 
 ## Summary and Interpretation
 
-The table below reports minimum required person-hours (Riley criterion), available training person-hours, and whether the sample is sufficient.
+The table below reports the adequacy verdict on the independent unit: the minimum number of independent observations required at each variant's stay-level prevalence, against the number of training stays available. The person-hour columns are the size of the design matrix and are reported for completeness only.
 
 ```{r summary-table}
 if (length(results) > 0) {

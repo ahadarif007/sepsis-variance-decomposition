@@ -87,9 +87,9 @@ cat("Missingness indicators:", paste(MISSINGNESS_FEATURES, collapse = ", "), "\n
 Per variant: load training person-hours, impute remaining NAs to zero, fit the multinomial model via `nnet::multinom`, compute cluster-robust SEs, predict on the test set, and save outputs. A binary logistic fallback handles non-convergence.
 
 ```{r fit-primary-model, code_folding="hide"}
-fit_primary_model <- function(vid) {
-  step(sprintf("--- Fitting primary model: Variant %s (%s) ---",
-               vid, variant_name(vid)))
+fit_primary_model <- function(vid, arm = "full") {
+  step(sprintf("--- Fitting primary model: Variant %s (%s), arm = %s ---",
+               vid, variant_name(vid), arm))
 
   ph <- as.data.table(arrow::read_parquet(
     file.path(DATA_DIR, paste0("03_person_hours_", vid, ".parquet"))
@@ -104,8 +104,17 @@ fit_primary_model <- function(vid) {
 
   avail_base  <- intersect(BASE_FEATURES,        names(train))
   avail_miss  <- intersect(MISSINGNESS_FEATURES, names(train))
-  all_features <- c(avail_base, avail_miss)
   require_features(BASE_FEATURES, MISSINGNESS_FEATURES, available = names(train))
+
+  # Protocol Amendment 5: the ablated arm drops the action-derived features
+  # (vasopressor exposure and the order indicators) and nothing else. The
+  # required-feature check above still runs against the full declared set, so a
+  # column vanishing from the panel is caught in both arms.
+  all_features <- arm_features(c(avail_base, avail_miss), arm)
+  if (identical(arm, "ablated"))
+    cat(sprintf("  Ablated arm: %d action-derived features dropped, %d remain\n",
+                length(intersect(ACTION_DERIVED_FEATURES, c(avail_base, avail_miss))),
+                length(all_features)))
 
   for (f in all_features) {
     if (is.numeric(train[[f]])) train[is.na(get(f)), (f) := 0]
@@ -175,6 +184,7 @@ fit_primary_model <- function(vid) {
   }
   coef_table$variant <- vid
   coef_table$model   <- "discrete_time_competing_risks"
+  coef_table$arm     <- arm
 
   # Test-set predictions
   test <- ph[temporal_split == "test"]
@@ -194,12 +204,13 @@ fit_primary_model <- function(vid) {
   save_cols <- c("stay_id", "hour", "event", "pred_sepsis", "temporal_split", "random_split",
                  "anchor_year_group", "onset_hour",
                  intersect(c("sofa_total", "news2_total", "qsofa_score"), names(test)))
+  sfx <- arm_suffix(arm)
   save_parquet(test[, ..save_cols],
-               paste0("05_predictions_primary_", vid), DATA_DIR)
-  save_parquet(coef_table, paste0("05_coef_table_primary_", vid), DATA_DIR)
-  saveRDS(fit, file.path(DATA_DIR, paste0("05_model_primary_", vid, ".rds")))
+               paste0("05_predictions_primary", sfx, "_", vid), DATA_DIR)
+  save_parquet(coef_table, paste0("05_coef_table_primary", sfx, "_", vid), DATA_DIR)
+  saveRDS(fit, file.path(DATA_DIR, paste0("05_model_primary", sfx, "_", vid, ".rds")))
 
-  cat(sprintf("  Variant %s model saved.\n", vid))
+  cat(sprintf("  Variant %s model saved (arm = %s).\n", vid, arm))
 
   # Deliberately do NOT return the fit. A multinom object on 2.3 M person-hours
   # carries its fitted values and residuals (~1.5 GB live, 450 MB on disk), and
@@ -214,9 +225,25 @@ fit_primary_model <- function(vid) {
 ```
 
 ```{r run-all-variants}
-run_variants  <- active_variants()
-models        <- lapply(run_variants, fit_primary_model)
-names(models) <- run_variants
+run_variants <- active_variants()
+run_arms     <- active_arms()
+v2_log(sprintf("Arms in this run: %s", paste(run_arms, collapse = ", ")))
+
+models <- NULL
+if ("full" %in% run_arms) {
+  models        <- lapply(run_variants, fit_primary_model, arm = "full")
+  names(models) <- run_variants
+}
+
+# The ablated arm is Protocol Amendment 5 and post-hoc. It writes to its own
+# files and never overwrites the pre-registered fit, so `V2_ARMS=ablated`
+# refreshes it while leaving every headline number on disk untouched.
+models_ablated <- NULL
+if ("ablated" %in% run_arms) {
+  ablate_variants        <- intersect(run_variants, names(LABEL_VARIANTS))
+  models_ablated         <- lapply(ablate_variants, fit_primary_model, arm = "ablated")
+  names(models_ablated)  <- ablate_variants
+}
 ```
 
 ## Random-Split Re-Fit (H4: Split Optimism)
@@ -318,7 +345,14 @@ fit_primary_random <- function(vid = "B") {
 # allocates its own design matrix.
 invisible(gc(FALSE))
 
-random_split_done <- if ("B" %in% run_variants) fit_primary_random("B") else {
+# The random-split arm exists only to quantify optimism under the pre-registered
+# specification (H4), so it is tied to the full arm. Under V2_ARMS=ablated it is
+# skipped rather than refitted, which is what keeps an ablation-only pass from
+# touching any H4 input.
+random_split_done <- if (!"full" %in% run_arms) {
+  cat("Full arm not selected; keeping the existing random-split fit.\n")
+  NULL
+} else if ("B" %in% run_variants) fit_primary_random("B") else {
   cat("Variant B not selected in this run; keeping the existing random-split fit.\n")
   NULL
 }
@@ -331,13 +365,17 @@ The combined coefficient table across variants feeds the H2 (coefficient instabi
 ```{r cross-label-coefs}
 step("Computing cross-label coefficient stability (→ H2)...")
 
-bind_coefs <- function(vids) data.table::rbindlist(
-  lapply(vids, function(vid) as.data.table(models[[vid]]$coef_table)), fill = TRUE
+bind_coefs <- function(vids, src = models) data.table::rbindlist(
+  lapply(vids, function(vid) as.data.table(src[[vid]]$coef_table)), fill = TRUE
 )
 
 # H2 is defined on the pre-registered family, so the alternative-label
 # coefficients are written to their own file and never mixed in.
-prereg_run <- intersect(run_variants, names(LABEL_VARIANTS))
+prereg_run <- if (is.null(models)) {
+  character(0)
+} else {
+  intersect(run_variants, names(LABEL_VARIANTS))
+}
 if (length(prereg_run) > 0) {
   all_coefs <- bind_coefs(prereg_run)
   save_parquet(all_coefs, "05_coef_all_variants", DATA_DIR)
@@ -354,9 +392,42 @@ if (length(prereg_run) > 0) {
   cat("No pre-registered variants in this run; 05_coef_all_variants left unchanged.\n")
 }
 
-alt_run <- intersect(run_variants, names(ALT_LABEL_VARIANTS))
+alt_run <- if (is.null(models)) {
+  character(0)
+} else {
+  intersect(run_variants, names(ALT_LABEL_VARIANTS))
+}
 if (length(alt_run) > 0) {
   save_parquet(bind_coefs(alt_run), "05_coef_alt_variants", DATA_DIR)
   cat("Alternative-label coefficient tables saved (Protocol Amendment 2).\n")
+}
+```
+
+### Ablated-Arm Stability (Protocol Amendment 5)
+
+The same instability rule applied to the ablated fit. The question is whether
+the cross-label instability observed in the full specification is a property of
+the model as a whole or specifically of the features that record clinician
+behaviour: if the latter, removing those features should leave a markedly more
+stable set of coefficients behind.
+
+```{r ablated-coef-stability}
+if (!is.null(models_ablated) && length(models_ablated) >= 2) {
+  abl_coefs <- bind_coefs(names(models_ablated), src = models_ablated)
+  save_parquet(abl_coefs, "05_coef_all_variants_ablated", DATA_DIR)
+
+  # coef_stability_flags() is the same function 12_inference.Rmd applies to the
+  # full arm, so the two counts differ only by the feature set.
+  abl_flags <- coef_stability_flags(abl_coefs, variants = names(models_ablated))
+  save_parquet(abl_flags, "05_h2_stability_ablated", DATA_DIR)
+  save_csv(abl_flags,     "05_h2_stability_ablated", DATA_DIR)
+
+  cat(sprintf("Ablated arm: of %d shared covariates, %d reverse sign, %d change magnitude >=2x, %d do either\n",
+              nrow(abl_flags), sum(abl_flags$sign_flip), sum(abl_flags$mag_flip),
+              sum(abl_flags$sign_flip | abl_flags$mag_flip)))
+  knitr::kable(abl_flags[sign_flip | mag_flip],
+               caption = "Unstable covariates remaining after ablation")
+} else {
+  cat("Ablated arm not run (or fewer than two variants); ablated stability unchanged.\n")
 }
 ```

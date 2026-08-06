@@ -571,6 +571,103 @@ if (!is.null(alt_df) && nrow(alt_df) > 0) {
 }
 ```
 
+## Feature-Ablation Evaluation (Protocol Amendment 5)
+
+The ablated fits from stages 05 and 06 are scored with the identical metric
+suite on the identical test rows, so the difference between the two arms is
+attributable to the feature set alone. The ablation removes the action-derived
+features --- vasopressor exposure and the per-test order indicators --- and
+retains all physiological measurements, including forward-filled laboratory
+values.
+
+```{r evaluate-ablation}
+step("--- Evaluating the ablated arm (Protocol Amendment 5) ---")
+
+ablation_rows <- list()
+
+for (vid in intersect(active_variants(), names(LABEL_VARIANTS))) {
+  abl_paths <- c(primary = file.path(DATA_DIR,
+                    paste0("05_predictions_primary_ablated_", vid, ".parquet")),
+                 gbt     = file.path(DATA_DIR,
+                    paste0("06_predictions_gbt_ablated_", vid, ".parquet")))
+  abl_cols  <- c(primary = "pred_sepsis", gbt = "pred_gbt")
+
+  for (mod_name in names(abl_paths)) {
+    if (!file.exists(abl_paths[[mod_name]])) next
+    d        <- as.data.table(arrow::read_parquet(abl_paths[[mod_name]]))
+    pred_col <- abl_cols[[mod_name]]
+    if (!pred_col %in% names(d)) next
+
+    y     <- as.integer(d$event == 1)
+    pred  <- as.numeric(d[[pred_col]])
+    valid <- !is.na(pred) & !is.na(y)
+    if (sum(valid) < 10) next
+
+    roc_pr <- compute_roc_pr(y[valid], pred[valid])
+    calib  <- tryCatch(compute_calibration(y[valid], pred[valid]),
+                       error = function(e) list(intercept = NA, slope = NA))
+    sweep  <- tryCatch(utility_curve(d[valid], pred_col,
+                                     utility_threshold_grid(pred[valid])),
+                       error = function(e) NULL)
+    best   <- if (!is.null(sweep)) {
+      cand <- sweep[n_alerts > 0 & is.finite(utility_normalised)]
+      if (nrow(cand) > 0) cand[which.max(utility_normalised)] else NULL
+    } else NULL
+
+    ablation_rows[[paste(vid, mod_name, sep = "-")]] <- data.frame(
+      variant         = vid,
+      variant_name    = variant_name(vid),
+      model           = mod_name,
+      arm             = "ablated",
+      eval_window     = "unrestricted",
+      split_type      = "temporal",
+      n_features      = NA_integer_,
+      n_rows          = sum(valid),
+      n_sepsis_events = sum(y[valid]),
+      auroc           = round(roc_pr$auroc, 4),
+      auprc           = round(roc_pr$auprc, 4),
+      calib_slope     = round(calib$slope, 4),
+      utility_max     = if (is.null(best)) NA_real_ else round(best$utility_normalised, 4)
+    )
+    rm(d); invisible(gc(FALSE))
+  }
+}
+
+if (length(ablation_rows) > 0) {
+  abl_res <- as.data.table(do.call(rbind, ablation_rows))
+
+  # Paired against the full arm on the same variant, model and window. The
+  # delta is the quantity of interest; the two AUROCs on their own are not.
+  full_res <- as.data.table(arrow::read_parquet(
+    file.path(DATA_DIR, "07_metric_results.parquet")))
+  full_res <- full_res[eval_window == "unrestricted" & split_type == "temporal",
+                       .(variant, model,
+                         auroc_full = auroc, auprc_full = auprc,
+                         calib_slope_full = calib_slope,
+                         utility_max_full = utility_max)]
+
+  abl_res <- merge(abl_res, full_res, by = c("variant", "model"), all.x = TRUE)
+  abl_res[, `:=`(
+    delta_auroc       = round(auroc       - auroc_full,       4),
+    delta_auprc       = round(auprc       - auprc_full,       4),
+    delta_utility_max = round(utility_max - utility_max_full, 4)
+  )]
+  setorder(abl_res, variant, model)
+
+  save_parquet(as.data.frame(abl_res), "07_ablation_metrics", DATA_DIR)
+  save_csv(as.data.frame(abl_res),     "07_ablation_metrics", DATA_DIR)
+  knitr::kable(
+    abl_res[, .(variant, model, n_sepsis_events,
+                auroc_full, auroc, delta_auroc,
+                utility_max_full, utility_max, delta_utility_max)],
+    caption = "Protocol Amendment 5: performance with and without the action-derived features"
+  )
+  cat("\nSaved: 07_ablation_metrics.parquet / .csv\n")
+} else {
+  cat("No ablated predictions found; the ablation arm has not been run.\n")
+}
+```
+
 ## Random-Split Evaluation (H4: Split Optimism)
 
 The same metric suite is applied to random-split predictions (Variant B only). The output `07_metric_results_random.parquet` feeds the variance decomposition for H4 (Guo et al., 2022).

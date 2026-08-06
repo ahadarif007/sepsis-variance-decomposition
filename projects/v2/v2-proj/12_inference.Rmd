@@ -268,9 +268,21 @@ if (file.exists(rnd_prim)) {
 # --- H5: internal -> external degradation on eICU-CRD -----------------------
 eicu_path <- file.path(DATA_DIR, "08_eicu_predictions_B.parquet")
 boot_h5 <- NULL; obs_h5 <- NA_real_; ext_auroc <- NA_real_
+ext_n_events <- NA_integer_; ext_interpretable <- NA
 if (file.exists(eicu_path)) {
   ed <- as.data.table(read_parquet(eicu_path))
   ed[, y := as.integer(event == 1)]
+  # The external event count governs whether the H5 estimate can be read at
+  # all. Stage 08 restricts the external cohort to the stays in which the
+  # Sepsis-3 anchor is recoverable; if that cohort still yields fewer than
+  # MIN_EXTERNAL_EVENTS events the interval is wider than the effect H5
+  # concerns, and the verdict is carried with that flag attached.
+  ext_n_events      <- sum(ed$y)
+  ext_interpretable <- ext_n_events >= MIN_EXTERNAL_EVENTS
+  if (!ext_interpretable)
+    v2_log(sprintf(paste0("H5: external cohort has %d events, below the %d-event ",
+                          "floor; the AUROC estimate is not interpretable"),
+                   ext_n_events, MIN_EXTERNAL_EVENTS), level = "WARN")
   setorder(ed, stay_id, hour)
   estays <- sort(unique(ed$stay_id)); ed[, sidx := match(stay_id, estays)]
   pre_ext <- auc_precompute(ed$pred_sepsis, ed$y, ed$sidx, length(estays))
@@ -303,22 +315,18 @@ if (file.exists(eicu_path)) {
 coef_path <- file.path(DATA_DIR, "05_coef_all_variants.parquet")
 h2_sign <- NA_integer_; h2_mag <- NA_integer_; h2_any <- NA_integer_; h2_n_terms <- NA_integer_
 if (file.exists(coef_path)) {
-  ct <- as.data.table(read_parquet(coef_path))
-  cs <- ct[outcome == "sepsis" & !grepl("^ns\\(|^\\(Intercept\\)", as.character(term))]
-  terms_common <- Reduce(intersect, lapply(c("A", "B", "C"),
-                                            function(v) unique(as.character(cs[variant == v, term]))))
-  flags <- rbindlist(lapply(terms_common, function(tm) {
-    vals <- vapply(c("A", "B", "C"), function(v) {
-      r <- cs[variant == v & as.character(term) == tm, coef]
-      if (length(r) == 0) NA_real_ else as.numeric(r[1])
-    }, numeric(1))
-    vals <- vals[!is.na(vals)]
-    if (length(vals) < 2) return(data.table(term = tm, sign_flip = FALSE, mag_flip = FALSE))
-    mag <- abs(vals); mag <- mag[mag > 0]
-    data.table(term = tm,
-               sign_flip = diff(range(sign(vals))) != 0,
-               mag_flip  = length(mag) >= 2 && (max(mag) / min(mag)) >= 2)
-  }))
+  ct    <- as.data.table(read_parquet(coef_path))
+  # Shared with the Amendment 5 ablation arm in 05_primary_model.Rmd, so the
+  # two instability counts are produced by one rule and remain comparable.
+  flags <- coef_stability_flags(ct, variants = c("A", "B", "C"))
+
+  # Instability split by whether the covariate records physiology or clinician
+  # behaviour. This is descriptive and sits outside the confirmatory family.
+  kind_split <- stability_by_feature_kind(flags)
+  save_parquet(kind_split, "12_h2_stability_by_kind", DATA_DIR)
+  save_csv(kind_split,     "12_h2_stability_by_kind", DATA_DIR)
+  cat("H2 instability by feature kind:\n"); print(kind_split)
+
   h2_sign    <- sum(flags$sign_flip)
   h2_mag     <- sum(flags$mag_flip)
   h2_any     <- sum(flags$sign_flip | flags$mag_flip)
@@ -367,6 +375,21 @@ mk <- function(id, label, contrast, theta, ci, null_txt, p, note = "") {
 
 rows <- list()
 
+# The two spreads and their intervals are the body of the decomposition table
+# in the thesis. They used to exist only inside H1's free-text note, which meant
+# the table transcribed them by hand; they are persisted as data instead.
+spread_ci <- rbindlist(lapply(c("label", "model"), function(q) {
+  col <- paste0(q, "_spread")
+  ci  <- perc_ci(boot_h1[, col], CI_LEVEL)
+  data.table(quantity = q,
+             estimate = round(unname(obs_h1h6[col]), 4),
+             ci_lo    = round(unname(ci["lo"]), 4),
+             ci_hi    = round(unname(ci["hi"]), 4))
+}))
+save_parquet(spread_ci, "12_spread_ci", DATA_DIR)
+save_csv(spread_ci,     "12_spread_ci", DATA_DIR)
+print(spread_ci)
+
 # H1: theta = label spread - model spread; H0: theta <= 0
 ci_h1 <- perc_ci(boot_h1[, "h1_delta"], CI_LEVEL)
 p_h1  <- boot_pvalue(boot_h1[, "h1_delta"], obs_h1h6["h1_delta"], 0, "greater")
@@ -413,8 +436,10 @@ if (!is.null(boot_h5)) {
   rows[["H5"]] <- mk("H5", "Metric divergence",
                      "Internal - external AUROC (primary, Variant B, eICU-CRD)",
                      obs_h5, ci_h5, "theta <= 0", p_h5,
-                     sprintf("external AUROC %.4f; Utility Score arm not testable: the internal score is %.3f at the default cut-off and %.3f at its best threshold, so a proportional decline has no baseline to be proportional to",
-                             ext_auroc,
+                     sprintf("external AUROC %.4f on %d external events (%s the %d-event interpretability floor); Utility Score arm not testable: the internal score is %.3f at the default cut-off and %.3f at its best threshold, so a proportional decline has no baseline to be proportional to",
+                             ext_auroc, ext_n_events,
+                             if (isTRUE(ext_interpretable)) "at or above" else "BELOW",
+                             MIN_EXTERNAL_EVENTS,
                              mt[variant == "B" & model == "primary" & eval_window == "unrestricted",
                                 utility_normalised][1],
                              mt[variant == "B" & model == "primary" & eval_window == "unrestricted",
@@ -518,6 +543,18 @@ for (svar in EQUITY_VARS) {
   if (nrow(elig) == 0) next
   ref_lvl <- elig[order(-n_rows)][1, lvl]
 
+  # Two distinct thresholds, and the distinction is the point. The filter above
+  # decides whether an AUROC can be COMPUTED at all; the flag below decides
+  # whether it is INTERPRETED. Levels under the interpretability floor are
+  # still estimated and reported -- suppressing them would hide which groups
+  # the cohort contains and how few events they carry -- but they are kept out
+  # of the contrast family, so the BH correction is applied over the analyses
+  # the study is willing to read rather than over every level that exists.
+  elig[, interpretable := n_events >= MIN_SUBGROUP_EVENTS_INTERPRET]
+  v2_log(sprintf(
+    "  %s: %d levels estimated, %d above the %d-event interpretability floor",
+    svar, nrow(elig), sum(elig$interpretable), MIN_SUBGROUP_EVENTS_INTERPRET))
+
   # Estimand keys are opaque ids paired with a lookup table: subgroup labels
   # contain slashes, spaces and hyphens, so they are never parsed out of a key.
   pre_sub <- list(); key_tab <- list()
@@ -551,9 +588,12 @@ for (svar in EQUITY_VARS) {
       is_reference = lv == ref_lvl,
       n_rows = e$n_rows, n_stays = e$n_stays, n_events = e$n_events,
       auroc = unname(obs_sub[nm]), ci_lo = ci["lo"], ci_hi = ci["hi"],
-      ci_width = unname(ci["hi"] - ci["lo"]))
+      ci_width = unname(ci["hi"] - ci["lo"]),
+      interpretable = e$interpretable,
+      min_events_interpret = MIN_SUBGROUP_EVENTS_INTERPRET)
 
-    if (lv != ref_lvl) {
+    ref_interpretable <- elig[lvl == ref_lvl, interpretable]
+    if (lv != ref_lvl && isTRUE(e$interpretable) && isTRUE(ref_interpretable)) {
       ref_nm <- key_tab[model == mn & lvl == ref_lvl, estimand]
       if (length(ref_nm) == 1L) {
         dvec <- b_sub[, nm] - b_sub[, ref_nm]

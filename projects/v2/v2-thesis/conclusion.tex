@@ -9,11 +9,12 @@ much of the reported performance comes from the model versus the researcher's
 choices about the label, the data split, and the evaluation metric?
 
 The answer is not the one the study anticipated. Model class dominates
-discrimination; the label definition contributes an order of magnitude less;
-the split design and external transport contribute nothing detectable. What the
-label determines is not how well a cohort can be predicted but \emph{which
-cohort exists at all} --- and, through its onset rule, whether prediction ahead
-of clinical action can be measured in the first place.
+discrimination. External transport comes second, moving AUROC several times
+more than the label definition does, though on an interval too wide to pin
+down. The label and the split design move it least. What the label determines is
+not how well a cohort can be predicted but \emph{which cohort exists at all} ---
+and, through its onset rule, whether prediction ahead of clinical action can be
+measured in the first place.
 
 \paragraph{H1 (Label dominance): Not confirmed, and reversed.}
 Changing the sepsis definition while keeping the model fixed changes AUROC by
@@ -65,21 +66,31 @@ choice.
 
 \paragraph{H5 (Metric divergence): Not confirmed --- and superseded by a starker
 finding.}
-Neither arm supports the hypothesis. External AUROC does not degrade at all:
-\pcExtAurocPrimaryB{} on eICU-CRD against \pcAurocPrimaryB{} internally, a
-difference of \pcHFiveEst{} (95\% CI \pcHFiveCiLo--\pcHFiveCiHi) centred on
-zero, well inside the 0.085 degradation anticipated from Moor et al.\
-\cite{moor2023review}. And the proportional utility decline the hypothesis
-asked for cannot be formed, because there is no internal utility to decline
-from: swept across sixty thresholds, the best any configuration achieves under
-the primary label is \pcUtilityMaxGbtB{}, at \pcUtilityOptBurdenGbtB{} false
-alerts per true one against a benchmark of 1.4. The utility collapse Wang et
-al.\ \cite{wang2025srpm} documented across ninety-one models therefore has its
+Neither arm supports the hypothesis, but the AUROC arm fails narrowly and in an
+informative way. External discrimination is \pcExtAurocPrimaryB{} on eICU-CRD
+against \pcAurocPrimaryB{} internally, a degradation of \pcHFiveEst{} --- the
+predicted direction, and roughly three-quarters of the 0.085 anticipated from
+Moor et al.\ \cite{moor2023review}. The interval (\pcHFiveCiLo--\pcHFiveCiHi)
+nonetheless covers zero, because the Sepsis-3 anchor is recoverable in only
+\pcExtMicroCoverage\% of eICU-CRD stays and the estimate rests on
+\pcExtNEventsB{} events. This is the one hypothesis a better-powered external
+cohort might have confirmed, and the antibiotic-only arm --- \pcExtAbxNEventsB{}
+events, a different target --- shows the same degradation with the same ordering
+across labels. The study establishes that discrimination declines on transport
+and cannot establish by how much.
+
+The utility arm needs no such qualification, because it is settled internally.
+The proportional decline the hypothesis asked for cannot be formed at all,
+there being no internal utility to decline from: swept across sixty thresholds,
+the best any configuration achieves under the primary label is
+\pcUtilityMaxGbtB{}, at \pcUtilityOptBurdenGbtB{} false alerts per true one
+against a benchmark of 1.4. The utility collapse Wang et al.\
+\cite{wang2025srpm} documented across ninety-one models therefore has its
 counterpart \emph{internally} on MIMIC-IV under an honest time-based split ---
 there was scarcely any margin left to collapse. Their broader point survives in
-strengthened form: AUROC and clinical utility are close to uncorrelated here,
-with discrimination transporting intact across two hundred hospitals while
-usable clinical value never materialises in either.
+strengthened form: on the cohort where the label is fully observed, AUROC and
+clinical utility are close to uncorrelated, discrimination sitting in the high
+0.7s while usable clinical value never materialises at any threshold.
 
 \paragraph{H6 (Model-class null): Not rejected --- equivalence holds.}
 The interpretable hazard model matches gradient-boosted trees:
@@ -155,12 +166,15 @@ than the patient's deterioration.
 \section{Contributions}
 
 \begin{enumerate}
-    \item \textbf{C1 (Label variance, separated from discrimination):} To the
-    best of our knowledge, the first three-variant label sensitivity analysis
-    for a dynamic survival model on MIMIC-IV (\pcNStays{} stays against Cohen
-    et al.'s 3,186), and the first to show that the two effects come apart:
-    label choice moves cohort membership substantially ($\kappa = \pcKappaVsBA$
-    between the narrowest readings) while moving AUROC by only \pcSpreadLabel.
+    \item \textbf{C1 (Label variance, separated from discrimination):} Three
+    Sepsis-3 readings applied to a discrete-time competing-risks model on
+    MIMIC-IV (\pcNStays{} stays, against the roughly two thousand admissions of
+    Cohen et al.'s MIMIC-III comparison), with the label and model-class
+    spreads estimated on the same test rows and each carrying an interval. That
+    combination is, to the best of our knowledge, not previously reported, and
+    it is what separates two effects the literature treats as one: label choice
+    moves cohort membership substantially ($\kappa = \pcKappaVsBA$ between the
+    narrowest readings) while moving AUROC by only \pcSpreadLabel.
 
     \item \textbf{C2 (Treatment leakage located in the onset rule):} A proof that
     the conjunction-based Sepsis-3 onset rule makes the pre-treatment window
@@ -188,18 +202,23 @@ than the patient's deterioration.
     \cite{lauritsen2021framing} framing-instability claim on MIMIC-IV for
     specific effect estimates, measured against an identified fit.
 
-    \item \textbf{C5 (Equity-by-label):} To the best of our knowledge, the first
-    study combining subgroup performance disparities with subgroup label
-    sensitivity for any sepsis model, and the first to report both with
-    cluster-bootstrap intervals under false-discovery control. The
-    label-sensitivity disparity survives correction; the discrimination
-    disparity does not, and reporting the second without the first would have
-    inverted which finding is defensible.
+    \item \textbf{C5 (Equity-by-label):} Subgroup discrimination and subgroup
+    label sensitivity measured on the same strata in the same
+    onset-prediction cohort, both with cluster-bootstrap intervals under
+    false-discovery control --- a pairing this study's search did not find
+    reported elsewhere, though each component separately has precedent
+    (Section~\ref{sec:search_strategy}). The label-sensitivity contrasts
+    survive correction and the discrimination contrasts do not, so the
+    defensible finding is about the completeness of the demographic record
+    rather than about race; reporting either analysis without the other would
+    have inverted which conclusion the data support.
 
     \item \textbf{C6 (Reproducible pipeline):} A pre-registered,
     TRIPOD+AI-conformant pipeline with fixed seeds and a single orchestration
     script, which reproduces every reported estimate exactly from the raw
-    databases (Section~\ref{sec:code_availability}).
+    databases, and which emits the numbers in this document as generated
+    constants so that text and code cannot diverge
+    (Section~\ref{sec:code_availability}, Appendix~\ref{app:code}).
 
     \item \textbf{C7 (Definitional vs.\ empirical label variance separated):}
     A treatment-independent deterioration label, tested alongside the three

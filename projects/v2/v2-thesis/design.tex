@@ -185,8 +185,16 @@ on the temporal training split. Baseline hazard splines use 5 knots. Standard
 errors are cluster-robust (grouped by stay). A random patient-level 75/25 split
 is also fitted to support H4.
 
-Outputs: \texttt{model\_primary\_A/B/C.rds}, coefficient tables, and
-\texttt{predictions\_primary\_A/B/C.parquet}.
+Both stages 05 and 06 run two \textbf{arms}: the pre-registered specification
+and the ablated one of Protocol Amendment 5
+(Section~\ref{sec:ablation_method}), which drops the action-derived features.
+The ablated arm writes to its own files and never overwrites a pre-registered
+fit, so it can be added or refreshed without re-executing the fits every
+headline number rests on.
+
+Outputs: \texttt{model\_primary\_A/B/C.rds}, coefficient tables,
+\texttt{predictions\_primary\_A/B/C.parquet}, and the corresponding
+\texttt{\_ablated} files.
 
 
 \section{Stage 06: Comparator Models}
@@ -196,8 +204,13 @@ Outputs: \texttt{model\_primary\_A/B/C.rds}, coefficient tables, and
 person-hour. GBT models are fitted under both temporal and random splits. GBT
 feature importance is exported for each variant.
 
-Outputs: model objects, predictions, feature importance tables, and Schoenfeld
-test results.
+The gradient-boosted comparator is additionally fitted on the ablated feature
+set with identical hyperparameters. NEWS2, qSOFA and SIRS never used the
+ablated features, and the Cox comparator's role here is the
+proportional-hazards check rather than discrimination, so neither is ablated.
+
+Outputs: model objects, predictions, feature importance tables, Schoenfeld
+test results, and the ablated GBT predictions.
 
 
 \section{Stage 07: Metrics Suite}
@@ -205,7 +218,9 @@ test results.
 \texttt{07\_metrics\_suite.Rmd} evaluates all models on all splits (temporal,
 random, treatment-anchored) using the full metric set: AUROC, AUPRC, calibration
 intercept and slope, PhysioNet Utility Score, alert burden, lead time, and
-decision-curve net benefit.
+decision-curve net benefit. The ablated arm is scored by the same code on the
+same test rows, and the paired difference is written to
+\texttt{07\_ablation\_metrics.csv}.
 
 The Utility Score is computed at the default 0.5 cut-off and swept across a
 sixty-point grid of alert rates, in a single pass: the per-stay reward is
@@ -227,8 +242,23 @@ Output: \texttt{07\_metric\_results.parquet} (and
 \section{Stage 08: External Validation on eICU-CRD}
 
 \texttt{08\_external\_validation.Rmd} applies the frozen MIMIC-IV models
-(primary and NEWS2) to eICU-CRD without any retraining. AUROC and AUPRC are
-reported for each variant and model.
+(primary, GBT and NEWS2) to eICU-CRD without any retraining. It builds the
+external person-hour panel once from physiology alone, then derives onsets
+\emph{per label variant} from that panel using each variant's own
+antibiotic--culture windows and SOFA-delta criterion
+(Section~\ref{sec:label_transport}). Antibiotic and vasopressor exposure is
+taken from \texttt{medication} and \texttt{infusionDrug} together.
+
+Two arms are reported. The primary arm applies the Sepsis-3 conjunction to the
+microbiology-covered sub-cohort; the secondary arm applies an antibiotic-only
+anchor to the full cohort and is labelled as a different target. AUROC and
+AUPRC are reported for each variant and model in both, alongside a
+labelling-input coverage table and an explicit reconciliation of the eICU-CRD
+and MIMIC-IV event rates.
+
+The stage asserts at run time that the three variants produce distinct external
+onset sets and halts otherwise, so that a label-invariant result can never be
+produced by a label that was never varied.
 
 
 \section{Stage 09: Variance Decomposition}
@@ -260,8 +290,14 @@ sensitivity within each stratum of the equity variables declared in
 \texttt{config.R} (race, ethnicity, language, insurance). MIMIC-IV v3.1 records
 race and ethnicity in a single field, so three variables carry data and are
 reported: \textbf{race, language, and insurance}. Levels are restricted to the
-eight largest per variable. The combination of performance disparities and
-label-sensitivity variation is the novel finding.
+eight largest per variable, and are strata of an administrative field rather
+than populations (Section~\ref{sec:equity_strata}). Discrimination is estimated
+for every stratum with enough rows to support an estimate, but only strata
+carrying at least \texttt{MIN\_SUBGROUP\_EVENTS\_INTERPRET} sepsis onsets enter
+the exploratory contrast family, so the multiplicity correction is applied over
+the analyses the study is willing to interpret rather than over every stratum
+that happens to exist. Label sensitivity, being a stay-level proportion, is
+reported for all strata.
 
 
 \section{Stage 11: Clinical Utility Metrics}
@@ -319,11 +355,11 @@ directory containing the \texttt{data/} folder.
 \label{sec:code_availability}
 
 The complete pipeline --- the twelve numbered scripts, \texttt{config.R},
-\texttt{utils.R}, \texttt{utility\_score.py}, the pre-registration document and
-the orchestration scripts --- is held in a version-controlled repository and is
-available from the author on request, including to examiners. The repository is
-currently private; the licence under which it will be released has not yet been
-fixed and is stated here as undetermined rather than asserted.
+\texttt{utils.R}, \texttt{clinical\_scores.R}, \texttt{thesis\_constants.R},
+\texttt{utility\_score.py}, the pre-registration document and the orchestration
+scripts --- is held in a public version-controlled repository at
+\url{\repourl}, released under the \repolicence. Appendix~\ref{app:code}
+describes the layout and the reproduction procedure.
 
 The repository contains \textbf{code only}. No MIMIC-IV or eICU-CRD record,
 derived person-hour table, or fitted model object is included: the

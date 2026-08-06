@@ -5,21 +5,28 @@
 > Only open a data file when you need a number that is *not* here, and then open
 > the single file named in §5 — never dump the whole `processed_data/` directory.
 
-Last updated: **2026-08-05 05:00** — full clean pipeline run (12/12 stages, all
-six variants) with Protocol Amendments 3 and 4 in force, thesis fully re-synced.
-Prior state: Amendment 4 (variant F) source-patched but not yet run; Amendment 3
-(fit identification + plausibility filter); Utility Score normalisation fix +
-threshold sweep; feedback round 1 write-up `v2/feedback/v1.md`.
+Last updated: **2026-08-06** — feedback round 7 patched into source and thesis,
+**nothing executed**. Structural changes: the thesis gained a **Discussion
+chapter** (now 7 chapters + an appendix), Chapter 2 was rewritten as a critical
+review, and the subgroup analysis gained a 100-event interpretability floor that
+**changes family E1's size**. Three runs are now pending (§9). Results in §3 are
+unchanged and current — the run of 2026-08-06 00:42, 12/12 stages.
 Work by Claude (Anthropic) with **Abdul Ahad** (ATU MSc, student ID G00486649).
 
 > ## Where things stand
 >
-> **§3 below is current.** It describes the run of 2026-08-05 03:03–04:32 plus a
-> stage-09 re-run at 04:51. No stale banner applies any more; four earlier
-> "superseded" notices have been folded into §3 and §6.
+> **§3 below is current.** Run of 2026-08-06 23:17–00:42, 12/12 stages.
+> The GBT canary held: every internal AUROC is bit-identical to the 2026-08-05
+> run, so the only thing that moved is eICU — which is what should have moved.
 >
-> Three headline reversals happened across feedback round 2, and all three are
-> now baked into §3 and the thesis. **Do not restate any of the old versions:**
+> **H5 reversed again, and this time towards the hypothesis.** With per-variant
+> external labels the internal→external AUROC gap is **+0.0630**
+> [−0.0215, +0.1563] rather than −0.0033. Discrimination *does* degrade on
+> transport; the study can establish the direction but not the magnitude, on 29
+> external events. Full account: `feedback/v2.md` §23.
+>
+> Six headline reversals happened across feedback round 2, and all are now baked
+> into §3 and the thesis. **Do not restate any of the old versions:**
 >
 > | Old claim | Status |
 > |---|---|
@@ -28,7 +35,7 @@ Work by Claude (Anthropic) with **Abdul Ahad** (ATU MSc, student ID G00486649).
 > | "Negative Utility Score for every model and every variant" (C3) | **Withdrawn.** Restated as a utility *ceiling*: max 0.039 (GBT/B) over the threshold sweep. |
 > | "Sepsis-3 is harder to predict than either limb" (Amendment 2) | **Dead.** φ_anchor = 1.041 [0.990, 1.097], CI includes 1. |
 > | "Random splits inflate AUROC" (H4) | **Reversed.** −0.0165 [−0.037, +0.004]; every model scores lower on the random split. |
-> | "External AUROC collapses under Variant B" (H5) | **Reversed.** eICU 0.7623 vs internal 0.7590; discrimination transports intact. |
+> | "External AUROC collapses under Variant B" (H5) | **Dead — and so is its first replacement.** Two superseded versions, do not restate either: (i) "B collapses, A and C hold"; (ii) "discrimination transports intact" (the 2026-08-05 eICU 0.7623 vs 0.7590), which was an artefact of one label set shared across all three variants. **Current:** discrimination *degrades* — B 0.7590 → 0.6960, H5 = +0.0630 [−0.0215, +0.1563], Holm p 0.551. Direction established, magnitude not. §23. |
 >
 > **All four testable hypotheses are non-confirmations**, and H6's
 > non-rejection (equivalence between an interpretable hazard model and GBT) is
@@ -79,9 +86,22 @@ RESEARCH/projects/v2/
 │                    thesis_constants.R, utility_score.py,
 │                    00_preregistration.md,
 │                    01..12_*.Rmd, run_pipeline.{R,sh}, output/
-└── v2-thesis/     ← LaTeX: index.tex + 7 chapter .tex, images/, build.sh,
-                     pipeline_constants.tex (GENERATED — see §4)
+└── v2-thesis/     ← LaTeX: index.tex + chapters, images/, build.sh,
+                     pipeline_constants.tex + table_*.tex (GENERATED — see §4)
 ```
+
+**Thesis chapter order (changed 2026-08-06, feedback round 7):**
+`introduction` · `review` · `methodology` · `design` · `evaluation` (Results) ·
+**`discussion`** · `conclusion`, then `\appendix` + `appendix.tex`.
+The Discussion used to be a section at the end of `evaluation.tex`; it is now
+its own chapter and also absorbed three interpretive passages that were embedded
+in Results ("What the External Estimate Can Support", "What Variant D Does and
+Does Not Establish", "What the Ablation Establishes"). **Results reports;
+Discussion interprets.** Put new interpretation in `discussion.tex`.
+`sec:limitations` and `sec:external_interpretability` now live there.
+
+`README.md` at the repo root and `v2-GENAI/SCREENCAST.md` are submission
+deliverables, added in the same round. The screencast plan is internal.
 
 Scripts are **01–12** (an older version of this file said 01–13; that was wrong).
 `output/` holds `processed_data/`, `figures/`, `pdf/`, `logs/`.
@@ -92,10 +112,10 @@ Scripts are **01–12** (an older version of this file said 01–13; that was wr
 | 02 | cohort_labels (5 variants: A/B/C + D/E) | 2 |
 | 03 | person_hours (heavy: streams ~6 GB) | 2 |
 | 04 | sample_size (Riley) | 3 |
-| 05 | primary_model (multinomial discrete-time CR) | 4 |
-| 06 | comparators (GBT, Cox+Schoenfeld, NEWS2/qSOFA/SIRS) | 4 |
-| 07 | metrics_suite | 5 |
-| 08 | external_validation (eICU, frozen models) | 6 |
+| 05 | primary_model (multinomial discrete-time CR) — **two arms**, see `V2_ARMS` | 4 |
+| 06 | comparators (GBT, Cox+Schoenfeld, NEWS2/qSOFA/SIRS) — GBT also ablated | 4 |
+| 07 | metrics_suite (+ ablation scoring) | 5 |
+| 08 | external_validation (eICU, frozen models, **per-variant labels**, two anchor arms) | 6 |
 | 09 | variance_decomposition + label-anchor attribution (Amendment 2) | 7 |
 | 10 | equity_analysis | 7 |
 | 11 | clinical_metrics (calibration curves, DCA, operating points, per-patient, lead time) | 8 |
@@ -110,16 +130,26 @@ Full run ≈ **60 min** (≈85 min with D/E); stage 05 dominates. Stage 12 alone
 loops in 02–07 to a subset. **Use it whenever you add a variant** — it is the
 only way to avoid an incidental XGBoost refit of A/B/C (see §4).
 
+`V2_ARMS=ablated ./run_pipeline.sh 05 06` restricts the **fitting arm** the same
+way (Protocol Amendment 5). `full` is the pre-registered specification;
+`ablated` drops `ACTION_DERIVED_FEATURES` (vasopressors + the six order flags,
+8 of 22). Unset runs both. With `V2_ARMS=ablated` stage 05 skips the main fits
+*and* the random-split refit, and 06 skips the comparators *and* the
+random-split comparators — so an ablation-only pass cannot touch a single H1,
+H4 or H6 input. Ablated output goes to `*_ablated_*` files; the main files are
+never overwritten.
+
 ---
 
-## 3. Current status — **2026-08-05 full clean run, 12/12 stages, all variants**
+## 3. Current status — **2026-08-06 full clean run, 12/12 stages, all variants**
 
-Everything below is the run of 2026-08-05 03:03–04:32 with Amendments 3 and 4 in
-force. Stage 06 ran unrestricted, so **every GBT number moved** — that is
-expected and correct here, because the whole run is internally consistent for
-the first time. The thesis is fully re-synced: `pipeline_constants.tex` carries
-**1,197 macros, 0 missing**, and `index.pdf` builds at 0 errors, 0 undefined
-references, 0 undefined citations, 114 pages.
+Everything below is the run of 2026-08-06 23:17–00:42 with Amendments 3 and 4 in
+force and the stage-08 eICU rewrite. **Every internal number is bit-identical to
+the 2026-08-05 run** — the GBT canary held, so the run reproduced and the only
+movement is external, which is where the fix was. The thesis is re-synced:
+`pipeline_constants.tex` carries **1,240 macros, 3 missing** (the eICU GBT
+comparator, §9), and `index.pdf` builds at 0 errors, 0 undefined references,
+0 undefined citations, 119 pages.
 
 ### Confirmatory verdicts (Holm, m=6, FWER 0.05)
 
@@ -129,15 +159,21 @@ references, 0 undefined citations, 114 pages.
 | H2 | unstable covariates | **6 / 22** | — | — | Descriptive (2 sign, 5 magnitude) |
 | H3 | pre-treatment onsets | **0** | — | — | **Definitional** (theorem, not finding — §6.14) |
 | H4 | random − temporal AUROC | **−0.0165** | −0.037 – +0.004 | 1.000 | **NOT confirmed — reversed** |
-| H5 | internal − external AUROC | **−0.0033** | −0.066 – +0.068 | 1.000 | **NOT confirmed** |
+| H5 | internal − external AUROC | **+0.0630** | −0.022 – +0.156 | 0.551 | **NOT confirmed — but the only near miss** |
 | H6 | GBT − primary AUROC | **−0.0129** | −0.027 – +0.002 | 1.000 | **NOT rejected — equivalence holds** |
 
-**All four testable hypotheses fail, two of them directionally.** Every adjusted
-p-value is 1.000, so multiplicity control determines no verdict.
+**All four testable hypotheses fail.** H1 and H4 fail directionally. H1, H4 and H6
+carry adjusted p = 1.000, so multiplicity determines no verdict for them. **H5 is
+the exception**: its estimate has the predicted sign, its raw p is 0.092 (the
+only one below 0.10 in the family) and Holm takes it to 0.551. It fails on
+precision — 29 external events — not on direction.
 
-Decomposition (ΔAUROC): model class **0.1499** · label **0.0123** · split
-**−0.0166** · external transport **−0.0033**. **Model class dominates the label
-by more than tenfold**; split and transport are indistinguishable from zero.
+Decomposition (ΔAUROC): model class **0.1499** · **external transport 0.0630** ·
+label **0.0123** · split **−0.0166**. **The ordering changed with the eICU fix.**
+Model class still dominates, but transport is now second and moves AUROC ~5x more
+than the label does. Split remains null. Transport carries by far the widest
+interval (it is the only row not measured on the full test cohort), so it ranks
+second on the point estimate without being established at that confidence.
 
 ### Key headline numbers
 
@@ -151,9 +187,23 @@ by more than tenfold**; split and transport are indistinguishable from zero.
   fixed 0.5 cut-off the primary model scores exactly 0.000 because it never
   alerts there — that zero is a threshold artefact, not a result. Report
   `utility_max`, not `utility_normalised`, when quoting a ceiling.
-- External (eICU): 63 events / 7.87 M person-hours. **AUROC transports intact**
-  — B primary 0.7623 external vs 0.7590 internal; A 0.7466, C 0.7489. Operating
-  characteristics do not transport (NNE ~75,000).
+- External (eICU), **Sepsis-3 arm on the microbiology-covered sub-cohort**
+  (2,824 of 181,589 stays = 1.55 %; 163,458 person-hours): primary AUROC
+  **A 0.6913 / B 0.6960 / C 0.7370** on **27 / 29 / 73** events — all below the
+  100-event interpretability floor. NEWS2 **0.5866 / 0.5259 / 0.5074**, i.e.
+  near chance externally. Degradation is ordered by label exactly as internally
+  (Narrow loses most, Liberal least). NNE 3,985 / 3,372 / 1,396;
+  ~12–13 false-alert hours per patient-day.
+- External **antibiotic-only sensitivity arm** (full cohort, 7.63 M
+  person-hours): **5,589 / 6,140 / 9,886** events, primary AUROC
+  **0.6488 / 0.6644 / 0.7209**. Well clear of the floor, same sign and ordering
+  as the Sepsis-3 arm — this is the consistency check that lets the thesis
+  assert a *direction*. Different target; never pool it with the Sepsis-3 arm.
+- **Event rate now reconciles.** Events per 1,000 person-hours, Variant B:
+  MIMIC 1.895 · eICU Sepsis-3 0.179 (ratio 0.094) · eICU antibiotic-only 0.805
+  (ratio 0.425). Was ratio ≈0.004. Two orders of magnitude recovered, and the
+  residual gap localises to the **culture limb**: eICU documents antibiotics
+  for 32.66 % of stays and cultures for 1.55 %.
 - Equity: **no** race contrast survives BH (smallest q=0.347). Label-sensitivity
   contrasts do: race-Unknown +3.01 pp (q=0.006), Unable-to-obtain +3.49 pp
   (q=0.009), Spanish +2.61 pp (q=0.006), Private insurance −1.76 pp (q=0.006).
@@ -223,6 +273,49 @@ needs X computed and subtracted, and a unit test that constructs X.** And never
 report a threshold-dependent metric at one cut-off — at a 0.19 % event rate the
 0.5 cut-off ranks models by calibration, not by clinical value.
 
+### A label built once and reused across the variant loop
+Stage 08 opened with `v <- LABEL_VARIANTS[["B"]]`, built **one** `event` column
+from it, and then looped `for (vid in names(LABEL_VARIANTS))` swapping only the
+*model*. The three external variants were one label wearing three names. The
+tell was there in the output for months: `pred_news2` scored **0.6058 under all
+three variants** and `n_events` was **63 in all three rows**. NEWS2's predictor
+is label-invariant, but its AUROC cannot be — AUROC is a property of the
+predictor *and* the outcome. The thesis had explained the identity away as
+"NEWS2 is label-invariant because it uses only physiological features", which is
+a true sentence about the wrong object and it concealed the defect.
+
+Generalise: **whenever a loop is supposed to vary factor X, find a quantity that
+must move when X moves and assert that it does.** Stage 08 now hashes the three
+onset sets and `stop()`s if they are identical. Do not weaken it to a warning.
+
+Three further defects lived in the same chunk and are fixed together:
+- **Negative `culturetakenoffset`** (pre-ICU cultures; the first rows of the
+  file are −688 and −5481) made `t_susp_h < 0`, so `at_risk <- is.na(onset) |
+  hour <= onset` was FALSE for every hour and `grid[at_risk == TRUE]` **deleted
+  the whole stay**. Out-of-range onsets must make a stay *non-septic*, never
+  absent — that is what MIMIC's `onset_time < intime → NA` rule does.
+- **Only `medication.csv.gz` was read.** eICU splits drugs across `medication`
+  (orders) and `infusionDrug` (infusions); vancomycin, pip-tazo and every
+  vasopressor live largely in the latter. Both are read now, and vasopressors
+  finally reach the SOFA cardiovascular component.
+- **The SOFA gate was an absolute `sofa_total >= 2` evaluated per row**, not
+  MIMIC's delta-vs-baseline inside the variant's window. Since `score_sofa()`
+  substitutes assumed-normal values for missing components, an absolute
+  threshold rejects on *missingness*, which biases hardest in the database with
+  sparser labs. It also nulled a stay-level `onset_hour` row by row, corrupting
+  the at-risk set.
+
+### `news2()` scores a FALSE consciousness flag as 3, and NA as 0
+`avpu_alert <- !is.na(gcs) & gcs >= 14` maps "unmeasured" to `FALSE`, which
+`news2()` charges **3 points**. eICU has no GCS in `vitalPeriodic`, so every
+external person-hour carried a spurious +3 — constant, therefore invisible in
+AUROC, but it invalidates every threshold, specificity and alert-burden number
+compared across cohorts. `avpu_alert_flag()` in `clinical_scores.R` is the
+correct helper and stage 08 uses it. **MIMIC (`03`) deliberately still does
+not**: 3.2 % of its person-hours have no GCS after LOCF, so switching would
+move every NEWS2 number in the thesis and needs a full 03–12 re-run. That is
+an open decision, flagged at the call site and in `feedback/v2.md` §22.
+
 ### `sandwich::vcovHC()` does not work on `multinom`
 No `estfun` method exists for that class, so the stage-05 call fails, is caught as a
 warning, and `vcov_robust` is silently `NULL`. **Cluster-robust SEs for the primary
@@ -241,6 +334,21 @@ Rules:
   `\pcAurocPrimaryB`, `\pcHOneEst`, `\pcKappaVsBA`, `\pcPhiAnchorPrimary`.
 - **Never hand-edit `pipeline_constants.tex`** — it is overwritten every run.
   To add a quantity, add a `put()` call in `thesis_constants.R`.
+- **Tables too large for one-macro-per-cell are generated whole.**
+  `write_table()` in `thesis_constants.R` emits a complete `tabular` to
+  `v2-thesis/table_<name>.tex`; the chapter keeps only `\begin{table}`,
+  `\input{table_<name>}`, caption and label. Currently `table_equitylabel` and
+  `table_equitylabelcontrasts`. **Emit the whole environment, never just the
+  rows** — `\input` of a partial alignment body fails with
+  "Misplaced `\noalign`" at the `\bottomrule`, because TeX's alignment scanner
+  needs the `&` and `\\` tokens in the same expansion context.
+  **Four** such tables now exist: `table_equitylabel`,
+  `table_equitylabelcontrasts`, and (added round 7) `table_equityperformance`,
+  `table_equitycontrasts`. The last two *had* to be generated: with the
+  subgroup event floor in force the row count is no longer fixed, so a
+  one-macro-per-cell grid would either leave red `??` cells or silently drop a
+  stratum. `table_*.tex` files are generated: never hand-edit, never commit a
+  fix to them.
 - A quantity the pipeline did not produce renders as a **red ??**
   (`\pcMissing`); one undefined by design (H2's test statistic, H3's p-value)
   renders as an em dash (`\pcNotApplicable`). The generator prints the missing
@@ -278,11 +386,14 @@ Audit before any commit that touches `v2-thesis/*.tex`:
 grep -niE "reviewer|supervis|feedback|earlier draft|previous(ly)? (draft|version|reported)|revision history|was originally|is withdrawn|as suggested|in response to|an examiner" v2-thesis/*.tex
 ```
 
-Exactly five hits are legitimate and expected: the supervisor acknowledgement,
-the clinical-staff-feedback future-work item, and three "no second reviewer
-screened independently" statements about the *literature search*. Anything else
-is a leak. `feedback/v2.md` §13.1a lists the six passages already fixed this way,
-so the same phrasing is not reintroduced.
+**Eight hits are legitimate and expected** (was five before feedback round 7):
+the supervisor acknowledgement; the clinical-staff-feedback future-work item;
+**four** "no second reviewer screened independently" statements about the
+*literature search* (`review.tex` ×2, `methodology.tex`, `discussion.tex`); one
+"not previously reported" in `conclusion.tex` C1, which is a claim about prior
+art rather than about this document; and one false positive on "unsupervised" in
+`review.tex`. Anything else is a leak. `feedback/v2.md` §13.1a lists the six
+passages already fixed this way, so the same phrasing is not reintroduced.
 
 ### Stray `.log` files in `v2-proj/` root
 Those are **xelatex** logs, not R logs (R logs live in `output/logs/`). xelatex
@@ -315,9 +426,15 @@ did not; `run_pipeline.R` always did). Fix the warning, don't just delete the lo
   `apply_plausibility()` in `config.R` now do it, applied in 03 and 08 **before**
   the forward-fill. Don't re-trust this bullet's old wording.
 - `PRROC::pr.curve()` crashes on NA → `complete.cases()` first.
-- eICU microbiology covers ~1.5% of stays → infection triggers on **antibiotics alone**.
-  This is why eICU yields only 63 events; it is a *label transport* failure, not a
-  population difference. Always state that caveat with external results.
+- eICU microbiology (`microLab.csv.gz`) covers **2,923 distinct unit stays**,
+  ~1.4 % of the cohort. **Correction: the claim that "infection triggers on
+  antibiotics alone" was never true of the code.** Stage 08 did an *inner*
+  `merge()` of antibiotics and cultures, so it required both — and the thesis
+  said the opposite. Documentation and implementation disagreed for the whole
+  project. The rewrite makes the Sepsis-3 arm explicit (restricted to the
+  micro-covered sub-cohort, so the denominator only holds person-hours in which
+  an onset is observable) and adds a separate, clearly-labelled antibiotic-only
+  arm on the full cohort. Never let those two arms be pooled or substituted.
 - Per-patient random-intercept GLMM is degenerate on rare outcomes → cluster-robust
   SEs (`sandwich::vcovCL()` on `stay_id`). Don't "fix" the GLMM.
 - Proportional hazards always rejected (global Schoenfeld p≈5e-31). **Six** of eleven
@@ -342,7 +459,12 @@ All under `v2-proj/output/processed_data/`. **CSV mirrors exist for 11_* and 12_
 |---|---|
 | Headline AUROC/AUPRC/Utility/alert burden | `07_metric_results.parquet` |
 | Random-split arm (H4) | `07_metric_results_random.parquet` |
-| eICU AUROC | `08_external_validation_results.parquet` |
+| eICU AUROC (Sepsis-3 arm, micro-covered sub-cohort) | `08_external_validation_results.csv` |
+| eICU AUROC (antibiotic-only sensitivity arm) | `08_external_validation_results_abxonly.csv` |
+| **eICU vs MIMIC event rates side by side** | `08_event_rate_reconciliation.csv` |
+| eICU labelling-input coverage | `08_eicu_coverage.csv` |
+| eICU onsets per variant × anchor | `08_eicu_label_summary.csv` |
+| H5 internal vs external + interpretability flag | `08_h5_internal_external.csv` |
 | Decomposition / verdicts | `09_variance_decomposition_table.parquet`, `09_hypothesis_verdicts.parquet` |
 | Calibration (ICI, E50/E90, Brier) | `11_calibration_summary.csv` |
 | PPV / NNE / FA-per-patient-day @80% sens | `11_operating_points.csv` |
@@ -363,6 +485,9 @@ All under `v2-proj/output/processed_data/`. **CSV mirrors exist for 11_* and 12_
 | Subgroup AUROC + BH contrasts | `12_subgroup_auroc_ci.csv`, `12_subgroup_auroc_contrasts.csv` |
 | Subgroup label sensitivity | `12_subgroup_labelsens_ci.csv`, `12_subgroup_labelsens_contrasts.csv` |
 | Confirmatory/exploratory register | `12_analysis_register.csv` |
+| **Ablation ΔAUROC / ΔUtility (Amendment 5)** | `07_ablation_metrics.csv` |
+| Ablated-arm coefficient stability | `05_h2_stability_ablated.csv` |
+| H2 instability split by feature kind | `12_h2_stability_by_kind.csv` |
 
 Equity variables: `config.R` declares four (race, ethnicity, language, insurance) but
 MIMIC-IV v3.1 merges race/ethnicity, so **three carry data**: race, language,
@@ -410,6 +535,53 @@ insurance. Top 8 levels each.
     model, and fit guards. The penalty value `1e-4` is **not** tuned — test
     AUROC moves <0.02 across a 20-point ridge path for every variant, and that
     insensitivity is the justification. Never present it as optimised.
+15. **Protocol Amendment 5** (2026-08-06, post-hoc, same disclosure rule as
+    1–4): the action-derived feature ablation. `ACTION_DERIVED_FEATURES` is the
+    8 of 22 covariates that record clinician behaviour rather than the patient —
+    `vaso_any`, `norepi_epi_any` and the six `*_measured` order flags. The
+    ablated arm refits primary + GBT without them, everything else held fixed.
+    **The boundary is deliberately conservative**: forward-filled lab *values*
+    are retained even though a value exists only because someone ordered the
+    test, because dropping them would confound the ablation with a loss of
+    physiological signal. Do not "improve" the ablation by widening it — the
+    conservative boundary is what makes the contrast interpretable, and the
+    limitation is stated in the thesis. Exploratory: enters no hypothesis, no
+    confirmatory family, no decomposition.
+16. **Two subgroup thresholds, and the distinction is load-bearing**
+    (2026-08-06, feedback round 7). `MIN_SUBGROUP_EVENTS = 5` decides whether a
+    subgroup AUROC is **computed**; `MIN_SUBGROUP_EVENTS_INTERPRET = 100`
+    (defined as `MIN_EXTERNAL_EVENTS`, not as a literal, so the two floors
+    cannot drift) decides whether it is **interpreted**. Below-floor strata are
+    still estimated and tabulated — flagged `†` — because the figure showing
+    their intervals reaching the chance line *is* the argument for the floor;
+    but they are excluded from every spread statement and **from exploratory
+    family E1**, so BH corrects over the contrasts the study will read.
+    Do not "simplify" this by raising the estimation floor: suppressing the
+    small strata hides the cohort's composition, which is the thing the section
+    is about.
+17. **The subgroup range is never compared against the decomposition spreads**
+    (same round). Three independent reasons, all stated in `evaluation.tex`
+    §Equity: different estimands (whole-cohort contrast vs extreme order
+    statistic over disjoint slices), different information, and the range of
+    noisy estimates is upward-biased by construction. Do not reinstate "the
+    subgroup spread is wider than the model-class spread" — it is not an effect
+    size.
+18. **MIMIC's equity strata are administrative, not populations** (same round).
+    `race` is one registration code mixing broad and granular levels from the
+    same population (`WHITE` vs `WHITE - OTHER EUROPEAN`, `ASIAN` vs
+    `ASIAN - CHINESE`), so the reference level is a *residual* category and the
+    strata are not disjoint populations; `UNKNOWN` and `UNABLE TO OBTAIN`
+    record the absence of an answer. Stated up front in `sec:equity_strata`.
+    **Consequence for C5:** both surviving label-sensitivity contrasts are
+    missingness categories and no stratum recording an actual demographic
+    answer differs from the reference, so the finding is read as one about
+    **documentation completeness**, not about race. Do not restate it as a
+    racial disparity.
+19. **Riley's criterion is applied on the stay, not the person-hour** (same
+    round). It assumes independent observations and person-hours are ~45
+    correlated rows per stay. Stage 04 now runs `pmsampsize` twice — stay-level
+    (the verdict) and per-hour (reference only, labelled as such). Never
+    compare a per-hour minimum against the 2.3 M row count.
 13. **κ(A,B) = 0.267** — the two pre-registered variants agree with each other
     *less* than post-hoc variant E agrees with B (κ = 0.432), despite nearly
     identical prevalence (9.6% vs 9.9%). This is in `09_label_agreement.csv` but
@@ -421,15 +593,35 @@ insurance. Top 8 levels each.
 
 ## 7. Open items / known weaknesses
 
-- **Licence: UNDECIDED.** No `LICENSE` file exists → code is currently *all rights
-  reserved*. Thesis claims of "permissive open-source licence" were **removed**
-  2026-07-30. Recommendation on the table: **Apache-2.0** (patent grant, stronger
-  warranty disclaimer for clinical-adjacent code, NOTICE for citation); CC BY 4.0
-  for prose. Must check ATU student-IP policy first.
-- **Repo private**, URL deliberately **omitted** from the thesis by the author's
-  choice. `design.tex` §Code Availability says "available from the author on
-  request" + code-only + PhysioNet DUA forbids data redistribution.
-  `.gitignore` verified: 0 patient-data files tracked.
+- **Licence: STILL UNDECIDED, and the thesis now names one.** No `LICENSE` file
+  exists → code is currently *all rights reserved*. `index.tex` sets
+  `\repolicence` to **Apache-2.0** on the strength of the standing
+  recommendation (patent grant, stronger warranty disclaimer for
+  clinical-adjacent code, NOTICE for citation; CC BY 4.0 for prose), and the
+  appendix and `design.tex` both print it. **Confirm against ATU student-IP
+  policy and add a `LICENSE` file** — `README.md` points at one that does not
+  exist yet.
+- **The repo-visibility position REVERSED in feedback round 7.** It was private
+  with the URL deliberately omitted; the submission page penalises a missing
+  repository link as a failure to submit, so `design.tex` §Code Availability and
+  the new Appendix A now state a **public** repository at `\repourl`. Two
+  consequences: (1) `\repourl` in `index.tex` is a **placeholder**
+  (`https://github.com/REPLACE-ME`) because the author is supplying a URL that
+  is not this tree's `origin` — one line to set; (2) **the thesis asserts the
+  repo is public, so it must actually be public before submission or that
+  sentence is false.** Code-only + PhysioNet DUA forbids data redistribution is
+  unchanged. `.gitignore` verified: 0 patient-data files tracked.
+- **Feedback round 7 — all eight items closed in source; two runs pending.**
+  Full write-up in `feedback/v2.md` §26. Summary: appendix + README + screencast
+  plan; Chapter 2 rewritten as a critical review around four disputes (14 sources
+  drawn in from the companion); Figure 2.1's invented AUROCs replaced with Cohen
+  et al.'s own reported numbers; **nine miscited references corrected and every
+  DOI in the bibliography verified to resolve** (the feedback named four; five
+  more were found, including one paper that does not exist); Riley applied on the
+  stay; subgroup event floor + non-disjoint-strata statement; novelty claims made
+  precise about *what* is new; Discussion promoted to its own chapter.
+  Two positions were **reversed** and both are recorded above: repo visibility,
+  and the equity reading (documentation, not race).
 - **The literature review is narrative, not PRISMA-conformant.** The companion doc
   states this explicitly. The thesis previously carried a PRISMA flow diagram full
   of `TODO` placeholders and cited a nonexistent `search_strategy_queries.xlsx`;
@@ -482,5 +674,125 @@ insurance. Top 8 levels each.
   `07_metric_results_altlabel` from whatever ran, so an F-only pass silently
   deletes D's and E's rows. 07 is cheap — always run it unrestricted.
 - Don't reinstate "no patient develops sepsis before treatment" (§6 rule 14).
+- Don't reinstate "discrimination transports intact to eICU" or "Variant B
+  collapses; A and C hold" (§4, the variant-loop trap). Both were artefacts of
+  a single reused label.
+- Don't pool the eICU antibiotic-only arm with the Sepsis-3 arm, and don't quote
+  it when the Sepsis-3 arm is inconvenient. It labels a different target.
 - Don't touch `v2-presentation*/` unless asked. Don't depend on `v1/`.
 - Don't leave LaTeX build junk in `v2-thesis/` (keep sources, `images/`, `index.pdf`).
+
+---
+
+## 9. Pending runs
+
+**Three** independent pieces of work are patched in source and **not executed**:
+9a and 9b from feedback round 5, and 9c from round 7. Together they account for
+72 missing macros. Unlike the earlier rounds, `index.pdf` currently **will not
+compile** — 9c's 21 macros do not exist at all yet, so they are undefined
+control sequences rather than red `??`. That is the loud-failure design working.
+
+### 9a. eICU GBT comparator — 3 macros
+
+`readRDS()` returns the stage-06 booster with an **empty** `feature_names`
+under this xgboost build. `lapply()` over an empty vector produced a
+zero-column DMatrix, `predict()` returned all-NA, and the metric loop discarded
+it as "fewer than 50 valid rows" — so the GBT row silently vanished from the
+external results. It had been absent for the whole project; it only became
+visible when the corrected external table asked for the number.
+
+Fixed by falling back to `BASE_FEATURES`, which is exact: stage 06 sets
+`gbt_feats <- intersect(BASE_FEATURES, names(ph))` with `require_features()`
+guaranteeing all 22 present, so the intersect is the declared vector unchanged.
+**Verified** against `06_predictions_comparators_B`: max absolute difference
+**0** across all 548,827 test rows. Guards added — `stop()` on a zero-column
+design matrix and on an all-NA prediction vector.
+
+### 9b. Protocol Amendment 5, the feature ablation — 48 macros
+
+New arm in 05/06, scored in 07, stability split in 12. See §6 rule 15.
+
+### 9c. Feedback round 7 — 21 macros, stages 04 and 12
+
+Two independent changes, both cheap and neither refitting anything.
+
+**Stage 04 — Riley on the independent unit.** `04_sample_size.Rmd` now calls
+`pmsampsize` twice, at the stay-level prevalence (the adequacy verdict) and at
+the per-hour prevalence (reference only). New columns `stay_prevalence`,
+`min_n_riley_stay`, `sufficient_stay`, `margin_stay`, `min_n_riley_perhour`;
+the old `min_n_riley` / `sufficient` are gone. Reads three columns of each
+`03_person_hours_*.parquet` — cheap, no 6 GB stream.
+
+**Stage 12 — the subgroup interpretability floor.** `elig` gains an
+`interpretable` flag; a contrast enters family E1 only if both the level and the
+reference clear `MIN_SUBGROUP_EVENTS_INTERPRET`. **This shrinks E1 and therefore
+moves every BH-adjusted q-value in it.** The confirmatory arm is untouched.
+
+Both are covered by `./run_pipeline.sh 04 12`, which can simply be folded into
+the command below by appending `04` to the stage list.
+
+### The run
+
+```bash
+cd projects/v2/v2-proj && V2_ARMS=ablated ./run_pipeline.sh 05 06 && ./run_pipeline.sh 04 07 08 11 12
+```
+
+```bash
+cd projects/v2/v2-proj && Rscript thesis_constants.R && cd ../v2-thesis && ./build.sh
+```
+
+Roughly 40–45 min. Why this order and these stages:
+
+- `V2_ARMS=ablated` on **05 06** fits only the ablated arm. The main fits and
+  both random-split refits are skipped, so **no H1/H4/H6 input is touched** and
+  there is no GBT-drift exposure at all.
+- **07** must run unrestricted (it scores the ablation and rewrites the
+  alt-label table; see §8). It refits nothing — it re-scores existing
+  predictions, deterministically.
+- **08** picks up the GBT fallback of 9a; **11** picks up the resulting GBT
+  external operating points.
+- **12** is needed only for `12_h2_stability_by_kind`. Its bootstraps are
+  seeded and read unchanged prediction files, so its output should be identical
+  apart from the new table — which is a useful check in itself.
+
+### What to verify afterwards
+
+| Check | Expect |
+|---|---|
+| `Arms in this run: ablated` in the 05 and 06 logs | present |
+| `Ablated arm: 8 action-derived features dropped, 14 remain` | present |
+| `Full arm not selected; keeping the existing random-split fit.` | present in both 05 and 06 |
+| `GBT model carries no feature_names; reconstructing from BASE_FEATURES` | present in the 08 log |
+| **Canary:** internal AUROCs in `07_metric_results.csv` | unchanged (primary 0.7713 / 0.7590 / 0.7695, GBT 0.7448 / 0.7460 / 0.7559) |
+| `12_h2_coefficient_stability.csv` | unchanged, 22 rows, 6 unstable |
+| `[PRIMARY] Minimum independent observations (Riley, stay-level)` in the 04 log | present, three variants |
+| `04_sample_size.parquet` | has `min_n_riley_stay` / `stay_prevalence` / `margin_stay`; `min_n_riley` gone |
+| `N levels estimated, M above the 100-event interpretability floor` in the 12 log | present for race, language, insurance |
+| `12_subgroup_auroc_ci.csv` | gains `interpretable` + `min_events_interpret`; **row count unchanged** |
+| `12_subgroup_auroc_contrasts.csv` | **row count falls**; every surviving row has `n_events >= 100` |
+| `12_confirmatory_tests.csv` | **H1–H6 unchanged** — round 7 touches no confirmatory input |
+| `thesis_constants.R` | **0 missing macros**; writes real rows into `table_equityperformance.tex` and `table_equitycontrasts.tex` (currently `\pcMissing` placeholders) |
+
+If any internal AUROC moves, an ablation-only pass overwrote a main fit — stop
+and check the `V2_ARMS` guards before trusting anything downstream. If any
+H1–H6 value moves, the subgroup edit leaked into the shared bootstrap
+machinery — also stop.
+
+### Then align the thesis
+
+`feedback/v2.md` §24.5 holds the decision table. The ablation's *direction* is
+unknown until it runs, and the thesis text is written to survive either
+outcome; what changes with the numbers is the strength of the reading, not
+its direction.
+
+### Still open
+
+- [ ] **MIMIC's `avpu_alert`** collapses unmeasured GCS to `FALSE`, which
+      `news2()` charges 3 points. 3.2 % of MIMIC person-hours after LOCF (vs
+      100 % in eICU, which is fixed). Needs a full 03–12 re-run. **Author's
+      call.**
+- [ ] **A matched MIMIC antibiotic-only arm** for the eICU sensitivity
+      comparison — Variant G under a Protocol Amendment 6, `V2_VARIANTS=G`
+      through 02/03/05/06 plus unrestricted 07, including the 6 GB stream.
+- [ ] Carried forward: `tab:equity_label` macro conversion; cluster-robust SEs
+      for the primary model; licence decision.

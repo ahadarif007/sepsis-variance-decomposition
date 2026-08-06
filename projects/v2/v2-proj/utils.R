@@ -459,3 +459,60 @@ check_multinom_fit <- function(fit, tag = "", warn_at = 20) {
                           "and PRIMARY_MODEL_DECAY."), tag, mx, warn_at), level = "WARN")
   invisible(list(convergence = fit$convergence, max_abs_coef = mx))
 }
+
+# --------------------------------------------------------------------------- #
+# Cross-label coefficient stability (H2, and the Amendment 5 ablation)
+# --------------------------------------------------------------------------- #
+#' Flag covariates whose coefficient reverses sign or changes magnitude
+#' >= `mag_ratio`-fold across label variants.
+#'
+#' Factored out of 12_inference.Rmd so the confirmatory H2 count and the
+#' ablated-arm count are produced by one implementation. Two implementations of
+#' a stability rule would be two chances to compare unlike things, and the whole
+#' point of the ablation is that the two counts are comparable.
+#'
+#' @param coef_dt   coefficient table with columns outcome, term, coef, variant
+#' @param variants  variants to compare across (default the pre-registered three)
+#' @param mag_ratio magnitude-change threshold
+#' @return data.table(term, sign_flip, mag_flip), one row per covariate shared
+#'   by all `variants`; spline basis and intercept terms are excluded.
+coef_stability_flags <- function(coef_dt, variants = c("A", "B", "C"),
+                                 mag_ratio = 2) {
+  ct <- as.data.table(coef_dt)
+  cs <- ct[outcome == "sepsis" & !grepl("^ns\\(|^\\(Intercept\\)", as.character(term))]
+  terms_common <- Reduce(intersect, lapply(variants, function(v)
+    unique(as.character(cs[variant == v, term]))))
+  if (length(terms_common) == 0)
+    return(data.table(term = character(0), sign_flip = logical(0),
+                      mag_flip = logical(0)))
+  rbindlist(lapply(terms_common, function(tm) {
+    vals <- vapply(variants, function(v) {
+      r <- cs[variant == v & as.character(term) == tm, coef]
+      if (length(r) == 0) NA_real_ else as.numeric(r[1])
+    }, numeric(1))
+    vals <- vals[!is.na(vals)]
+    if (length(vals) < 2)
+      return(data.table(term = tm, sign_flip = FALSE, mag_flip = FALSE))
+    mag <- abs(vals); mag <- mag[mag > 0]
+    data.table(term      = tm,
+               sign_flip = diff(range(sign(vals))) != 0,
+               mag_flip  = length(mag) >= 2 && (max(mag) / min(mag)) >= mag_ratio)
+  }))
+}
+
+#' Split stability flags by whether the covariate is action-derived.
+#'
+#' `ACTION_DERIVED_FEATURES` names columns; a fitted term may carry a factor
+#' level suffix (`vaso_any` -> `vaso_anyTRUE`), so matching is by prefix.
+stability_by_feature_kind <- function(flags,
+                                      action_features = ACTION_DERIVED_FEATURES) {
+  f <- as.data.table(flags)
+  f[, is_action := vapply(as.character(term), function(tm)
+    any(startsWith(tm, action_features)), logical(1))]
+  f[, .(n_terms   = .N,
+        n_sign    = sum(sign_flip),
+        n_mag     = sum(mag_flip),
+        n_unstable = sum(sign_flip | mag_flip),
+        pct_unstable = round(100 * sum(sign_flip | mag_flip) / .N, 1)),
+    by = .(kind = fifelse(is_action, "action-derived", "physiological"))]
+}

@@ -173,12 +173,24 @@ for (v in PREREG) {
 
 ss <- rd("04_sample_size")
 for (v in PREREG) {
-  put(paste0("NTrainPersonH", v), cell(ss, "n_train_person_h", variant = v), big = TRUE)
-  put(paste0("MinNRiley", v),     cell(ss, "min_n_riley",      variant = v), big = TRUE)
-  put(paste0("Epv", v),           cell(ss, "epv",              variant = v), digits = 1)
-  put(paste0("NOnsetEvents", v),  cell(ss, "n_onset_events",   variant = v), big = TRUE)
-  put(paste0("PerHourRate", v),   cell(ss, "per_hour_event_rate", variant = v), digits = 5)
+  # Independent unit = the stay. This is the adequacy verdict the thesis reports.
+  put(paste0("MinNRileyStay", v),  cell(ss, "min_n_riley_stay",  variant = v), big = TRUE)
+  put(paste0("StayPrevalence", v), cell(ss, "stay_prevalence",   variant = v), digits = 4)
+  put(paste0("RileyMargin", v),    cell(ss, "margin_stay",       variant = v), digits = 2)
+  put(paste0("NOnsetEvents", v),   cell(ss, "n_onset_events",    variant = v), big = TRUE)
+  put(paste0("Epv", v),            cell(ss, "epv",               variant = v), digits = 1)
+  # Design-matrix size, reported alongside. NOT a sample size -- see the note in
+  # 04_sample_size.Rmd. MinNRileyPerHour exists so the two parameterisations can
+  # be shown together and never silently substituted for one another.
+  put(paste0("NTrainPersonH", v),  cell(ss, "n_train_person_h",  variant = v), big = TRUE)
+  put(paste0("PerHourRate", v),    cell(ss, "per_hour_event_rate", variant = v), digits = 5)
+  put(paste0("MinNRileyPerHour", v), cell(ss, "min_n_riley_perhour", variant = v), big = TRUE)
 }
+# The training split is the same set of stays under every variant; only the
+# label differs. Emitted once so the thesis cannot imply otherwise.
+put("NTrainStays", cell(ss, "n_train_stays", variant = "B"), big = TRUE)
+put("AnticipatedAuc", cell(ss, "anticipated_auc", variant = "B"), digits = 3)
+put("NCandidatePredictors", cell(ss, "n_candidate_preds", variant = "B"), digits = 0)
 
 # label agreement (kappa vs B) - the number reviewers keep assuming
 sec("Label agreement (kappa vs Variant B)")
@@ -238,6 +250,13 @@ for (v in PREREG) for (m in names(MODEL_TOK)) {
 }
 put("NTestRowsB",   cell(mr, "n_rows",          variant = "B", model = "primary"), big = TRUE)
 put("NTestEventsB", cell(mr, "n_sepsis_events", variant = "B", model = "primary"), big = TRUE)
+# Per-variant test-set size and event count. Needed wherever the development
+# cohort's event rate is stated alongside the external one, which cannot be
+# done from Variant B alone once the external label sets differ by variant.
+for (v in setdiff(PREREG, "B")) {
+  put(paste0("NTestRows", v),   cell(mr, "n_rows",          variant = v, model = "primary"), big = TRUE)
+  put(paste0("NTestEvents", v), cell(mr, "n_sepsis_events", variant = v, model = "primary"), big = TRUE)
+}
 
 # Utility at the best operating point, not at the arbitrary 0.5 cut-off.
 sec("Utility Score at the best threshold (unrestricted window)")
@@ -378,13 +397,61 @@ for (v in PREREG) for (m in names(MODEL_TOK)) {
 }
 
 sec("External validation (eICU-CRD)")
+# Primary arm: Sepsis-3 conjunction on the microbiology-covered sub-cohort.
+# Every quantity here is per-variant, because the external label sets are
+# per-variant. Emitting a single row and reusing it across A/B/C would restate
+# the defect the variant-invariance guard in stage 08 exists to catch.
 ex <- rd("08_external_validation_results")
 for (v in PREREG) {
   put(paste0("ExtAurocPrimary", v), cell(ex, "auroc", variant = v, model = "pred_sepsis"))
   put(paste0("ExtAurocNews", v),    cell(ex, "auroc", variant = v, model = "pred_news2"))
+  put(paste0("ExtAurocGbt", v),     cell(ex, "auroc", variant = v, model = "pred_gbt"))
+  put(paste0("ExtNRows", v),   cell(ex, "n_rows",   variant = v, model = "pred_sepsis"), big = TRUE)
+  put(paste0("ExtNEvents", v), cell(ex, "n_events", variant = v, model = "pred_sepsis"), big = TRUE)
 }
 put("ExtNRows",   cell(ex, "n_rows",   variant = "B", model = "pred_sepsis"), big = TRUE)
 put("ExtNEvents", cell(ex, "n_events", variant = "B", model = "pred_sepsis"), big = TRUE)
+
+# Labelling-input coverage: the quantity that bounds how much of eICU-CRD the
+# Sepsis-3 anchor can reach at all.
+cv <- rd("08_eicu_coverage")
+put("ExtNCohortStays",   cell(cv, "n_cohort_stays"),        big = TRUE)
+put("ExtNMicroStays",    cell(cv, "n_micro_covered_stays"), big = TRUE)
+put("ExtMicroCoverage",  cell(cv, "pct_micro_covered"),     digits = 2)
+put("ExtNAbxStays",      cell(cv, "n_abx_stays"),           big = TRUE)
+put("ExtAbxCoverage",    cell(cv, "pct_abx_covered"),       digits = 2)
+put("ExtPanelHoursFull", cell(cv, "panel_person_hours_full"),  big = TRUE)
+put("ExtPanelHoursMicro",cell(cv, "panel_person_hours_micro"), big = TRUE)
+put("ExtMinEvents",      cell(cv, "min_external_events"),   digits = 0)
+
+# Event-rate reconciliation against the development cohort.
+rc <- rd("08_event_rate_reconciliation")
+for (v in PREREG) {
+  put(paste0("ExtRateMimic", v),
+      cell(rc, "events_per_1k_person_h", variant = v, source = "MIMIC-IV temporal test"),
+      digits = 3)
+  put(paste0("ExtRateEicu", v),
+      cell(rc, "events_per_1k_person_h", variant = v, source = "eICU Sepsis-3 (micro-covered)"),
+      digits = 3)
+  put(paste0("ExtRateRatio", v),
+      cell(rc, "rate_ratio_vs_mimic", variant = v, source = "eICU Sepsis-3 (micro-covered)"),
+      digits = 3)
+  put(paste0("ExtRateEicuAbx", v),
+      cell(rc, "events_per_1k_person_h", variant = v, source = "eICU antibiotic-only (full)"),
+      digits = 3)
+  put(paste0("ExtRateRatioAbx", v),
+      cell(rc, "rate_ratio_vs_mimic", variant = v, source = "eICU antibiotic-only (full)"),
+      digits = 3)
+}
+
+# Sensitivity arm: antibiotic-only anchor on the full cohort. The target is not
+# Sepsis-3, so these never substitute for the primary arm.
+ab <- rd("08_external_validation_results_abxonly")
+for (v in PREREG) {
+  put(paste0("ExtAbxAurocPrimary", v), cell(ab, "auroc",    variant = v, model = "pred_sepsis"))
+  put(paste0("ExtAbxNEvents", v),      cell(ab, "n_events", variant = v, model = "pred_sepsis"), big = TRUE)
+}
+put("ExtAbxNRows", cell(ab, "n_rows", variant = "B", model = "pred_sepsis"), big = TRUE)
 
 # --------------------------------------------------------------------------- #
 # Variance decomposition
@@ -424,6 +491,50 @@ local({
   put("HTwoNTerms", if (is.null(h2)) NA else nrow(h2),                  digits = 0)
   put("HTwoNSign",  if (is.null(h2)) NA else sum(tf(h2$sign_flip)),     digits = 0)
   put("HTwoNMag",   if (is.null(h2)) NA else sum(tf(h2$mag_flip)),      digits = 0)
+})
+
+# Instability split by feature kind — the quantity behind the claim that it is
+# the action-derived covariates that are unstable, not physiology in general.
+sec("H2 instability by feature kind (Amendment 5)")
+hk <- rd("12_h2_stability_by_kind")
+for (k in c("action-derived", "physiological")) {
+  tok <- if (k == "action-derived") "Action" else "Physio"
+  put(paste0("HTwoN",        tok), cell(hk, "n_terms",      kind = k), digits = 0)
+  put(paste0("HTwoNUnstable", tok), cell(hk, "n_unstable",  kind = k), digits = 0)
+  put(paste0("HTwoPctUnstable", tok), cell(hk, "pct_unstable", kind = k), digits = 1)
+}
+
+# Protocol Amendment 5 — feature ablation
+sec("Feature ablation (Protocol Amendment 5)")
+ab  <- rd("07_ablation_metrics")
+h2a_pre <- rd("05_h2_stability_ablated")
+# Dropped-feature count, taken from the two stability tables rather than
+# hardcoded, so it can never disagree with what was actually fitted.
+put("AblNDropped",
+    if (is.null(h2) || is.null(h2a_pre)) NA else nrow(h2) - nrow(h2a_pre),
+    digits = 0)
+for (v in PREREG) for (m in c("primary", "gbt")) {
+  tok <- paste0(if (m == "primary") "Primary" else "Gbt", v)
+  put(paste0("AblAuroc",      tok), cell(ab, "auroc",             variant = v, model = m))
+  put(paste0("AblDeltaAuroc", tok), cell(ab, "delta_auroc",       variant = v, model = m))
+  put(paste0("AblAuprc",      tok), cell(ab, "auprc",             variant = v, model = m))
+  put(paste0("AblDeltaAuprc", tok), cell(ab, "delta_auprc",       variant = v, model = m))
+  put(paste0("AblUtilityMax", tok), cell(ab, "utility_max",       variant = v, model = m), digits = 3)
+  put(paste0("AblDeltaUtility", tok), cell(ab, "delta_utility_max", variant = v, model = m), digits = 3)
+}
+
+# Ablated-arm coefficient stability
+sec("Ablated-arm coefficient stability (Amendment 5)")
+h2a <- h2a_pre
+local({
+  tf <- function(x) x %in% c(TRUE, "TRUE")
+  put("AblHTwoNTerms",    if (is.null(h2a)) NA else nrow(h2a),                 digits = 0)
+  put("AblHTwoNSign",     if (is.null(h2a)) NA else sum(tf(h2a$sign_flip)),    digits = 0)
+  put("AblHTwoNMag",      if (is.null(h2a)) NA else sum(tf(h2a$mag_flip)),     digits = 0)
+  put("AblHTwoNUnstable", if (is.null(h2a)) NA else
+        sum(tf(h2a$sign_flip) | tf(h2a$mag_flip)),                             digits = 0)
+  put("AblHTwoPctUnstable", if (is.null(h2a) || nrow(h2a) == 0) NA else
+        round(100 * sum(tf(h2a$sign_flip) | tf(h2a$mag_flip)) / nrow(h2a), 1), digits = 1)
 })
 
 sec("Per-model AUROC intervals, Variant B")
@@ -593,6 +704,17 @@ local({
     }
   }
   put("EquityNContrastsEOne", if (is.null(sct)) NA else nrow(sct), digits = 0)
+  put("EquityNSigEOne",
+      if (is.null(sct)) NA else sum(sct$significant_bh, na.rm = TRUE), digits = 0)
+})
+
+sec("Subgroup interpretability floor")
+local({
+  put("MinSubgroupEvents", MIN_SUBGROUP_EVENTS_INTERPRET, digits = 0)
+  n_above <- if (is.null(sc8)) NA else
+    nrow(unique(sc8[subgroup_col == "race" &
+                    n_events >= MIN_SUBGROUP_EVENTS_INTERPRET, .(subgroup_val)]))
+  put("NSubgroupsAboveFloor", n_above, digits = 0)
 })
 
 sec("Equity (BH-adjusted subgroup contrasts)")
@@ -625,6 +747,260 @@ if (!is.null(sl) && nrow(sl)) {
   }
   put("LabelSensNSig", NA)
 }
+# --------------------------------------------------------------------------- #
+# Derived quantities that used to be transcribed by hand
+#
+# Every number below appeared as a literal in a chapter until now. They are
+# computed here from the result tables so a re-run cannot leave the prose
+# behind. Where a quantity is a difference between two tables (the split-
+# optimism deltas), it is computed here rather than added to a pipeline stage:
+# no stage owns the comparison, and this file already reads both sides.
+# --------------------------------------------------------------------------- #
+sec("Spread confidence intervals (decomposition table)")
+sp <- rd("12_spread_ci")
+for (q in c("label", "model")) {
+  tok <- if (q == "label") "SpreadLabel" else "SpreadModelClass"
+  put(paste0(tok, "CiLo"), cell(sp, "ci_lo", quantity = q), digits = 3)
+  put(paste0(tok, "CiHi"), cell(sp, "ci_hi", quantity = q), digits = 3)
+}
+
+sec("Split optimism: random - temporal by model (Variant B)")
+local({
+  tt <- rd("07_metric_results")
+  rr <- rd("07_metric_results_random")
+  deltas <- c()
+  # qSOFA and SIRS are not re-fitted on the random split (they are rule-based
+  # and carry no fitted parameters), so only the four fitted models appear.
+  for (m in c("primary", "gbt", "cox", "news2")) {
+    a <- cell(tt, "auroc", variant = "B", model = m, eval_window = "unrestricted")
+    b <- cell(rr, "auroc", variant = "B", model = m, eval_window = "unrestricted")
+    d <- if (is.na(a) || is.na(b)) NA_real_ else as.numeric(b) - as.numeric(a)
+    put(paste0("SplitDelta", MODEL_TOK[[m]], "B"), d, digits = 3)
+    if (!is.na(d)) deltas <- c(deltas, d)
+  }
+  # The prose says "each scores lower by X to Y"; both bounds are magnitudes.
+  put("SplitDeltaMinAbs", if (length(deltas)) min(abs(deltas)) else NA, digits = 3)
+  put("SplitDeltaMaxAbs", if (length(deltas)) max(abs(deltas)) else NA, digits = 3)
+})
+
+sec("Equity: the one surviving E1 contrast, and the label-sensitivity range")
+local({
+  sc <- rd("12_subgroup_auroc_contrasts")
+  top <- if (is.null(sc)) NULL else {
+    x <- sc[significant_bh %in% c(TRUE, "TRUE")]
+    if (nrow(x)) x[order(p_bh)][1] else NULL
+  }
+  g <- function(col) if (is.null(top)) structure(NA, row_found = FALSE) else top[[col]][1]
+  put("EquityTopDelta",   g("delta_auroc"), digits = 3)
+  put("EquityTopCiLo",    g("ci_lo"),       digits = 3)
+  put("EquityTopCiHi",    g("ci_hi"),       digits = 3)
+  put("EquityTopQ",       g("p_bh"),        digits = 3)
+  put("EquityTopNEvents", g("n_events"),    digits = 0)
+
+  # The four label-sensitivity contrasts that survive BH, named individually in
+  # the caption and the paragraph that follows it.
+  lsc <- rd("12_subgroup_labelsens_contrasts")
+  for (spec in list(c("LabelSensUnknown",   "race",      "UNKNOWN"),
+                    c("LabelSensUnable",    "race",      "UNABLE TO OBTAIN"),
+                    c("LabelSensSpanish",   "language",  "Spanish"),
+                    c("LabelSensPrivate",   "insurance", "Private"))) {
+    put(paste0(spec[1], "Pp"),
+        cell(lsc, "delta_range_pp", subgroup_col = spec[2], subgroup_val = spec[3]),
+        digits = 2)
+    put(paste0(spec[1], "Q"),
+        cell(lsc, "p_bh", subgroup_col = spec[2], subgroup_val = spec[3]),
+        digits = 3)
+  }
+  # How many of the surviving contrasts are racial. (The family-wide count is
+  # already emitted as \pcLabelSensNSig above.)
+  nrace <- if (is.null(lsc)) NA else
+    sum(lsc$significant_bh %in% c(TRUE, "TRUE") & lsc$subgroup_col == "race")
+  put("LabelSensNSigRace", nrace, digits = 0)
+
+  ls_r <- rd("12_subgroup_labelsens_ci")
+  rng  <- if (is.null(ls_r)) NULL else ls_r[subgroup_col == "race" &
+                                              !(is_reference %in% c(TRUE, "TRUE")),
+                                            range_pp]
+  put("LabelSensRangeLo", if (length(rng)) min(rng) else NA, digits = 1)
+  put("LabelSensRangeHi", if (length(rng)) max(rng) else NA, digits = 1)
+})
+
+# --------------------------------------------------------------------------- #
+# Generated table bodies
+#
+# Some tables have too many cells for one-macro-per-cell to be workable (the
+# equity tables are ~50 numbers each). Emitting the tabular body itself keeps
+# the same guarantee - no figure is ever transcribed by hand - and scales to any
+# number of rows. The thesis \input{}s these; the surrounding \begin{table},
+# column spec and caption stay in the .tex where they belong.
+#
+# A body that cannot be built is written as a single \pcMissing row rather than
+# left stale or absent, so the failure is visible in the PDF exactly like a
+# missing macro.
+# --------------------------------------------------------------------------- #
+TABLES_WRITTEN <- character(0)
+TABLES_MISSING <- character(0)
+
+#' Write a complete tabular environment to ../v2-thesis/table_<name>.tex.
+#'
+#' The WHOLE environment is emitted, not just the rows. A partial alignment
+#' body cannot be \\input reliably: TeX's alignment scanner has to see the
+#' `&` and `\\\\` tokens in the same expansion context, and \\input breaks that,
+#' which surfaces as "Misplaced \\noalign" at the \\bottomrule. The thesis keeps
+#' the surrounding \\begin{table}, caption and label.
+#'
+#' @param name    file stem
+#' @param colspec tabular column specification, e.g. "lrcccc"
+#' @param header  character vector of header lines (without the trailing \\\\)
+#' @param rows    body rows (without trailing \\\\)
+write_table <- function(name, colspec, header, rows) {
+  path <- file.path(THESIS_DIR, paste0("table_", name, ".tex"))
+  if (is.null(rows) || length(rows) == 0) {
+    writeLines(c("% GENERATED by thesis_constants.R -- source rows missing",
+                 "\\begin{tabular}{l}", "\\pcMissing", "\\end{tabular}"), path)
+    TABLES_MISSING <<- c(TABLES_MISSING, name)
+    return(invisible(NULL))
+  }
+  writeLines(c(
+    "% GENERATED by thesis_constants.R -- do not edit",
+    sprintf("\\begin{tabular}{%s}", colspec),
+    "\\toprule",
+    paste0(header, " \\\\"),
+    "\\midrule",
+    paste0(rows, " \\\\"),
+    "\\bottomrule",
+    "\\end{tabular}"
+  ), path)
+  TABLES_WRITTEN <<- c(TABLES_WRITTEN, name)
+  invisible(NULL)
+}
+
+# Numeric formatters for table cells.
+f1  <- function(x) formatC(as.numeric(x), format = "f", digits = 1)
+f2  <- function(x) formatC(as.numeric(x), format = "f", digits = 2)
+big <- function(x) formatC(as.numeric(x), format = "d", big.mark = "{,}")
+# LaTeX-safe display name for a subgroup level. The pipeline stores MIMIC's
+# raw all-caps codes; the thesis prints prose. An explicit map is used rather
+# than a case-folding heuristic because these labels are few, fixed, and read
+# badly when title-cased mechanically ("Unable To Obtain").
+LEVEL_LABELS <- c(
+  "WHITE"                  = "White",
+  "UNKNOWN"                = "Unknown",
+  "BLACK/AFRICAN AMERICAN" = "Black / African American",
+  "OTHER"                  = "Other",
+  "UNABLE TO OBTAIN"       = "Unable to obtain",
+  "WHITE - OTHER EUROPEAN" = "White -- Other European",
+  "ASIAN"                  = "Asian",
+  "ASIAN - CHINESE"        = "Asian -- Chinese",
+  "HISPANIC/LATINO"        = "Hispanic / Latino",
+  "HISPANIC/LATINO - PUERTO RICAN" = "Hispanic / Latino -- Puerto Rican",
+  "HISPANIC OR LATINO"     = "Hispanic or Latino"
+)
+pretty_level <- function(x) {
+  x   <- as.character(x)
+  out <- unname(LEVEL_LABELS[toupper(trimws(x))])
+  # Unmapped level: fall back to sentence case rather than dropping the row,
+  # so a new subgroup appears (readably) instead of vanishing.
+  fb  <- !is.na(out)
+  res <- ifelse(fb, out, paste0(toupper(substring(x, 1, 1)),
+                                tolower(substring(x, 2))))
+  gsub("&", "\\\\&", gsub(" - ", " -- ", res, fixed = TRUE))
+}
+signed <- function(x, d = 2) {
+  v <- as.numeric(x)
+  sprintf("$%s%s$", ifelse(v < 0, "-", "+"),
+          formatC(abs(v), format = "f", digits = d))
+}
+
+# --- Label sensitivity by racial subgroup (tab:equity_label) ----------------
+ls_ci <- rd("12_subgroup_labelsens_ci")
+write_table("equitylabel", "lrcccc",
+  paste("\\textbf{Racial group} & \\textbf{Stays} & \\textbf{A (\\%)}",
+        "& \\textbf{B (\\%)} & \\textbf{C (\\%)}",
+        "& \\textbf{Range (pp, 95\\% CI)}"),
+  local({
+    if (is.null(ls_ci)) return(NULL)
+    r <- ls_ci[subgroup_col == "race"]
+    if (!nrow(r)) return(NULL)
+    setorder(r, -n_stays)
+    sprintf("%s & %s & %s & %s & %s & %s (%s--%s)",
+            pretty_level(r$subgroup_val), big(r$n_stays),
+            f1(r$pct_A), f1(r$pct_B), f1(r$pct_C),
+            f1(r$range_pp), f1(r$range_lo), f1(r$range_hi))
+  }))
+
+# --- Label-sensitivity contrasts vs White (tab:equity_label_contrasts) ------
+ls_ct <- rd("12_subgroup_labelsens_contrasts")
+write_table("equitylabelcontrasts", "lrcrr",
+  paste("\\textbf{Racial group} & \\textbf{Stays}",
+        "& \\textbf{$\\Delta$ range vs.\\ White (pp, 95\\% CI)}",
+        "& \\textbf{$p$} & \\textbf{$q_{\\text{BH}}$}"),
+  local({
+    if (is.null(ls_ct)) return(NULL)
+    r <- ls_ct[subgroup_col == "race"]
+    if (!nrow(r)) return(NULL)
+    setorder(r, p_bh)
+    sig  <- r$significant_bh %in% c(TRUE, "TRUE")
+    qtxt <- formatC(as.numeric(r$p_bh), format = "f", digits = 3)
+    qtxt <- ifelse(sig, paste0("\\textbf{", qtxt, "}"), qtxt)
+    sprintf("%s & %s & %s (%s--%s) & %s & %s",
+            pretty_level(r$subgroup_val), big(r$n_stays),
+            signed(r$delta_range_pp), signed(r$ci_lo), signed(r$ci_hi),
+            formatC(as.numeric(r$p_raw), format = "f", digits = 3), qtxt)
+  }))
+
+# --- Subgroup discrimination by racial stratum (tab:equity_performance) -----
+# Generated whole rather than macro-per-cell: the number of rows now depends on
+# how many strata clear the interpretability floor, so a fixed grid of
+# One..Eight macros would either leave red ?? cells or silently hide a stratum.
+f3 <- function(x) formatC(as.numeric(x), format = "f", digits = 3)
+write_table("equityperformance", "lrrcc",
+  paste("\\textbf{Racial stratum} & \\textbf{Rows} & \\textbf{Sepsis}",
+        "& \\textbf{GBT AUROC (95\\% CI)} & \\textbf{Primary AUROC (95\\% CI)}"),
+  local({
+    if (is.null(sc8)) return(NULL)
+    r <- unique(sc8[subgroup_col == "race", .(subgroup_val, n_rows, n_events)])
+    if (!nrow(r)) return(NULL)
+    setorder(r, -n_rows)
+    one <- function(lvl, m) {
+      x <- sc8[subgroup_col == "race" & subgroup_val == lvl & model == m]
+      if (!nrow(x)) return("\\pcMissing")
+      sprintf("%s (%s--%s)", f3(x$auroc[1]), f3(x$ci_lo[1]), f3(x$ci_hi[1]))
+    }
+    # Strata below the floor are shown but flagged: suppressing them would hide
+    # which groups the cohort contains and how few events they carry, which is
+    # itself the argument for the floor.
+    flag <- ifelse(r$n_events < MIN_SUBGROUP_EVENTS_INTERPRET, "$^\\dagger$", "")
+    sprintf("%s%s & %s & %s & %s & %s",
+            pretty_level(r$subgroup_val), flag, big(r$n_rows), big(r$n_events),
+            vapply(r$subgroup_val, one, character(1), m = "gbt"),
+            vapply(r$subgroup_val, one, character(1), m = "primary"))
+  }))
+
+# --- Subgroup AUROC contrasts (tab:equity_contrasts) ------------------------
+# Only strata above the interpretability floor reach this table, because only
+# those enter family E1 (see 12_inference.Rmd). The row count is therefore not
+# fixed in advance either.
+write_table("equitycontrasts", "lrlcrr",
+  paste("\\textbf{Racial stratum} & \\textbf{Sepsis} & \\textbf{Model}",
+        "& \\textbf{$\\Delta$AUROC vs.\\ reference (95\\% CI)}",
+        "& \\textbf{$p$} & \\textbf{$q_{\\text{BH}}$}"),
+  local({
+    if (is.null(sct)) return(NULL)
+    r <- sct[subgroup_col == "race"]
+    if (!nrow(r)) return(NULL)
+    setorder(r, model, p_raw)
+    sig  <- r$significant_bh %in% c(TRUE, "TRUE")
+    qtxt <- formatC(as.numeric(r$p_bh), format = "f", digits = 3)
+    qtxt <- ifelse(sig, paste0("\\textbf{", qtxt, "}"), qtxt)
+    mtok <- unname(MODEL_TOK[as.character(r$model)])
+    mtok[is.na(mtok)] <- as.character(r$model)[is.na(mtok)]
+    sprintf("%s & %s & %s & %s (%s--%s) & %s & %s",
+            pretty_level(r$subgroup_val), big(r$n_events), mtok,
+            signed(r$delta_auroc, 3), signed(r$ci_lo, 3), signed(r$ci_hi, 3),
+            formatC(as.numeric(r$p_raw), format = "f", digits = 3), qtxt)
+  }))
+
 
 # --------------------------------------------------------------------------- #
 # Emit
@@ -669,6 +1045,12 @@ if (length(MISSING)) {
   for (m in MISSING) cat("     \\pc", m, "\n", sep = "")
   cat("\n  Usually means the producing stage did not run. Check output/logs/.\n")
 }
+if (length(TABLES_WRITTEN))
+  cat(sprintf("  %d generated table bodies: %s\n", length(TABLES_WRITTEN),
+              paste(TABLES_WRITTEN, collapse = ", ")))
+if (length(TABLES_MISSING))
+  cat(sprintf("  !! %d table bodies could NOT be built: %s\n",
+              length(TABLES_MISSING), paste(TABLES_MISSING, collapse = ", ")))
 
 # --------------------------------------------------------------------------- #
 # Figure sync - the other half of the manual-sync trap

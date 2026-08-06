@@ -229,6 +229,60 @@ active_variants <- function(all_ids = ALL_VARIANTS) {
   intersect(all_ids, keep)
 }
 
+# --------------------------------------------------------------------------- #
+# Action-derived features — Protocol Amendment 5 (post-hoc)
+#
+# The thesis argues that the Sepsis-3 label is constituted by clinician action.
+# The same objection applies to part of the feature set. Two kinds of predictor
+# are records of clinician behaviour rather than of physiology:
+#
+#   vasopressor exposure   — a treatment, not a measurement
+#   *_measured indicators  — whether a test was ORDERED in that hour, which is
+#                            a record of clinical attention; the value carries
+#                            physiology, the indicator carries the decision to
+#                            look
+#
+# These are held here so the ablation arm can drop exactly this set and no
+# other. Note the boundary: the forward-filled lab VALUES are retained, even
+# though a value exists only because someone ordered the test. Dropping them
+# too would remove most of the laboratory signal and confound the ablation with
+# a loss of physiological information, so the ablation is deliberately the
+# narrower and more conservative one — it removes the features that encode
+# *only* clinician behaviour.
+# --------------------------------------------------------------------------- #
+ACTION_DERIVED_FEATURES <- c(
+  "vaso_any", "norepi_epi_any",
+  "lactate_measured", "creatinine_measured", "bilirubin_total_measured",
+  "platelets_measured", "wbc_measured", "pf_ratio_measured"
+)
+
+#' Restrict the fitting stages (05, 06) to one arm.
+#'
+#' "full" is the pre-registered specification; "ablated" drops
+#' ACTION_DERIVED_FEATURES. Set V2_ARMS=ablated to add or refresh the ablation
+#' WITHOUT refitting the main models — the same reasoning as V2_VARIANTS. This
+#' matters because the main fits are what every headline number in the thesis
+#' rests on, and the safest way to leave them untouched is not to re-execute
+#' them at all.
+active_arms <- function(all_arms = c("full", "ablated")) {
+  sel <- Sys.getenv("V2_ARMS", "")
+  if (!nzchar(sel)) return(all_arms)
+  keep <- trimws(strsplit(sel, ",", fixed = TRUE)[[1]])
+  unknown <- setdiff(keep, all_arms)
+  if (length(unknown) > 0)
+    stop("V2_ARMS names unknown arms: ", paste(unknown, collapse = ", "))
+  intersect(all_arms, keep)
+}
+
+#' The feature vector for one arm, given the full declared set.
+arm_features <- function(features, arm) {
+  if (identical(arm, "ablated")) setdiff(features, ACTION_DERIVED_FEATURES) else features
+}
+
+#' Filename suffix for an arm ("" for the main arm, so existing paths are
+#' unchanged and no downstream stage has to learn about arms it does not use).
+arm_suffix <- function(arm) if (identical(arm, "ablated")) "_ablated" else ""
+
 #' Look up a variant's definition in either family.
 variant_def <- function(vid) {
   if (!is.null(LABEL_VARIANTS[[vid]])) LABEL_VARIANTS[[vid]] else ALT_LABEL_VARIANTS[[vid]]
@@ -321,6 +375,36 @@ VASOPRESSOR_ITEMIDS <- list(
 # Urine output itemids (outputevents)
 URINE_OUTPUT_ITEMIDS <- c(226559L, 226560L, 226561L, 226584L, 226563L,
                            226565L, 226567L, 226557L, 226558L)
+
+# --------------------------------------------------------------------------- #
+# eICU-CRD drug capture (stage 08)
+#
+# eICU has no itemid vocabulary; drugs are free-text `drugname` strings spread
+# across two tables that must BOTH be read:
+#
+#   medication.csv.gz   physician orders (oral and IV), `drugstartoffset`
+#   infusionDrug.csv.gz continuous infusions,           `infusionoffset`
+#
+# Vasopressors and a large share of the intravenous antibiotics (vancomycin,
+# piperacillin-tazobactam, cefepime) are recorded as infusions and appear in
+# medication.csv.gz inconsistently or not at all, so reading only that table
+# both under-counts the infection anchor and leaves the SOFA cardiovascular
+# component permanently at its no-pressor value.
+#
+# Matching is by substring against these patterns (see `match_antibiotics()`),
+# which is the same mechanism ANTIBIOTICS uses on MIMIC-IV `drug`.
+# --------------------------------------------------------------------------- #
+EICU_VASOPRESSORS <- c(
+  "norepinephrine", "levophed", "epinephrine", "adrenaline",
+  "dopamine", "dobutamine", "vasopressin", "pitressin",
+  "phenylephrine", "neosynephrine", "neo-synephrine"
+)
+
+# The two agents that score 3 rather than 2 on the SOFA cardiovascular
+# component. "norepinephrine" is a superstring of "epinephrine", so a match on
+# either pattern lands in this set by construction, which is the intended
+# behaviour: both are level-3 agents.
+EICU_NOREPI_EPI <- c("norepinephrine", "levophed", "epinephrine", "adrenaline")
 
 # --------------------------------------------------------------------------- #
 # Physiological plausibility ranges
@@ -431,6 +515,15 @@ ALERT_BURDEN_BENCHMARK <- 1.4
 # Expected external AUC degradation (Moor et al., 2023): ~0.085
 EXPECTED_EXTERNAL_DEGRADATION <- 0.085
 
+# Minimum external event count below which an external AUROC is reported but
+# not interpreted. Riley et al. (2021) and Collins et al. (2024, TRIPOD+AI)
+# both put the floor for a stable external discrimination estimate at about 100
+# events; below it the confidence interval is wider than any effect the study
+# is trying to detect, and a point estimate invites over-reading. Stage 08
+# flags every variant that falls under this floor and stage 12 carries the flag
+# into the H5 verdict.
+MIN_EXTERNAL_EVENTS <- 100L
+
 # --------------------------------------------------------------------------- #
 # Equity subgroups (Wang, Li, Naidech, & Luo, 2022)
 # --------------------------------------------------------------------------- #
@@ -459,9 +552,26 @@ FDR_Q                    <- 0.05   # Benjamini-Hochberg within each exploratory 
 
 # Subgroup analyses are exploratory. Each subgroup is contrasted against the
 # largest level of its own variable, which is chosen empirically and recorded.
-MIN_SUBGROUP_ROWS   <- 50L   # minimum person-hours to report a subgroup at all
-MIN_SUBGROUP_EVENTS <- 5L    # minimum sepsis onsets for an interpretable AUROC
+MIN_SUBGROUP_ROWS   <- 50L   # minimum person-hours to ESTIMATE a subgroup AUROC
+MIN_SUBGROUP_EVENTS <- 5L    # minimum onsets to ESTIMATE a subgroup AUROC
 MAX_SUBGROUP_LEVELS <- 8L    # top-N levels per equity variable (matches 10_equity_analysis)
+
+# Interpretability floor for subgroup discrimination. Distinct from the two
+# constants above, which govern whether an estimate is *computed*; this one
+# governs whether it is *interpreted*.
+#
+# Below this event count the confidence interval on a subgroup AUROC is wider
+# than any disparity the study could act on, so the estimate is tabulated (so
+# that the composition of the cohort stays visible) but is not interpreted, is
+# excluded from every statement about spread, and -- importantly -- is excluded
+# from exploratory family E1, so the BH correction is applied over the contrasts
+# the study is willing to read rather than over every level that happens to
+# exist.
+#
+# Set equal to MIN_EXTERNAL_EVENTS deliberately: same question (is this event
+# count enough to interpret an AUROC?), same warrant (Riley et al. 2019;
+# Collins et al. 2024), so the two floors must not drift apart.
+MIN_SUBGROUP_EVENTS_INTERPRET <- MIN_EXTERNAL_EVENTS
 
 # --------------------------------------------------------------------------- #
 # Sample size (Riley et al., 2019) — reference anticipated AUC

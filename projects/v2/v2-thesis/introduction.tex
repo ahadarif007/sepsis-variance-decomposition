@@ -21,9 +21,11 @@ means the model's alerts cause more harm than benefit. AUROC did not detect
 this collapse because it only measures whether a model can rank patients
 correctly, not whether its alerts are timely or useful. This gap between
 apparent accuracy and real-world usefulness has also been observed in
-deployment: Wong et al.\ \cite{wong2026epic} evaluated the Epic Sepsis
-Model v2 across 227,091 encounters and found high AUROC alongside an alert
-burden that clinical staff described as unmanageable.
+deployment: Wong et al.\ \cite{wong2026epic} validated the Epic Sepsis
+Model v2 prospectively across 227,091 encounters at four US health systems and
+found encounter-level AUROC between 0.82 and 0.92 alongside positive predictive
+value of 0.13 to 0.26 --- 21 to 35 alerts investigated for every sepsis case
+identified.
 
 The key question is therefore not ``which model is best?'' but something more
 fundamental: \textit{how much of a model's reported performance comes from the
@@ -122,11 +124,16 @@ states plainly that it was written after the analyses had been run.
 \label{sec:contrib}
 
 \begin{enumerate}
-    \item \textbf{C1 (Label variance).} To the best of our knowledge, the first
-    three-variant label sensitivity analysis for a dynamic survival model on
-    MIMIC-IV, following Cohen et al.\ \cite{cohen2024subtle} and Dutta et al.\
-    \cite{dutta2026performance} (see Section~\ref{sec:search_strategy} for the
-    search strategy supporting this claim).
+    \item \textbf{C1 (Label variance).} Label sensitivity itself is established
+    by Cohen et al.\ \cite{cohen2024subtle} and Dutta et al.\
+    \cite{dutta2026performance}, and neither the survival setting nor the
+    multi-variant design is new. What is new, to the best of our knowledge, is
+    the combination: three Sepsis-3 readings applied to a discrete-time
+    competing-risks model on MIMIC-IV, with the label spread and the
+    model-class spread measured on the same test rows and each carrying an
+    interval, so that the two can be compared as estimands rather than as
+    ranges of point estimates (Section~\ref{sec:search_strategy} states the
+    search strategy and the bound on this claim).
 
     \item \textbf{C2 (Treatment leakage located in the onset rule).} A proof that
     a conjunction-based Sepsis-3 onset rule --- the rule used here and widely in
@@ -154,10 +161,15 @@ states plainly that it was written after the analyses had been run.
     exposure, a treatment indicator --- supporting Lauritsen et al.'s
     \cite{lauritsen2021framing} framing-instability finding on MIMIC-IV.
 
-    \item \textbf{C5 (Equity-by-label analysis).} To the best of our knowledge,
-    the first study to examine both model performance disparities and label
-    sensitivity across demographic subgroups, following Wang et al.\
-    \cite{wang2022equity} (see Section~\ref{sec:search_strategy}).
+    \item \textbf{C5 (Equity-by-label analysis).} Subgroup performance
+    disparity and subgroup variation in who gets labelled are both reported by
+    Wang et al.\ \cite{wang2022equity}, though for mortality prediction among
+    patients already identified as septic rather than for onset prediction.
+    What is new, to the best of our knowledge, is measuring the two on the
+    \emph{same} strata in the same onset-prediction cohort under common
+    false-discovery control --- which is what shows that only one of them is
+    precisely enough estimated to support a claim
+    (Section~\ref{sec:search_strategy}).
 
     \item \textbf{C6 (Reproducible pipeline).} A pre-registered, seed-fixed
     pipeline following TRIPOD+AI \cite{collins2024tripodai} and PROBAST+AI
@@ -193,4 +205,8 @@ Chapter~\ref{ch:design} explains the pipeline architecture and its twelve
 scripts.
 Chapter~\ref{ch:evaluation} presents all results, organised around the six
 hypotheses.
+Chapter~\ref{ch:discussion} interprets them, bounds what each estimate can
+support, and states the limitations.
 Chapter~\ref{ch:conclusion} draws conclusions and outlines future work.
+Appendix~\ref{app:code} gives the source-code repository and the procedure for
+reproducing every reported number.

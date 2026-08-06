@@ -38,13 +38,29 @@ External validation on a distinct dataset is the minimum standard for generalisa
 
 Expected AUC degradation: ~0.085 (Moor et al., 2023). This analysis tests **H5**: Utility Score degrades proportionally more than AUROC on external data.
 
+### Two anchor arms, and why both are needed
+
+Sepsis-3 onset is anchored on the co-occurrence of an antibiotic order and a
+microbiology culture. In eICU-CRD that conjunction is only *recoverable* where
+microbiology exists, and `microLab.csv.gz` covers a small minority of unit
+stays. Applying the conjunction to the full cohort therefore does not measure a
+low sepsis incidence; it measures the coverage of one source table, because the
+overwhelming majority of person-hours sit in stays where the anchor cannot fire
+by construction. The two arms separate those questions:
+
+| Arm | Cohort | Anchor | Role |
+|---|---|---|---|
+| **Sepsis-3 (primary)** | stays with $\geq 1$ culture record | culture $\wedge$ antibiotic, per-variant windows | label matches MIMIC-IV exactly; denominator contains only person-hours in which an onset *could* be observed |
+| **Antibiotic-only (sensitivity)** | full cohort | first systemic antibiotic, no culture requirement | quantifies how much of the event count the culture requirement removes; the target is **not** Sepsis-3 and is never pooled with the primary arm |
+
 Steps:
 
-1. Build eICU person-hour table harmonised to MIMIC-IV naming
-2. Apply Sepsis-3 Variant B onset definition
+1. Build the eICU person-hour panel harmonised to MIMIC-IV naming
+2. Derive onsets **per label variant** under each anchor, using the same
+   SOFA-delta criterion as `02_cohort_labels.Rmd`
 3. Load MIMIC-IV trained models (no retraining)
 4. Evaluate with the same metric suite
-5. Compare internal vs. external performance
+5. Reconcile the eICU and MIMIC-IV event rates explicitly
 
 ```{r load-deps}
 suppressPackageStartupMessages({
@@ -166,6 +182,9 @@ if (file.exists(lab_path)) {
     lab_hr[, fio2_frac := ifelse(fio2_lab > 1, fio2_lab / 100, fio2_lab)]
     lab_hr[, pf_ratio  := ifelse(!is.na(pao2) & !is.na(fio2_frac) & fio2_frac > 0,
                                   pao2 / fio2_frac, NA_real_)]
+    # fio2 is retained (as a fraction) because NEWS2 needs the supplemental-oxygen
+    # flag; without it every eICU person-hour scores 0 on that parameter.
+    lab_hr[, fio2 := fio2_frac]
     lab_hr[, c("fio2_lab", "fio2_frac") := NULL]
   }
 } else {
@@ -174,137 +193,404 @@ if (file.exists(lab_path)) {
 }
 ```
 
-## Suspected Infection (eICU)
+## Drug Exposure: Antibiotics and Vasopressors
 
-Variant B antibiotic-culture window logic applied to eICU medication and microbiology tables. eICU offsets are in minutes from ICU admission.
+eICU records drugs across two tables. `medication.csv.gz` holds physician
+orders and `infusionDrug.csv.gz` holds continuous infusions; vasopressors and a
+large share of the intravenous antibiotics appear only in the latter. Both are
+read, and the antibiotic exposure is the union.
 
-```{r eicu-suspected-infection}
-step("Loading eICU infection events...")
+```{r eicu-drugs}
+step("Loading eICU drug exposure (medication + infusionDrug)...")
 
-micro_path <- file.path(EICU_DIR, "microLab.csv.gz")
-med_path   <- file.path(EICU_DIR, "medication.csv.gz")
-eicu_abx   <- data.table()
-eicu_culture <- data.table()
+med_path <- file.path(EICU_DIR, "medication.csv.gz")
+inf_path <- file.path(EICU_DIR, "infusionDrug.csv.gz")
+
+abx_parts    <- list()
+vaso_hours   <- data.table()
+norepi_hours <- data.table()
 
 if (file.exists(med_path)) {
   meds <- data.table::fread(med_path, showProgress = FALSE,
-                              select = c("patientunitstayid","drugstartoffset","drugname"))
+                              select = c("patientunitstayid","drugstartoffset",
+                                         "drugname","drugordercancelled"))
+  meds <- meds[drugordercancelled != "Yes" & !is.na(drugstartoffset)]
   meds[, is_abx := match_antibiotics(drugname, ANTIBIOTICS)]
-  eicu_abx <- meds[is_abx == TRUE & !is.na(drugstartoffset),
-                    .(stay_id = patientunitstayid,
-                      abx_hour = floor(drugstartoffset / 60))]
+  abx_parts$medication <- meds[is_abx == TRUE,
+                                .(stay_id  = patientunitstayid,
+                                  abx_hour = floor(drugstartoffset / 60))]
+  cat(sprintf("Antibiotic orders (medication): %s rows, %s stays\n",
+              format(nrow(abx_parts$medication), big.mark = ","),
+              format(uniqueN(abx_parts$medication$stay_id), big.mark = ",")))
+  rm(meds); gc()
+} else {
+  v2_log("medication.csv.gz not found", level = "WARN")
 }
+
+if (file.exists(inf_path)) {
+  infus <- data.table::fread(inf_path, showProgress = FALSE,
+                               select = c("patientunitstayid","infusionoffset",
+                                          "drugname"))
+  infus <- infus[!is.na(infusionoffset)]
+  infus[, inf_hour := floor(infusionoffset / 60)]
+
+  infus[, is_abx := match_antibiotics(drugname, ANTIBIOTICS)]
+  abx_parts$infusion <- infus[is_abx == TRUE,
+                               .(stay_id = patientunitstayid, abx_hour = inf_hour)]
+  cat(sprintf("Antibiotic infusions (infusionDrug): %s rows, %s stays\n",
+              format(nrow(abx_parts$infusion), big.mark = ","),
+              format(uniqueN(abx_parts$infusion$stay_id), big.mark = ",")))
+
+  # Vasopressor exposure, restricted to the panel horizon. An infusion row is a
+  # rate observation at one instant, so exposure is flagged on the hour of the
+  # observation rather than over an interval (eICU carries no infusion stop
+  # time). This is the closest available analogue to the MIMIC-IV
+  # `inputevents` start/end expansion in 03_person_hours.Rmd.
+  infus[, is_vaso   := match_antibiotics(drugname, EICU_VASOPRESSORS)]
+  infus[, is_norepi := match_antibiotics(drugname, EICU_NOREPI_EPI)]
+  vaso_hours <- unique(infus[is_vaso == TRUE & inf_hour >= 0 &
+                               inf_hour <= MAX_PANEL_HOURS,
+                             .(stay_id = patientunitstayid, obs_hour = inf_hour)])
+  vaso_hours[, vaso_any := TRUE]
+  norepi_hours <- unique(infus[is_norepi == TRUE & inf_hour >= 0 &
+                                 inf_hour <= MAX_PANEL_HOURS,
+                               .(stay_id = patientunitstayid, obs_hour = inf_hour)])
+  norepi_hours[, norepi_epi_any := TRUE]
+  cat(sprintf("Vasopressor infusion hours: %s (%s stays); norepi/epi: %s (%s stays)\n",
+              format(nrow(vaso_hours), big.mark = ","),
+              format(uniqueN(vaso_hours$stay_id), big.mark = ","),
+              format(nrow(norepi_hours), big.mark = ","),
+              format(uniqueN(norepi_hours$stay_id), big.mark = ",")))
+  rm(infus); gc()
+} else {
+  v2_log("infusionDrug.csv.gz not found", level = "WARN")
+}
+
+eicu_abx <- if (length(abx_parts) > 0) unique(rbindlist(abx_parts)) else data.table()
+cat(sprintf("Antibiotic exposure (union): %s rows, %s stays\n",
+            format(nrow(eicu_abx), big.mark = ","),
+            format(uniqueN(eicu_abx$stay_id), big.mark = ",")))
+```
+
+## Microbiology Coverage
+
+`microLab.csv.gz` is the binding constraint on Sepsis-3 label transport. The
+coverage figure below defines the primary arm's cohort: a stay with no culture
+record cannot satisfy the Sepsis-3 conjunction under any variant, so counting
+its person-hours in the denominator measures table coverage rather than
+incidence.
+
+```{r eicu-cultures}
+step("Loading eICU microbiology...")
+
+micro_path   <- file.path(EICU_DIR, "microLab.csv.gz")
+eicu_culture <- data.table()
 
 if (file.exists(micro_path)) {
   micro <- data.table::fread(micro_path, showProgress = FALSE,
-                               select = c("patientunitstayid","culturetakenoffset","culturesite"))
+                               select = c("patientunitstayid","culturetakenoffset",
+                                          "culturesite"))
+  micro <- micro[!culturesite %in% SURVEILLANCE_SPEC_TYPES]
   eicu_culture <- micro[!is.na(culturetakenoffset),
-                         .(stay_id = patientunitstayid,
+                         .(stay_id      = patientunitstayid,
                            culture_hour = floor(culturetakenoffset / 60))]
+} else {
+  v2_log("microLab.csv.gz not found", level = "WARN")
 }
 
-v <- LABEL_VARIANTS[["B"]]
-eicu_susp <- data.table()
-if (nrow(eicu_abx) > 0 && nrow(eicu_culture) > 0) {
-  susp_raw <- merge(eicu_abx, eicu_culture, by = "stay_id", allow.cartesian = TRUE)
-  susp_raw[, dt_abx_before := culture_hour - abx_hour]
-  susp_raw[, dt_cul_before := abx_hour - culture_hour]
-  susp_raw <- susp_raw[
-    (dt_abx_before >= 0 & dt_abx_before <= v$abx_before_culture_h) |
-    (dt_cul_before >= 0 & dt_cul_before <= v$culture_before_abx_h)
-  ]
-  if (nrow(susp_raw) > 0) {
-    susp_raw[, t_susp_h := pmax(abx_hour, culture_hour)]
-    setorderv(susp_raw, c("stay_id", "t_susp_h"))
-    eicu_susp <- susp_raw[, .SD[1], by = stay_id][, .(stay_id, t_susp_h)]
-  }
-}
-cat(sprintf("eICU suspected infection stays: %d\n", nrow(eicu_susp)))
+cohort_ids  <- unique(as.integer(eicu_patient$patientunitstayid))
+micro_stays <- intersect(unique(eicu_culture$stay_id), cohort_ids)
+
+cat(sprintf("Culture records: %s over %s stays\n",
+            format(nrow(eicu_culture), big.mark = ","),
+            format(uniqueN(eicu_culture$stay_id), big.mark = ",")))
+cat(sprintf("Microbiology coverage within the analysis cohort: %s / %s stays (%.2f%%)\n",
+            format(length(micro_stays), big.mark = ","),
+            format(length(cohort_ids),  big.mark = ","),
+            100 * length(micro_stays) / max(length(cohort_ids), 1)))
+cat(sprintf("Culture records drawn before ICU admission (negative offset): %.1f%%\n",
+            100 * mean(eicu_culture$culture_hour < 0)))
 ```
 
-## Build eICU Person-Hour Table
+## Build eICU Person-Hour Panel
 
-Same construction as MIMIC-IV (hourly grid, LOCF, missingness indicators, rolling slopes, clinical scores). GCS is unavailable in eICU vitalPeriodic and set to NA.
+The panel is built **once**, from physiology alone, and carries no label. Onsets
+are derived from it per variant in the next section, which is what makes the
+three external label sets genuinely distinct. Construction mirrors MIMIC-IV
+(hourly grid, plausibility filter, LOCF, missingness indicators, rolling
+slopes, clinical scores). GCS is unavailable in `vitalPeriodic` and is left as
+`NA` rather than imputed.
 
-```{r build-eicu-person-hours}
-step("Building eICU person-hour table...")
+```{r build-eicu-panel}
+step("Building eICU person-hour panel...")
 
-eicu_stays <- eicu_patient[, .(stay_id = patientunitstayid, los_hours,
+eicu_stays <- eicu_patient[, .(stay_id = as.integer(patientunitstayid), los_hours,
                                 age = age_num, gender, ethnicity,
                                 hospital_expire = unitdischargestatus == "Expired")]
-grid <- build_person_hour_grid(eicu_stays, max_hours = MAX_PANEL_HOURS)
+panel <- build_person_hour_grid(eicu_stays, max_hours = MAX_PANEL_HOURS)
 
 if (nrow(vp_hr) > 0) {
   if ("obs_hour" %in% names(vp_hr)) setnames(vp_hr, "obs_hour", "hour")
-  grid <- merge(grid, vp_hr, by = c("stay_id", "hour"), all.x = TRUE)
+  panel <- merge(panel, vp_hr, by = c("stay_id", "hour"), all.x = TRUE)
 }
 if (nrow(lab_hr) > 0) {
   if (!"hour" %in% names(lab_hr) && "obs_hour" %in% names(lab_hr))
     setnames(lab_hr, "obs_hour", "hour")
-  grid <- merge(grid, lab_hr, by = c("stay_id", "hour"), all.x = TRUE)
+  panel <- merge(panel, lab_hr, by = c("stay_id", "hour"), all.x = TRUE)
 }
+
+if (nrow(vaso_hours) > 0) {
+  setnames(vaso_hours, "obs_hour", "hour")
+  panel <- merge(panel, vaso_hours, by = c("stay_id", "hour"), all.x = TRUE)
+  panel[is.na(vaso_any), vaso_any := FALSE]
+} else { panel[, vaso_any := FALSE] }
+
+if (nrow(norepi_hours) > 0) {
+  setnames(norepi_hours, "obs_hour", "hour")
+  panel <- merge(panel, norepi_hours, by = c("stay_id", "hour"), all.x = TRUE)
+  panel[is.na(norepi_epi_any), norepi_epi_any := FALSE]
+} else { panel[, norepi_epi_any := FALSE] }
 
 # Same plausibility filter as the MIMIC panel in 03, applied before the
 # forward-fill, so the external cohort is pre-processed identically to the
 # training cohort rather than on its own terms.
-apply_plausibility(grid, label = "eICU panel")
+apply_plausibility(panel, label = "eICU panel")
 
-fill_cols <- intersect(c("hr","resp_rate","spo2","map","sbp","temp_c",
+fill_cols <- intersect(c("hr","resp_rate","spo2","map","sbp","temp_c","fio2",
                           "lactate","creatinine","bilirubin_total","platelets",
-                          "wbc","pf_ratio"), names(grid))
-grid <- ffill_by_stay(grid, fill_cols)
+                          "wbc","pf_ratio"), names(panel))
+panel <- ffill_by_stay(panel, fill_cols)
 
 for (mc in c("lactate","creatinine","bilirubin_total","platelets","wbc","pf_ratio")) {
-  if (mc %in% names(grid))
-    grid[[paste0(mc, "_measured")]] <- as.integer(!is.na(grid[[mc]]))
+  if (mc %in% names(panel))
+    panel[[paste0(mc, "_measured")]] <- as.integer(!is.na(panel[[mc]]))
 }
-for (col in intersect(c("hr","resp_rate","map","temp_c"), names(grid)))
-  grid <- rolling_mean_by_stay(grid, col, n_h = SLOPE_WINDOW_H,
-                                col_out = paste0(col, "_slope6h"))
+for (col in intersect(c("hr","resp_rate","map","temp_c"), names(panel)))
+  panel <- rolling_mean_by_stay(panel, col, n_h = SLOPE_WINDOW_H,
+                                 col_out = paste0(col, "_slope6h"))
 
-if (nrow(eicu_susp) > 0) {
-  grid <- merge(grid, eicu_susp, by = "stay_id", all.x = TRUE)
-  grid[, onset_hour := t_susp_h]
-  grid[, vaso_any       := FALSE]
-  grid[, norepi_epi_any := FALSE]
-  if (!"bilirubin" %in% names(grid) && "bilirubin_total" %in% names(grid))
-    grid[, bilirubin := bilirubin_total]
-  if (!"gcs" %in% names(grid)) grid[, gcs := NA_real_]
-  sofa_scores <- score_sofa(as.data.frame(grid))
-  grid[, sofa_total := sofa_scores$sofa_total]
-  grid[!is.na(onset_hour) & (is.na(sofa_total) | sofa_total < SOFA_INCREASE_THRESHOLD),
-       onset_hour := NA_integer_]
+if (!"gcs" %in% names(panel))       panel[, gcs := NA_real_]
+if (!"fio2" %in% names(panel))      panel[, fio2 := NA_real_]
+if (!"bilirubin" %in% names(panel) && "bilirubin_total" %in% names(panel))
+  panel[, bilirubin := bilirubin_total]
+
+# NEWS2 and qSOFA. `avpu_alert` must be NA, not FALSE, where GCS is unknown:
+# news2() scores NA as 0 on the consciousness parameter but scores FALSE as 3,
+# so passing FALSE for an unmeasured GCS adds a constant +3 to every eICU
+# person-hour and makes every cross-cohort threshold comparison meaningless.
+# GCS is absent from vitalPeriodic, so that is every row of this panel.
+suppl_o2   <- { f <- panel$fio2; ifelse(is.na(f), NA, f > 0.21) }
+avpu_alert <- avpu_alert_flag(panel$gcs)
+news2_scores <- news2(panel$resp_rate, panel$spo2, suppl_o2, panel$sbp, panel$hr,
+                       panel$temp_c, avpu_alert)
+panel[, names(news2_scores) := news2_scores]
+panel[, qsofa_score := qsofa(resp_rate, gcs, map)]
+
+cat(sprintf("eICU panel: %s person-hours over %s stays\n",
+            format(nrow(panel), big.mark = ","),
+            format(uniqueN(panel$stay_id), big.mark = ",")))
+```
+
+## Per-Variant Onset Derivation
+
+Each label variant is applied to eICU with **its own** antibiotic--culture
+window and **its own** SOFA evaluation window and baseline, exactly as
+`02_cohort_labels.Rmd` applies them to MIMIC-IV. Two points of construction
+matter:
+
+* The organ-dysfunction criterion is a SOFA **increase of $\geq 2$ points over
+  a baseline**, not an absolute score. An absolute threshold is a different
+  criterion, and because `score_sofa()` substitutes assumed-normal values for
+  missing components it also rejects on missingness rather than on physiology.
+  The baseline is the admission window (hours 0--`r DETERIORATION_BASELINE_H`)
+  for Variants A and B and the rolling 24 hours preceding the evaluation window
+  for Variant C, matching each variant's `sofa_baseline` setting.
+* Suspicion drawn before ICU admission (a negative offset) makes the stay
+  **non-septic within the panel**; it does not remove the stay. The same holds
+  for suspicion after the stay ends. This mirrors the MIMIC-IV rule that an
+  onset outside `[intime, outtime]` is set to `NA` while the stay remains in
+  the at-risk denominator.
+
+```{r eicu-onset-functions}
+EICU_SOFA_COMPONENTS <- c("pf_ratio", "platelets", "bilirubin", "map",
+                          "gcs", "creatinine")
+
+#' SOFA scored once over a per-stay hour window, mirroring the window-mean
+#' aggregation `compute_sofa_delta_vectorized()` performs on MIMIC-IV.
+#' @param wins data.table(stay_id, h_lo, h_hi)
+sofa_over_window <- function(pan, wins) {
+  out <- data.table(stay_id = wins$stay_id, sofa = 0L)
+  if (nrow(wins) == 0) return(out)
+  comps <- intersect(EICU_SOFA_COMPONENTS, names(pan))
+  keep  <- c("stay_id", "hour", comps,
+             intersect(c("vaso_any", "norepi_epi_any"), names(pan)))
+  d <- merge(pan[, ..keep], wins, by = "stay_id")
+  d <- d[hour >= h_lo & hour <= h_hi]
+  if (nrow(d) == 0) return(out)
+
+  agg <- d[, lapply(.SD, mean, na.rm = TRUE), by = stay_id, .SDcols = comps]
+  for (vc in intersect(c("vaso_any", "norepi_epi_any"), names(d))) {
+    vb <- d[, .(x = any(get(vc) %in% TRUE)), by = stay_id]
+    setnames(vb, "x", vc)
+    agg <- merge(agg, vb, by = "stay_id", all.x = TRUE)
+  }
+  agg[, sofa := score_sofa(as.data.frame(agg))$sofa_total]
+  out <- merge(out[, .(stay_id)], agg[, .(stay_id, sofa)], by = "stay_id", all.x = TRUE)
+  out[is.na(sofa), sofa := 0L]
+  out[]
 }
 
-grid <- merge(grid, eicu_stays[, .(stay_id, hospital_expire)], by = "stay_id", all.x = TRUE)
-grid_last <- grid[, .(max_h = max(hour)), by = stay_id]
-grid <- merge(grid, grid_last, by = "stay_id", all.x = TRUE)
-grid[, event := 0L]
-grid[!is.na(onset_hour) & hour == onset_hour,                     event := 1L]
-grid[hour == max_h & is.na(onset_hour) & hospital_expire == TRUE,  event := 3L]
-grid[hour == max_h & is.na(onset_hour) & hospital_expire == FALSE, event := 2L]
-grid[, at_risk := is.na(onset_hour) | hour <= onset_hour]
-grid <- grid[at_risk == TRUE]
+#' Suspicion time under one variant and one anchor mode.
+#' @param anchor "sepsis3" (culture AND antibiotic) or "abx_only"
+derive_suspicion <- function(vid, anchor) {
+  v <- variant_def(vid)
+  if (anchor == "abx_only") {
+    if (nrow(eicu_abx) == 0) return(data.table(stay_id = integer(0), t_susp_h = integer(0)))
+    return(eicu_abx[, .(t_susp_h = min(abx_hour)), by = stay_id])
+  }
+  if (nrow(eicu_abx) == 0 || nrow(eicu_culture) == 0)
+    return(data.table(stay_id = integer(0), t_susp_h = integer(0)))
 
-nr_grid  <- nrow(grid)
-fio2_v   <- grid$fio2;  if (is.null(fio2_v)) fio2_v  <- rep(NA_real_, nr_grid)
-gcs_v    <- grid$gcs;   if (is.null(gcs_v))  gcs_v   <- rep(NA_real_, nr_grid)
-spo2_v   <- grid$spo2;  if (is.null(spo2_v)) spo2_v  <- rep(NA_real_, nr_grid)
-suppl_o2   <- !is.na(fio2_v) & fio2_v > 0.21
-avpu_alert <- !is.na(gcs_v)  & gcs_v  >= 14
-news2_scores <- news2(grid$resp_rate, spo2_v, suppl_o2, grid$sbp, grid$hr,
-                       grid$temp_c, avpu_alert)
-grid[, names(news2_scores) := news2_scores]
-grid[, qsofa_score := qsofa(resp_rate, gcs, map)]
+  pairs <- merge(eicu_abx, eicu_culture, by = "stay_id", allow.cartesian = TRUE)
+  pairs[, dt_abx_before_cul := culture_hour - abx_hour]
+  pairs[, dt_cul_before_abx := abx_hour - culture_hour]
+  pairs <- pairs[
+    (dt_abx_before_cul >= 0 & dt_abx_before_cul <= v$abx_before_culture_h) |
+    (dt_cul_before_abx >= 0 & dt_cul_before_abx <= v$culture_before_abx_h)
+  ]
+  if (nrow(pairs) == 0) return(data.table(stay_id = integer(0), t_susp_h = integer(0)))
+  pairs[, t_susp := pmax(abx_hour, culture_hour)]
+  pairs[, .(t_susp_h = min(t_susp)), by = stay_id]
+}
 
-save_parquet(grid, "08_eicu_person_hours", DATA_DIR)
-cat(sprintf("eICU person-hours: %s rows, %d events\n",
-            format(nrow(grid), big.mark = ","), sum(grid$event == 1)))
+#' Onsets under one variant and one anchor: suspicion, gated by a SOFA rise of
+#' >= SOFA_INCREASE_THRESHOLD inside the variant's evaluation window.
+derive_eicu_onsets <- function(pan, stay_meta, vid, anchor) {
+  v    <- variant_def(vid)
+  susp <- derive_suspicion(vid, anchor)
+  susp <- susp[stay_id %in% stay_meta$stay_id]
+  if (nrow(susp) == 0)
+    return(data.table(stay_id = integer(0), t_susp_h = integer(0),
+                      onset_hour = integer(0)))
+
+  eval_wins <- susp[, .(stay_id,
+                        h_lo = t_susp_h - v$sofa_window_before_h,
+                        h_hi = t_susp_h + v$sofa_window_after_h)]
+  base_wins <- if (identical(v$sofa_baseline, "rolling_24h")) {
+    susp[, .(stay_id,
+             h_lo = t_susp_h - v$sofa_window_before_h - 24L,
+             h_hi = t_susp_h - v$sofa_window_before_h)]
+  } else {
+    susp[, .(stay_id, h_lo = 0L, h_hi = DETERIORATION_BASELINE_H)]
+  }
+
+  ev <- sofa_over_window(pan, eval_wins); setnames(ev, "sofa", "sofa_eval")
+  bs <- sofa_over_window(pan, base_wins); setnames(bs, "sofa", "sofa_base")
+
+  out <- merge(merge(susp, ev, by = "stay_id", all.x = TRUE),
+               bs, by = "stay_id", all.x = TRUE)
+  out[is.na(sofa_eval), sofa_eval := 0L]
+  out[is.na(sofa_base), sofa_base := 0L]
+  out[, onset_hour := fifelse((sofa_eval - sofa_base) >= SOFA_INCREASE_THRESHOLD,
+                              as.integer(t_susp_h), NA_integer_)]
+
+  # Onset must fall inside the stay and after the minimum observation period.
+  # Out-of-range onsets make the stay non-septic; they never delete it.
+  out <- merge(out, stay_meta[, .(stay_id, los_hours)], by = "stay_id", all.x = TRUE)
+  out[!is.na(onset_hour) &
+        (onset_hour < 0 | onset_hour > floor(los_hours)), onset_hour := NA_integer_]
+  out[!is.na(onset_hour) & onset_hour <= MIN_OBS_HOURS,   onset_hour := NA_integer_]
+  out[, .(stay_id, t_susp_h, onset_hour)]
+}
+
+#' Attach a variant's labels to the panel and apply competing-risk coding.
+attach_labels <- function(pan, onsets, stay_meta) {
+  g <- merge(pan, onsets[, .(stay_id, onset_hour)], by = "stay_id", all.x = TRUE)
+  g <- merge(g, stay_meta[, .(stay_id, hospital_expire)], by = "stay_id", all.x = TRUE)
+  g[, max_h := max(hour), by = stay_id]
+  # An onset beyond the 72 h panel horizon is right-censoring, not an event.
+  g[, in_panel := !is.na(onset_hour) & onset_hour <= max_h]
+  g[, event := 0L]
+  g[in_panel == TRUE & hour == onset_hour,                       event := 1L]
+  g[in_panel == FALSE & hour == max_h & hospital_expire == TRUE,  event := 3L]
+  g[in_panel == FALSE & hour == max_h & hospital_expire == FALSE, event := 2L]
+  g[is.na(onset_hour) | hour <= onset_hour]
+}
+```
+
+```{r derive-eicu-labels}
+step("Deriving eICU onsets per label variant...")
+
+panel_primary <- panel[stay_id %in% micro_stays]
+stays_primary <- eicu_stays[stay_id %in% micro_stays]
+
+eicu_labels <- list()
+label_summary <- list()
+
+for (vid in names(LABEL_VARIANTS)) {
+  for (anchor in c("sepsis3", "abx_only")) {
+    pan <- if (anchor == "sepsis3") panel_primary else panel
+    stm <- if (anchor == "sepsis3") stays_primary else eicu_stays
+    ons <- derive_eicu_onsets(pan, stm, vid, anchor)
+    eicu_labels[[paste(vid, anchor, sep = "-")]] <- ons
+
+    n_onset <- ons[!is.na(onset_hour), .N]
+    label_summary[[paste(vid, anchor, sep = "-")]] <- data.table(
+      variant       = vid,
+      variant_name  = variant_name(vid),
+      anchor        = anchor,
+      n_stays       = uniqueN(stm$stay_id),
+      n_suspicion   = nrow(ons),
+      n_onsets      = n_onset,
+      pct_onsets    = round(100 * n_onset / max(uniqueN(stm$stay_id), 1), 2),
+      median_onset_h = if (n_onset > 0)
+        as.numeric(median(ons[!is.na(onset_hour), onset_hour])) else NA_real_
+    )
+  }
+}
+
+label_summary_dt <- rbindlist(label_summary)
+knitr::kable(label_summary_dt,
+             caption = "eICU onsets by label variant and anchor definition")
+save_parquet(label_summary_dt, "08_eicu_label_summary", DATA_DIR)
+save_csv(label_summary_dt,     "08_eicu_label_summary", DATA_DIR)
+```
+
+### Variant-invariance guard
+
+The failure mode this guards against is a label built once and reused across
+the variant loop: the external "variants" then differ only in which model is
+applied, every label-dependent quantity is identical across A, B and C, and the
+identity reads as a substantive finding rather than as the absence of a
+computation. A label-invariant comparator such as NEWS2 makes it visible --- its
+AUROC can only be identical across variants if the label sets are identical ---
+so the check is enforced at run time rather than left to inspection.
+
+```{r variant-invariance-guard}
+onset_signature <- function(key) {
+  o <- eicu_labels[[key]]
+  paste(sort(o[!is.na(onset_hour), paste(stay_id, onset_hour, sep = ":")]),
+        collapse = "|")
+}
+
+for (anchor in c("sepsis3", "abx_only")) {
+  sigs <- vapply(names(LABEL_VARIANTS),
+                 function(v) onset_signature(paste(v, anchor, sep = "-")),
+                 character(1))
+  if (length(unique(sigs)) == 1L)
+    stop(sprintf(paste0("Variant-invariance guard failed for anchor '%s': ",
+                        "variants %s produced byte-identical onset sets. ",
+                        "The per-variant label logic is not being applied."),
+                 anchor, paste(names(LABEL_VARIANTS), collapse = "/")))
+  v2_log(sprintf("Variant-invariance guard passed for anchor '%s' (%d distinct onset sets)",
+                 anchor, length(unique(sigs))))
+}
 ```
 
 ## Apply MIMIC-IV Trained Models
 
-Trained models applied to eICU data without retraining. Missing features are zero-filled (same as training). Predictions generated in chunks for memory.
+Trained models are applied without retraining. Missing features are zero-filled
+(same as training). Predictions are generated in chunks for memory.
 
 ```{r apply-models}
 step("Applying trained models to eICU cohort...")
@@ -318,24 +604,22 @@ BASE_FEATURES <- c(
   "platelets_measured","wbc_measured","pf_ratio_measured"
 )
 
-eval_results <- list()
-
-for (vid in names(LABEL_VARIANTS)) {
+#' Evaluate every available model on one labelled eICU panel.
+evaluate_panel <- function(g, vid, anchor) {
   prim_model_path <- file.path(DATA_DIR, paste0("05_model_primary_", vid, ".rds"))
   gbt_model_path  <- file.path(DATA_DIR, paste0("06_model_gbt_",     vid, ".rds"))
-  if (!file.exists(prim_model_path)) next
+  if (!file.exists(prim_model_path)) return(NULL)
 
-  eicu_pred   <- copy(grid)
-  avail_feats <- intersect(BASE_FEATURES, names(eicu_pred))
+  eicu_pred   <- copy(g)
   require_features(BASE_FEATURES, available = names(eicu_pred))
-  for (f in avail_feats) {
+  for (f in intersect(BASE_FEATURES, names(eicu_pred))) {
     if (is.numeric(eicu_pred[[f]])) eicu_pred[is.na(get(f)), (f) := 0]
     if (is.logical(eicu_pred[[f]])) eicu_pred[is.na(get(f)), (f) := FALSE]
   }
 
-  prim_mod       <- readRDS(prim_model_path)
-  PRED_CHUNK     <- 500000L
-  n_ep           <- nrow(eicu_pred)
+  prim_mod        <- readRDS(prim_model_path)
+  PRED_CHUNK      <- 500000L
+  n_ep            <- nrow(eicu_pred)
   pred_sepsis_vec <- numeric(n_ep)
   for (ch_start in seq(1L, n_ep, by = PRED_CHUNK)) {
     ch_idx   <- ch_start:min(ch_start + PRED_CHUNK - 1L, n_ep)
@@ -349,11 +633,29 @@ for (vid in names(LABEL_VARIANTS)) {
     rm(chunk_df)
   }
   eicu_pred[, pred_sepsis := pred_sepsis_vec]
-  rm(pred_sepsis_vec); gc()
+  rm(pred_sepsis_vec, prim_mod); gc()
 
   if (file.exists(gbt_model_path)) {
-    gbt_mod  <- readRDS(gbt_model_path)
+    gbt_mod   <- readRDS(gbt_model_path)
     gbt_feats <- gbt_mod$feature_names
+    # An xgb.Booster round-tripped through saveRDS returns with an EMPTY
+    # feature_names under this xgboost build. lapply() over an empty vector then
+    # yields a zero-column DMatrix whose predictions are all NA, and the metric
+    # loop below discards them as "fewer than 50 valid rows" -- so the GBT row
+    # vanishes from the external results with no error anywhere. That is how
+    # eICU carried no GBT comparator for the whole project.
+    #
+    # Stage 06 trains on BASE_FEATURES in exactly this order: it sets
+    # gbt_feats <- avail_feats <- intersect(BASE_FEATURES, names(ph)), and
+    # require_features() guarantees all of them are present, so the intersect is
+    # the declared vector unchanged. Reconstructing from BASE_FEATURES therefore
+    # reproduces the training design matrix exactly (verified against
+    # 06_predictions_comparators_B: zero difference over 548,827 test rows).
+    if (length(gbt_feats) == 0) {
+      v2_log("GBT model carries no feature_names; reconstructing from BASE_FEATURES",
+             level = "WARN")
+      gbt_feats <- BASE_FEATURES
+    }
     nr_ep     <- nrow(eicu_pred)
     gbt_cols  <- lapply(gbt_feats, function(f) {
       v <- if (f %in% names(eicu_pred)) as.numeric(eicu_pred[[f]]) else rep(0.0, nr_ep)
@@ -362,13 +664,20 @@ for (vid in names(LABEL_VARIANTS)) {
     names(gbt_cols) <- gbt_feats
     X_eicu <- as.matrix(as.data.table(gbt_cols))
     storage.mode(X_eicu) <- "double"
+    if (ncol(X_eicu) == 0L)
+      stop("GBT design matrix has zero columns; the feature list is empty.")
     eicu_pred[, pred_gbt := predict(gbt_mod, xgboost::xgb.DMatrix(X_eicu))]
-    rm(X_eicu, gbt_cols); gc()
+    # A silently all-NA prediction vector is indistinguishable downstream from
+    # "this model was not evaluated". Fail loudly instead.
+    if (all(is.na(eicu_pred$pred_gbt)))
+      stop(sprintf("GBT predictions are entirely NA on eICU for variant %s.", vid))
+    rm(X_eicu, gbt_cols, gbt_mod); gc()
   }
 
   eicu_pred[, pred_news2 := news2_total / 20]
 
-  y <- as.integer(eicu_pred$event == 1)
+  y    <- as.integer(eicu_pred$event == 1)
+  rows <- list()
   for (mod_nm in c("pred_sepsis","pred_gbt","pred_news2")) {
     if (!mod_nm %in% names(eicu_pred)) next
     pr    <- as.numeric(eicu_pred[[mod_nm]])
@@ -376,69 +685,189 @@ for (vid in names(LABEL_VARIANTS)) {
     if (sum(valid) < 50) next
 
     roc_pr <- tryCatch({
-      list(
-        auroc = PRROC::roc.curve(pr[valid], weights.class0 = y[valid])$auc,
-        auprc = PRROC::pr.curve(pr[valid],  weights.class0 = y[valid])$auc.integral
-      )
-    }, error = function(e) list(auroc = NA, auprc = NA))
+      list(auroc = PRROC::roc.curve(pr[valid], weights.class0 = y[valid])$auc,
+           auprc = PRROC::pr.curve(pr[valid],  weights.class0 = y[valid])$auc.integral)
+    }, error = function(e) list(auroc = NA_real_, auprc = NA_real_))
 
-    eval_results[[paste(vid, mod_nm, "eicu", sep = "-")]] <- data.frame(
+    rows[[mod_nm]] <- data.frame(
       variant  = vid,
       model    = mod_nm,
       cohort   = "eicu",
+      anchor   = anchor,
+      n_stays  = uniqueN(eicu_pred$stay_id),
       n_rows   = sum(valid),
       n_events = sum(y[valid]),
       auroc    = round(roc_pr$auroc, 4),
       auprc    = round(roc_pr$auprc, 4)
     )
   }
+  list(rows = rows, pred = eicu_pred)
+}
 
-  save_cols_eicu <- c("stay_id","hour","event","pred_sepsis","onset_hour",
-                      intersect(c("pred_gbt","pred_news2","news2_total","qsofa_score"),
-                                names(eicu_pred)))
-  save_parquet(eicu_pred[, ..save_cols_eicu],
-               paste0("08_eicu_predictions_", vid), DATA_DIR)
-  rm(eicu_pred, prim_mod); if (exists("gbt_mod")) rm(gbt_mod); gc()
+eval_primary   <- list()
+eval_sensitivity <- list()
+
+for (vid in names(LABEL_VARIANTS)) {
+  # Primary arm: Sepsis-3 conjunction on the microbiology-covered sub-cohort.
+  g   <- attach_labels(panel_primary, eicu_labels[[paste(vid, "sepsis3", sep = "-")]],
+                       stays_primary)
+  res <- evaluate_panel(g, vid, "sepsis3")
+  rm(g); gc()
+  if (!is.null(res)) {
+    eval_primary <- c(eval_primary, res$rows)
+    save_cols <- c("stay_id","hour","event","pred_sepsis","onset_hour",
+                   intersect(c("pred_gbt","pred_news2","news2_total","qsofa_score"),
+                             names(res$pred)))
+    save_parquet(res$pred[, ..save_cols], paste0("08_eicu_predictions_", vid), DATA_DIR)
+    rm(res); gc()
+  }
+
+  # Sensitivity arm: antibiotic-only anchor on the full cohort. Metrics only —
+  # the target is not Sepsis-3, so these predictions are never written to the
+  # files stages 11 and 12 consume.
+  g   <- attach_labels(panel, eicu_labels[[paste(vid, "abx_only", sep = "-")]],
+                       eicu_stays)
+  res <- evaluate_panel(g, vid, "abx_only")
+  rm(g); gc()
+  if (!is.null(res)) eval_sensitivity <- c(eval_sensitivity, res$rows)
+  rm(res); gc()
 }
 ```
 
-## Results and H5 Test
+## Results
 
-External vs. internal performance comparison. H5 tests whether Utility Score degrades proportionally more than AUROC on external data.
+```{r results-tables}
+ext_df <- if (length(eval_primary) > 0) do.call(rbind, eval_primary) else NULL
+sen_df <- if (length(eval_sensitivity) > 0) do.call(rbind, eval_sensitivity) else NULL
+
+if (!is.null(ext_df)) {
+  knitr::kable(ext_df,
+               caption = "External validation, Sepsis-3 anchor on the microbiology-covered sub-cohort")
+  save_parquet(ext_df, "08_external_validation_results", DATA_DIR)
+  save_csv(ext_df,     "08_external_validation_results", DATA_DIR)
+}
+if (!is.null(sen_df)) {
+  knitr::kable(sen_df,
+               caption = "Sensitivity arm: antibiotic-only anchor on the full eICU cohort (target is not Sepsis-3)")
+  save_parquet(sen_df, "08_external_validation_results_abxonly", DATA_DIR)
+  save_csv(sen_df,     "08_external_validation_results_abxonly", DATA_DIR)
+}
+```
+
+### Event-rate reconciliation
+
+An external event rate two or more orders of magnitude below the development
+cohort's is a property of the label extraction, not of the population. The
+table below states the rates side by side so the comparison is made explicitly
+rather than left to the reader.
+
+```{r rate-reconciliation}
+recon <- NULL
+internal_path <- file.path(DATA_DIR, "07_metric_results.parquet")
+
+if (!is.null(ext_df) && file.exists(internal_path)) {
+  internal_res <- as.data.table(arrow::read_parquet(internal_path))
+  ext_dt <- as.data.table(ext_df)
+  sen_dt <- if (!is.null(sen_df)) as.data.table(sen_df) else NULL
+
+  rate_rows <- list()
+  for (vid in names(LABEL_VARIANTS)) {
+    int_row <- internal_res[variant == vid & model == "primary" &
+                              eval_window == "unrestricted" & split_type == "temporal"]
+    ext_row <- ext_dt[variant == vid & model == "pred_sepsis"]
+    sen_row <- if (!is.null(sen_dt)) sen_dt[variant == vid & model == "pred_sepsis"] else NULL
+
+    mk_rate <- function(src, n_rows, n_events, n_stays) data.table(
+      variant = vid, source = src,
+      n_stays = n_stays, person_hours = n_rows, n_events = n_events,
+      events_per_1k_person_h = round(1000 * n_events / max(n_rows, 1), 4)
+    )
+
+    if (nrow(int_row) > 0)
+      rate_rows[[paste0(vid, "-mimic")]] <-
+        mk_rate("MIMIC-IV temporal test", int_row$n_rows[1],
+                int_row$n_sepsis_events[1], NA_integer_)
+    if (nrow(ext_row) > 0)
+      rate_rows[[paste0(vid, "-eicu")]] <-
+        mk_rate("eICU Sepsis-3 (micro-covered)", ext_row$n_rows[1],
+                ext_row$n_events[1], ext_row$n_stays[1])
+    if (!is.null(sen_row) && nrow(sen_row) > 0)
+      rate_rows[[paste0(vid, "-eicuabx")]] <-
+        mk_rate("eICU antibiotic-only (full)", sen_row$n_rows[1],
+                sen_row$n_events[1], sen_row$n_stays[1])
+  }
+
+  if (length(rate_rows) > 0) {
+    recon <- rbindlist(rate_rows)
+    # Ratio against the development-cohort rate for the same variant. Written
+    # as a join rather than a by-group subscript so a variant with no MIMIC row
+    # yields NA instead of a length-zero assignment error.
+    mimic_rate <- recon[source == "MIMIC-IV temporal test",
+                        .(variant, mimic_rate = events_per_1k_person_h)]
+    recon <- merge(recon, mimic_rate, by = "variant", all.x = TRUE, sort = FALSE)
+    recon[, rate_ratio_vs_mimic := round(events_per_1k_person_h / mimic_rate, 3)]
+    recon[, mimic_rate := NULL]
+    knitr::kable(recon, caption = "Sepsis event rate, MIMIC-IV versus eICU-CRD")
+    save_parquet(recon, "08_event_rate_reconciliation", DATA_DIR)
+    save_csv(recon,     "08_event_rate_reconciliation", DATA_DIR)
+  }
+}
+
+# Microbiology coverage is the quantity that governs how much of the eICU
+# cohort the Sepsis-3 anchor can reach at all, so it is persisted rather than
+# left in the log.
+cov_dt <- data.table(
+  n_cohort_stays        = length(cohort_ids),
+  n_micro_covered_stays = length(micro_stays),
+  pct_micro_covered     = round(100 * length(micro_stays) /
+                                  max(length(cohort_ids), 1), 3),
+  n_abx_stays           = uniqueN(eicu_abx$stay_id),
+  pct_abx_covered       = round(100 * uniqueN(eicu_abx$stay_id) /
+                                  max(length(cohort_ids), 1), 3),
+  panel_person_hours_full  = nrow(panel),
+  panel_person_hours_micro = nrow(panel_primary),
+  min_external_events      = MIN_EXTERNAL_EVENTS
+)
+knitr::kable(cov_dt, caption = "eICU labelling-input coverage")
+save_parquet(cov_dt, "08_eicu_coverage", DATA_DIR)
+save_csv(cov_dt,     "08_eicu_coverage", DATA_DIR)
+```
+
+### H5: internal versus external AUROC
 
 ```{r results-h5}
-if (length(eval_results) > 0) {
-  ext_df <- do.call(rbind, eval_results)
-  knitr::kable(ext_df, caption = "External validation results (eICU-CRD)")
-  save_parquet(ext_df, "08_external_validation_results", DATA_DIR)
-
-  internal_path <- file.path(DATA_DIR, "07_metric_results.parquet")
-  if (file.exists(internal_path)) {
-    internal_res <- as.data.table(arrow::read_parquet(internal_path))
-    cat("\nH5 test: AUROC vs Utility Score degradation\n")
-    h5_rows <- list()
-    for (vid in names(LABEL_VARIANTS)) {
-      int_row <- internal_res[variant == vid & model == "primary" &
-                                eval_window == "unrestricted"]
-      ext_row <- ext_df[ext_df$variant == vid & ext_df$model == "pred_sepsis", ]
-      if (nrow(int_row) > 0 && nrow(ext_row) > 0) {
-        auroc_drop <- int_row$auroc - ext_row$auroc
-        cat(sprintf("  V%s: Internal AUROC=%.3f, External AUROC=%.3f, drop=%.3f\n",
-                    vid, int_row$auroc, ext_row$auroc, auroc_drop))
-        cat(sprintf("  V%s: Expected drop ~ %.3f (Moor et al., 2023)\n",
-                    vid, EXPECTED_EXTERNAL_DEGRADATION))
-        if (auroc_drop < 0.02)
-          cat("  ** WARNING: Very small drop - external cohort may be insufficiently distant **\n")
-        h5_rows[[vid]] <- data.frame(variant = vid,
-                                      internal_auroc = int_row$auroc,
-                                      external_auroc = ext_row$auroc,
-                                      auroc_drop     = round(auroc_drop, 4),
-                                      expected_drop  = EXPECTED_EXTERNAL_DEGRADATION)
-      }
+if (!is.null(ext_df) && file.exists(internal_path)) {
+  internal_res <- as.data.table(arrow::read_parquet(internal_path))
+  ext_dt <- as.data.table(ext_df)
+  cat("\nH5 test: AUROC internal -> external\n")
+  h5_rows <- list()
+  for (vid in names(LABEL_VARIANTS)) {
+    int_row <- internal_res[variant == vid & model == "primary" &
+                              eval_window == "unrestricted" & split_type == "temporal"]
+    ext_row <- ext_dt[variant == vid & model == "pred_sepsis"]
+    if (nrow(int_row) > 0 && nrow(ext_row) > 0) {
+      auroc_drop <- int_row$auroc[1] - ext_row$auroc[1]
+      cat(sprintf("  V%s: Internal AUROC=%.3f, External AUROC=%.3f, drop=%.3f (%d external events)\n",
+                  vid, int_row$auroc[1], ext_row$auroc[1], auroc_drop, ext_row$n_events[1]))
+      cat(sprintf("  V%s: Expected drop ~ %.3f (Moor et al., 2023)\n",
+                  vid, EXPECTED_EXTERNAL_DEGRADATION))
+      if (ext_row$n_events[1] < MIN_EXTERNAL_EVENTS)
+        cat(sprintf("  ** V%s: %d external events is below the %d-event floor; the estimate is not interpretable **\n",
+                    vid, ext_row$n_events[1], MIN_EXTERNAL_EVENTS))
+      h5_rows[[vid]] <- data.frame(variant = vid,
+                                    internal_auroc = int_row$auroc[1],
+                                    external_auroc = ext_row$auroc[1],
+                                    auroc_drop     = round(auroc_drop, 4),
+                                    expected_drop  = EXPECTED_EXTERNAL_DEGRADATION,
+                                    n_external_events = ext_row$n_events[1],
+                                    interpretable  = ext_row$n_events[1] >= MIN_EXTERNAL_EVENTS)
     }
-    if (length(h5_rows) > 0)
-      knitr::kable(do.call(rbind, h5_rows),
-                   caption = "H5: Internal vs external AUROC")
+  }
+  if (length(h5_rows) > 0) {
+    h5_dt <- rbindlist(h5_rows)
+    knitr::kable(h5_dt, caption = "H5: internal versus external AUROC")
+    save_parquet(h5_dt, "08_h5_internal_external", DATA_DIR)
+    save_csv(h5_dt,     "08_h5_internal_external", DATA_DIR)
   }
 }
 
