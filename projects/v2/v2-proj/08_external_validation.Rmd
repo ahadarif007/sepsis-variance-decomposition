@@ -722,7 +722,7 @@ for (vid in names(LABEL_VARIANTS)) {
     rm(res); gc()
   }
 
-  # Sensitivity arm: antibiotic-only anchor on the full cohort. Metrics only —
+  # Sensitivity arm: antibiotic-only anchor on the full cohort. Metrics only:
   # the target is not Sepsis-3, so these predictions are never written to the
   # files stages 11 and 12 consume.
   g   <- attach_labels(panel, eicu_labels[[paste(vid, "abx_only", sep = "-")]],

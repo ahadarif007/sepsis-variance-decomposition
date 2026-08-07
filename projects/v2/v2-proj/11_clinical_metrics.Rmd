@@ -369,7 +369,7 @@ patient_level_metrics <- function(dt, pred_col, thr) {
 
 The same merge as notebook 07: primary-model predictions joined to the
 comparator predictions on `(stay_id, hour)`. Only the unrestricted evaluation
-window is used — the treatment-anchored window contains zero event hours
+window is used: the treatment-anchored window contains zero event hours
 (notebook 07, H3), so no operating point can be defined in it.
 
 ```{r assemble}

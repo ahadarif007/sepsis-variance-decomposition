@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2026 Abdul Ahad
-# config.R — V2 pipeline configuration
+# config.R: V2 pipeline configuration
 # Single source of truth for all paths, parameters, and label variant definitions.
 #
 # V2 methodology:
@@ -139,7 +139,7 @@ LABEL_VARIANTS <- list(
 SOFA_INCREASE_THRESHOLD <- 2   # >= 2 SOFA points = organ dysfunction
 
 # --------------------------------------------------------------------------- #
-# Alternative (non-Sepsis-3) label definitions — Protocol Amendment 2
+# Alternative (non-Sepsis-3) label definitions: Protocol Amendment 2
 #
 # All three pre-registered variants above are Sepsis-3 interpretations sharing
 # one culture-plus-antibiotic suspicion anchor, so their mutual disagreement is
@@ -147,10 +147,10 @@ SOFA_INCREASE_THRESHOLD <- 2   # >= 2 SOFA points = organ dysfunction
 # Sepsis-3 conjunction (suspected infection AND organ dysfunction) into its two
 # limbs so the contribution of the treatment anchor can be measured:
 #
-#   E  anchor limb alone     — the suspicion-of-infection time itself, with the
+#   E  anchor limb alone: the suspicion-of-infection time itself, with the
 #                              SOFA criterion removed. Depends only on clinician
 #                              treatment behaviour, not on physiology.
-#   D  dysfunction limb alone — first hour of acute organ dysfunction relative to
+#   D  dysfunction limb alone: first hour of acute organ dysfunction relative to
 #                              the ICU-admission baseline, with no infection
 #                              criterion and with treatment-derived SOFA
 #                              components (vasopressors) excluded. Contains no
@@ -158,7 +158,7 @@ SOFA_INCREASE_THRESHOLD <- 2   # >= 2 SOFA points = organ dysfunction
 #
 # Protocol Amendment 4 adds a third:
 #
-#   F  early-onset timing    — Variant B's membership exactly (the Sepsis-3
+#   F  early-onset timing: Variant B's membership exactly (the Sepsis-3
 #                              conjunction is unchanged, so the same stays are
 #                              septic), but the onset *time* is the standard
 #                              min(t_susp, t_SOFA) of Seymour et al. (2016) and
@@ -232,14 +232,14 @@ active_variants <- function(all_ids = ALL_VARIANTS) {
 }
 
 # --------------------------------------------------------------------------- #
-# Action-derived features — Protocol Amendment 5 (post-hoc)
+# Action-derived features: Protocol Amendment 5 (post-hoc)
 #
 # The thesis argues that the Sepsis-3 label is constituted by clinician action.
 # The same objection applies to part of the feature set. Two kinds of predictor
 # are records of clinician behaviour rather than of physiology:
 #
-#   vasopressor exposure   — a treatment, not a measurement
-#   *_measured indicators  — whether a test was ORDERED in that hour, which is
+#   vasopressor exposure, a treatment, not a measurement
+#   *_measured indicators, whether a test was ORDERED in that hour, which is
 #                            a record of clinical attention; the value carries
 #                            physiology, the indicator carries the decision to
 #                            look
@@ -249,7 +249,7 @@ active_variants <- function(all_ids = ALL_VARIANTS) {
 # though a value exists only because someone ordered the test. Dropping them
 # too would remove most of the laboratory signal and confound the ablation with
 # a loss of physiological information, so the ablation is deliberately the
-# narrower and more conservative one — it removes the features that encode
+# narrower and more conservative one: it removes the features that encode
 # *only* clinician behaviour.
 # --------------------------------------------------------------------------- #
 ACTION_DERIVED_FEATURES <- c(
@@ -262,7 +262,7 @@ ACTION_DERIVED_FEATURES <- c(
 #'
 #' "full" is the pre-registered specification; "ablated" drops
 #' ACTION_DERIVED_FEATURES. Set V2_ARMS=ablated to add or refresh the ablation
-#' WITHOUT refitting the main models — the same reasoning as V2_VARIANTS. This
+#' WITHOUT refitting the main models: the same reasoning as V2_VARIANTS. This
 #' matters because the main fits are what every headline number in the thesis
 #' rests on, and the safest way to leave them untouched is not to re-execute
 #' them at all.
@@ -533,7 +533,7 @@ EQUITY_VARS <- c("race", "ethnicity", "language", "insurance")
 
 # --------------------------------------------------------------------------- #
 # Inference, uncertainty, and multiplicity control
-# (Protocol Amendment 1, 2026-07-30 — see 00_preregistration.md §13.
+# (Protocol Amendment 1, 2026-07-30: see 00_preregistration.md §13.
 #  Added after unblinding; the amendment itself is therefore not pre-specified.)
 # --------------------------------------------------------------------------- #
 
@@ -576,7 +576,7 @@ MAX_SUBGROUP_LEVELS <- 8L    # top-N levels per equity variable (matches 10_equi
 MIN_SUBGROUP_EVENTS_INTERPRET <- MIN_EXTERNAL_EVENTS
 
 # --------------------------------------------------------------------------- #
-# Sample size (Riley et al., 2019) — reference anticipated AUC
+# Sample size (Riley et al., 2019): reference anticipated AUC
 # --------------------------------------------------------------------------- #
 ANTICIPATED_AUC <- 0.846  # Moor et al. (2023) internal AUC
 P_CANDIDATE_PREDICTORS <- 25  # approximate number of candidate predictors

@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2026 Abdul Ahad
 """
-utility_score.py — PhysioNet 2019 Utility Score (Reyna et al., 2020)
+utility_score.py: PhysioNet 2019 Utility Score (Reyna et al., 2020)
 
 Standalone reference implementation of the scoring rule used by
 `07_metrics_suite.Rmd`, kept in step with the R version so that any prediction
@@ -40,8 +40,8 @@ Thresholds
 ----------
 At an hourly event rate below 0.5 per cent, no model's predicted probability
 approaches 0.5, so a fixed 0.5 cut-off scores the no-alert strategy rather than
-the model. `sweep_thresholds` walks a grid defined on the *alert rate* — the
-fraction of person-hours alerted — which adapts to each model's calibration,
+the model. `sweep_thresholds` walks a grid defined on the *alert rate*, the
+fraction of person-hours alerted, which adapts to each model's calibration,
 and reports the maximum achievable utility along with the operating point that
 attains it.
 
@@ -63,7 +63,7 @@ import numpy as np
 import pandas as pd
 
 # --------------------------------------------------------------------------- #
-# Scoring parameters — mirror config.R
+# Scoring parameters: mirror config.R
 # --------------------------------------------------------------------------- #
 PREDICTION_HORIZON = 6      # hours; the prediction horizon of the study
 U_TP_MIN           = -6     # earliest true-positive offset (hours before onset)

@@ -24,7 +24,7 @@ apparent accuracy and real-world usefulness has also been observed in
 deployment: Wong et al.\ \cite{wong2026epic} validated the Epic Sepsis
 Model v2 prospectively across 227,091 encounters at four US health systems and
 found encounter-level AUROC between 0.82 and 0.92 alongside positive predictive
-value of 0.13 to 0.26 --- 21 to 35 alerts investigated for every sepsis case
+value of 0.13 to 0.26: 21 to 35 alerts investigated for every sepsis case
 identified.
 
 The key question is therefore not ``which model is best?'' but something more
@@ -136,8 +136,8 @@ states plainly that it was written after the analyses had been run.
     search strategy and the bound on this claim).
 
     \item \textbf{C2 (Treatment leakage located in the onset rule).} A proof that
-    a conjunction-based Sepsis-3 onset rule --- the rule used here and widely in
-    the MIMIC-IV literature --- makes pre-treatment prediction structurally
+    a conjunction-based Sepsis-3 onset rule, the rule used here and widely in
+    the MIMIC-IV literature, makes pre-treatment prediction structurally
     impossible, together with the measurement that the standard
     $\min(t_{\text{susp}}, t_{\text{SOFA}})$ rule applied to the identical stays
     recovers \pcPreTreatOnsetsVarF{} pre-treatment onsets at
@@ -148,17 +148,16 @@ states plainly that it was written after the analyses had been run.
     \item \textbf{C3 (Utility ceiling documented).} Swept across the whole
     threshold grid rather than scored at a conventional cut-off, no model
     exceeds \pcUtilityMaxGbtB{} under the primary label or
-    \pcUtilityMaxGbtC{} under any pre-registered variant --- a few per cent
-    above the strategy of issuing no alerts, on a scale whose upper bound is 1
-    --- and reaching even that costs tens of false alerts per true one. This
+    \pcUtilityMaxGbtC{} under any pre-registered variant (a few per cent
+    above the strategy of issuing no alerts, on a scale whose upper bound is 1), and reaching even that costs tens of false alerts per true one. This
     extends Wang et al.'s \cite{wang2025srpm} meta-analytic finding to a
     controlled single-study comparison and settles it against the
     operating-point objection.
 
     \item \textbf{C4 (Coefficient instability).} \pcHTwoEst{} of the
     \pcHTwoNTerms{} shared clinical covariates are unstable across label
-    variants, \pcHTwoNSign{} of them by direction --- including vasopressor
-    exposure, a treatment indicator --- supporting Lauritsen et al.'s
+    variants, \pcHTwoNSign{} of them by direction (including vasopressor
+    exposure, a treatment indicator), supporting Lauritsen et al.'s
     \cite{lauritsen2021framing} framing-instability finding on MIMIC-IV.
 
     \item \textbf{C5 (Equity-by-label analysis).} Subgroup performance
@@ -167,7 +166,7 @@ states plainly that it was written after the analyses had been run.
     patients already identified as septic rather than for onset prediction.
     What is new, to the best of our knowledge, is measuring the two on the
     \emph{same} strata in the same onset-prediction cohort under common
-    false-discovery control --- which is what shows that only one of them is
+    false-discovery control, which is what shows that only one of them is
     precisely enough estimated to support a claim
     (Section~\ref{sec:search_strategy}).
 
@@ -180,9 +179,9 @@ states plainly that it was written after the analyses had been run.
     separately, so that the part of the label effect guaranteed by the
     definition can be told apart from the part discovered in the data. Two
     results follow. The onset \emph{time} under every pre-registered Sepsis-3
-    variant is fixed entirely by the treatment anchor --- the organ-dysfunction
+    variant is fixed entirely by the treatment anchor, the organ-dysfunction
     criterion filters which stays are labelled and moves no onset by a single
-    hour --- while a treatment-independent deterioration label agrees with
+    hour, while a treatment-independent deterioration label agrees with
     Sepsis-3 at $\kappa = \pcKappaVsBD$, close to chance. And the treatment
     anchor alone is as predictable as the Sepsis-3 conjunction built on top of
     it ($\phi_{\text{anchor}} = \pcPhiAnchorPrimary$, interval including 1), so

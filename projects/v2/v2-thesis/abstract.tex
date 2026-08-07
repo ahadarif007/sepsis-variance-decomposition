@@ -24,7 +24,7 @@ treatment.
 
 The results invert the study's own premise. Model class dominates the
 decomposition, moving AUROC by \pcSpreadModelClass{} against the label
-definition's \pcSpreadLabel{} --- a difference of \pcHOneEst{} whose interval
+definition's \pcSpreadLabel{}: a difference of \pcHOneEst{} whose interval
 [\pcHOneCiLo, \pcHOneCiHi] excludes zero. Yet the three labels disagree sharply
 about \emph{which} patients are septic ($\kappa = \pcKappaVsBA$ between the two
 narrowest readings, at near-identical prevalence), so label choice sets the
@@ -34,15 +34,15 @@ covariates are unstable across labels, including a sign reversal on vasopressor
 exposure. Random data splits do \emph{not} inflate AUROC relative to time-based
 splits (\pcHFourEst, 95\% CI \pcHFourCiLo--\pcHFourCiHi). Discrimination does
 fall on transport to eICU-CRD, by \pcHFiveEst{} (95\% CI
-\pcHFiveCiLo--\pcHFiveCiHi) --- close to the 0.085 anticipated from the
+\pcHFiveCiLo--\pcHFiveCiHi), close to the 0.085 anticipated from the
 literature, but estimated on \pcExtNEventsB{} external events, because the
 Sepsis-3 anchor is recoverable in only \pcExtMicroCoverage\% of eICU-CRD stays.
 The direction is established and the magnitude is not. An interpretable hazard
 model matches
 gradient-boosted trees to within \pcHSixEst{} AUROC
 [\pcHSixCiLo, \pcHSixCiHi], inside the pre-registered equivalence margin. The
-pre-treatment evaluation window --- the hours before the first antibiotic or
-culture --- contains \textbf{zero sepsis events} in
+pre-treatment evaluation window, the hours before the first antibiotic or
+culture, contains \textbf{zero sepsis events} in
 \pcPreTreatPersonHoursVarB{} person-hours. That zero is proved here to be a
 logical consequence of the conjunction-based onset rule rather than a discovery
 about the data: when the onset of the \emph{same} labelled stays is timed by the
@@ -53,8 +53,8 @@ standard $\min(t_{\text{susp}}, t_{\text{SOFA}})$ rule instead,
 it is the conjunction-based onset rule, widely used in this literature, that
 prevents them from being recorded. Sweeping the alert threshold rather than
 scoring at an arbitrary cut-off, \textbf{no model exceeds a Utility Score of
-\pcUtilityMaxGbtB{}} under the primary label --- a few per cent above the
-strategy of issuing no alerts at all, on a scale whose upper bound is 1 --- and
+\pcUtilityMaxGbtB{}} under the primary label (a few per cent above the
+strategy of issuing no alerts at all, on a scale whose upper bound is 1), and
 that maximum is bought at \pcUtilityOptBurdenGbtB{} false alerts for every true
 one, against a benchmark of 1.4. Under that label four of the six models have
 no threshold at which alerting beats silence at all.
@@ -63,7 +63,7 @@ Splitting the definition shows how much of the label effect is definitional and
 how much is real. The onset \emph{time} under every pre-registered Sepsis-3
 variant is fixed entirely by the treatment anchor, the organ-dysfunction
 criterion selecting which stays are labelled without moving any onset by an
-hour --- an implementation choice, not a property of Sepsis-3. Yet a
+hour: an implementation choice, not a property of Sepsis-3. Yet a
 treatment-independent deterioration label agrees with Sepsis-3 at
 $\kappa = \pcKappaVsBD$, close to chance, so the label effect is not an artefact
 of re-reading one definition. The treatment anchor alone is as predictable as
@@ -89,7 +89,7 @@ definitions significantly more often than the reference groups.
 The collapse in clinical utility is not a model problem, and on this evidence it
 is not primarily a discrimination problem either. It is a label problem. Better
 models cannot fix a label whose \emph{membership} is constituted by the very
-actions it is meant to anticipate --- and how that label's onset is
+actions it is meant to anticipate, and how that label's onset is
 \emph{timed} determines whether anticipation can be measured at all.
 
 \noindent\textbf{Keywords:} sepsis; MIMIC-IV; discrete-time survival analysis;

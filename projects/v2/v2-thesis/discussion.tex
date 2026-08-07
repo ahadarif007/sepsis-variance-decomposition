@@ -7,7 +7,7 @@ pushed, and what the study cannot support. Section~\ref{sec:discussion_core}
 states the central finding and Section~\ref{sec:discussion_h1h6} resolves the
 tension the pre-registration deliberately built between H1 and H6.
 Sections~\ref{sec:external_interpretability} to~\ref{sec:ablation_establishes}
-bound the three analyses whose readings are most easily over-extended --- the
+bound the three analyses whose readings are most easily over-extended, the
 external estimate, the treatment-independent label, and the feature ablation.
 Section~\ref{sec:implications} draws out what the findings imply for how
 studies of this kind should be reported, and
@@ -47,7 +47,7 @@ validation to destroy.
 \label{sec:discussion_h1h6}
 
 H1 (label dominance) and H6 (model-class null) are in productive tension, as
-designed, and the resolution is sharper than either hypothesis anticipated ---
+designed, and the resolution is sharper than either hypothesis anticipated,
 because both resolve in the same direction, which the pre-registration treated
 as unlikely.
 
@@ -60,14 +60,13 @@ spread \pcSpreadLabel{} by \pcHOneEst, with an interval
 
 Read together these are not in conflict; they locate the model-class effect
 precisely. The large model-class spread is the distance between \emph{families}
-of estimator --- a six-item bedside score against a fitted hazard model --- not
+of estimator, a six-item bedside score against a fitted hazard model, not
 between one fitted model and another. Within the family of flexible estimators
 the choice is free (H6), and across families it is the single largest factor in
 the decomposition (H1). The conventional literature, which fixes the label and
 compares flexible models to each other, is therefore measuring the one contrast
-that has almost no room left in it, while the choice that would move the number
---- fit anything flexible at all, rather than deploy a score --- is not in
-dispute and the choice that moves the cohort --- the label --- is invisible to
+that has almost no room left in it, while the choice that would move the number (fit anything flexible at all, rather than deploy a score) is not in
+dispute and the choice that moves the cohort, the label, is invisible to
 the metric being reported.
 
 The H6 result also settles, for this task and this dataset, the narrower
@@ -115,9 +114,8 @@ requires enough septic stays for the timeliness reward to be estimated at all.
 Neither is interpreted externally.
 
 \paragraph{The antibiotic-only arm.} Relaxing the culture requirement across
-the full cohort raises the event count by two orders of magnitude ---
-\pcExtAbxNEventsA, \pcExtAbxNEventsB{} and \pcExtAbxNEventsC{} events across
-\pcExtAbxNRows{} person-hours --- and therefore clears the floor with room to
+the full cohort raises the event count by two orders of magnitude (\pcExtAbxNEventsA, \pcExtAbxNEventsB{} and \pcExtAbxNEventsC{} events across
+\pcExtAbxNRows{} person-hours), and therefore clears the floor with room to
 spare. Under that anchor the primary model scores \pcExtAbxAurocPrimaryA,
 \pcExtAbxAurocPrimaryB{} and \pcExtAbxAurocPrimaryC.
 
@@ -130,7 +128,7 @@ cannot supply for itself. The degradation it shows is of the same sign, the same
 label ordering and a somewhat larger magnitude than the Sepsis-3 arm's, on a
 sample large enough to resolve it. Two estimates that disagree by two orders of
 magnitude in event count and agree on direction are better evidence of a
-direction than either is alone --- which is the strongest statement the external
+direction than either is alone, which is the strongest statement the external
 analysis in this thesis supports, and deliberately weaker than a claim about how
 much discrimination is lost.
 
@@ -174,8 +172,8 @@ Three things it does establish:
     carries \pcUtilityOptBurdenGbtD{} false alerts per true alert, better than
     Variant B's \pcUtilityOptBurdenGbtB{} but still nine times the 1.4
     benchmark of Moor et al.\ \cite{moor2023review}. Contribution C3 survives
-    the change of label in its alarm-volume form --- which the pre-registered
-    variants alone could not show --- and does not survive in the form of a
+    the change of label in its alarm-volume form, which the pre-registered
+    variants alone could not show, and does not survive in the form of a
     utility ceiling near zero. The rise is itself expected from the caveat
     above: a label built from recorded physiology is easier to alert on than
     one built from a clinician's decision.
@@ -210,7 +208,7 @@ and it is tested here rather than asserted.
 
 It could have failed, and the form of the result matters as much as its
 direction. Had discrimination fallen substantially, the finding would have been
-that the models lean on clinician behaviour --- supportive of the same argument,
+that the models lean on clinician behaviour: supportive of the same argument,
 but a concern about what reported performance is measuring, belonging as much in
 the limitations as in the results. Had stability been unchanged, the
 concentration of instability in the action-derived features would have been
@@ -224,13 +222,13 @@ weight, and features whose removal takes five of six unstable terms with them
 are where the label sensitivity lives.
 
 The reading this licenses is bounded and worth stating exactly. It is
-\emph{not} that the action-derived features are unimportant --- a feature that
+\emph{not} that the action-derived features are unimportant: a feature that
 moves AUROC by less than 0.01 may still be the reason a particular alert fires.
 It is that on this cohort the discrimination such a model reports does not
 depend on them, while its cross-label stability does. A published effect
 estimate for a treatment indicator from a model of this kind is therefore
 reporting something about the labelling regime as much as about the patient, and
-the cheapest available remedy --- dropping the explicit action features --- costs
+the cheapest available remedy, dropping the explicit action features, costs
 almost nothing in the metric the field reports.
 
 The corresponding limitation is stated in Section~\ref{sec:limitations}: the
@@ -253,8 +251,8 @@ headline number can be read at all.
 Section~\ref{sec:label_object} observed that the literature demonstrates
 \emph{that} the label matters without attaching an interval to how much. The
 result here sharpens the reason that gap is costly. Label choice moves AUROC by
-\pcSpreadLabel{} and cohort membership by far more --- the two narrowest
-readings agree at $\kappa = \pcKappaVsBA$ at near-identical prevalence --- so a
+\pcSpreadLabel{} and cohort membership by far more, the two narrowest
+readings agree at $\kappa = \pcKappaVsBA$ at near-identical prevalence, so a
 study that reports one definition's AUROC has reported a number that would
 barely move under a different definition while every count, rate and
 denominator beneath it moved substantially. The consequence is that reporting a
@@ -284,9 +282,8 @@ way. At the event rate here the conventional 0.5 cut-off separates models by
 calibration rather than by clinical value, and the primary model's zero at that
 cut-off is an artefact of never alerting there. A threshold-dependent metric is
 interpretable only as a swept ceiling with the attaining operating point
-reported beside it, and the alert burden at that point ---
-\pcUtilityOptBurdenGbtB{} false alerts per true one here, against the 1.4
-benchmark of Moor et al.\ \cite{moor2023review} --- is the number that decides
+reported beside it, and the alert burden at that point (\pcUtilityOptBurdenGbtB{} false alerts per true one here, against the 1.4
+benchmark of Moor et al.\ \cite{moor2023review}) is the number that decides
 deployability. It appears in almost none of the ninety-one models Wang et al.\
 \cite{wang2025srpm} reviewed.
 
@@ -307,8 +304,7 @@ partition does not carve the field. The decomposition supports a stronger
 version: within the family of flexible estimators the choice is free to within
 \pcHSixEst{} AUROC, so a study comparing one flexible model against another is
 measuring the axis with the least room left in it, while the label choice that
-sets its cohort goes unreported. The reporting recommendation follows directly
---- fit any flexible estimator, report which one and stop defending the choice,
+sets its cohort goes unreported. The reporting recommendation follows directly: fit any flexible estimator, report which one and stop defending the choice,
 and spend the space on the label and the onset rule instead.
 
 \paragraph{A subgroup analysis needs an interpretability floor declared in
@@ -350,7 +346,7 @@ underpowered for a fairness question can report one as answered.
     (Section~\ref{sec:external_interpretability}). Adding person-hours from the
     uncovered stays would enlarge the denominator without adding a single
     observable onset, so this is not a limitation additional data of the same
-    kind would remove --- it would require a destination database whose
+    kind would remove, it would require a destination database whose
     microbiology recording matches MIMIC-IV's. The consequence is specific and
     should not be over-read in either direction: the study establishes that
     discrimination degrades on transport, and cannot establish by how much.
@@ -364,9 +360,8 @@ underpowered for a fairness question can report one as answered.
     documentation and measurement-frequency differences, genuine differences in
     how sepsis presents across two hundred hospitals, or residual imperfection
     in the transported label. This study measures the total and attributes none
-    of it. The antibiotic-only arm bounds the label's contribution loosely ---
-    degradation persists when the culture limb is removed, so it is not solely
-    an artefact of culture coverage --- but a proper attribution would require
+    of it. The antibiotic-only arm bounds the label's contribution loosely (degradation persists when the culture limb is removed, so it is not solely
+    an artefact of culture coverage), but a proper attribution would require
     a destination database with equivalent labelling inputs, which is precisely
     what was unavailable.
 
@@ -389,8 +384,7 @@ underpowered for a fairness question can report one as answered.
 
     \item \textbf{The feature set cannot be fully purged of clinician action.}
     The ablation in Section~\ref{sec:ablation} removes the
-    \pcAblNDropped{} predictors that record clinician behaviour explicitly ---
-    vasopressor exposure and the per-test order indicators --- but the
+    \pcAblNDropped{} predictors that record clinician behaviour explicitly, vasopressor exposure and the per-test order indicators, but the
     laboratory values it retains are forward-filled from tests somebody chose
     to order, and even a vital sign is recorded on a schedule that reflects how
     closely a patient is being watched. The boundary drawn is therefore
@@ -439,7 +433,7 @@ underpowered for a fairness question can report one as answered.
     The unpenalised likelihood is completely separated on this design under
     every label variant (Section~\ref{sec:primary_model_spec}), so the reported
     fits are ridge-penalised. The penalty is small and no result depends on its
-    value --- test AUROC moves by less than 0.02 across a 20-point path --- but
+    value, test AUROC moves by less than 0.02 across a 20-point path, but
     the coefficients are shrunk estimates, not maximum-likelihood ones, and the
     H2 stability counts are properties of the penalised solution. Reporting an
     unpenalised fit here would have been worse, not better: its coefficients
@@ -453,7 +447,7 @@ underpowered for a fairness question can report one as answered.
     reach a model because of a name mismatch, and implausible recorded values
     entering the fit. The pipeline now errors on any declared-but-absent
     feature rather than dropping it, and applies an explicit plausibility range
-    to all nineteen physiological variables before forward-fill --- MIMIC-IV
+    to all nineteen physiological variables before forward-fill: MIMIC-IV
     chartevents contains values several orders of magnitude outside the
     physiological range, and such rows carry unbounded leverage. Neither guard
     is a substitute for independent replication of the feature pipeline.
@@ -468,9 +462,8 @@ underpowered for a fairness question can report one as answered.
     H3 among them: under its rule an empty pre-treatment window is a theorem
     rather than a result (Proposition~\ref{prop:h3}). Variant F supplies the
     measurement the pre-registered design cannot, but it is post-hoc (Protocol
-    Amendment 4), it uses the full SOFA score including the vasopressor terms
-    --- so its onsets are free of the antibiotic-and-culture anchor but not of
-    treatment in general --- and its $t_{\text{SOFA}}$ is searched only inside
+    Amendment 4), it uses the full SOFA score including the vasopressor terms, so its onsets are free of the antibiotic-and-culture anchor but not of
+    treatment in general, and its $t_{\text{SOFA}}$ is searched only inside
     the 72-hour modelled panel, so a rise occurring earlier in the admission
     cannot be detected. A design that pre-specified both timing rules across all
     three variants would be stronger than one that adds the second afterwards.
@@ -480,7 +473,7 @@ underpowered for a fairness question can report one as answered.
     not a consensus definition with an evidence base behind it, and its onsets
     have no external adjudication. Its label is also a threshold function of
     recorded physiology of which five of six components are model inputs, so
-    its discrimination \emph{level} is not comparable with Variant B's --- only
+    its discrimination \emph{level} is not comparable with Variant B's, only
     its disagreement with Variant B about which patients deteriorate, and when,
     carries weight.
 
@@ -526,16 +519,16 @@ underpowered for a fairness question can report one as answered.
     construct validity: MIMIC-IV's \texttt{race} field is a single
     administrative code assigned at registration, so the strata compared are
     documentation categories rather than populations. Broad and granular codes
-    drawn from the same population appear as separate levels --- ``White''
+    drawn from the same population appear as separate levels (``White''
     excludes stays coded ``White -- Other European'', and ``Asian'' excludes
-    those coded ``Asian -- Chinese'' --- so the reference level is a residual
+    those coded ``Asian -- Chinese''), so the reference level is a residual
     category and the contrasts are not between disjoint groups. ``Unknown'' and
     ``Unable to obtain'' record the absence of an answer. The
     label-sensitivity result (Table~\ref{tab:equity_label}) is the better
     powered of the two equity analyses because it is a stay-level proportion
     rather than a discrimination metric, but it inherits the same construct
     limitation, and its two significant strata are precisely the two
-    missingness categories --- which is why it is read in this thesis as a
+    missingness categories, which is why it is read in this thesis as a
     finding about documentation completeness rather than about race.
 
     \item \textbf{The novelty claims rest on a narrative, not systematic,
@@ -572,7 +565,7 @@ underpowered for a fairness question can report one as answered.
     of it could ever have been informative. Both are reported descriptively
     while still consuming a slot in the family size, which makes the correction
     on the remaining four hypotheses stricter, not weaker. For H1, H4 and H6
-    the correction determines nothing --- each carries an adjusted $p$-value of
+    the correction determines nothing, each carries an adjusted $p$-value of
     1.000 and each fails on its point estimate. H5 is the exception: its
     adjusted value is \pcHFivePHolm, and it fails on the width of its interval
     rather than on its direction.

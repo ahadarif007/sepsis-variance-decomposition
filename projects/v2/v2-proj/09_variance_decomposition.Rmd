@@ -544,7 +544,7 @@ if (nrow(pretreat) == 0) {
   f_row <- pretreat[variant == "F" & model == "primary"]
   b_row <- pretreat[variant == "B" & model == "primary"]
   if (nrow(f_row) == 1 && nrow(b_row) == 1)
-    cat(sprintf("\nPre-treatment onsets — B (conjunction timing): %d in %s person-h; F (standard min(t_susp, t_SOFA) timing, same stays): %d in %s person-h, AUROC %s\n",
+    cat(sprintf("\nPre-treatment onsets: B (conjunction timing): %d in %s person-h; F (standard min(t_susp, t_SOFA) timing, same stays): %d in %s person-h, AUROC %s\n",
                 b_row$n_sepsis_events, format(b_row$n_rows, big.mark = ","),
                 f_row$n_sepsis_events, format(f_row$n_rows, big.mark = ","),
                 if (is.na(f_row$auroc)) "undefined" else sprintf("%.4f", f_row$auroc)))
@@ -613,7 +613,7 @@ if (!is.null(attrib)) {
   d_prim <- attrib[variant == "D" & model == "primary"]
   b_prim <- metrics[variant == "B" & model == "primary" & eval_window == "unrestricted"]
   if (nrow(e_prim) == 1 && nrow(b_prim) == 1)
-    cat(sprintf("Primary model AUROC — B (Sepsis-3): %.3f | E (anchor only): %.3f | D (deterioration): %s\n",
+    cat(sprintf("Primary model AUROC: B (Sepsis-3): %.3f | E (anchor only): %.3f | D (deterioration): %s\n",
                 b_prim$auroc, e_prim$auroc,
                 if (nrow(d_prim) == 1) sprintf("%.3f", d_prim$auroc) else "n/a"))
 }

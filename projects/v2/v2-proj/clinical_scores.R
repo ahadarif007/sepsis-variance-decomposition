@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2026 Abdul Ahad
-# clinical_scores.R — Clinical scoring functions for V2 pipeline
+# clinical_scores.R: Clinical scoring functions for V2 pipeline
 #
 # Implements: SOFA, NEWS2 (primary rule-based comparator), SIRS, qSOFA
 # NEWS2 replaces qSOFA as headline comparator per Evans et al. (2021).
@@ -88,7 +88,7 @@ score_sofa <- function(panel) {
 }
 
 # --------------------------------------------------------------------------- #
-# NEWS2 (National Early Warning Score 2) — primary rule-based comparator
+# NEWS2 (National Early Warning Score 2): primary rule-based comparator
 # Royal College of Physicians, 2017.
 # Uses Scale 1 SpO2 (no COPD flag available in MIMIC-IV routinely).
 # --------------------------------------------------------------------------- #
@@ -175,7 +175,7 @@ avpu_alert_flag <- function(gcs, alert_threshold = 14) {
 }
 
 # --------------------------------------------------------------------------- #
-# qSOFA — retained for descriptive comparison only (NOT primary comparator)
+# qSOFA: retained for descriptive comparison only (NOT primary comparator)
 # Evans et al. (2021): strong recommendation AGAINST using as sole screening tool
 # --------------------------------------------------------------------------- #
 qsofa <- function(resp_rate, gcs, map_val) {
@@ -187,7 +187,7 @@ qsofa <- function(resp_rate, gcs, map_val) {
 }
 
 # --------------------------------------------------------------------------- #
-# SIRS — retained for descriptive comparison only
+# SIRS: retained for descriptive comparison only
 # --------------------------------------------------------------------------- #
 sirs <- function(hr, resp_rate, temp_c, wbc) {
   as.integer(

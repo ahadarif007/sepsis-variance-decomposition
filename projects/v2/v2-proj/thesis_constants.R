@@ -497,7 +497,7 @@ local({
   put("HTwoNMag",   if (is.null(h2)) NA else sum(tf(h2$mag_flip)),      digits = 0)
 })
 
-# Instability split by feature kind — the quantity behind the claim that it is
+# Instability split by feature kind: the quantity behind the claim that it is
 # the action-derived covariates that are unstable, not physiology in general.
 sec("H2 instability by feature kind (Amendment 5)")
 hk <- rd("12_h2_stability_by_kind")
@@ -508,7 +508,7 @@ for (k in c("action-derived", "physiological")) {
   put(paste0("HTwoPctUnstable", tok), cell(hk, "pct_unstable", kind = k), digits = 1)
 }
 
-# Protocol Amendment 5 — feature ablation
+# Protocol Amendment 5: feature ablation
 sec("Feature ablation (Protocol Amendment 5)")
 ab  <- rd("07_ablation_metrics")
 h2a_pre <- rd("05_h2_stability_ablated")
@@ -1024,7 +1024,7 @@ lines <- c(
   "\\ifdefined\\pcConstantsLoaded\\endinput\\fi",
   "\\newcommand{\\pcConstantsLoaded}{}",
   "\\providecommand{\\pcMissing}{\\textbf{\\textcolor{red}{??}}}",
-  "\\providecommand{\\pcNotApplicable}{\\textup{---}}",
+  "\\providecommand{\\pcNotApplicable}{\\textup{n/a}}",
   ""
 )
 for (item in ORDER) {

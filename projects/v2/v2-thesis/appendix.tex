@@ -25,9 +25,9 @@ by neither this repository nor its licence; and the thesis text and its figures,
 being scholarly prose rather than software, are made available for citation and
 academic reuse with attribution rather than under a software licence.
 
-Where a routine implements a published method --- the SOFA score, the Sepsis-3
+Where a routine implements a published method (the SOFA score, the Sepsis-3
 operational criteria, NEWS2, qSOFA, SIRS, the PhysioNet Utility Score, the
-sample-size criteria, pooled logistic regression, decision-curve analysis --- the
+sample-size criteria, pooled logistic regression, decision-curve analysis) the
 implementation is original to this work and written from the published
 definition, and the method is attributed to its authors both in \texttt{NOTICE}
 and at the point of use in this thesis. No implementation was copied or adapted
@@ -134,8 +134,8 @@ Both databases are de-identified and publicly available to credentialed
 researchers under the PhysioNet Credentialed Health Data Use Agreement. The
 analysis is retrospective and observational, involves no patient contact and no
 intervention, and required no additional ethical approval beyond the data use
-agreement, whose terms --- including the prohibition on redistribution and on
-attempted re-identification --- were observed throughout.
+agreement, whose terms, including the prohibition on redistribution and on
+attempted re-identification, were observed throughout.
 Section~\ref{sec:ethics} sets out the full statement.
 
 
@@ -156,7 +156,7 @@ directly.
         \textbf{Stage} & \textbf{Reads} & \textbf{Writes} & \textbf{Supports} \\
         \midrule
         01 & MIMIC-IV source tables &
-        --- (validation only; halts on a missing table) &
+        n/a (validation only; halts on a missing table) &
         Run integrity \\
         \addlinespace
         02 & \texttt{hosp/}, \texttt{icu/} source tables &
@@ -231,7 +231,7 @@ directly.
     \end{tabularx}
     \caption{Stage inputs, outputs, and the results each supports. Stage 03 is
     the only stage that reads the full-size source tables, and Stage 12 is the
-    only one that reads nothing but stored predictions --- which is what allows
+    only one that reads nothing but stored predictions, which is what allows
     the inference layer to be re-run and checked without refitting any model.}
     \label{tab:stage_reference}
 \end{table}

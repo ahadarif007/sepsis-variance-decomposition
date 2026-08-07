@@ -28,7 +28,7 @@ MIMIC-IV's \texttt{chartevents} table is 3.5\,GB compressed and
 machine this study ran on. Both are therefore read through a DuckDB streaming
 layer that pushes the cohort filter and the item-identifier filter down into the
 scan, so only rows belonging to the analysis cohort are ever materialised. The
-alternative --- extracting a reduced copy once and working from it --- was
+alternative, extracting a reduced copy once and working from it, was
 rejected because it makes the extraction step invisible to everything
 downstream: a defect in the filter becomes indistinguishable from a property of
 the data. Reading from the original tables on every run keeps the extraction
@@ -41,8 +41,7 @@ No stage writes to \texttt{data/}, and every stage writes only to
 left the inputs in a state the next run depends on.
 
 \paragraph{Every clinical constant must have exactly one definition.}
-The study varies label definitions deliberately, which means the same quantity
---- an antibiotic--culture window, a SOFA threshold, an evaluation horizon ---
+The study varies label definitions deliberately, which means the same quantity (an antibiotic--culture window, a SOFA threshold, an evaluation horizon)
 is read by several stages and must mean the same thing in all of them. A
 constant duplicated across two scripts is a constant that can silently diverge,
 and in a study about definitional sensitivity such a divergence would be
@@ -57,7 +56,7 @@ disagree between the code and the text either.
 The pipeline's most dangerous failure mode is not a crash but a stage that
 quietly does less than it was asked to. Selecting predictors by intersecting a
 declared feature list with the columns actually present, for instance, silently
-drops any predictor whose name does not match --- the model still fits, the
+drops any predictor whose name does not match: the model still fits, the
 metrics still compute, and nothing in the output indicates that a variable is
 missing. Interfaces are therefore declared rather than inferred:
 \texttt{require\_features()} raises an error when a declared predictor is absent
@@ -89,7 +88,7 @@ so they cannot overwrite a pre-registered result.
 \paragraph{Why twelve scripts rather than one program.} The stage boundaries
 follow the analysis, not the code: each corresponds to a step that has to be
 separately inspectable because a claim in Chapter~\ref{ch:evaluation} rests on
-it. The inference layer is the clearest case --- Stage 12 reads only the stored
+it. The inference layer is the clearest case: Stage 12 reads only the stored
 predictions of earlier stages, so intervals and multiplicity corrections can be
 recomputed without refitting anything, and the correction applied to a result is
 verifiable independently of the model that produced it. The cost of this
@@ -207,7 +206,7 @@ and reports their sizes. The pipeline stops if any table is missing.
     \item \textbf{Onset time:} For the pre-registered variants A--C, the
     suspicion time $t_{\text{susp}}$, provided the SOFA rise occurs somewhere in
     the evaluation window. The SOFA criterion therefore gates \emph{membership}
-    and contributes no timing information --- an implementation choice with
+    and contributes no timing information: an implementation choice with
     consequences developed in Section~\ref{sec:variant_f}.
 
     \item \textbf{Alternative labels (Protocol Amendments 2 and 4):} The Sepsis-3
@@ -280,9 +279,9 @@ The fit carries two guards that are part of the specification rather than
 defensive extras. The declared predictor set is required rather than
 intersected, so a name mismatch stops the stage instead of producing a model
 with fewer terms than specified. And because the unpenalised likelihood for this
-design is completely separated --- its maximum lies at infinity, while the
+design is completely separated (its maximum lies at infinity, while the
 optimiser's stopping rule reports success regardless
-(Section~\ref{sec:primary_model_spec}) --- the fit is ridge-penalised and the
+(Section~\ref{sec:primary_model_spec})) the fit is ridge-penalised and the
 stage logs the largest fitted coefficient alongside the convergence flag, since
 only the former distinguishes an identified solution from an arbitrary stopping
 point. No analytic variance is available for the fitted object, so all
@@ -323,7 +322,7 @@ The Utility Score is computed at the default 0.5 cut-off and swept across a
 sixty-point grid of alert rates, in a single pass: the per-stay reward is
 monotone in a falling threshold, so the whole grid costs one sort plus one
 traversal of the reward-window rows. Two invariants are asserted at run time
-rather than assumed --- a threshold above every predicted probability must
+rather than assumed: a threshold above every predicted probability must
 return exactly zero, since it \emph{is} the no-alert strategy, and no operating
 point may exceed the optimal strategy's score of one. A stand-alone Python
 implementation of the same scoring rule, \texttt{utility\_score.py}, is kept in
@@ -443,10 +442,10 @@ directory containing the \texttt{data/} folder.
 \subsection{Code Availability}
 \label{sec:code_availability}
 
-The complete pipeline --- the twelve numbered scripts, \texttt{config.R},
+The complete pipeline (the twelve numbered scripts, \texttt{config.R},
 \texttt{utils.R}, \texttt{clinical\_scores.R}, \texttt{thesis\_constants.R},
 \texttt{utility\_score.py}, the pre-registration document and the orchestration
-scripts --- is held in a public version-controlled repository at
+scripts) is held in a public version-controlled repository at
 \url{\repourl}, released under the \repolicence. Appendix~\ref{app:code}
 describes the layout, the reproduction procedure, and the boundary of that
 licence, which covers the source written for this study and neither the

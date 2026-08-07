@@ -312,7 +312,7 @@ admission baseline used by variants A and B).
 "Physiology-only" means the vasopressor and catecholamine columns are withheld
 from `score_sofa()`, so the cardiovascular component is scored from MAP alone.
 The resulting label therefore contains no antibiotic order, no culture draw and
-no drug administration — nothing that records a clinician's decision to treat.
+no drug administration: nothing that records a clinician's decision to treat.
 
 ```{r deterioration-onset-fn, code_folding="hide"}
 SOFA_PHYS_COMPONENTS <- c("pf_ratio", "platelets", "bilirubin", "map",

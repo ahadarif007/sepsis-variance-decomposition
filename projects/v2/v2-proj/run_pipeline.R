@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2026 Abdul Ahad
-# run_pipeline.R — Master pipeline runner for V2
+# run_pipeline.R: Master pipeline runner for V2
 #
 # Usage:
 #   Rscript run_pipeline.R [--phase 0-7] [--variant A|B|C|all]
@@ -44,7 +44,7 @@ requested_phase <- if (any(grepl("--phase", args))) {
 } else "all"
 
 v2_log("======================================================")
-v2_log("  V2 Sepsis Prediction Pipeline — Model, Label, or Analyst?")
+v2_log("  V2 Sepsis Prediction Pipeline: Model, Label, or Analyst?")
 v2_log("======================================================")
 v2_log(sprintf("Project root: %s", PROJECT_ROOT))
 v2_log(sprintf("Output dir:   %s", OUTPUT_DIR))
@@ -103,7 +103,7 @@ run_phase <- function(phase_num) {
 v2_log("\n=== Phase 0: Pre-registration check ===")
 prereg_path <- file.path(script_dir, "00_preregistration.md")
 if (file.exists(prereg_path)) {
-  v2_log("[OK] 00_preregistration.md exists — protocol is locked.")
+  v2_log("[OK] 00_preregistration.md exists: protocol is locked.")
 } else {
   v2_log("[BLOCKING] 00_preregistration.md not found. Create and lock protocol before modelling.",
          level = "ERROR")

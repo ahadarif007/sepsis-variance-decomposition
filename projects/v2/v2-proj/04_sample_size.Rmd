@@ -36,7 +36,7 @@ knitr::opts_chunk$set(
 
 Riley et al. (2019) provide minimum sample size criteria for prediction models: (i) shrinkage $\geq 0.9$, (ii) Nagelkerke $R^2$ optimism $\leq 0.05$, and (iii) adequate event-rate precision.
 
-**The criteria assume independent observations, and person-hours are not independent** — they are nested within ICU stays at roughly 45 correlated rows per stay, one stay per patient. The adequacy assessment is therefore parameterised on the **stay**: the outcome proportion supplied to `pmsampsize` is the fraction of training *stays* labelled septic, and the resulting minimum is compared against the number of training stays.
+**The criteria assume independent observations, and person-hours are not independent**: they are nested within ICU stays at roughly 45 correlated rows per stay, one stay per patient. The adequacy assessment is therefore parameterised on the **stay**: the outcome proportion supplied to `pmsampsize` is the fraction of training *stays* labelled septic, and the resulting minimum is compared against the number of training stays.
 
 The per-person-hour parameterisation is also computed and retained, because it is the quantity that governs the precision of an hourly hazard estimate conditional on the clustering, and because reporting only one of the two invites the reader to compare a minimum derived at one prevalence against a count at the other. It is **not** an effective sample size and must never be compared against the 2.3M person-hour row count as though it were. The stay-level figure is the one the thesis reports as the adequacy verdict.
 

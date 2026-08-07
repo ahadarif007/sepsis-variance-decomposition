@@ -248,7 +248,7 @@ if ("ablated" %in% run_arms) {
 
 ## Random-Split Re-Fit (H4: Split Optimism)
 
-The same primary model is re-fitted on a random patient-level split (Guo et al., 2022). Only Variant B is needed — H4 compares temporal vs. random AUROC under a fixed label and model class.
+The same primary model is re-fitted on a random patient-level split (Guo et al., 2022). Only Variant B is needed: H4 compares temporal vs. random AUROC under a fixed label and model class.
 
 ```{r fit-random-split}
 step("--- Re-fitting primary model on random split (H4) ---")
@@ -259,7 +259,7 @@ fit_primary_random <- function(vid = "B") {
   ))
 
   if (!"random_split" %in% names(ph)) {
-    v2_log("  random_split column not found — skipping H4 re-fit.", level = "WARN")
+    v2_log("  random_split column not found: skipping H4 re-fit.", level = "WARN")
     return(NULL)
   }
 

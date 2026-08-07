@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2026 Abdul Ahad
-# utils.R — Shared R utility functions for the pipeline
+# utils.R: Shared R utility functions for the pipeline
 
 suppressPackageStartupMessages({
   library(data.table)

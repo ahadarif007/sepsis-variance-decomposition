@@ -110,7 +110,7 @@ fi
 # ---------------------------------------------------------------------------
 START_TS=$(date '+%Y-%m-%d %H:%M:%S')
 echo "======================================================" | tee "$LOG_FILE"
-echo "  V2 Pipeline — ${START_TS}" | tee -a "$LOG_FILE"
+echo "  V2 Pipeline: ${START_TS}" | tee -a "$LOG_FILE"
 echo "  Scripts: ${RMD_FILES[*]}" | tee -a "$LOG_FILE"
 echo "  Output:  ${OUTPUT_DIR}/" | tee -a "$LOG_FILE"
 echo "======================================================" | tee -a "$LOG_FILE"
@@ -146,7 +146,7 @@ for rmd in "${RMD_FILES[@]}"; do
   else
     T1=$(date +%s)
     ELAPSED=$(( T1 - T0 ))
-    echo "  FAILED  (${ELAPSED}s)  — see ${step_log}" | tee -a "$LOG_FILE"
+    echo "  FAILED  (${ELAPSED}s): see ${step_log}" | tee -a "$LOG_FILE"
     # Show last 20 lines of R error to terminal
     echo "  Last error output:" | tee -a "$LOG_FILE"
     tail -20 "${step_log}" | tee -a "$LOG_FILE"
@@ -164,7 +164,7 @@ done
 # Cleanup temporary / stale files
 #
 # xelatex writes its .log into the working directory, and tinytex only keeps it
-# when the LaTeX run emitted warnings — which is why stray logs appeared for
+# when the LaTeX run emitted warnings, which is why stray logs appeared for
 # some scripts and not others. The R logs we care about are already in
 # output/logs/, so the LaTeX build artefacts are removed here (mirrors the
 # cleanup block in run_pipeline.R).
