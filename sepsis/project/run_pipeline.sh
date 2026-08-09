@@ -180,8 +180,8 @@ find "$SCRIPT_DIR" -maxdepth 1 -name '*.knit.md' -delete 2>/dev/null
 # ---------------------------------------------------------------------------
 # Thesis alignment
 #
-# Regenerate ../v2-thesis/pipeline_constants.tex from the result tables and
-# sync output/figures -> ../v2-thesis/images. This is what keeps the thesis
+# Regenerate ../thesis/pipeline_constants.tex from the result tables and
+# sync output/figures -> ../thesis/images. This is what keeps the thesis
 # from drifting away from the pipeline (HANDOFF section 4). Skipped when a
 # stage failed, because half-written results would produce a constants file
 # that looks authoritative but is not.

@@ -512,7 +512,7 @@ in Cardiology Challenge 2019," *Critical Care Medicine*, vol. 48, no. 2, pp. 210
 sepsis patients with different social determinants," *BMC Medical Informatics and Decision Making*, vol. 22, Suppl 2, p.
 156, 2022.
 
-[14] A. Johnson, L. Bulgarelli, L. Shen et al., "MIMIC-IV, version 3.1," PhysioNet, 2023. doi: 10.13026/6mm1-ek67.
+[14] A. Johnson, L. Bulgarelli, T. Pollard et al., "MIMIC-IV," PhysioNet, 2024. Version 3.1. doi: 10.13026/kpb9-mt58.
 
 [15] T. J. Pollard, A. E. W. Johnson, J. D. Raffa et al., "The eICU Collaborative Research Database, a freely available
 multi-centre database for critical care research," *Scientific Data*, vol. 5, 180178, 2018.

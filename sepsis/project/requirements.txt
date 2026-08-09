@@ -1,4 +1,4 @@
-# R package requirements for v2-thesis pipeline
+# R package requirements for thesis pipeline
 # Install via: Rscript -e "install.packages(readLines('requirements.txt'), repos='https://cloud.r-project.org')"
 # Or run 01_setup.R which handles installation automatically.
 

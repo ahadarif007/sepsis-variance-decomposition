@@ -24,14 +24,12 @@ apart.
 1. COVERED BY APACHE-2.0 — the author's original work
 --------------------------------------------------------------------------------
 
-  projects/v2/v2-proj/       all source code, in full:
+  sepsis/project/            all source code, in full:
                              config.R, utils.R, clinical_scores.R,
                              thesis_constants.R, run_pipeline.R,
                              run_pipeline.sh, utility_score.py,
                              01_setup.Rmd .. 12_inference.Rmd,
                              00_preregistration.md
-  projects/v1/v1-project/    earlier project source code and the reports
-                             knitted from it, on the same terms
   README.md, CLAUDE.md       repository documentation
   .gitignore, .gitattributes
 
@@ -46,13 +44,13 @@ section 3.
 
   Atlantic Technological University thesis template and brand assets
   ----------------------------------------------------------------------------
-  projects/v2/v2-thesis/index.tex  (title-page layout, ATU colour definitions,
+  sepsis/thesis/index.tex          (title-page layout, ATU colour definitions,
                                     page furniture — the template supplied by
                                     the institution)
-  projects/v2/v2-thesis/images/atu-logo-green.png
-  projects/v2/v2-thesis/images/atu-logo-navy.png
-  projects/v2/v2-thesis/images/atu-logo-teal.png
-  projects/v2/v2-thesis/images/leftbar.png
+  sepsis/thesis/images/atu-logo-green.png
+  sepsis/thesis/images/atu-logo-navy.png
+  sepsis/thesis/images/atu-logo-teal.png
+  sepsis/thesis/images/leftbar.png
 
   These are ATU's template and trade marks, reproduced here only because the
   thesis will not typeset without them. They are NOT licensed under Apache-2.0
@@ -109,11 +107,11 @@ source code.
 4. THE THESIS ITSELF
 --------------------------------------------------------------------------------
 
-  projects/v2/v2-thesis/*.tex   (excluding the ATU template elements in §2)
-  projects/v2/v2-thesis/index.pdf
-  projects/v2/v2-thesis/images/*.png  (excluding the ATU assets in §2)
-  projects/v2/v2-lr-rp/
-  projects/v2/v2-GENAI/
+  sepsis/thesis/*.tex           (excluding the ATU template elements in §2)
+  sepsis/thesis/index.pdf
+  sepsis/thesis/images/*.png    (excluding the ATU assets in §2)
+  sepsis/lr-rp/
+  sepsis/GEN-AI/
 
 The thesis text, its generated figures, and the companion literature review are
 the author's original scholarly work. A software licence is not the appropriate

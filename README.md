@@ -36,15 +36,15 @@ amendments to separate definitional from empirical label variance.
 
 ```
 RESEARCH/
-├── projects/v2/
-│   ├── v2-proj/        ← the analysis pipeline (R + Python)
-│   ├── v2-thesis/      ← the thesis (LaTeX)
-│   ├── v2-lr-rp/       ← companion critical literature review
+├── sepsis/
+│   ├── project/        ← the analysis pipeline (R + Python)
+│   ├── thesis/         ← the thesis (LaTeX)
+│   ├── lr-rp/          ← companion critical literature review
 │   └── feedback/       ← internal development record
 └── data/               ← NOT tracked; you supply this (see below)
 ```
 
-### The pipeline — `projects/v2/v2-proj/`
+### The pipeline — `sepsis/project/`
 
 | File | Role |
 |---|---|
@@ -78,8 +78,7 @@ RESEARCH/
 
 ### Prerequisites
 
-- **R 4.5+** with the packages listed in `requirements.txt` /
-  `projects/v2/v2-proj/`
+- **R 4.5+** with the packages listed in `sepsis/project/requirements.txt`
 - **Python 3.12+** with `pandas` (for the Utility Score mirror only)
 - **TeX** providing `xelatex` and `pdflatex` + `biber` (to build the thesis)
 - **Both databases**, obtained independently through PhysioNet credentialing:
@@ -92,7 +91,7 @@ RESEARCH/
 ### Full run
 
 ```bash
-cd projects/v2/v2-proj
+cd sepsis/project
 ./run_pipeline.sh
 ```
 
@@ -118,8 +117,8 @@ not bit-stable and an incidental refit moves every GBT number.
 ### Building the thesis
 
 ```bash
-cd projects/v2/v2-proj && Rscript thesis_constants.R
-cd ../v2-thesis && ./build.sh
+cd sepsis/project && Rscript thesis_constants.R
+cd ../thesis && ./build.sh
 ```
 
 ---
@@ -134,7 +133,7 @@ builds, so the GBT rows serve as an explicit consistency check on any re-run.
 
 **No result number in the thesis is typed by hand.** `thesis_constants.R` reads
 the result tables and writes every reported quantity into
-`v2-thesis/pipeline_constants.tex` as a LaTeX macro, which the document
+`sepsis/thesis/pipeline_constants.tex` as a LaTeX macro, which the document
 includes; larger tables are generated whole. A quantity the pipeline did not
 produce typesets as a conspicuous marker rather than as a stale value, so a
 partial run cannot silently leave an outdated number in the text.
@@ -182,11 +181,10 @@ The pipeline source code written for this study is released under the
 The grant is scoped, and [`NOTICE`](NOTICE) states the boundary in full. In
 short:
 
-- **Covered** — everything under `projects/v2/v2-proj/` and
-  `projects/v1/v1-project/`, plus the repository documentation. All of it was
-  written for this study.
+- **Covered** — everything under `sepsis/project/`, plus the repository
+  documentation. All of it was written for this study.
 - **Not covered** — the ATU thesis template and brand assets in
-  `projects/v2/v2-thesis/` (reproduced only so the thesis will typeset; ATU's
+  `sepsis/thesis/` (reproduced only so the thesis will typeset; ATU's
   rights, not mine), and the MIMIC-IV and eICU-CRD databases, which are not in
   this repository and cannot be redistributed under any licence.
 - **Thesis text and figures** are scholarly prose, not software. They are

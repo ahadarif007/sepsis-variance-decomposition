@@ -45,7 +45,7 @@ Work by Claude (Anthropic) with **Abdul Ahad** (ATU MSc, student ID G00486649).
 > non-rejection (equivalence between an interpretable hazard model and GBT) is
 > now the strongest positive result in the thesis.
 >
-> Read `v2/feedback/v2.md` for the full write-up: §§0–10 point 1 (Variant B fit),
+> Read `feedback/v2.md` for the full write-up: §§0–10 point 1 (Variant B fit),
 > §§11–15 point 2 (H3 circularity / Amendment 4), §§16–20 point 3 (Utility),
 > §21 the alignment pass.
 
@@ -82,15 +82,15 @@ Amendment 4 enlarges (so its BH adjustments are stricter than before).
 ## 2. Layout
 
 ```
-RESEARCH/projects/v2/
-├── v2-GENAI/      ← this file
+RESEARCH/sepsis/
+├── GEN-AI/        ← this file
 ├── feedback/      ← supervisor feedback rounds: `v1.md` (see §7)
-├── v2-lr-rp/      ← companion literature review (NARRATIVE, not systematic — see §7)
-├── v2-proj/       ← pipeline: config.R, utils.R, clinical_scores.R,
+├── lr-rp/         ← companion literature review (NARRATIVE, not systematic — see §7)
+├── project/       ← pipeline: config.R, utils.R, clinical_scores.R,
 │                    thesis_constants.R, utility_score.py,
 │                    00_preregistration.md,
 │                    01..12_*.Rmd, run_pipeline.{R,sh}, output/
-└── v2-thesis/     ← LaTeX: index.tex + chapters, images/, build.sh,
+└── thesis/        ← LaTeX: index.tex + chapters, images/, build.sh,
                      pipeline_constants.tex + table_*.tex (GENERATED — see §4)
 ```
 
@@ -104,7 +104,7 @@ Does Not Establish", "What the Ablation Establishes"). **Results reports;
 Discussion interprets.** Put new interpretation in `discussion.tex`.
 `sec:limitations` and `sec:external_interpretability` now live there.
 
-`README.md` at the repo root and `v2-GENAI/SCREENCAST.md` are submission
+`README.md` at the repo root and `GEN-AI/SCREENCAST.md` are submission
 deliverables, added in the same round. The screencast plan is internal.
 
 Scripts are **01–12** (an older version of this file said 01–13; that was wrong).
@@ -126,7 +126,7 @@ Scripts are **01–12** (an older version of this file said 01–13; that was wr
 | 12 | inference (cluster bootstrap, Holm + BH, analysis register) | 9 |
 
 Run: `./run_pipeline.sh` (all) · `./run_pipeline.sh 10 11 12` (subset) ·
-`Rscript run_pipeline.R --phase 4`. Thesis: `cd ../v2-thesis && ./build.sh`.
+`Rscript run_pipeline.R --phase 4`. Thesis: `cd ../thesis && ./build.sh`.
 Full run ≈ **60 min** (≈85 min with D/E); stage 05 dominates. Stage 12 alone
 ≈ 14 min (bootstrap).
 
@@ -377,9 +377,9 @@ model were never actually computed**, though the methodology claims them. Unreso
 see `feedback/v2.md` §6.3.
 
 ### GBT drift + thesis sync — now automated, use it
-**Fixed 2026-08-04.** `v2-proj/thesis_constants.R` reads the result tables and
-writes `v2-thesis/pipeline_constants.tex` (≈292 `\pc`-prefixed macros), then
-copies `output/figures/*.png` → `v2-thesis/images/`. `index.tex` `\input`s it.
+**Fixed 2026-08-04.** `project/thesis_constants.R` reads the result tables and
+writes `thesis/pipeline_constants.tex` (≈292 `\pc`-prefixed macros), then
+copies `output/figures/*.png` → `thesis/images/`. `index.tex` `\input`s it.
 It runs automatically at the tail of `run_pipeline.{sh,R}` **when every stage
 succeeded**, and standalone via `Rscript thesis_constants.R`.
 
@@ -390,7 +390,7 @@ Rules:
   To add a quantity, add a `put()` call in `thesis_constants.R`.
 - **Tables too large for one-macro-per-cell are generated whole.**
   `write_table()` in `thesis_constants.R` emits a complete `tabular` to
-  `v2-thesis/table_<name>.tex`; the chapter keeps only `\begin{table}`,
+  `thesis/table_<name>.tex`; the chapter keeps only `\begin{table}`,
   `\input{table_<name>}`, caption and label. Currently `table_equitylabel` and
   `table_equitylabelcontrasts`. **Emit the whole environment, never just the
   rows** — `\input` of a partial alignment body fails with
@@ -434,10 +434,10 @@ position analytically instead of narrating a change of position — e.g. C2 is
 *must* be declared post-hoc; that is research integrity, not revision history.
 Keep the analysis register's [C]/[E]/[D] labels for the same reason.
 
-Audit before any commit that touches `v2-thesis/*.tex`:
+Audit before any commit that touches `thesis/*.tex`:
 
 ```bash
-grep -niE "reviewer|supervis|feedback|earlier draft|previous(ly)? (draft|version|reported)|revision history|was originally|is withdrawn|as suggested|in response to|an examiner" v2-thesis/*.tex
+grep -niE "reviewer|supervis|feedback|earlier draft|previous(ly)? (draft|version|reported)|revision history|was originally|is withdrawn|as suggested|in response to|an examiner" thesis/*.tex
 ```
 
 **Eight hits are legitimate and expected** (was five before feedback round 7):
@@ -449,7 +449,7 @@ art rather than about this document; and one false positive on "unsupervised" in
 `review.tex`. Anything else is a leak. `feedback/v2.md` §13.1a lists the six
 passages already fixed this way, so the same phrasing is not reintroduced.
 
-### Stray `.log` files in `v2-proj/` root
+### Stray `.log` files in `project/` root
 Those are **xelatex** logs, not R logs (R logs live in `output/logs/`). xelatex
 writes `.log` to the working dir and tinytex keeps it **only when LaTeX warned**.
 Root cause is always a real defect. Two seen and fixed:
@@ -506,7 +506,7 @@ did not; `run_pipeline.R` always did). Fix the warning, don't just delete the lo
 
 ## 5. Ground truth — read ONE of these, not the directory
 
-All under `v2-proj/output/processed_data/`. **CSV mirrors exist for 11_* and 12_*
+All under `project/output/processed_data/`. **CSV mirrors exist for 11_* and 12_*
 — prefer them; they are small and need no arrow.**
 
 | Question | File |
@@ -652,7 +652,7 @@ insurance. Top 8 levels each.
   `NOTICE` now exist at the repo root, and the seven pipeline source files carry
   `SPDX-License-Identifier: Apache-2.0` headers.
   **The scoping is the point and must not be flattened.** `NOTICE` §1 covers
-  `v2-proj/` and `v1/v1-project/` source; §2 *excludes* the ATU thesis template
+  `sepsis/project/` source; §2 *excludes* the ATU thesis template
   and brand assets (`index.tex` title page, `atu-logo-*.png`, `leftbar.png` ---
   ATU's rights, reproduced only so the thesis typesets) and excludes both
   databases absolutely; §3 lists the eight published methods implemented here
@@ -714,7 +714,7 @@ insurance. Top 8 levels each.
 | Vivas | **29–30 October** |
 | Presentation | 15 min + 15 min questions |
 
-**Do not work on `v2-presentation*/`.** This is a standing instruction, not an
+**Do not work on `presentation*/`.** This is a standing instruction, not an
 oversight: results moved in every feedback round, so any polish before the
 results settled would have been discarded. The skeleton (11 section files, same
 in both decks) is sound and is what October returns to. The current deck is
@@ -764,8 +764,8 @@ drafted in `feedback/v2.md` §29.4.
   a single reused label.
 - Don't pool the eICU antibiotic-only arm with the Sepsis-3 arm, and don't quote
   it when the Sepsis-3 arm is inconvenient. It labels a different target.
-- Don't touch `v2-presentation*/` unless asked. Don't depend on `v1/`.
-- Don't leave LaTeX build junk in `v2-thesis/` (keep sources, `images/`, `index.pdf`).
+- Don't touch `presentation*/` unless asked. Don't depend on `v1/`.
+- Don't leave LaTeX build junk in `thesis/` (keep sources, `images/`, `index.pdf`).
 
 ---
 
@@ -792,11 +792,11 @@ Verification checks that were specified in advance and passed:
 The command, recorded for the next time a stage needs re-running:
 
 ```bash
-cd projects/v2/v2-proj && V2_ARMS=ablated ./run_pipeline.sh 05 06 && ./run_pipeline.sh 04 07 08 11 12
+cd sepsis/project && V2_ARMS=ablated ./run_pipeline.sh 05 06 && ./run_pipeline.sh 04 07 08 11 12
 ```
 
 ```bash
-cd projects/v2/v2-proj && Rscript thesis_constants.R && cd ../v2-thesis && ./build.sh
+cd sepsis/project && Rscript thesis_constants.R && cd ../thesis && ./build.sh
 ```
 
 Why that order: `V2_ARMS=ablated` on 05/06 fits only the ablated arm, so no H1/H4/H6

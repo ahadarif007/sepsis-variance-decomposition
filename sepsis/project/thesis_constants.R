@@ -13,7 +13,7 @@
 #  every GBT number and the thesis silently kept the old ones. This script
 #  closes that loop. It reads the result tables and writes
 #
-#      ../v2-thesis/pipeline_constants.tex
+#      ../thesis/pipeline_constants.tex
 #
 #  as a set of \pc-prefixed LaTeX macros, then syncs output/figures -> images/.
 #  The thesis \inputs that file, so re-running the pipeline re-aligns the
@@ -51,7 +51,7 @@ SCRIPT_DIR <- local({
 })
 DATA_DIR   <- file.path(SCRIPT_DIR, "output", "processed_data")
 FIG_DIR    <- file.path(SCRIPT_DIR, "output", "figures")
-THESIS_DIR <- normalizePath(file.path(SCRIPT_DIR, "..", "v2-thesis"), mustWork = FALSE)
+THESIS_DIR <- normalizePath(file.path(SCRIPT_DIR, "..", "thesis"), mustWork = FALSE)
 OUT_TEX    <- file.path(THESIS_DIR, "pipeline_constants.tex")
 source(file.path(SCRIPT_DIR, "config.R"))
 
@@ -845,7 +845,7 @@ local({
 TABLES_WRITTEN <- character(0)
 TABLES_MISSING <- character(0)
 
-#' Write a complete tabular environment to ../v2-thesis/table_<name>.tex.
+#' Write a complete tabular environment to ../thesis/table_<name>.tex.
 #'
 #' The WHOLE environment is emitted, not just the rows. A partial alignment
 #' body cannot be \\input reliably: TeX's alignment scanner has to see the
@@ -1013,7 +1013,7 @@ lines <- c(
   "% =====================================================================",
   "%  pipeline_constants.tex - GENERATED FILE, DO NOT EDIT BY HAND",
   "% ---------------------------------------------------------------------",
-  "%  Written by v2-proj/thesis_constants.R at the end of every pipeline",
+  "%  Written by sepsis/project/thesis_constants.R at the end of every pipeline",
   "%  run. Edits here are overwritten. To change a number, change the",
   "%  pipeline; to add one, add a put() call in thesis_constants.R.",
   "%",

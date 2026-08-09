@@ -2,9 +2,9 @@
 \label{ch:design}
 
 The pipeline consists of twelve numbered, single-purpose scripts in
-\texttt{v2-proj/}, preceded by the locked pre-registration document
+\texttt{sepsis/project/}, preceded by the locked pre-registration document
 (\texttt{00\_preregistration.md}). Each script reads from upstream outputs and
-writes its own results to \texttt{v2-proj/output/}. No script modifies the
+writes its own results to \texttt{sepsis/project/output/}. No script modifies the
 original source data. All random seeds are fixed for reproducibility.
 Figure~\ref{fig:pipeline_dag} shows the data flow, and
 Appendix~\ref{app:stages} tabulates each stage's inputs and outputs in full.
