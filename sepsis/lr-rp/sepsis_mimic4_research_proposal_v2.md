@@ -1,5 +1,15 @@
 # Model, Label, or Analyst? A Variance Decomposition of Real-Time Sepsis Onset Prediction on MIMIC-IV
 
+> **Status: pre-study research proposal, retained as the record of the design as
+> registered.** Written before any modelling. Where this document and the thesis
+> differ, **the thesis is authoritative**. Two positions here were amended and
+> should not be read as current: AUROC is reported descriptively *alongside* the
+> Utility Score rather than demoted, and the Utility Score is reported both at
+> the 0.5 cut-off and at its swept maximum rather than at a single cut-off (see
+> `00_preregistration.md`, Protocol Amendments 1–7). It is kept because a
+> proposal that is quietly revised to match its results is worth nothing as a
+> pre-registration.
+
 ### MSc Research Proposal
 
 **Basis:** *Statistical and Machine-Learning Approaches to Real-Time Sepsis Onset Prediction on MIMIC-IV: An Extended Critical Literature Review* (50 sources)

@@ -268,7 +268,19 @@ if (!is.na(h6_delta)) {
 
 if (length(verdicts) > 0) {
   verdicts_df <- do.call(rbind, verdicts)
-  knitr::kable(verdicts_df, caption = "Hypothesis test verdicts")
+  # These are point-estimate pre-checks computed before any uncertainty exists.
+  # Protocol Amendment 1 made 12_inference.Rmd the adjudicating layer, and the
+  # two disagree by construction: this table marks H2 and H6 "confirmed = TRUE"
+  # where 12_confirmatory_tests records "Descriptive" and "H6 not rejected",
+  # and it holds four hypotheses where the family has six. No stage and no
+  # macro reads it. Labelled rather than left to be found by an examiner
+  # reproducing the run.
+  verdicts_df$status <- "point estimate only; superseded by 12_confirmatory_tests (Amendment 1)"
+  knitr::kable(verdicts_df, caption = paste("Hypothesis pre-checks on point estimates.",
+    "The adjudicated verdicts, with intervals and Holm correction, are in",
+    "12_confirmatory_tests (Protocol Amendment 1)."))
+  cat(paste0("\nNOTE: 09_hypothesis_verdicts holds point-estimate pre-checks only.\n",
+             "      The confirmatory verdicts are 12_confirmatory_tests.\n"))
   save_parquet(verdicts_df, "09_hypothesis_verdicts", DATA_DIR)
 }
 ```

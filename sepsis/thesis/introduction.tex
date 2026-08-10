@@ -101,15 +101,19 @@ Six hypotheses were pre-registered before any modelling:
     \item[H1 (Label dominance)] Changing the sepsis definition affects AUROC at
     least as much as changing the model.
     \item[H2 (Coefficient instability)] At least one clinical feature changes its
-    effect direction across label variants.
+    effect direction, or changes in magnitude by a factor of two or more, across
+    label variants.
     \item[H3 (Treatment leakage)] Restricting evaluation to before treatment
     begins reduces AUROC by at least 0.03.
     \item[H4 (Split optimism)] Time-based testing gives at least 0.02 lower AUROC
     than random testing.
     \item[H5 (Metric divergence)] The Utility Score declines more than AUROC when
-    moving from internal to external validation.
-    \item[H6 (Model-class null)] The primary statistical model performs within 0.02
-    AUROC of gradient-boosted trees.
+    moving from internal to external validation. This is tested, for the reasons
+    given in Section~\ref{sec:h5}, on the AUROC limb alone.
+    \item[H6 (Model-class null)] The primary statistical model is not
+    outperformed by gradient-boosted trees by more than 0.02 AUROC. The
+    pre-registered statement is two-sided; only the upper side is testable
+    against these data, as Section~\ref{sec:h6} sets out.
 \end{description}
 
 H1 and H6 are in deliberate tension: if H1 is confirmed, the label is the main

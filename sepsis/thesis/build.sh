@@ -1,10 +1,77 @@
 #!/bin/bash
 cd "$(dirname "$0")"
 
+# ---------------------------------------------------------------------------
+# Refuse to build a PDF that would carry visible placeholders.
+#
+# thesis_constants.R emits \pcMissing (a bold red ??) for any quantity the
+# pipeline did not produce. That mechanism worked as designed and was then
+# ignored: a committed index.pdf carried thirteen red ?? across two chapters
+# and a table whose entire body was one placeholder, because nothing stopped
+# the build. Now something does. Set V2_ALLOW_MISSING=1 for a deliberate draft.
+# ---------------------------------------------------------------------------
+#
+# Only a macro a chapter actually *uses* can put a ?? on a page. An unresolved
+# macro that nothing references is a pipeline note, not a document defect, and
+# blocking on it would train everyone to pass V2_ALLOW_MISSING=1 by reflex --
+# which is how the placeholders got into a committed PDF in the first place.
+# So: referenced-and-unresolved blocks, unreferenced-and-unresolved warns.
+if [ -z "${V2_ALLOW_MISSING:-}" ]; then
+  CHAPTERS=$(ls ./*.tex 2>/dev/null | grep -v '/pipeline_constants\.tex$')
+  BLOCKING=""
+  UNUSED=""
+  for m in $(grep -o 'newcommand{\\pc[A-Za-z]*}{\\pcMissing}' pipeline_constants.tex 2>/dev/null |
+             sed 's/newcommand{\\\(pc[A-Za-z]*\)}{.*/\1/'); do
+    # Trailing guard so \pcHTwoZMin does not match \pcHTwoZMinRobust.
+    if grep -qE "\\\\${m}([^A-Za-z]|$)" $CHAPTERS 2>/dev/null; then
+      BLOCKING="$BLOCKING $m"
+    else
+      UNUSED="$UNUSED $m"
+    fi
+  done
+
+  PLACEHOLDER_TABLES=$(grep -l '\\pcMissing' ./table_*.tex 2>/dev/null)
+
+  if [ -n "$UNUSED" ]; then
+    echo "NOTE: unresolved macros that no chapter references (harmless in the PDF):"
+    for m in $UNUSED; do echo "  \\$m"; done
+    echo ""
+  fi
+
+  if [ -n "$BLOCKING" ] || [ -n "$PLACEHOLDER_TABLES" ]; then
+    echo "REFUSING TO BUILD — these WOULD typeset as a red ?? on the page:"
+    for m in $BLOCKING; do echo "  \\$m"; done
+    for t in $PLACEHOLDER_TABLES; do echo "  $t (generated table body is a placeholder)"; done
+    echo ""
+    echo "Re-run the producing stage, or set V2_ALLOW_MISSING=1 for a draft build."
+    exit 1
+  fi
+fi
+
 pdflatex -interaction=nonstopmode index.tex
 biber index
 pdflatex -interaction=nonstopmode index.tex
 pdflatex -interaction=nonstopmode index.tex
+
+# ---------------------------------------------------------------------------
+# Report before cleaning. The log is deleted below, so anything not surfaced
+# here is invisible -- which is how a document with undefined references could
+# be built and committed without anyone seeing a warning.
+# ---------------------------------------------------------------------------
+count_in_log() { grep -acE "$1" index.log 2>/dev/null | head -1 || true; }
+N_ERR=$(count_in_log '^! ')
+N_REF=$(count_in_log 'Reference .* undefined')
+N_CIT=$(count_in_log 'Citation .* undefined')
+N_ERR=${N_ERR:-0}; N_REF=${N_REF:-0}; N_CIT=${N_CIT:-0}
+N_PAGE=$(grep -aoE 'Output written on index\.pdf \([0-9]+ pages' index.log 2>/dev/null | grep -oE '[0-9]+' | head -1)
+echo ""
+echo "------------------------------------------------------------"
+echo "  Pages: ${N_PAGE:-?}   Errors: $N_ERR   Undefined refs: $N_REF   Undefined citations: $N_CIT"
+if [ "$N_ERR" -gt 0 ] || [ "$N_REF" -gt 0 ] || [ "$N_CIT" -gt 0 ]; then
+  echo "  !! Not clean. Offending lines:"
+  grep -aE '^! |Reference .* undefined|Citation .* undefined' index.log | sort -u | sed 's/^/     /' | head -20
+fi
+echo "------------------------------------------------------------"
 
 # clean build artifacts
 rm -f index.aux index.bbl index.bcf index.blg index.lof index.log index.lot \

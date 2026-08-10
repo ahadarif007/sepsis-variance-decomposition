@@ -205,10 +205,14 @@ second on the point estimate without being established at that confidence.
 - Calibration is the primary model's strongest result: slope 1.013 / **1.055** /
   1.084 across A/B/C, scaled Brier positive throughout. GBT and Cox are
   miscalibrated by ~3 orders of magnitude (scaled Brier −97 for GBT/B).
-- **Utility: no model exceeds 0.039 (GBT/B) at its best threshold.** At the
-  fixed 0.5 cut-off the primary model scores exactly 0.000 because it never
-  alerts there — that zero is a threshold artefact, not a result. Report
-  `utility_max`, not `utility_normalised`, when quoting a ceiling.
+- **Utility ceiling, scoped.** Under the *primary* label B no model exceeds
+  **0.039** (GBT/B) at its best threshold. Across all variants the maximum is
+  **0.1121** (GBT/C) — the unscoped version of this sentence ("no model exceeds
+  0.039 at any threshold") was false and was corrected in `abstract.tex` in
+  round 10; it survived here until round 11. At the fixed 0.5 cut-off the
+  primary model scores exactly 0.000 because it never alerts there — that zero
+  is a threshold artefact, not a result. Report `utility_max`, not
+  `utility_normalised`, when quoting a ceiling, and always say which variant.
 - External (eICU), **Sepsis-3 arm on the microbiology-covered sub-cohort**
   (2,824 of 181,589 stays = 1.55 %; 163,458 person-hours): primary AUROC
   **A 0.6913 / B 0.6960 / C 0.7370** on **27 / 29 / 73** events — all below the
@@ -229,6 +233,11 @@ second on the point estimate without being established at that confidence.
   limb documented **55,273 (30.44 %)**, culture limb **2,824 (1.555 %)**,
   **both limbs at any offset 232 (0.128 %)**, suspicion pair firing inside the
   variant window **186 / 196 / 211** (A/B/C), Sepsis-3 onsets **27 / 31 / 73**.
+  **Reconciling 31 against the 29 in the AUROC bullet above:** an onset falling
+  after a stay's last observed hour is right-censoring, not an event (the same
+  horizon rule MIMIC applies at 72 h), so 2 of B's 31 are not scored. A and C
+  lose none, which is why only B differs between the two counts. No onset is
+  lost for any other reason — stage 08 now asserts that and logs it.
   The old "32.66 %" was a defect: `n_abx_stays` counted distinct stays in the
   antibiotic *tables* (59,304) against a *cohort* denominator. Fixed in stage
   08; the ladder is monotone, so the "240 vs 2,824" question is answered —
@@ -575,8 +584,11 @@ did not; `run_pipeline.R` always did). Fix the warning, don't just delete the lo
   said five.
 - Missingness indicators often outweigh the values. Never drop them.
 - **Calibration floor must be 1e-6, not 1e-3.** At a 0.2% hourly event rate the
-  conventional clamp overwrites 45–72% of predictions. This changed A's slope
-  1.169→1.029 and B's 0.318→0.209.
+  conventional clamp overwrites **46.8 / 39.6 / 8.8 %** of the primary model's
+  predictions under A/B/C. (The old "45–72%" and the slope pair
+  "1.169→1.029 / 0.318→0.209" are pre-Amendment-3 numbers — the current
+  clamped-vs-floored contrast for A is **1.137 → 1.013**. Both figures are now
+  generated as `\pcPctBelowClampPrimary*` and `\pcCalibSlopeClampedPrimary*`.)
 - **DCA threshold grid must be 0.1×–10× prevalence**, not 0.01–0.20. The conventional
   grid sits 5–100× above prevalence and yields a trivially null result.
 - Parquet for all intermediate data; CSV only for small result tables (user rule).
@@ -643,8 +655,10 @@ insurance. Top 8 levels each.
 7. Temporal split (train 2008–2016 / test 2017–2019) is primary; random 75/25
    seed 42 exists only to quantify optimism (H4).
 8. Confirmatory family = Holm m=6 (H2/H3 reserve slots without p-values, which makes
-   the correction *stricter*). Exploratory = BH q=0.05 in families E1 (30 AUROC
-   contrasts) and E2 (18 label-sensitivity contrasts).
+   the correction *stricter*). Exploratory = BH q=0.05 in families E1 (**6**
+   AUROC contrasts — 30 were computed; Amendment 6's 100-event interpretability
+   floor restricts the *inferential* family to 6, see rule 16) and E2 (18
+   label-sensitivity contrasts).
 9. The inference layer (stage 12) is **Protocol Amendment 1** and is disclosed as
    post-hoc. Don't present it as pre-specified.
 10. Variants D/E are **Protocol Amendment 2**, also post-hoc. Same rule: never
@@ -951,22 +965,18 @@ The one config change that alters a pipeline output is `P_CANDIDATE_PREDICTORS`.
   Described in the thesis as a **ridge-regularised** sandwich, because
   `decay > 0` makes it the covariance of the penalised estimator.
 
-- [ ] **PENDING RUN: `./run_pipeline.sh 05` then `./run_pipeline.sh 12`.**
-      Protocol Amendment 7 (§21) is coded and the thesis is written against it,
-      but the producing stages have not run, so **8 macros and
-      `table_htwouncertainty.tex` are currently red `??` in `index.pdf`**. The
-      generator degrades correctly rather than crashing — verified. Stage 05
-      now attaches `se_cluster` to the coefficient table via
-      `attach_cluster_se()` (joined on `"<outcome>:<term>"`, never by
-      position); stage 12 calls `h2_stability_uncertainty()` and writes
-      `12_h2_stability_uncertainty`. Only 05 and 12 are needed: 05's
-      coefficients are unchanged, so 07/11 outputs stay as they are.
-      **Re-check the canary afterwards** (H1 −0.137549, H4 −0.016543,
-      H6 −0.012931); stage 06 must NOT be re-run, or GBT drifts.
-      Expected result, dry-run against the existing `.rds` files on
-      2026-08-10: 6 flagged, 3 exceed noise, 3 do not, all 3 exceeders
-      action-derived, z from 0.61 to 15.51 with a clean gap between 1.07 and
-      2.48.
+- [x] ~~**PENDING RUN: `./run_pipeline.sh 05` then `./run_pipeline.sh 12`**~~ —
+      **DONE, full pipeline run 2026-08-10, 12/12 stages.** Amendment 7 (§21)
+      now has its producing outputs: `12_h2_stability_uncertainty` exists and
+      `table_htwouncertainty.tex` carries six data rows, so the 8 red `??` are
+      gone and `index.pdf` builds clean at **164 pages, 0 errors, 0 undefined
+      references, 0 undefined citations, 1,397 macros, 0 missing**.
+      **Canary held**: H4 −0.0165430069475656 and H6 −0.012930984123391
+      bit-identical, H1 −0.137549147378645 (matching to 9 dp). The GBT refit
+      reproduced exactly despite the full run touching stage 06.
+      The dry-run prediction was exact: 6 flagged, 3 exceed noise, 3 do not,
+      all 3 exceeders action-derived, z from 0.61 to 15.51 with a clean gap
+      between 1.07 and 2.48.
 
 - [x] ~~The covariance is computed but nothing consumes it~~ — **closed by
       Amendment 7.** The record of what it found: `05_coef_table_primary_*.parquet` still has no `se`

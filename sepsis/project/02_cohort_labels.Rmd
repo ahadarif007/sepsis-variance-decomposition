@@ -94,13 +94,41 @@ stays <- merge(stays, admissions[, .(hadm_id, race, language, insurance,
                                       hospital_expire_flag)],
                by = "hadm_id", all.x = TRUE)
 
-stays <- stays[anchor_age >= MIN_AGE]
+# The counts at each rung are captured as they are applied. The CONSORT figure
+# in methodology.tex used to hardcode them and its caption said so ("from the
+# pipeline's cohort extraction log"), which put five numbers in the thesis that
+# no re-run could correct. Written to a result table so the figure can be
+# driven from macros like every other quantity.
+consort <- list(data.table(step = "icu_stays_total",
+                           label = "MIMIC-IV v3.1 ICU stays",
+                           n = nrow(stays), n_excluded = NA_integer_))
+
+n_before <- nrow(stays)
+stays    <- stays[anchor_age >= MIN_AGE]
+consort  <- c(consort, list(data.table(
+  step = "adult", label = sprintf("Age >= %s at admission", MIN_AGE),
+  n = nrow(stays), n_excluded = n_before - nrow(stays))))
 
 setorderv(stays, c("subject_id", "intime"))
 stays[, icu_rank := seq_len(.N), by = subject_id]
+n_before <- nrow(stays)
 if (FIRST_ICU_STAY_ONLY) stays <- stays[icu_rank == 1]
+consort  <- c(consort, list(data.table(
+  step = "first_icu_stay", label = "First ICU stay per patient",
+  n = nrow(stays), n_excluded = n_before - nrow(stays))))
 
-stays <- stays[los_hours >= MIN_ICU_LOS_HOURS]
+n_before <- nrow(stays)
+stays    <- stays[los_hours >= MIN_ICU_LOS_HOURS]
+consort  <- c(consort, list(data.table(
+  step = "min_los", label = sprintf("ICU LOS >= %s hours", MIN_ICU_LOS_HOURS),
+  n = nrow(stays), n_excluded = n_before - nrow(stays))))
+
+consort_dt <- rbindlist(consort)
+consort_dt[, n_patients := NA_integer_]
+consort_dt[.N, n_patients := stays[, uniqueN(subject_id)]]
+save_parquet(consort_dt, "02_cohort_flow", DATA_DIR)
+save_csv(consort_dt,     "02_cohort_flow", DATA_DIR)
+print(consort_dt)
 
 cat(sprintf("Base cohort: %s stays, %s unique patients\n",
             format(nrow(stays), big.mark = ","),
@@ -449,6 +477,14 @@ alt_run <- intersect(names(cohorts), names(ALT_LABEL_VARIANTS))
 if (length(alt_run) > 0) {
   alt_variance <- do.call(rbind, lapply(alt_run, summarise_variant))
   alt_variance$label_family <- vapply(alt_run, variant_type, character(1))
+  # Variant D's onsets are assigned per hour in stage 03, so summarise_variant()
+  # counts zero of them here. A literal 0 in a column headed "sepsis onsets" is
+  # indistinguishable from a real finding to anything that reads this file, and
+  # the true panel count is 27,209. Blank it so a consumer gets a visible
+  # missing marker rather than a plausible wrong number.
+  d_row <- alt_variance$variant %in% "D"
+  if (any(d_row))
+    alt_variance[d_row, c("n_sepsis_onsets", "pct_sepsis", "n_non_sepsis")] <- NA
   knitr::kable(alt_variance,
                caption = "Alternative (non-Sepsis-3) label variants; Variant D onsets are assigned in stage 03")
   save_parquet(alt_variance, "02_alt_label_variance_table", DATA_DIR)

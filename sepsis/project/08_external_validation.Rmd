@@ -698,9 +698,39 @@ evaluate_panel <- function(g, vid, anchor) {
       n_stays  = uniqueN(eicu_pred$stay_id),
       n_rows   = sum(valid),
       n_events = sum(y[valid]),
+      # Three different counts of "events" exist here and the thesis quotes two
+      # of them, so all three are recorded rather than left to be reconciled by
+      # subtracting one table from another.
+      #
+      #   n_onsets_labelled  stays given an onset by the variant's rule, at any
+      #                      offset. This is 08_eicu_label_summary's n_onsets:
+      #                      31 under Variant B.
+      #   n_events           onset hours actually scored: 29 under Variant B.
+      #
+      # The gap is attach_labels()'s horizon rule: an onset falling after the
+      # stay's last observed hour is right-censoring, not an event, because no
+      # model could have been asked to predict it inside the panel. That is
+      # correct and matches the MIMIC 72 h horizon, but it is undocumented, and
+      # at 29 events a reader is entitled to know where the other two went.
+      n_onsets_labelled   = uniqueN(eicu_pred[!is.na(onset_hour), stay_id]),
+      n_onsets_beyond_panel = uniqueN(eicu_pred[!is.na(onset_hour), stay_id]) -
+                              uniqueN(eicu_pred[in_panel == TRUE, stay_id]),
+      # Separately: an onset hour whose prediction is NA would leave the
+      # analysis silently. Asserted to be zero rather than assumed.
+      n_events_dropped_na = sum(y) - sum(y[valid]),
       auroc    = round(roc_pr$auroc, 4),
       auprc    = round(roc_pr$auprc, 4)
     )
+
+    if (sum(y) != sum(y[valid]))
+      v2_log(sprintf(paste0("  [%s/%s/%s] %d of %d labelled onset hours have no ",
+                            "prediction and are excluded from scoring"),
+                     vid, anchor, mod_nm, sum(y) - sum(y[valid]), sum(y)))
+    n_lab <- uniqueN(eicu_pred[!is.na(onset_hour), stay_id])
+    if (n_lab != sum(y[valid]))
+      v2_log(sprintf(paste0("  [%s/%s/%s] %d onsets labelled, %d scored; %d fall ",
+                            "beyond the stay's observed panel and are right-censored"),
+                     vid, anchor, mod_nm, n_lab, sum(y[valid]), n_lab - sum(y[valid])))
   }
   list(rows = rows, pred = eicu_pred)
 }

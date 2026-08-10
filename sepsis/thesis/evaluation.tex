@@ -48,7 +48,7 @@ same across all three variants; only the sepsis definition differs.
     \centering\small
     \begin{tabular}{llrrrrr}
         \toprule
-        \textbf{Var} & \textbf{Name} & \textbf{Stays} & \textbf{Onsets}
+        \textbf{Var} & \textbf{Name} & \textbf{Stays} & \textbf{Onsets (cohort)}
         & \textbf{\%} & \textbf{Deaths} & \textbf{Onset h (IQR)} \\
         \midrule
         A & Narrow      & \pcNStays & \pcNOnsetsA & \pcPctOnsetsA & \pcNDeathsNoSepA & \pcMedianOnsetHA [\pcIqrOnsetLoHA--\pcIqrOnsetHiHA] \\
@@ -59,7 +59,11 @@ same across all three variants; only the sepsis definition differs.
     \caption{Cohort description by label variant. The Liberal variant identifies
     about twice as many sepsis cases as the Narrow or Seymour-Standard variants,
         mainly because it accepts wider antibiotic-culture windows and uses a rolling
-        SOFA baseline.}
+        SOFA baseline. Onsets are counted \textbf{cohort-wide, at any hour of the
+        stay}. Table~\ref{tab:label_agreement} reports the subset falling inside
+        the 72-hour modelling horizon (\pcNPositiveA, \pcNPositiveBPanel{} and
+        \pcNPositiveC), which is the count the models are trained and evaluated
+        on; the two columns are different quantities, not conflicting ones.}
     \label{tab:cohort}
 \end{table}
 
@@ -376,14 +380,15 @@ the prevalence for every person-hour.
     intercept = 0, slope = 1, ICI = 0. A scaled Brier score at or below zero
     means the model is no better than predicting the prevalence for everyone.
     NEWS2, qSOFA and SIRS are omitted: their score-to-probability lookups take
-    only 18, 4 and 4 distinct values respectively, too few to support a
-    flexible calibration curve.}
+    only \pcNDistinctNews, \pcNDistinctQsofa{} and \pcNDistinctSirs{} distinct
+    values respectively, too few to support a flexible calibration curve.}
     \label{tab:calibration}
 \end{table}
 
 Two results stand out. First, only the primary model is calibrated at all, and
 it is calibrated under \emph{every} label variant: its intercept sits within
-0.09 of zero, its slope within 0.09 of one
+\pcCalibIntMaxAbsPrimary{} of zero, its slope within
+\pcCalibSlopeMaxDevPrimary{} of one
 (\pcCalibSlopePrimaryA, \pcCalibSlopePrimaryB, \pcCalibSlopePrimaryC), and its
 ICI stays below 0.0005, roughly a quarter of the 0.2 per cent event rate.
 Its scaled Brier score is positive under all three, though barely
@@ -425,7 +430,7 @@ the fitted hazard tracks the observed rate.
     = perfect calibration; points = twenty equal-sized bins of predicted risk;
     shaded band = 95\% confidence interval. Each panel has its own scale
     because the predicted-risk ranges differ by orders of magnitude. The
-    primary model tracks the diagonal under Variants A and C; GBT sits far to
+    primary model tracks the diagonal under all three variants; GBT sits far to
     the right of it in every variant.}
     \label{fig:calibration}
 \end{figure}
@@ -436,14 +441,17 @@ The calibration intercepts and slopes above supersede those produced by the
 metric-suite notebook, which computed them after clamping predicted
 probabilities to $[0.001, 0.999]$. That guard is standard for models whose
 predictions approach 0 or 1, but at a 0.2 per cent hourly event rate it is
-actively harmful: 46.8\% (Variant A), 39.6\% (Variant B) and 8.8\% (Variant C)
-of the primary model's predicted probabilities fall \emph{below} the clamp
-floor, so the clamp was overwriting a large share of the quantity being
-measured. No predicted probability exceeds 0.24 under any variant, so the
+actively harmful: \pcPctBelowClampPrimaryA\% (Variant A),
+\pcPctBelowClampPrimaryB\% (Variant B) and \pcPctBelowClampPrimaryC\%
+(Variant C) of the primary model's predicted probabilities fall \emph{below}
+the clamp floor, so the clamp was overwriting a large share of the quantity
+being measured. No predicted probability exceeds \pcMaxPredPrimaryC{} under any
+variant, so the
 ceiling never binds; it is only the floor that does damage. The
 values in Table~\ref{tab:calibration} use a floor of $10^{-6}$, below the
 smallest non-zero prediction in the test set. Under the conventional clamp the primary
-model's Variant A slope reads 1.169 against \pcCalibSlopePrimaryA{} on the
+model's Variant A slope reads \pcCalibSlopeClampedPrimaryA{} against
+\pcCalibSlopePrimaryA{} on the
 $10^{-6}$ floor: the clamp makes a well-calibrated model look materially
 worse than it is. Both figures are given rather than only the second, because
 the gap between them is exactly the kind of scale-dependent analyst decision
@@ -542,9 +550,13 @@ usable curve; that null result is a property of the grid, not of the models.
 
 Read on the correct threshold scale, decision-curve analysis gives the most
 favourable result in this thesis, and it is still a weak one. At a
-threshold equal to the prevalence, the primary model captures 38.0\% (Variant
-A) and 39.9\% (Variant C) of the attainable net benefit, and 15.0\% under
-Variant B. This is genuine, if modest, value over both defaults, and it is the same
+threshold equal to the prevalence, the primary model captures
+\pcSnbPctPrimaryA\% (Variant A), \pcSnbPctPrimaryB\% (Variant B) and
+\pcSnbPctPrimaryC\% (Variant C) of the attainable net benefit. The three
+variants agree closely --- they span barely three percentage points --- so
+unlike discrimination, where the label moves the answer, the share of
+attainable benefit captured is insensitive to which reading of Sepsis-3 is
+used. This is genuine, if modest, value over both defaults, and it is the same
 qualitative verdict the swept Utility Score reaches in
 Table~\ref{tab:utility_optimum}: a small positive margin for the fitted models
 once the threshold is set on the right scale, and nothing at all for the
@@ -617,8 +629,9 @@ the primary model under the Liberal label, still requires \pcNnePrimaryC{}
 alerted person-hours per true event hour; under the Seymour-Standard label the
 same model requires \pcNnePrimaryB. Every configuration generates between
 \pcFaPerPtDayPrimaryC{} and \pcFaPerPtDayNewsA{} false-alert hours per
-patient-day. A twelve-bed unit at the best operating point would field roughly
-125 false alert-hours per day, more than five per bed per day, every day.
+patient-day. At the best operating point that is \pcFaPerPtDayPrimaryC{} false
+alert-hours per occupied bed per day --- a twelve-bed unit would field roughly
+125 of them daily, every day, before a single true alert is counted.
 
 The ordering here is also the one that matters clinically, and it is not the
 AUROC ordering. The primary model and GBT are separated by less than 0.02 AUROC
@@ -629,11 +642,12 @@ not the same comparison.
 
 Setting the threshold this way also exposes the coarse rule-based scores. qSOFA
 cannot be tuned to 80 per cent sensitivity under the Liberal label at all: with
-only four distinct score values, the lowest cut-off reaching the target is the
-one that alerts on every person-hour (specificity \pcSpecQsofaC, 23.9
-false-alert hours per patient-day: an alert on every hour of every stay). It
+only \pcNDistinctQsofa{} distinct score values, the lowest cut-off reaching the
+target is the one that alerts on every person-hour (specificity \pcSpecQsofaC,
+\pcFaPerPtDayQsofaC{} false-alert hours per patient-day: an alert on every hour
+of every stay). It
 reaches the target under Variants A and B only at specificity
-\pcSpecQsofaA{} and around 15.7 false-alert hours per patient-day. Their
+\pcSpecQsofaA{} and \pcFaPerPtDayQsofaA{} false-alert hours per patient-day. Their
 apparent competitiveness on AUROC in Table~\ref{tab:internal_results} does not
 survive being asked to hit a sensitivity target.
 
@@ -843,7 +857,21 @@ inside a variant's own antibiotic--culture window, which is what suspicion of
 infection means, leaves \pcExtNSuspicionA{}, \pcExtNSuspicionB{} and
 \pcExtNSuspicionC{} stays under Variants A, B and C. Adding the
 organ-dysfunction criterion leaves \pcExtNOnsetStaysA{},
-\pcExtNOnsetStaysB{} and \pcExtNOnsetStaysC{} labelled stays. The four counts
+\pcExtNOnsetStaysB{} and \pcExtNOnsetStaysC{} labelled stays.
+
+One further step separates the labelled stays from the events the external
+AUROC is computed on, and it accounts for the only discrepancy between the two:
+under Variant B, \pcExtNOnsetStaysB{} stays are labelled but
+\pcExtNEventsB{} events are scored. An onset falling after a stay's last
+observed hour cannot be predicted from inside that stay's panel, so it is
+treated as right-censoring rather than as an event --- the same horizon rule the
+development cohort applies at 72 hours. Two of Variant B's onsets fall that way;
+none of Variant A's or Variant C's do, which is why only Variant B moves between
+the two tables. No labelled onset hour is lost for any other reason: every one
+that falls inside its panel carries a complete covariate vector and receives a
+prediction from all three models.
+
+The four coverage counts
 answer four different questions and are stated together here because a single
 percentage cannot carry the constraint: \pcExtMicroCoverage\% is the sub-cohort
 in which an onset is \emph{observable}, and it is the denominator of the
@@ -869,15 +897,15 @@ which an onset is observable in principle.
         \midrule
         A & MIMIC-IV temporal test        & \pcNTestRowsA & \pcNTestEventsA & \pcExtRateMimicA \\
         A & eICU, microbiology-covered    & \pcExtNRowsA  & \pcExtNEventsA  & \pcExtRateEicuA \\
-        A & eICU, antibiotic-only anchor  & \pcExtAbxNRows & \pcExtAbxNEventsA & \pcExtRateEicuAbxA \\
+        A & eICU, antibiotic-only anchor  & \pcExtAbxNRowsA & \pcExtAbxNEventsA & \pcExtRateEicuAbxA \\
         \midrule
         B & MIMIC-IV temporal test        & \pcNTestRowsB & \pcNTestEventsB & \pcExtRateMimicB \\
         B & eICU, microbiology-covered    & \pcExtNRowsB  & \pcExtNEventsB  & \pcExtRateEicuB \\
-        B & eICU, antibiotic-only anchor  & \pcExtAbxNRows & \pcExtAbxNEventsB & \pcExtRateEicuAbxB \\
+        B & eICU, antibiotic-only anchor  & \pcExtAbxNRowsB & \pcExtAbxNEventsB & \pcExtRateEicuAbxB \\
         \midrule
         C & MIMIC-IV temporal test        & \pcNTestRowsC & \pcNTestEventsC & \pcExtRateMimicC \\
         C & eICU, microbiology-covered    & \pcExtNRowsC  & \pcExtNEventsC  & \pcExtRateEicuC \\
-        C & eICU, antibiotic-only anchor  & \pcExtAbxNRows & \pcExtAbxNEventsC & \pcExtRateEicuAbxC \\
+        C & eICU, antibiotic-only anchor  & \pcExtAbxNRowsC & \pcExtAbxNEventsC & \pcExtRateEicuAbxC \\
         \bottomrule
     \end{tabular}}
     \caption{Event-rate reconciliation. The rate is stated for the development
@@ -1050,16 +1078,17 @@ exactly. Under variants A, B and C the onset time \emph{is} the suspicion time
 $t_{\text{susp}}$; the SOFA criterion decides only \emph{whether} a stay is
 labelled, never \emph{when}. Variant E, which removes the SOFA criterion,
 therefore turns out to be a strict superset of Variant B: every one of B's
-5,887 labelled stays is also labelled by E, and in \textbf{100\% of them the
-onset hour is identical}. Adding the organ-dysfunction requirement discards
-11,364 of E's 17,251 labelled stays, two thirds, and moves not one onset
+\pcNPositiveBPanel{} labelled stays is also labelled by E, and in
+\textbf{\pcPctExactMatchE\% of them the onset hour is identical}. Adding the
+organ-dysfunction requirement discards \pcNPositiveEExcessOverB{} of E's
+\pcNPositiveE{} labelled stays, two thirds, and moves not one onset
 by a single hour.
 
 \begin{table}[H]
     \centering\small
     \begin{tabular}{llrrrrr}
         \toprule
-        \textbf{Var} & \textbf{Label} & \textbf{Onsets} & \textbf{\%}
+        \textbf{Var} & \textbf{Label} & \textbf{Onsets ($\leq$72\,h)} & \textbf{\%}
         & \textbf{$\kappa$ vs B} & \textbf{Sens.\ to B}
         & \textbf{Exact onset match} \\
         \midrule
@@ -1464,7 +1493,13 @@ covariates costs \pcAblDeltaAurocPrimaryB{} AUROC for the primary model and
 \pcAblDeltaAurocPrimaryA{} for either model under any variant. Stability moves a
 great deal: the unstable count falls from \pcHTwoEst{} of \pcHTwoNTerms{} to
 \pcAblHTwoNUnstable{} of \pcAblHTwoNTerms, or
-\pcAblHTwoPctUnstable\% of the remaining specification.
+\pcAblHTwoPctUnstable\% of the remaining specification. The reduction is not a
+subset relation, and the difference is worth stating: the single flag that
+remains in the ablated arm falls on \texttt{lactate}, a covariate the full fit
+does \emph{not} flag. Removing the action-derived features does not simply
+delete unstable coefficients, it re-estimates the ones that remain --- which is
+what a refit does, and why the ablated count is a property of the ablated
+specification rather than a subset of the full one.
 
 The two readings agree with the by-kind split of
 Section~\ref{sec:h2_action}, where the action-derived features are
@@ -2535,12 +2570,12 @@ exploratory rows are transcribed from
 \texttt{12\_analysis\_\allowbreak register\allowbreak .parquet}, which the
 inference stage writes from the same objects it corrects, so the status and
 correction attached to a hypothesis are the ones the code applied rather than
-the ones this chapter claims for it. Three rows have no counterpart in that
-file and are marked accordingly: the antibiotic-only external arm, the
-action-derived ablation and its by-kind stability split are scored in stages 07
-and 08 and enter no corrected family, so the inference stage never sees them.
-They are recorded here because a register that omitted them would understate
-how much of this chapter is exploratory.
+the ones this chapter claims for it. Two rows have no counterpart in that
+file and are marked accordingly: the antibiotic-only external arm and the
+by-kind stability split are scored in stages 07 and 08 and enter no corrected
+family, so the inference stage never sees them. They are recorded here because
+a register that omitted them would understate how much of this chapter is
+exploratory.
 
 \begin{table}[H]
     \centering\footnotesize\setlength{\tabcolsep}{4pt}
@@ -2565,12 +2600,13 @@ how much of this chapter is exploratory.
         H6 model-class null                       & [C] & \S7     & Holm ($m=6$)                           \\
         External validation on eICU-CRD           & [C] & \S4     & none (estimation); feeds H5            \\
         \quad antibiotic-only anchor (sensitivity)$^\P$ & [E] & n/a     & none; different target, not pooled \\
-        Action-derived feature ablation$^\P$      & [E] & n/a     & none (estimation); Amendment 5         \\
+        Action-derived feature ablation           & [E] & A5      & none (estimation); enters no family    \\
         \quad instability by feature kind$^\P$     & [E] & n/a     & none (descriptive split of H2)         \\
         Variance decomposition table              & [C] & \S1     & none (assembly of H1--H6)              \\
         Proportional-hazards testing              & [C] & \S8     & none (single check)                    \\
         GBT feature importance                    & [E] & n/a     & none (ranking, no inference)           \\
         Subgroup AUROC by demographic group       & [E] & \S9$^*$ & Benjamini--Hochberg, family E1         \\
+        \quad interpretability floor on E1         & [E] & A6$^\S$ & restricts E1 to \pcNSubgroupContrasts{} contrasts \\
         Subgroup label sensitivity                & [E] & \S9$^*$ & Benjamini--Hochberg, family E2         \\
         Label sensitivity vs.\ AUROC association  & [E] & n/a     & none (visual, no test)                 \\
         Alternative-label AUROC vs.\ Sepsis-3     & [E] & A2$^\dagger$ & Benjamini--Hochberg, family E3    \\
@@ -2590,7 +2626,11 @@ how much of this chapter is exploratory.
     pre-registered estimand. $^\ddagger$A4 = Protocol Amendment 4 (\S18), which
     adds the standard onset timing as Variant F; also post-hoc, and it enlarges
     family E3, so every BH-adjusted p-value in that family is stricter than it
-    would be without the amendment. $^\P$These three analyses are scored
+    would be without the amendment. $^\S$A6 = Protocol Amendment 6 (\S20), the
+    subgroup interpretability floor; post-hoc, and it \emph{reduces} family E1,
+    which the inference plan's own denominator rule prohibits on its face ---
+    Section~\ref{sec:multiplicity} states the tension and \S20.4 of the
+    pre-registration gives the argument. $^\P$These three analyses are scored
     outside the inference stage and enter no corrected family, so they have no
     row in \texttt{12\_analysis\_register}; they are listed here so that the
     exploratory record in this chapter is complete.}

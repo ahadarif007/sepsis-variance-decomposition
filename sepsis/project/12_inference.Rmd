@@ -1099,7 +1099,31 @@ register <- rbindlist(list(
   data.table(analysis = "Onset agreement between label definitions",     status = "descriptive",
              prereg = "Protocol Amendment 2 (post hoc; §16-17)",
              correction = "none (descriptive agreement statistics)",
-             reported_in = "Table: label_agreement")
+             reported_in = "Table: label_agreement"),
+  # Amendments 5-7 were absent from the register, so the register and the
+  # chapter's own register table disagreed about how many analyses had no
+  # machine-generated counterpart. Amendment 6 is the load-bearing one: it is
+  # the only place the reduction of family E1 from 30 computed contrasts to 6
+  # is recorded in a file the pipeline writes.
+  data.table(analysis = "Subgroup interpretability floor (family E1 reduction)",
+             status = "exploratory",
+             prereg = "Protocol Amendment 6 (post hoc; §20)",
+             correction = sprintf(paste0("E1 restricted to contrasts in which both strata carry >= %d ",
+                                         "events; %s contrasts retained. Below-floor strata are still ",
+                                         "estimated and tabulated, and are excluded from the inferential ",
+                                         "family only"),
+                                  MIN_SUBGROUP_EVENTS_INTERPRET,
+                                  if (exists("sub_delta") && !is.null(sub_delta))
+                                    format(nrow(sub_delta)) else "?"),
+             reported_in = "Table: equity_contrasts"),
+  data.table(analysis = "Action-derived feature ablation (Amendment 5)", status = "exploratory",
+             prereg = "Protocol Amendment 5 (post hoc; §19)",
+             correction = "none (estimation); enters no corrected family",
+             reported_in = "Table: ablation")
+  # Amendment 7 is NOT added here: the diagnostic block above already registers
+  # it as "H2 instability uncertainty diagnostic". A second row was briefly
+  # added in this round and removed -- a duplicated register entry is exactly
+  # the kind of thing the register exists to make impossible.
 ))
 
 save_parquet(register, "12_analysis_register", DATA_DIR)

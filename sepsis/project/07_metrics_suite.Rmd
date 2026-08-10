@@ -558,6 +558,28 @@ alt_df <- if (!is.null(results_df))
 
 if (!is.null(alt_df) && nrow(alt_df) > 0) {
   alt_df$label_family <- vapply(alt_df$variant, variant_type, character(1))
+
+  # This write used to be a plain overwrite, so a partial pass silently
+  # truncated the file to whatever ran: V2_VARIANTS=F deleted D's and E's rows,
+  # and four consumers read it (09, 12 and thesis_constants.R twice), so the
+  # alt-label table, family E3 and the phi_anchor macros all lost two variants
+  # with no error anywhere. Merge instead: rows for the variants in THIS run
+  # replace their previous selves, every other variant is carried forward.
+  alt_prev <- tryCatch({
+    p <- file.path(DATA_DIR, "07_metric_results_altlabel.parquet")
+    if (file.exists(p)) as.data.frame(arrow::read_parquet(p)) else NULL
+  }, error = function(e) NULL)
+  if (!is.null(alt_prev) && nrow(alt_prev) > 0 &&
+      identical(sort(names(alt_prev)), sort(names(alt_df)))) {
+    carried <- alt_prev[!(alt_prev$variant %in% unique(alt_df$variant)), , drop = FALSE]
+    if (nrow(carried) > 0) {
+      cat(sprintf("Carrying forward %d alt-label rows for variants not in this run: %s\n",
+                  nrow(carried), paste(sort(unique(carried$variant)), collapse = ", ")))
+      alt_df <- rbind(alt_df, carried[, names(alt_df), drop = FALSE])
+    }
+  }
+  alt_df <- alt_df[order(alt_df$variant, alt_df$eval_window, alt_df$model), , drop = FALSE]
+
   save_parquet(alt_df, "07_metric_results_altlabel", DATA_DIR)
   save_csv(alt_df,     "07_metric_results_altlabel", DATA_DIR)
   knitr::kable(
@@ -621,7 +643,11 @@ for (vid in intersect(active_variants(), names(LABEL_VARIANTS))) {
       arm             = "ablated",
       eval_window     = "unrestricted",
       split_type      = "temporal",
-      n_features      = NA_integer_,
+      # The ablated arm drops ACTION_DERIVED_FEATURES from the declared
+      # covariate vector; both counts come from config.R rather than being
+      # asserted, so the "8 of 22" in the thesis is checkable against the file.
+      n_features      = length(model_features()) - length(ACTION_DERIVED_FEATURES),
+      n_features_full = length(model_features()),
       n_rows          = sum(valid),
       n_sepsis_events = sum(y[valid]),
       auroc           = round(roc_pr$auroc, 4),

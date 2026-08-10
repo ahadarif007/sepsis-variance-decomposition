@@ -16,8 +16,8 @@
 
 
 % --- Provenance ---
-\newcommand{\pcGeneratedAt}{2026-08-10 13:54}
-\newcommand{\pcPipelineRunDate}{2026-08-10 12:30}
+\newcommand{\pcGeneratedAt}{2026-08-10 18:12}
+\newcommand{\pcPipelineRunDate}{2026-08-10 17:28}
 
 % --- Cohort and label variants ---
 \newcommand{\pcNStays}{\ensuremath{65{,}078}}
@@ -39,6 +39,14 @@
 \newcommand{\pcNDeathsNoSepC}{\ensuremath{4{,}956}}
 \newcommand{\pcIqrOnsetLoHC}{\ensuremath{4}}
 \newcommand{\pcIqrOnsetHiHC}{\ensuremath{30}}
+\newcommand{\pcConsortNTotal}{\ensuremath{94{,}458}}
+\newcommand{\pcConsortNAdult}{\ensuremath{94{,}458}}
+\newcommand{\pcConsortNExclAge}{\ensuremath{0}}
+\newcommand{\pcConsortNFirstStay}{\ensuremath{65{,}366}}
+\newcommand{\pcConsortNExclNotFirst}{\ensuremath{29{,}092}}
+\newcommand{\pcConsortNFinal}{\ensuremath{65{,}078}}
+\newcommand{\pcConsortNExclLos}{\ensuremath{288}}
+\newcommand{\pcConsortNPatients}{\ensuremath{65{,}078}}
 \newcommand{\pcMinNRileyStayA}{\ensuremath{1{,}729}}
 \newcommand{\pcStayPrevalenceA}{\ensuremath{0.0878}}
 \newcommand{\pcRileyMarginA}{\ensuremath{30.62}}
@@ -119,6 +127,7 @@
 \newcommand{\pcIqrShiftLoHF}{\ensuremath{-1}}
 \newcommand{\pcIqrShiftHiHF}{\ensuremath{0}}
 \newcommand{\pcNPositiveBPanel}{\ensuremath{5{,}887}}
+\newcommand{\pcNPositiveEExcessOverB}{\ensuremath{11{,}364}}
 \newcommand{\pcPctOnsetsBPanel}{\ensuremath{9.0}}
 
 % --- Alternative-label per-model metrics (unrestricted window) ---
@@ -484,6 +493,23 @@
 \newcommand{\pcEmaxCoxC}{\ensuremath{0.984}}
 \newcommand{\pcBrierScaledCoxC}{\ensuremath{-60.3299}}
 \newcommand{\pcPrevalenceB}{\ensuremath{0.00189}}
+\newcommand{\pcNDistinctNews}{\ensuremath{21}}
+\newcommand{\pcNDistinctQsofa}{\ensuremath{4}}
+\newcommand{\pcNDistinctSirs}{\ensuremath{5}}
+\newcommand{\pcCalibSlopeClampedPrimaryA}{\ensuremath{1.137}}
+\newcommand{\pcCalibIntClampedPrimaryA}{\ensuremath{-0.172}}
+\newcommand{\pcCalibSlopeClampedPrimaryB}{\ensuremath{1.148}}
+\newcommand{\pcCalibIntClampedPrimaryB}{\ensuremath{-0.170}}
+\newcommand{\pcCalibSlopeClampedPrimaryC}{\ensuremath{1.092}}
+\newcommand{\pcCalibIntClampedPrimaryC}{\ensuremath{-0.039}}
+\newcommand{\pcPctBelowClampPrimaryA}{\ensuremath{46.8}}
+\newcommand{\pcMaxPredPrimaryA}{\ensuremath{0.1308}}
+\newcommand{\pcPctBelowClampPrimaryB}{\ensuremath{39.6}}
+\newcommand{\pcMaxPredPrimaryB}{\ensuremath{0.0988}}
+\newcommand{\pcPctBelowClampPrimaryC}{\ensuremath{8.8}}
+\newcommand{\pcMaxPredPrimaryC}{\ensuremath{0.2342}}
+\newcommand{\pcCalibIntMaxAbsPrimary}{\ensuremath{0.11}}
+\newcommand{\pcCalibSlopeMaxDevPrimary}{\ensuremath{0.08}}
 
 % --- Operating points at 80 percent sensitivity ---
 \newcommand{\pcPpvPrimaryA}{\ensuremath{0.0034}}
@@ -838,74 +864,92 @@
 % --- Net benefit at prevalence (stage 11) ---
 \newcommand{\pcNetBenefitPrimaryA}{\ensuremath{7.53\times 10^{-4}}}
 \newcommand{\pcSnbPrimaryA}{\ensuremath{0.407}}
+\newcommand{\pcSnbPctPrimaryA}{\ensuremath{40.7}}
 \newcommand{\pcAlertRatePrimaryA}{\ensuremath{0.305}}
 \newcommand{\pcAlertRangePrimaryA}{\ensuremath{0.987}}
 \newcommand{\pcNetBenefitGbtA}{\ensuremath{0}}
 \newcommand{\pcSnbGbtA}{\ensuremath{0.000}}
+\newcommand{\pcSnbPctGbtA}{\ensuremath{0.0}}
 \newcommand{\pcAlertRateGbtA}{\ensuremath{1.000}}
 \newcommand{\pcAlertRangeGbtA}{\ensuremath{0.000}}
 \newcommand{\pcNetBenefitNewsA}{\ensuremath{1.33\times 10^{-4}}}
 \newcommand{\pcSnbNewsA}{\ensuremath{0.072}}
+\newcommand{\pcSnbPctNewsA}{\ensuremath{7.2}}
 \newcommand{\pcAlertRateNewsA}{\ensuremath{0.894}}
 \newcommand{\pcAlertRangeNewsA}{\ensuremath{0.000}}
 \newcommand{\pcNetBenefitCoxA}{\ensuremath{0}}
 \newcommand{\pcSnbCoxA}{\ensuremath{0.000}}
+\newcommand{\pcSnbPctCoxA}{\ensuremath{0.0}}
 \newcommand{\pcAlertRateCoxA}{\ensuremath{1.000}}
 \newcommand{\pcAlertRangeCoxA}{\ensuremath{0.000}}
 \newcommand{\pcNetBenefitQsofaA}{\ensuremath{2.70\times 10^{-4}}}
 \newcommand{\pcSnbQsofaA}{\ensuremath{0.146}}
+\newcommand{\pcSnbPctQsofaA}{\ensuremath{14.6}}
 \newcommand{\pcAlertRateQsofaA}{\ensuremath{0.656}}
 \newcommand{\pcAlertRangeQsofaA}{\ensuremath{0.000}}
 \newcommand{\pcNetBenefitSirsA}{\ensuremath{2.51\times 10^{-4}}}
 \newcommand{\pcSnbSirsA}{\ensuremath{0.136}}
+\newcommand{\pcSnbPctSirsA}{\ensuremath{13.6}}
 \newcommand{\pcAlertRateSirsA}{\ensuremath{0.676}}
 \newcommand{\pcAlertRangeSirsA}{\ensuremath{0.000}}
 \newcommand{\pcNetBenefitPrimaryB}{\ensuremath{7.19\times 10^{-4}}}
 \newcommand{\pcSnbPrimaryB}{\ensuremath{0.380}}
+\newcommand{\pcSnbPctPrimaryB}{\ensuremath{38.0}}
 \newcommand{\pcAlertRatePrimaryB}{\ensuremath{0.318}}
 \newcommand{\pcAlertRangePrimaryB}{\ensuremath{0.995}}
 \newcommand{\pcNetBenefitGbtB}{\ensuremath{0}}
 \newcommand{\pcSnbGbtB}{\ensuremath{0.000}}
+\newcommand{\pcSnbPctGbtB}{\ensuremath{0.0}}
 \newcommand{\pcAlertRateGbtB}{\ensuremath{1.000}}
 \newcommand{\pcAlertRangeGbtB}{\ensuremath{0.000}}
 \newcommand{\pcNetBenefitNewsB}{\ensuremath{1.31\times 10^{-4}}}
 \newcommand{\pcSnbNewsB}{\ensuremath{0.069}}
+\newcommand{\pcSnbPctNewsB}{\ensuremath{6.9}}
 \newcommand{\pcAlertRateNewsB}{\ensuremath{0.894}}
 \newcommand{\pcAlertRangeNewsB}{\ensuremath{0.000}}
 \newcommand{\pcNetBenefitCoxB}{\ensuremath{0}}
 \newcommand{\pcSnbCoxB}{\ensuremath{0.000}}
+\newcommand{\pcSnbPctCoxB}{\ensuremath{0.0}}
 \newcommand{\pcAlertRateCoxB}{\ensuremath{1.000}}
 \newcommand{\pcAlertRangeCoxB}{\ensuremath{0.000}}
 \newcommand{\pcNetBenefitQsofaB}{\ensuremath{2.84\times 10^{-4}}}
 \newcommand{\pcSnbQsofaB}{\ensuremath{0.150}}
+\newcommand{\pcSnbPctQsofaB}{\ensuremath{15.0}}
 \newcommand{\pcAlertRateQsofaB}{\ensuremath{0.656}}
 \newcommand{\pcAlertRangeQsofaB}{\ensuremath{0.000}}
 \newcommand{\pcNetBenefitSirsB}{\ensuremath{2.83\times 10^{-4}}}
 \newcommand{\pcSnbSirsB}{\ensuremath{0.149}}
+\newcommand{\pcSnbPctSirsB}{\ensuremath{14.9}}
 \newcommand{\pcAlertRateSirsB}{\ensuremath{0.676}}
 \newcommand{\pcAlertRangeSirsB}{\ensuremath{0.000}}
-\newcommand{\pcNetBenefitPrimaryC}{\ensuremath{17.33\times 10^{-4}}}
+\newcommand{\pcNetBenefitPrimaryC}{\ensuremath{1.73\times 10^{-3}}}
 \newcommand{\pcSnbPrimaryC}{\ensuremath{0.411}}
+\newcommand{\pcSnbPctPrimaryC}{\ensuremath{41.1}}
 \newcommand{\pcAlertRatePrimaryC}{\ensuremath{0.289}}
 \newcommand{\pcAlertRangePrimaryC}{\ensuremath{0.997}}
 \newcommand{\pcNetBenefitGbtC}{\ensuremath{0}}
 \newcommand{\pcSnbGbtC}{\ensuremath{0.000}}
+\newcommand{\pcSnbPctGbtC}{\ensuremath{0.0}}
 \newcommand{\pcAlertRateGbtC}{\ensuremath{1.000}}
 \newcommand{\pcAlertRangeGbtC}{\ensuremath{0.000}}
 \newcommand{\pcNetBenefitNewsC}{\ensuremath{2.98\times 10^{-4}}}
 \newcommand{\pcSnbNewsC}{\ensuremath{0.071}}
+\newcommand{\pcSnbPctNewsC}{\ensuremath{7.1}}
 \newcommand{\pcAlertRateNewsC}{\ensuremath{0.888}}
 \newcommand{\pcAlertRangeNewsC}{\ensuremath{0.000}}
 \newcommand{\pcNetBenefitCoxC}{\ensuremath{0}}
 \newcommand{\pcSnbCoxC}{\ensuremath{0.000}}
+\newcommand{\pcSnbPctCoxC}{\ensuremath{0.0}}
 \newcommand{\pcAlertRateCoxC}{\ensuremath{1.000}}
 \newcommand{\pcAlertRangeCoxC}{\ensuremath{0.000}}
 \newcommand{\pcNetBenefitQsofaC}{\ensuremath{6.45\times 10^{-4}}}
 \newcommand{\pcSnbQsofaC}{\ensuremath{0.153}}
+\newcommand{\pcSnbPctQsofaC}{\ensuremath{15.3}}
 \newcommand{\pcAlertRateQsofaC}{\ensuremath{0.644}}
 \newcommand{\pcAlertRangeQsofaC}{\ensuremath{0.000}}
 \newcommand{\pcNetBenefitSirsC}{\ensuremath{6.91\times 10^{-4}}}
 \newcommand{\pcSnbSirsC}{\ensuremath{0.164}}
+\newcommand{\pcSnbPctSirsC}{\ensuremath{16.4}}
 \newcommand{\pcAlertRateSirsC}{\ensuremath{0.665}}
 \newcommand{\pcAlertRangeSirsC}{\ensuremath{0.000}}
 
@@ -960,19 +1004,22 @@
 \newcommand{\pcExtRateRatioAbxC}{\ensuremath{0.315}}
 \newcommand{\pcExtAbxAurocPrimaryA}{\ensuremath{0.6488}}
 \newcommand{\pcExtAbxNEventsA}{\ensuremath{5{,}589}}
+\newcommand{\pcExtAbxNRowsA}{\ensuremath{7{,}656{,}521}}
 \newcommand{\pcExtAbxAurocPrimaryB}{\ensuremath{0.6644}}
 \newcommand{\pcExtAbxNEventsB}{\ensuremath{6{,}140}}
+\newcommand{\pcExtAbxNRowsB}{\ensuremath{7{,}627{,}689}}
 \newcommand{\pcExtAbxAurocPrimaryC}{\ensuremath{0.7209}}
 \newcommand{\pcExtAbxNEventsC}{\ensuremath{9{,}886}}
+\newcommand{\pcExtAbxNRowsC}{\ensuremath{7{,}450{,}975}}
 \newcommand{\pcExtAbxNRows}{\ensuremath{7{,}627{,}689}}
 
 % --- Variance decomposition ---
 \newcommand{\pcSpreadModelClass}{\ensuremath{0.1499}}
 \newcommand{\pcSpreadLabel}{\ensuremath{0.0123}}
 \newcommand{\pcSpreadAnchoring}{\pcNotApplicable}
-\newcommand{\pcSpreadSplit}{\ensuremath{-0.0166}}
+\newcommand{\pcSpreadSplit}{\ensuremath{-0.0165}}
 \newcommand{\pcSpreadMetric}{\ensuremath{0.0630}}
-\newcommand{\pcSpreadModelNull}{\ensuremath{0.0130}}
+\newcommand{\pcSpreadModelNull}{\ensuremath{-0.0129}}
 
 % --- Confirmatory hypotheses (Holm, m=6) ---
 \newcommand{\pcHOneEst}{\ensuremath{-0.1375}}
@@ -1020,17 +1067,19 @@
 \newcommand{\pcHTwoPctUnstablePhysio}{\ensuremath{14.3}}
 
 % --- H2 instability uncertainty diagnostic (Amendment 7) ---
-\newcommand{\pcHTwoNFlagged}{\pcMissing}
-\newcommand{\pcHTwoNRobust}{\pcMissing}
-\newcommand{\pcHTwoNNoise}{\pcMissing}
-\newcommand{\pcHTwoNRobustAction}{\pcMissing}
-\newcommand{\pcHTwoZMin}{\pcMissing}
-\newcommand{\pcHTwoZMax}{\pcMissing}
-\newcommand{\pcHTwoZMaxNoise}{\pcMissing}
-\newcommand{\pcHTwoZMinRobust}{\pcMissing}
+\newcommand{\pcHTwoNFlagged}{\ensuremath{6}}
+\newcommand{\pcHTwoNRobust}{\ensuremath{3}}
+\newcommand{\pcHTwoNNoise}{\ensuremath{3}}
+\newcommand{\pcHTwoNRobustAction}{\ensuremath{3}}
+\newcommand{\pcHTwoZMin}{\ensuremath{0.61}}
+\newcommand{\pcHTwoZMax}{\ensuremath{15.51}}
+\newcommand{\pcHTwoZMaxNoise}{\ensuremath{1.07}}
+\newcommand{\pcHTwoZMinRobust}{\ensuremath{2.48}}
 
 % --- Feature ablation (Protocol Amendment 5) ---
 \newcommand{\pcAblNDropped}{\ensuremath{8}}
+\newcommand{\pcAblNFeatures}{\ensuremath{14}}
+\newcommand{\pcAblNFeaturesFull}{\ensuremath{22}}
 \newcommand{\pcAblAurocPrimaryA}{\ensuremath{0.7633}}
 \newcommand{\pcAblDeltaAurocPrimaryA}{\ensuremath{-0.0080}}
 \newcommand{\pcAblAuprcPrimaryA}{\ensuremath{0.0075}}
@@ -1379,6 +1428,9 @@
 
 % --- Subgroup interpretability floor ---
 \newcommand{\pcMinSubgroupEvents}{\ensuremath{100}}
+\newcommand{\pcMinSubgroupEventsEstimate}{\ensuremath{5}}
+\newcommand{\pcNSubgroupContrasts}{\ensuremath{6}}
+\newcommand{\pcSubgroupMinQ}{\ensuremath{0.066}}
 \newcommand{\pcNSubgroupsAboveFloor}{\ensuremath{2}}
 
 % --- Equity (BH-adjusted subgroup contrasts) ---

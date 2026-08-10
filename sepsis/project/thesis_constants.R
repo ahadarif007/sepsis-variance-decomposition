@@ -175,6 +175,21 @@ for (v in PREREG) {
   put(paste0("IqrOnsetHiH", v), cell(lv, "iqr_onset_h_hi",  variant = v), digits = 0)
 }
 
+# CONSORT flow (stage 02). These five counts were hardcoded in the figure in
+# methodology.tex, with a caption conceding they came from the extraction log.
+# They are now a result table like everything else.
+local({
+  cf <- rd("02_cohort_flow")
+  put("ConsortNTotal",       cell(cf, "n", step = "icu_stays_total"),  big = TRUE)
+  put("ConsortNAdult",       cell(cf, "n", step = "adult"),            big = TRUE)
+  put("ConsortNExclAge",     cell(cf, "n_excluded", step = "adult"),   big = TRUE)
+  put("ConsortNFirstStay",   cell(cf, "n", step = "first_icu_stay"),   big = TRUE)
+  put("ConsortNExclNotFirst",cell(cf, "n_excluded", step = "first_icu_stay"), big = TRUE)
+  put("ConsortNFinal",       cell(cf, "n", step = "min_los"),          big = TRUE)
+  put("ConsortNExclLos",     cell(cf, "n_excluded", step = "min_los"), big = TRUE)
+  put("ConsortNPatients",    cell(cf, "n_patients", step = "min_los"), big = TRUE)
+})
+
 ss <- rd("04_sample_size")
 for (v in PREREG) {
   # Independent unit = the stay. This is the adequacy verdict the thesis reports.
@@ -215,6 +230,12 @@ for (v in c("A", "C", "D", "E", "F")) {
   put(paste0("IqrShiftHiH", v),     cell(la, "iqr_shift_hi_h",     variant = v), digits = 0)
 }
 put("NPositiveBPanel", cell(la, "n_positive_B", variant = "A"), big = TRUE)
+# Stays E labels that B does not: the "discards two thirds" figure, which was a
+# hand-computed literal in the results chapter.
+put("NPositiveEExcessOverB",
+    { ne <- cell(la, "n_positive", variant = "E"); nb <- cell(la, "n_positive_B", variant = "E")
+      if (is.na(ne) || is.na(nb)) ne else as.numeric(ne) - as.numeric(nb) },
+    big = TRUE)
 put("PctOnsetsBPanel",
     { np <- cell(la, "n_positive_B", variant = "A"); ns <- cell(la, "n_stays", variant = "A")
       if (is.na(np) || is.na(ns)) np else 100 * as.numeric(np) / as.numeric(ns) },
@@ -319,6 +340,73 @@ for (v in PREREG) for (m in c("primary", "gbt", "cox")) {
 }
 put("PrevalenceB", cell(cal, "prevalence", variant = "B", model = "primary"), digits = 5)
 
+# How many distinct probabilities each rule-based score can emit. This is the
+# stated reason the three are excluded from the calibration table, and it was
+# carried as "18, 4 and 4" -- NEWS2 is 21, and SIRS is 5, not 4. SIRS read 4
+# only while the `hr` naming defect capped sirs_score at three of its four
+# criteria, so the sentence was a survivor of the Amendment 3 repair. Counted
+# from the predictions rather than asserted.
+local({
+  pc <- rd("06_predictions_comparators_B")
+  for (m in c("news2", "qsofa", "sirs")) {
+    col <- paste0("pred_", m)
+    put(paste0("NDistinct", MODEL_TOK[[if (m == "news2") "news2" else m]]),
+        if (is.null(pc) || !(col %in% names(pc))) NA else length(unique(pc[[col]])),
+        digits = 0)
+  }
+})
+
+# The clamped counterparts, from the metric suite's [0.001, 0.999] guard. The
+# thesis contrasts these against the 1e-6-floor estimates above to show what the
+# conventional clamp costs, and the Variant A figure was carried in the prose as
+# a literal 1.169 -- a pre-Amendment-3 value that no longer matches anything the
+# pipeline produces. Sourced here so the contrast cannot go stale again.
+local({
+  mr7 <- rd("07_metric_results")
+  if (!is.null(mr7) && "eval_window" %in% names(mr7))
+    mr7 <- mr7[eval_window == "unrestricted"]
+  for (v in PREREG) {
+    put(paste0("CalibSlopeClampedPrimary", v),
+        cell(mr7, "calib_slope", variant = v, model = "primary"), digits = 3)
+    put(paste0("CalibIntClampedPrimary", v),
+        cell(mr7, "calib_intercept", variant = v, model = "primary"), digits = 3)
+  }
+})
+
+# What the conventional [0.001, 0.999] clamp would overwrite, and the largest
+# prediction the model ever emits. Both were literals in the results chapter --
+# correct at the time of writing, but exactly the class of number that a refit
+# moves and no mechanism catches. Computed from the stored test predictions.
+local({
+  for (v in PREREG) {
+    f <- file.path(DATA_DIR, sprintf("05_predictions_primary_%s.parquet", v))
+    r <- if (file.exists(f)) tryCatch({
+      d <- as.data.table(arrow::read_parquet(f, col_select = "pred_sepsis"))
+      p <- d$pred_sepsis[!is.na(d$pred_sepsis)]
+      if (length(p) == 0) NULL else
+        list(pct = 100 * mean(p < CALIB_CLAMP_CONVENTIONAL), mx = max(p))
+    }, error = function(e) NULL) else NULL
+    put(paste0("PctBelowClampPrimary", v), if (is.null(r)) NA else r$pct, digits = 1)
+    put(paste0("MaxPredPrimary", v),       if (is.null(r)) NA else r$mx,  digits = 4)
+  }
+})
+
+# Bounds the prose states as "within X of zero / of one". Computed rather than
+# asserted: the intercept bound was written as 0.09 while Variant B's intercept
+# is -0.106, so the sentence was false for the primary label.
+local({
+  ci <- vapply(PREREG, function(v) {
+    x <- cell(cal, "calib_int", variant = v, model = "primary")
+    if (is.na(x)) NA_real_ else abs(as.numeric(x))
+  }, numeric(1))
+  cs <- vapply(PREREG, function(v) {
+    x <- cell(cal, "calib_slope", variant = v, model = "primary")
+    if (is.na(x)) NA_real_ else abs(as.numeric(x) - 1)
+  }, numeric(1))
+  put("CalibIntMaxAbsPrimary",   if (all(is.na(ci))) NA else max(ci, na.rm = TRUE), digits = 2)
+  put("CalibSlopeMaxDevPrimary", if (all(is.na(cs))) NA else max(cs, na.rm = TRUE), digits = 2)
+})
+
 sec("Operating points at 80 percent sensitivity")
 op <- rd("11_operating_points")
 if (!is.null(op) && "target_sens" %in% names(op)) op <- op[abs(target_sens - 0.8) < 1e-9]
@@ -393,9 +481,18 @@ for (v in PREREG) for (m in names(MODEL_TOK)) {
   put(paste0("NetBenefit", tok),
       { x <- cell(nb, "net_benefit", variant = v, model = m)
         if (is.na(x)) x else if (as.numeric(x) == 0) "\\ensuremath{0}"
-        else sprintf("\\ensuremath{%.2f\\times 10^{-4}}", 1e4 * as.numeric(x)) },
+        else sprintf("\\ensuremath{%s\\times 10^{%d}}",
+                     formatC(as.numeric(x) / 10^floor(log10(abs(as.numeric(x)))),
+                             format = "f", digits = 2),
+                     floor(log10(abs(as.numeric(x))))) },
       raw = TRUE)
   put(paste0("Snb",        tok), cell(nb, "snb",              variant = v, model = m), digits = 3)
+  # The prose reads the standardised net benefit as a percentage of the
+  # attainable benefit. Emitted here so the sentence cannot drift from the
+  # table: the two used to disagree on all three variants.
+  put(paste0("SnbPct",     tok),
+      { x <- cell(nb, "snb", variant = v, model = m)
+        if (is.na(x)) x else 100 * as.numeric(x) }, digits = 1)
   put(paste0("AlertRate",  tok), cell(nb, "alert_rate",       variant = v, model = m), digits = 3)
   put(paste0("AlertRange", tok), cell(nb, "alert_rate_range", variant = v, model = m), digits = 3)
 }
@@ -468,7 +565,18 @@ ab <- rd("08_external_validation_results_abxonly")
 for (v in PREREG) {
   put(paste0("ExtAbxAurocPrimary", v), cell(ab, "auroc",    variant = v, model = "pred_sepsis"))
   put(paste0("ExtAbxNEvents", v),      cell(ab, "n_events", variant = v, model = "pred_sepsis"), big = TRUE)
+  # The at-risk panel is truncated at each variant's own onset, so the
+  # person-hour denominator is NOT shared across A/B/C: it runs 7,656,521 /
+  # 7,627,689 / 7,450,975. A single ExtAbxNRows macro used to be emitted from
+  # Variant B and printed in all three rows of tab:external_rates, which made
+  # the A and C rows arithmetically inconsistent with their own printed rates.
+  # Emit it per variant; never re-collapse it.
+  put(paste0("ExtAbxNRows", v),        cell(ab, "n_rows",   variant = v, model = "pred_sepsis"), big = TRUE)
 }
+# DEPRECATED, retained only so the document still compiles until
+# tab:external_rates is switched to the per-variant macros above. It is
+# Variant B's denominator and is correct for Variant B alone. Delete this line
+# once no chapter references \pcExtAbxNRows.
 put("ExtAbxNRows", cell(ab, "n_rows", variant = "B", model = "pred_sepsis"), big = TRUE)
 
 # --------------------------------------------------------------------------- #
@@ -476,10 +584,29 @@ put("ExtAbxNRows", cell(ab, "n_rows", variant = "B", model = "pred_sepsis"), big
 # --------------------------------------------------------------------------- #
 sec("Variance decomposition")
 vd <- rd("09_variance_decomposition_table")
-dec <- c(ModelClass = "-", Label = "H1", Anchoring = "H3",
-         Split = "H4", Metric = "H5", ModelNull = "H6")
-for (nm in names(dec))
-  put(paste0("Spread", nm), cell(vd, "spread_auroc", hypothesis = dec[[nm]]))
+
+# Stage 09 differences AUROCs it has already rounded to four places, so its
+# split row read -0.0166 against the bootstrap estimate of -0.0165 that
+# tab:confirmatory prints for the same contrast, with the same interval. Same
+# quantity, two values, three pages apart. The rows that correspond to a
+# confirmatory contrast are therefore taken from 12_confirmatory_tests -- the
+# estimator the interval actually belongs to -- and stage 09 supplies only the
+# rows that have no hypothesis-level counterpart.
+#
+# Row by row: ModelClass and Label are spreads, and 12_spread_ci already
+# supplies the intervals printed beside them, so the estimate is taken from the
+# same object. Split and Metric ARE the H4 and H5 contrasts. Anchoring is
+# undefined by design (H3 has no test statistic) and stays with stage 09.
+# ModelNull is |primary - GBT|; no chapter prints it, but it carried 0.0130
+# against H6's -0.0129, so it is aligned rather than left as a second value.
+ct_dec <- rd("12_confirmatory_tests")
+sp_dec <- rd("12_spread_ci")
+put("SpreadModelClass", cell(sp_dec, "estimate", quantity = "model"))
+put("SpreadLabel",      cell(sp_dec, "estimate", quantity = "label"))
+put("SpreadAnchoring",  cell(vd,     "spread_auroc", hypothesis = "H3"))
+put("SpreadSplit",      cell(ct_dec, "estimate", hypothesis = "H4"))
+put("SpreadMetric",     cell(ct_dec, "estimate", hypothesis = "H5"))
+put("SpreadModelNull",  cell(ct_dec, "estimate", hypothesis = "H6"))
 
 # --------------------------------------------------------------------------- #
 # Confirmatory hypotheses
@@ -558,6 +685,10 @@ h2a_pre <- rd("05_h2_stability_ablated")
 put("AblNDropped",
     if (is.null(h2) || is.null(h2a_pre)) NA else nrow(h2) - nrow(h2a_pre),
     digits = 0)
+# The two arms' covariate counts, now recorded by stage 07 rather than left NA.
+# These are the "8 of 22" and "1 of 14" denominators the thesis quotes.
+put("AblNFeatures",     cell(ab, "n_features",      variant = "B", model = "primary"), digits = 0)
+put("AblNFeaturesFull", cell(ab, "n_features_full", variant = "B", model = "primary"), digits = 0)
 for (v in PREREG) for (m in c("primary", "gbt")) {
   tok <- paste0(if (m == "primary") "Primary" else "Gbt", v)
   put(paste0("AblAuroc",      tok), cell(ab, "auroc",             variant = v, model = m))
@@ -756,6 +887,19 @@ local({
 sec("Subgroup interpretability floor")
 local({
   put("MinSubgroupEvents", MIN_SUBGROUP_EVENTS_INTERPRET, digits = 0)
+  # The estimation floor, distinct from the interpretation floor above. The
+  # methods chapter now states both and says which decides what, so both come
+  # from config.R rather than being typed.
+  put("MinSubgroupEventsEstimate", MIN_SUBGROUP_EVENTS, digits = 0)
+  # Family E1's size after Amendment 6, and its smallest adjusted p-value. Both
+  # are quoted in the methods chapter's defence of the reduction.
+  local({
+    sd8 <- rd("12_subgroup_auroc_contrasts")
+    put("NSubgroupContrasts", if (is.null(sd8)) NA else nrow(sd8), digits = 0)
+    put("SubgroupMinQ",
+        if (is.null(sd8) || !("p_bh" %in% names(sd8))) NA else min(sd8$p_bh, na.rm = TRUE),
+        digits = 3)
+  })
   n_above <- if (is.null(sc8)) NA else
     nrow(unique(sc8[subgroup_col == "race" &
                     n_events >= MIN_SUBGROUP_EVENTS_INTERPRET, .(subgroup_val)]))
@@ -1131,4 +1275,24 @@ if (dir.exists(FIG_DIR) && dir.exists(img_dir)) {
   }
 } else {
   message("Figure sync skipped (missing ", FIG_DIR, " or ", img_dir, ")")
+}
+
+# --------------------------------------------------------------------------- #
+# Exit status: an unresolved macro must be actionable, not decorative
+#
+# The \pcMissing mechanism makes a gap visible in the PDF, and that worked --
+# and then a PDF carrying thirteen red ?? across two chapters was committed
+# anyway, because nothing downstream treated the warning as a failure. A
+# non-zero exit lets build.sh and run_pipeline.{sh,R} refuse. Draft builds that
+# genuinely want the placeholders set V2_ALLOW_MISSING=1.
+# --------------------------------------------------------------------------- #
+if ((length(MISSING) > 0 || length(TABLES_MISSING) > 0) &&
+    !nzchar(Sys.getenv("V2_ALLOW_MISSING"))) {
+  cat(sprintf(paste0("\nFAIL: %d unresolved macro(s) and %d unbuilt table body/ies.\n",
+                     "      Any of these that a chapter references will typeset as a\n",
+                     "      red ?? in index.pdf; build.sh reports which ones those are\n",
+                     "      and refuses only on those. Re-run the producing stage, or\n",
+                     "      set V2_ALLOW_MISSING=1 to accept them in a draft build.\n"),
+              length(MISSING), length(TABLES_MISSING)))
+  quit(status = 1L)
 }

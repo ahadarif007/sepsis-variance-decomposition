@@ -186,10 +186,31 @@ find "$SCRIPT_DIR" -maxdepth 1 -name '*.knit.md' -delete 2>/dev/null
 # stage failed, because half-written results would produce a constants file
 # that looks authoritative but is not.
 # ---------------------------------------------------------------------------
+CONSTANTS_INCOMPLETE=0
+INCONSISTENT=0
 if [ $FAILED -eq 0 ]; then
   echo "" | tee -a "$LOG_FILE"
   echo "Regenerating thesis constants..." | tee -a "$LOG_FILE"
-  Rscript "$SCRIPT_DIR/thesis_constants.R" 2>&1 | tee -a "$LOG_FILE"
+  # thesis_constants.R exits non-zero when a macro or a generated table body is
+  # unresolved. That is a real problem -- it means the PDF would carry a red ??
+  # -- but it is NOT a pipeline failure, and under `set -euo pipefail` an
+  # unguarded non-zero here would abort the script before it printed the
+  # summary of a run that actually succeeded. Capture it and report it below.
+  if Rscript "$SCRIPT_DIR/thesis_constants.R" 2>&1 | tee -a "$LOG_FILE"; then
+    CONSTANTS_INCOMPLETE=0
+  else
+    CONSTANTS_INCOMPLETE=1
+  fi
+
+  # Cross-file arithmetic. The macro system guarantees a number is the one the
+  # pipeline produced; it cannot check that two numbers which must agree do.
+  echo "" | tee -a "$LOG_FILE"
+  echo "Checking cross-file consistency..." | tee -a "$LOG_FILE"
+  if Rscript "$SCRIPT_DIR/check_consistency.R" 2>&1 | tee -a "$LOG_FILE"; then
+    INCONSISTENT=0
+  else
+    INCONSISTENT=1
+  fi
 else
   echo "" | tee -a "$LOG_FILE"
   echo "Skipping thesis-constants regeneration (a stage failed)." | tee -a "$LOG_FILE"
@@ -208,6 +229,22 @@ if [ ${#FAILED_LIST[@]} -gt 0 ]; then
 fi
 echo "  PDF reports: ${PDF_DIR}/" | tee -a "$LOG_FILE"
 echo "  Full log:     ${LOG_FILE}" | tee -a "$LOG_FILE"
+if [ $CONSTANTS_INCOMPLETE -ne 0 ]; then
+  echo "" | tee -a "$LOG_FILE"
+  echo "  !! Every stage succeeded, but the thesis constants are INCOMPLETE." | tee -a "$LOG_FILE"
+  echo "     Some macros or table bodies are unresolved; the generator output" | tee -a "$LOG_FILE"
+  echo "     above lists them. Run thesis/build.sh to see which of them a" | tee -a "$LOG_FILE"
+  echo "     chapter actually references -- those are the ones that would put" | tee -a "$LOG_FILE"
+  echo "     a red ?? on a page, and build.sh refuses on them." | tee -a "$LOG_FILE"
+fi
+if [ $INCONSISTENT -ne 0 ]; then
+  echo "" | tee -a "$LOG_FILE"
+  echo "  !! Cross-file consistency checks FAILED. Two reported quantities" | tee -a "$LOG_FILE"
+  echo "     disagree; see the check output above. Fix the source, not the check." | tee -a "$LOG_FILE"
+fi
+
 echo "======================================================" | tee -a "$LOG_FILE"
 
 [ $FAILED -eq 0 ] || exit 1
+[ $CONSTANTS_INCOMPLETE -eq 0 ] || exit 2
+[ $INCONSISTENT -eq 0 ] || exit 3

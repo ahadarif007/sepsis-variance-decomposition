@@ -39,7 +39,10 @@ RESEARCH/
 ├── sepsis/
 │   ├── project/        ← the analysis pipeline (R + Python)
 │   ├── thesis/         ← the thesis (LaTeX)
-│   ├── lr-rp/          ← companion critical literature review
+│   ├── lr-rp/          ← companion critical literature review, and the
+│   │                     pre-study research proposal
+│   ├── GEN-AI/         ← engineering defect log and working handoff; not
+│   │                     thesis voice, retained deliberately (see below)
 │   └── feedback/       ← internal development record
 └── data/               ← NOT tracked; you supply this (see below)
 ```
@@ -87,7 +90,9 @@ RESEARCH/
   Rscript install_requirements.R --check   # report only
   Rscript install_requirements.R           # install what is missing
   ```
-- **Python 3.12+** with `pandas` (for the Utility Score mirror only)
+- **Python 3.14** with `pandas` 3.0.4 (for the Utility Score mirror only),
+  pinned in `sepsis/project/requirements-python.txt`. pandas 3.x is required:
+  the script depends on its CSV datetime behaviour
 - **TeX** providing `xelatex` and `pdflatex` + `biber` (to build the thesis)
 - **Both databases**, obtained independently through PhysioNet credentialing:
   - MIMIC-IV v3.1 → `data/mimic-iv-3.1/{hosp,icu}/*.csv.gz`
@@ -104,8 +109,14 @@ cd sepsis/project
 ```
 
 Runs stages 01–12 in order and, on success, regenerates the thesis constants
-and figures. Roughly 60 minutes end to end; stage 05 dominates, and stage 03
-streams about 6 GB.
+and figures. **About 2 h 30 m end to end** on a 2023 MacBook Pro; stage 05
+(~73 min, nine model fits) and stage 12 (~19 min, the bootstrap) dominate, and
+stage 03 streams about 6 GB. Per-stage wall-clock, measured from the run that
+produced the reported results:
+
+| Stage | 01 | 02 | 03 | 04 | 05 | 06 | 07 | 08 | 09 | 10 | 11 | 12 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| min | <1 | 3 | 16 | <1 | 73 | 9 | 2 | 16 | <1 | <1 | 15 | 19 |
 
 ### Partial runs
 
@@ -116,11 +127,12 @@ V2_VARIANTS=D,E ./run_pipeline.sh 02 03 05 06 07   # restrict the variant loop
 V2_ARMS=ablated ./run_pipeline.sh 05 06            # restrict the fitting arm
 ```
 
-Two cautions, both learned the hard way and documented at the call sites:
-stage 07 must always run **unrestricted** (it rewrites the alternative-label
-metric table from whatever ran), and stages 05/06 should be restricted with
+One caution, learned the hard way: stages 05/06 should be restricted with
 `V2_VARIANTS` when adding a variant, because gradient-boosted tree fitting is
-not bit-stable and an incidental refit moves every GBT number.
+not bit-stable and an incidental refit moves every GBT number. Stage 07's
+alternative-label table used to be overwritten from whatever ran, so a partial
+pass silently deleted the other variants' rows; it now merges, carrying forward
+any variant not in the current run and logging that it did so.
 
 ### Building the thesis
 
@@ -139,7 +151,10 @@ reproduces the reported estimates exactly, with one documented exception:
 gradient-boosted tree fitting is not bit-reproducible across differing library
 builds, so the GBT rows serve as an explicit consistency check on any re-run.
 
-**No result number in the thesis is typed by hand.** `thesis_constants.R` reads
+**No quantity this study estimates is typed by hand into the thesis.** The
+exceptions are figures quoted from prior work, thresholds fixed by the
+pre-registration, and prose roundings of a macro stated exactly in the adjacent
+table. `thesis_constants.R` reads
 the result tables and writes every reported quantity into
 `sepsis/thesis/pipeline_constants.tex` as a LaTeX macro, which the document
 includes; larger tables are generated whole. A quantity the pipeline did not
@@ -151,7 +166,7 @@ partial run cannot silently leave an outdated number in the text.
 ## Findings in brief
 
 - **Model class dominates discrimination, not the label.** The model-class
-  spread is roughly ten times the label spread, and the interval on the
+  spread is an order of magnitude larger than the label spread, and the interval on the
   difference excludes zero — the reverse of the pre-registered hypothesis.
 - **An interpretable hazard model is not outperformed by gradient-boosted
   trees.** The trees are not better by more than the pre-registered 0.02

@@ -170,7 +170,7 @@ all label variants:
     features and at least one prediction opportunity).
 \end{itemize}
 
-The resulting cohort contains \textbf{65,078 stays} in MIMIC-IV.
+The resulting cohort contains \textbf{\pcNStays{} stays} in MIMIC-IV.
 Figure~\ref{fig:consort} shows the patient flow through each exclusion step.
 
 \begin{figure}[H]
@@ -188,34 +188,38 @@ Figure~\ref{fig:consort} shows the patient flow through each exclusion step.
         exarr/.style={-{Latex[length=2mm]}, thick, ATUOrange},
     ]
 
-\node[box] (total) {MIMIC-IV v3.1 ICU stays\\$n = 94{,}458$};
-\node[excl, right=1.2cm of total] (e1) {Non-first ICU stay\\$n = 29{,}092$ excluded};
+\node[box] (total) {MIMIC-IV v3.1 ICU stays\\$n = \pcConsortNTotal$};
+\node[excl, right=1.2cm of total] (e1) {Non-first ICU stay\\$n = \pcConsortNExclNotFirst$ excluded};
 \draw[exarr] (total.east) -- (e1.west);
 
-\node[box, below=of total] (first) {First ICU stay per patient\\(all ages $\geq 18$ in MIMIC-IV)\\$n = 65{,}366$};
+\node[box, below=of total] (first) {First ICU stay per patient\\(all ages $\geq 18$ in MIMIC-IV)\\$n = \pcConsortNFirstStay$};
 \draw[arr] (total) -- (first);
 
-\node[excl, right=1.2cm of first] (e2) {LOS $< 4$ hours\\$n = 288$ excluded};
+\node[excl, right=1.2cm of first] (e2) {LOS $< 4$ hours\\$n = \pcConsortNExclLos$ excluded};
 \draw[exarr] (first.east) -- (e2.west);
 
-\node[box, below=of first] (final) {\textbf{Analysis cohort}\\$n = 65{,}078$};
+\node[box, below=of first] (final) {\textbf{Analysis cohort}\\$n = \pcConsortNFinal$};
 \draw[arr] (first) -- (final);
 
 \node[box, below left=0.8cm and -0.5cm of final, text width=3.2cm]
-(va) {Variant A\\Sepsis: 6{,}252\\(9.6\%)};
+(va) {Variant A\\Sepsis: \pcNOnsetsA\\(\pcPctOnsetsA\%)};
 \node[box, below=0.8cm of final, text width=3.2cm]
-(vb) {Variant B\\Sepsis: 6{,}447\\(9.9\%)};
+(vb) {Variant B\\Sepsis: \pcNOnsetsB\\(\pcPctOnsetsB\%)};
 \node[box, below right=0.8cm and -0.5cm of final, text width=3.2cm]
-(vc) {Variant C\\Sepsis: 12{,}581\\(19.3\%)};
+(vc) {Variant C\\Sepsis: \pcNOnsetsC\\(\pcPctOnsetsC\%)};
 
 \draw[arr] (final.south) -- ++(0,-0.3) -| (va.north);
 \draw[arr] (final.south) -- (vb.north);
 \draw[arr] (final.south) -- ++(0,-0.3) -| (vc.north);
 
     \end{tikzpicture}}
-    \caption{CONSORT-style patient flow diagram. All 65,078 stays enter all three
-    label variants; only the sepsis outcome differs. Exclusion counts are from the
-    pipeline's cohort extraction log (script \texttt{02\_cohort\_labels.Rmd}).}
+    \caption{CONSORT-style patient flow diagram. All \pcConsortNFinal{} stays enter
+    all three label variants; only the sepsis outcome differs. Every count is
+    generated from \texttt{02\_cohort\_flow}, written by script
+    \texttt{02\_cohort\_labels.Rmd}. Sepsis counts are \textbf{cohort-wide},
+    at any hour of the stay; the subset falling inside the 72-hour modelling
+    horizon, which is what the models are trained and evaluated on, is reported
+    in the results chapter.}
     \label{fig:consort}
 \end{figure}
 
@@ -808,6 +812,7 @@ direction that makes the study look better powered than it is.
 
 
 \section{Statistical Inference and Multiplicity}
+\label{sec:multiplicity}
 \label{sec:inference}
 
 \subsection{Uncertainty: the Stay-Level Cluster Bootstrap}
@@ -874,10 +879,50 @@ false-discovery proportion bounded; applying family-wise control to it would
 suppress every signal the scan is meant to surface.
 
 Each subgroup is contrasted against the largest level of its own variable. The
-reference is chosen by sample size alone, never by outcome. A subgroup is
-reported only if it has at least 50 person-hours and at least 5 sepsis onsets;
-below that floor an AUROC is not estimable and the subgroup is listed as such
-rather than shown as a point estimate.
+reference is chosen by sample size alone, never by outcome.
+
+\paragraph{Two event floors, and what each decides (Protocol Amendment 6).}
+Two distinct thresholds govern the subgroup analysis and the distinction is
+load-bearing. \texttt{MIN\_SUBGROUP\_EVENTS} $= \pcMinSubgroupEventsEstimate$
+decides whether a subgroup AUROC is \emph{computed}: below it, together with a
+50 person-hour minimum, an AUROC is not estimable and the subgroup is listed as
+such rather than shown as a point estimate.
+\texttt{MIN\_SUBGROUP\_EVENTS\_INTERPRET} $= \pcMinSubgroupEvents$ decides
+whether a computed AUROC is \emph{interpreted}, and whether its contrast enters
+family E1. Strata below the interpretation floor are still estimated and still
+tabulated, flagged as such, because the figure showing their intervals reaching
+the chance line is itself the argument for the floor; they are excluded from
+every statement about spread and from the corrected family. The constant is set
+equal to the external-validation floor deliberately: it answers the same
+question on the same warrant, so the two cannot drift apart.
+
+This is \textbf{Protocol Amendment 6}, adopted post-hoc on 6 August 2026 and
+recorded as \S20 of the pre-registration. It must be read against the rule
+stated two paragraphs above --- that the correction denominator is the number of
+contrasts computed, not the number selected for presentation --- because
+restricting E1 from thirty computed contrasts to
+\pcNSubgroupContrasts{} is on its face the manoeuvre that rule prohibits.
+Three facts bear on whether it is admissible, and \S20.4 of the
+pre-registration sets out the full argument for a reader who wishes to reject
+it. The criterion is outcome-blind, depending only on a stratum's event count.
+The direction is exculpatory: the reduction removed the family's only surviving
+discovery, a language contrast resting on twelve events, rather than creating
+one --- a family narrowed to manufacture significance narrows \emph{around} its
+significant results. And the verdict is invariant to the choice: no contrast in
+E1 survives Benjamini--Hochberg under either denominator, the smallest adjusted
+value being $q = \pcSubgroupMinQ$ at $m = \pcNSubgroupContrasts$.
+Section~\ref{sec:equity_strata} reports the consequence.
+
+The floor applies to E1 and \emph{not} to E2, and the asymmetry is deliberate
+rather than an oversight. E1's estimand is an AUROC, which requires enough
+events to order cases against non-cases and is not usefully estimable on a
+handful; E2's is a stay-level proportion, which is estimable at any stratum size
+and simply carries a wide interval when the stratum is small. E2 therefore
+retains every stratum, including one insurance category resting on seven stays
+whose interval spans nearly sixty percentage points and is reported with that
+interval visible. Retaining it makes the correction \emph{stricter}, not more
+permissive, because it enlarges the denominator over which false-discovery
+control is applied; dropping it would be the manoeuvre that needs defending.
 
 \subsection{Analysis Status Tagging}
 

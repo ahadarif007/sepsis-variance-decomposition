@@ -1,5 +1,13 @@
 # Statistical and Machine-Learning Approaches to Real-Time Sepsis Onset Prediction on MIMIC-IV: An Extended Critical Literature Review
 
+> **Status: pre-study document, retained as the record of the design as
+> registered.** Compiled 13 July 2026, before any modelling. Where this document
+> and the thesis differ, **the thesis is authoritative** — several design
+> positions stated here were amended during the study, and every amendment is
+> disclosed in `sepsis/project/00_preregistration.md`. It is kept because a
+> proposal that is quietly revised to match its results is worth nothing as a
+> pre-registration.
+
 **Document type:** Extended literature review (Level 2), superseding and incorporating *A Literature Review of Statistical Modeling Approaches for Real-Time Sepsis Prediction Using the MIMIC-IV Database* (hereafter, "the base review")
 **Date of compilation:** 13 July 2026
 **Citation style:** APA (7th ed.)

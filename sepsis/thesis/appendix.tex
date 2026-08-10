@@ -94,7 +94,7 @@ against the tracked file list before release.
 \label{app:repro}
 
 \paragraph{Prerequisites.} R 4.5 or later with the packages listed in the
-repository, Python 3.12 or later with \texttt{pandas} for the Utility Score
+repository, Python 3.14 with \texttt{pandas} 3.0.4 for the Utility Score
 mirror, and a \TeX{} distribution providing \texttt{xelatex} and
 \texttt{pdflatex}/\texttt{biber}. The two source databases must be obtained
 independently through PhysioNet credentialing: MIMIC-IV v3.1 and eICU-CRD
@@ -111,8 +111,11 @@ constants and figures. Individual stages or phases can be run by number. Every
 stochastic step is seeded, so a repeated run reproduces the reported estimates
 exactly; the one exception is noted below.
 
-\paragraph{How the thesis stays aligned with the pipeline.} No result value in
-this document is typed by hand. On completion, \texttt{thesis\_constants.R}
+\paragraph{How the thesis stays aligned with the pipeline.} No quantity
+estimated by this study is typed by hand into this document; the exceptions are
+figures quoted from prior work, constants fixed by the pre-registration, and
+prose roundings of a macro stated exactly nearby. On completion,
+\texttt{thesis\_constants.R}
 reads the result tables and writes every reported quantity as a macro into
 \texttt{pipeline\_constants.tex}, which the thesis includes; it also copies the
 generated figures into the document's image directory. A quantity the pipeline

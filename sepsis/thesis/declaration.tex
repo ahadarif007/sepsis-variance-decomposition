@@ -54,11 +54,17 @@ Specifically, it was used to:
 \end{itemize}
 
 It was \emph{not} used to generate data, to produce or alter any result, or to
-decide what the results mean. Every quantity reported in this thesis is written
-into the document mechanically from the pipeline's own output tables by
-\texttt{thesis\_constants.R} (Appendix~\ref{app:repro}); no result value is
-typed by hand, by me or by any tool, and a quantity the pipeline did not
-produce typesets as a visible marker rather than as a plausible number. The
+decide what the results mean. Every quantity this study itself estimates ---
+every AUROC, interval, p-value, count, rate and calibration statistic --- is
+written into the document mechanically from the pipeline's own output tables by
+\texttt{thesis\_constants.R} (Appendix~\ref{app:repro}), and a quantity the
+pipeline did not produce typesets as a visible marker rather than as a
+plausible number. Three classes of number are typed rather than generated, and
+none of them is a result of this study: figures quoted from prior work, each
+carrying its citation; thresholds and design constants fixed by the
+pre-registration before any modelling, such as the equivalence margin and the
+correction levels; and, in running prose, values rounded for readability from
+the generated macro that states them exactly in the adjacent table. The
 analytical claims, the hypothesis verdicts and the limitations are mine, and I
 take full responsibility for the content of this thesis.
 

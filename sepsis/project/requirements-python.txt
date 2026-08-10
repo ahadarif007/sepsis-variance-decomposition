@@ -1,0 +1,19 @@
+# Python dependencies for the Utility Score reference implementation
+# (utility_score.py). Pinned to the versions the reported results were
+# produced under, on the interpreter recorded below.
+#
+#   Interpreter: CPython 3.14.0
+#
+# Only utility_score.py uses Python; the twelve pipeline stages are R. The
+# script is maintained as a mirror of the R scoring rule, and the two are
+# cross-checked at run time in stage 07.
+#
+# Install:  python3 -m pip install -r requirements-python.txt
+# Check:    python3 -m pip list --format=freeze | grep -Ff <(cut -d= -f1 requirements-python.txt)
+#
+# NOTE ON pandas 3.x: reading a CSV no longer infers datetimes, so timestamp
+# columns arrive as Arrow-backed strings and `str - Timedelta` raises. Every
+# read_csv of a table with timestamps must pass parse_dates=[...] explicitly.
+# Downgrading to pandas 2.x is not supported by this script.
+
+pandas==3.0.4

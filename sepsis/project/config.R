@@ -663,6 +663,19 @@ MAX_SUBGROUP_LEVELS <- 8L    # top-N levels per equity variable (matches 10_equi
 MIN_SUBGROUP_EVENTS_INTERPRET <- MIN_EXTERNAL_EVENTS
 
 # --------------------------------------------------------------------------- #
+# Calibration probability guards
+#
+# The conventional clamp is [1e-3, 1-1e-3], and at a 0.2 % hourly event rate it
+# overwrites 8-47 % of the primary model's predictions depending on the
+# variant -- it rewrites the quantity being measured. Stage 11 therefore uses
+# 1e-6, below the smallest non-zero prediction in the test set. Both are
+# declared here so the thesis can report what the conventional guard would have
+# cost without either number being typed into a chapter.
+# --------------------------------------------------------------------------- #
+CALIB_CLAMP_CONVENTIONAL <- 1e-3
+CALIB_CLAMP_FLOOR        <- 1e-6
+
+# --------------------------------------------------------------------------- #
 # Sample size (Riley et al., 2019): reference anticipated AUC
 # --------------------------------------------------------------------------- #
 ANTICIPATED_AUC <- 0.846  # Moor et al. (2023) internal AUC

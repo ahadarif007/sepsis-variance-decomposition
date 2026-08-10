@@ -10,7 +10,7 @@ from $+0.381$ internally to $-0.164$ externally while AUROC barely moves. This
 thesis asks whether that failure belongs to the model, to the sepsis label, or
 to the analyst's discretionary choices.
 
-Using MIMIC-IV v3.1 (65,078 adult ICU stays) with external validation on
+Using MIMIC-IV v3.1 (\pcNStays{} adult ICU stays) with external validation on
 eICU-CRD v2.0, three pre-registered Sepsis-3 label variants are crossed with
 five model classes, two split designs and two evaluation metrics, under
 stay-level cluster-bootstrap intervals with Holm and Benjamini--Hochberg
@@ -32,8 +32,9 @@ direction is established and the magnitude is not.
 The label's consequence lies elsewhere. Under the primary label no model
 exceeds a Utility Score of \pcUtilityMaxGbtB{} at any threshold, or
 \pcUtilityMaxGbtC{} under any pre-registered variant, on a scale bounded by 1;
-the three
-variants agree at only $\kappa = \pcKappaVsBA{}$ on which patients are septic,
+the two
+narrowest readings agree at only $\kappa = \pcKappaVsBA{}$ on which patients are
+septic,
 so the label fixes the cohort and the denominator of every clinical quantity
 computed on it. And the pre-treatment window contains zero Sepsis-3 events ---
 proved here to follow from the conjunction-based onset rule rather than
