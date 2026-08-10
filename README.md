@@ -48,8 +48,8 @@ RESEARCH/
 
 | File | Role |
 |---|---|
-| `00_preregistration.md` | The pre-registration, including the G0 analysis gate and Protocol Amendments 1–5, each dated and disclosed as post-hoc |
-| `config.R` | **Sole source of truth** for every constant: label-variant parameters, feature lists, plausibility ranges, seeds, bootstrap sizes, multiplicity families, event floors |
+| `00_preregistration.md` | The pre-registration, including the G0 analysis gate and Protocol Amendments 1–7, each dated and disclosed as post-hoc |
+| `config.R` | **Sole source of truth** for every constant: label-variant parameters, the covariate vector, plausibility ranges, seeds, bootstrap sizes, multiplicity families, event floors. `check_model_features()` turns a stored model whose columns disagree with it into an error rather than a wrong number |
 | `utils.R` | Shared helpers, including `require_features()` (errors rather than silently dropping a declared predictor) and `check_multinom_fit()` |
 | `clinical_scores.R` | SOFA, NEWS2, qSOFA, SIRS |
 | `01_setup.Rmd` … `12_inference.Rmd` | The twelve pipeline stages, in execution order |
@@ -78,7 +78,15 @@ RESEARCH/
 
 ### Prerequisites
 
-- **R 4.5+** with the packages listed in `sepsis/project/requirements.txt`
+- **R 4.5+** with the packages listed in `sepsis/project/requirements.txt`,
+  which pins the version each dependency was at when the reported results were
+  produced. Check or install them with:
+
+  ```bash
+  cd sepsis/project
+  Rscript install_requirements.R --check   # report only
+  Rscript install_requirements.R           # install what is missing
+  ```
 - **Python 3.12+** with `pandas` (for the Utility Score mirror only)
 - **TeX** providing `xelatex` and `pdflatex` + `biber` (to build the thesis)
 - **Both databases**, obtained independently through PhysioNet credentialing:
@@ -145,9 +153,12 @@ partial run cannot silently leave an outdated number in the text.
 - **Model class dominates discrimination, not the label.** The model-class
   spread is roughly ten times the label spread, and the interval on the
   difference excludes zero — the reverse of the pre-registered hypothesis.
-- **An interpretable hazard model matches gradient-boosted trees** to within the
-  pre-registered equivalence margin, and is marginally ahead on point
-  estimates. This is the strongest positive result in the study.
+- **An interpretable hazard model is not outperformed by gradient-boosted
+  trees.** The trees are not better by more than the pre-registered 0.02
+  margin, and the interpretable model is marginally ahead on point estimates.
+  This is non-inferiority rather than two-sided equivalence — the interval
+  extends past the margin on the side that favours the interpretable model —
+  and it is the strongest positive result in the study.
 - **What the label determines is which cohort exists**, not how learnable it is:
   the two narrowest Sepsis-3 readings agree on which stays are septic at
   κ = 0.267 despite near-identical prevalence.

@@ -3,9 +3,10 @@
 **Abdul Ahad** · G00486649 · M.Sc. Computing, ATU Galway
 *Model, Label, or Analyst? A Variance Decomposition of Real-Time Sepsis Onset Prediction on MIMIC-IV*
 
-Two feedback rounds, twelve points, all closed. This is the one-page-per-section
-summary; `v1.md` and `v2.md` in this directory hold the full record with file
-locations and diagnostics.
+Three supervisory feedback rounds and one full examiner-style audit, all
+closed. This is the one-page-per-section summary; `v1.md`, `v2.md`, `v3.md` and
+`v4.md` in this directory hold the full record with file locations and
+diagnostics.
 
 ---
 
@@ -20,7 +21,7 @@ none from changing a modelling choice to obtain a better number.
 | **H3** Treatment leakage | "0 pre-treatment onsets" — presented as the strongest finding | **Definitional, not empirical.** The zero is a *theorem* given the onset rule. Standard timing recovers **71** pre-treatment onsets at 0.8081 AUROC | Recognised as circular; Variant F added |
 | **H4** Split optimism | Confirmed, +0.123 | **Not confirmed, reversed.** −0.0165 [−0.037, +0.004] | Fit repair |
 | **H5** Metric divergence | Confirmed, +0.170 | **Not confirmed.** +0.0630 [−0.022, +0.156]; direction established, magnitude not | eICU label bug fixed |
-| **H6** Model-class null | **Rejected** (0.135) | **Not rejected — equivalence holds.** −0.0129 [−0.027, +0.002]. *Now the strongest positive result* | Fit repair |
+| **H6** Model-class null | **Rejected** (0.135) | **Not rejected — non-inferiority established.** −0.0129 [−0.027, +0.002]. The upper limit is inside the 0.02 margin, so the boosted trees are not better by more than it; the lower limit is not, so this is *not* two-sided equivalence. *Now the strongest positive result* | Fit repair; wording corrected in round 10 |
 | φ_anchor | 2.40 [2.06–2.89] — "Sepsis-3 is harder than either limb" | **1.041 [0.990, 1.097]** — interval includes 1; claim withdrawn | Fit repair |
 
 **All four testable hypotheses are non-confirmations.** The thesis is built around
@@ -59,7 +60,7 @@ predictor, and three run-time invariants halt the run rather than warn.
 
 ## 3. What changed in code and methodology
 
-Five pre-registration amendments, all disclosed as post-hoc.
+Seven pre-registration amendments, all disclosed as post-hoc.
 
 | Amendment | What was built | Why |
 |---|---|---|
@@ -68,6 +69,8 @@ Five pre-registration amendments, all disclosed as post-hoc.
 | **3** Model identification | Plausibility filter (19 variables), `hr` naming fix, ridge penalty (λ = 1e−4), fit guards | Defects 1–3 above |
 | **4** Standard onset timing | Variant **F** — Variant B's membership exactly, onset re-timed to `min(t_susp, t_SOFA)` | Isolates *timing* from *membership*; supplies the empirical counterpart to H3 |
 | **5** Feature ablation | Refit without the 8 action-derived covariates (vasopressors + 6 order flags) | Makes "the label is constituted by clinician action" falsifiable |
+| **6** Subgroup interpretability floor | 100-event floor for *interpreting* a subgroup AUROC; family E1 falls from 30 contrasts to 6 | 5 events is enough to compute an AUROC and not enough to read one |
+| **7** H2 uncertainty diagnostic | Cluster-robust SEs on the primary model's coefficients; each H2-flagged covariate's cross-label movement referred to its own pooled SE | A threshold rule on point estimates cannot tell a coefficient that moved from one never estimated precisely enough for a doubling to mean anything |
 
 **Also built:** new stage `11_clinical_metrics.Rmd` (calibration curves, decision
 curves, PPV/NNE, false alarms per patient-day, lead time, per-patient
@@ -91,7 +94,7 @@ bibliography now resolves.
 |---|---|---|
 | Primary AUROC (Variant B, temporal test) | 0.607 | **0.7590** |
 | Calibration slope (Variant B) | 0.209 (degenerate) | **1.055** |
-| Coefficient instability (H2) | 10/20 sign reversals | **6/22 unstable, 2 by sign** |
+| Coefficient instability (H2) | 10/20 sign reversals | **6/22 unstable, 2 by sign**; of the 6, only **3** exceed their own cluster-robust SE, and all 3 are order indicators (Amendment 7) |
 | Utility Score, primary model | −1.000 at cut-off | **0.000** at cut-off; ceiling **+0.025**; best overall **+0.039** (GBT) |
 | Alert burden at that ceiling | — | **44 false alerts per true alert** (29–49 across variants; benchmark: 1.4) |
 | eICU events (A/B/C) | 63 / 63 / 63 | **27 / 29 / 73** |
@@ -145,27 +148,45 @@ Stated so it is not discovered at viva.
    clear the event floor, and one of them is "Unknown". The study contains no
    sufficiently powered comparison between two strata that both record an actual
    demographic answer — an absence of measurement, not a null result.
-3. **All five amendments are post-hoc**, disclosed as such. Amendment 1
+3. **All seven amendments are post-hoc**, disclosed as such. Amendment 1
    overturned the study's most attractive finding, which is the strongest
-   available argument that the disclosure is honest.
+   available argument that the disclosure is honest. Two need their own defence
+   and get it in the pre-registration: Amendment 6 *reduces* an exploratory
+   family, which the inference plan's own rule prohibits (§20.4 gives four
+   reasons it is admissible, the decisive one being that the reduction removed
+   the family's only surviving discovery rather than creating one); and
+   Amendment 7 returns a result favourable to the thesis, so §21.4 records in
+   advance that it is not a test and not independent corroboration of
+   Amendment 5.
 4. **The literature review is narrative, not systematic** — no de-duplicated
    screening pass, no second reviewer. Novelty claims are hedged and bounded.
 5. **Variant D is unvalidated and partly self-fulfilling** (5 of 6 SOFA
    components are model inputs). Only its *disagreement* with Sepsis-3 carries
    weight, never its AUROC level.
-6. **No deep survival comparator**, so H6's equivalence holds against
-   gradient-boosted trees, not against every flexible estimator.
+6. **No deep survival comparator**, so H6's non-inferiority holds against
+   gradient-boosted trees, not against every flexible estimator. It is also
+   one-sided: the boosted trees are excluded from outperforming the hazard
+   model, but the two have not been shown to be interchangeable.
+7. **H5 is tested on a substituted estimand.** The pre-registered contrast
+   compares proportional declines and cannot be formed against an internal
+   Utility Score of 0.025, so the AUROC limb alone occupies H5's slot. Declared
+   in §13.6 of the pre-registration and flagged wherever H5's verdict is
+   reported.
 
 ---
 
 ## 7. Current state
 
 Pipeline: 12 stages, 12/12 succeeding, seed-fixed, ~60 min end to end.
-Thesis: 151 pages, 0 errors, 0 undefined references, 0 undefined citations,
-1,330 generated constants with none missing.
-Code: public, Apache-2.0, no patient data —
-`https://github.com/ahadarif007/RESEARCH`
+Thesis: 162 pages, 0 errors, 0 undefined references, 0 undefined citations,
+1,337 generated constants.
+Code: Apache-2.0, no patient data, 70 tracked files —
+`https://github.com/ahadarif007/RESEARCH`. **The repository must be made public
+(or shared with the panel) before submission**: two sentences in the thesis
+assert that it is.
 
-Outstanding: record the screencast; rebuild the presentation in October against
-the generated constants (the current deck predates these results and inverts the
-H6 verdict).
+Outstanding: read and amend the Declaration (blocking); make the repository
+public; record the screencast; rebuild the presentation in October against the
+generated constants. The decks were **untracked in round 10** — they predate
+these results and invert the H6 verdict, and an examiner following the
+repository URL in the thesis would have found them.

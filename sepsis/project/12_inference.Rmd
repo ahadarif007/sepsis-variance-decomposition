@@ -308,12 +308,22 @@ if (file.exists(eicu_path)) {
 
 ```{r confirmatory-h2h3}
 # --- H2: coefficient stability (descriptive; no test statistic) -------------
-# The primary model is a multinomial fit whose stored object carries no
-# Hessian, so no standard errors are available and refitting under a bootstrap
-# is not tractable at 2.3M training rows. H2 is therefore reported as a
-# descriptive stability count, and it still consumes a slot in the family size.
+# H2's estimand is a threshold rule on point estimates -- sign reversal, or a
+# doubling in magnitude, across the pre-registered label variants -- and it
+# stays exactly that. It is not a contrast and carries no test, and it consumes
+# a slot in the family size regardless, which makes the correction on the other
+# hypotheses stricter.
+#
+# Protocol Amendment 7 adds a diagnostic beside it, not in place of it. Once
+# stage 05 could compute a cluster-robust covariance the obvious question about
+# the count became answerable: does a flagged coefficient move by more than it
+# is estimated to within? A threshold rule cannot distinguish a coefficient
+# that genuinely shifts from one that was never estimated precisely enough for
+# a doubling to mean anything. The pre-registered count is reported first and
+# unmodified; the diagnostic is reported second and separately.
 coef_path <- file.path(DATA_DIR, "05_coef_all_variants.parquet")
 h2_sign <- NA_integer_; h2_mag <- NA_integer_; h2_any <- NA_integer_; h2_n_terms <- NA_integer_
+h2_n_robust <- NA_integer_; h2_n_noise <- NA_integer_
 if (file.exists(coef_path)) {
   ct    <- as.data.table(read_parquet(coef_path))
   # Shared with the Amendment 5 ablation arm in 05_primary_model.Rmd, so the
@@ -335,6 +345,31 @@ if (file.exists(coef_path)) {
   save_csv(flags,     "12_h2_coefficient_stability", DATA_DIR)
   cat(sprintf("H2: of %d shared covariates, %d reverse sign, %d change magnitude >=2x, %d do either\n",
               h2_n_terms, h2_sign, h2_mag, h2_any))
+
+  # Amendment 7: the uncertainty diagnostic on the flagged covariates.
+  h2_unc <- h2_stability_uncertainty(ct, flags, variants = c("A", "B", "C"))
+  if (nrow(h2_unc) > 0) {
+    h2_unc[, is_action := vapply(as.character(term), function(tm)
+      any(startsWith(tm, ACTION_DERIVED_FEATURES)), logical(1))]
+    setorder(h2_unc, -z_ratio)
+    save_parquet(h2_unc, "12_h2_stability_uncertainty", DATA_DIR)
+    save_csv(h2_unc,     "12_h2_stability_uncertainty", DATA_DIR)
+    h2_n_robust <- sum(h2_unc$exceeds_noise, na.rm = TRUE)
+    h2_n_noise  <- sum(!h2_unc$exceeds_noise, na.rm = TRUE)
+    cat(sprintf(paste0("H2 uncertainty diagnostic: of the %d flagged covariates, ",
+                       "%d exceed their pooled cluster-robust SE and %d do not; ",
+                       "%d of the %d that do are action-derived\n"),
+                nrow(h2_unc), h2_n_robust, h2_n_noise,
+                sum(h2_unc$exceeds_noise & h2_unc$is_action, na.rm = TRUE),
+                h2_n_robust))
+    print(h2_unc[, .(term, max_diff = round(max_diff, 4),
+                     pooled_se = round(pooled_se, 4),
+                     z = round(z_ratio, 2), exceeds_noise, is_action)])
+  } else {
+    v2_log(paste0("H2 uncertainty diagnostic empty: no se_cluster column in ",
+                  "05_coef_all_variants, or no covariate flagged. Re-run ",
+                  "stage 05 if the covariance was expected."), level = "WARN")
+  }
 }
 
 # --- H3: treatment-anchored window (degenerate; exact bound instead) --------
@@ -406,9 +441,16 @@ rows[["H1"]] <- mk("H1", "Label dominance",
 rows[["H2"]] <- mk("H2", "Coefficient instability",
                    "Covariates with sign reversal or >=2x magnitude change across variants",
                    as.numeric(h2_any), c(NA_real_, NA_real_),
-                   "not testable (primary model carries no variance estimate)", NA_real_,
-                   sprintf("%d of %d covariates unstable (%d sign reversals, %d magnitude >=2x)",
-                           h2_any, h2_n_terms, h2_sign, h2_mag))
+                   "not testable (threshold rule on point estimates, not a contrast)", NA_real_,
+                   sprintf(paste0("%d of %d covariates unstable (%d sign reversals, ",
+                                  "%d magnitude >=2x). Amendment 7 diagnostic: %s of the %d ",
+                                  "flagged exceed their pooled cluster-robust SE; the ",
+                                  "remainder move by less than their own estimation noise. ",
+                                  "The count above is the pre-registered estimand and is ",
+                                  "unmodified by the diagnostic"),
+                           h2_any, h2_n_terms, h2_sign, h2_mag,
+                           ifelse(is.na(h2_n_robust), "an unrecorded number", h2_n_robust),
+                           h2_any))
 
 # H3: degenerate; exact bound rather than a test
 rows[["H3"]] <- mk("H3", "Treatment leakage",
@@ -999,6 +1041,10 @@ register <- rbindlist(list(
              reported_in = "Table: patient_level, lead_time"),
   data.table(analysis = "H1 label dominance",                            status = "confirmatory",
              prereg = "§7",        correction = "Holm (m=6)", reported_in = "H1 box"),
+  data.table(analysis = "H2 instability uncertainty diagnostic",         status = "exploratory",
+             prereg = "Amendment 7 (post-hoc)",
+             correction = "none; ratio to pooled SE, not a test",
+             reported_in = "Table: h2_uncertainty"),
   data.table(analysis = "H2 coefficient instability",                    status = "confirmatory",
              prereg = "§7",        correction = "family slot reserved; no test statistic",
              reported_in = "H2 box, Table: coef_instability"),

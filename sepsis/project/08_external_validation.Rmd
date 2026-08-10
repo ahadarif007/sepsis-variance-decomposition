@@ -595,14 +595,12 @@ Trained models are applied without retraining. Missing features are zero-filled
 ```{r apply-models}
 step("Applying trained models to eICU cohort...")
 
-BASE_FEATURES <- c(
-  "hr","resp_rate","spo2","map","temp_c","gcs",
-  "lactate","creatinine","bilirubin_total","platelets","wbc",
-  "vaso_any","norepi_epi_any",
-  "hr_slope6h","resp_rate_slope6h","map_slope6h",
-  "lactate_measured","creatinine_measured","bilirubin_total_measured",
-  "platelets_measured","wbc_measured","pf_ratio_measured"
-)
+# Declared once in config.R. This stage previously kept its own copy, which is
+# the most dangerous of the three duplicates that existed: it is the vector the
+# stored GBT model's column order is reconstructed from below, so a divergence
+# in ORDER between this copy and stage 06's would have produced permuted
+# external predictions that are still well-formed numbers.
+MODEL_FEATURES <- model_features()
 
 #' Evaluate every available model on one labelled eICU panel.
 evaluate_panel <- function(g, vid, anchor) {
@@ -611,8 +609,8 @@ evaluate_panel <- function(g, vid, anchor) {
   if (!file.exists(prim_model_path)) return(NULL)
 
   eicu_pred   <- copy(g)
-  require_features(BASE_FEATURES, available = names(eicu_pred))
-  for (f in intersect(BASE_FEATURES, names(eicu_pred))) {
+  require_features(MODEL_FEATURES, available = names(eicu_pred))
+  for (f in intersect(MODEL_FEATURES, names(eicu_pred))) {
     if (is.numeric(eicu_pred[[f]])) eicu_pred[is.na(get(f)), (f) := 0]
     if (is.logical(eicu_pred[[f]])) eicu_pred[is.na(get(f)), (f) := FALSE]
   }
@@ -645,17 +643,20 @@ evaluate_panel <- function(g, vid, anchor) {
     # vanishes from the external results with no error anywhere. That is how
     # eICU carried no GBT comparator for the whole project.
     #
-    # Stage 06 trains on BASE_FEATURES in exactly this order: it sets
-    # gbt_feats <- avail_feats <- intersect(BASE_FEATURES, names(ph)), and
+    # Stage 06 trains on MODEL_FEATURES in exactly this order: it sets
+    # gbt_feats <- avail_feats <- intersect(MODEL_FEATURES, names(ph)), and
     # require_features() guarantees all of them are present, so the intersect is
-    # the declared vector unchanged. Reconstructing from BASE_FEATURES therefore
-    # reproduces the training design matrix exactly (verified against
+    # the declared vector unchanged. Reconstructing from MODEL_FEATURES
+    # therefore reproduces the training design matrix exactly (verified against
     # 06_predictions_comparators_B: zero difference over 548,827 test rows).
-    if (length(gbt_feats) == 0) {
-      v2_log("GBT model carries no feature_names; reconstructing from BASE_FEATURES",
-             level = "WARN")
-      gbt_feats <- BASE_FEATURES
-    }
+    #
+    # check_model_features() decides between the two cases rather than leaving
+    # the fallback silent: where the booster DID persist its names, disagreeing
+    # with config.R is now an error, because a permuted design matrix yields
+    # wrong predictions that nothing downstream can detect; where it did not,
+    # the declared vector is used and the log says so explicitly.
+    gbt_feats <- check_model_features(gbt_feats, MODEL_FEATURES,
+                                      tag = paste0("gbt/", vid, "/", anchor))
     nr_ep     <- nrow(eicu_pred)
     gbt_cols  <- lapply(gbt_feats, function(f) {
       v <- if (f %in% names(eicu_pred)) as.numeric(eicu_pred[[f]]) else rep(0.0, nr_ep)

@@ -1,49 +1,74 @@
-# R package requirements for thesis pipeline
-# Install via: Rscript -e "install.packages(readLines('requirements.txt'), repos='https://cloud.r-project.org')"
-# Or run 01_setup.R which handles installation automatically.
+# R package requirements for the thesis pipeline.
+#
+# Format: one "package version" pair per line. Blank lines and lines beginning
+# with '#' are comments. Versions are the ones the reported results were
+# produced under, recorded so that a re-run can be compared against a known
+# environment rather than against whatever CRAN serves today.
+#
+# Install (parses the comments out; the previous one-liner in this header did
+# not, and passed "# Core data handling" to install.packages() as a package
+# name):
+#
+#   Rscript install_requirements.R
+#
+# Or run 01_setup.Rmd, which handles installation automatically.
+#
+# One dependency is deliberately NOT pinnable in practice: xgboost. Gradient-
+# boosted tree fitting is not bit-reproducible across differing library builds
+# even at a fixed version and seed, which is why the GBT rows are used as the
+# consistency check on any re-run (see the Reproducibility section of the
+# README). Every other estimate in the thesis reproduces exactly.
 
-# Core data handling
-data.table
-arrow
-dplyr
-tidyr
-readr
-purrr
-tibble
-lubridate
+# Environment the reported results were produced under
+# R version 4.5.2 (2025-10-31), aarch64-apple-darwin
+# Python 3.14 with pandas 3.0.4 (utility_score.py mirror only)
 
-# Visualisation
-ggplot2
+# --- Core data handling ---
+data.table 1.18.2.1
+arrow 24.0.0
+dplyr 1.2.0
+tidyr 1.3.2
+readr 2.2.0
+purrr 1.2.1
+tibble 3.3.1
+lubridate 1.9.5
 
-# Survival and discrete-time models
-survival
-nnet
-VGAM
-rms
-discSurv
-cmprsk
-prodlim
-timeROC
+# --- Streaming layer for chartevents / labevents ---
+duckdb 1.5.4.3
+DBI 1.3.0
 
-# Sandwich variance estimator
-sandwich
-lmtest
+# --- Visualisation ---
+ggplot2 4.0.2
 
-# ML comparator
-xgboost
+# --- Survival and discrete-time models ---
+survival 3.8.3
+nnet 7.3.20
+VGAM 1.1.14
+rms 8.1.1
+discSurv 2.5.1
+cmprsk 2.2.12
+prodlim 2026.3.11
+timeROC 0.4.1
 
-# Metrics
-PRROC
-dcurves
-CalibrationCurves
+# --- Sandwich variance estimator ---
+sandwich 3.1.1
+lmtest 0.9.40
 
-# Sample size
-pmsampsize
+# --- ML comparator (see the note on bit-reproducibility above) ---
+xgboost 3.2.1.1
 
-# Splines
-splines
+# --- Metrics ---
+PRROC 1.4
+dcurves 0.5.1
+CalibrationCurves 3.1.0
 
-# --- Python dependencies (for utility_score.py) ---
-# numpy >= 1.24
-# pandas >= 2.0
-# pyarrow >= 12.0
+# --- Sample size ---
+pmsampsize 1.1.3
+
+# --- Report rendering ---
+knitr 1.51
+rmarkdown 2.30
+bookdown 0.46
+
+# NOTE: `splines` and `stats` ship with R and are not installable from CRAN;
+# they were listed here in error and have been removed.

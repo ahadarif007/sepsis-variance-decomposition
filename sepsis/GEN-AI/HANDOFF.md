@@ -1,5 +1,24 @@
 # GENAI Handoff — V2 Sepsis Variance Decomposition
 
+> ### What this document is, for a reader who is not a maintainer
+>
+> This is an **engineering defect log and working handoff**, not part of the
+> thesis and not written in its voice. It exists because the pipeline is large
+> enough that a defect found once and not written down gets reintroduced, and
+> because several defects in it materially changed reported results. It records
+> them bluntly, including the observation that the ones found ran in the
+> direction that flattered the study — that is the whole point of keeping the
+> list, and it is why the amendments in `00_preregistration.md` can be checked
+> against something rather than taken on trust.
+>
+> Three consequences for how to read it. Its tone is diagnostic and internal.
+> Its numbers are resynced after a run but the thesis, not this file, is
+> authoritative — every reported quantity in the thesis is written mechanically
+> from the result tables by `thesis_constants.R`, and where the two disagree
+> this file is the stale one. And it is deliberately retained in the repository
+> rather than removed before submission: a defect log that disappears when the
+> work is examined is worth nothing.
+
 > **Read this file first and stop.** It is written so a cold thread can answer most
 > questions with **zero further file reads**. Headline numbers are inlined below.
 > Only open a data file when you need a number that is *not* here, and then open
@@ -7,9 +26,9 @@
 
 Last updated: **2026-08-06** — feedback round 7 complete **and executed**.
 All three previously-pending runs (§9a eICU GBT, §9b ablation, §9c round 7) have
-now run. `pipeline_constants.tex` carries **1,330 macros, 0 missing** and
+now run. `pipeline_constants.tex` carries **1,337 macros, 0 missing** and
 `index.pdf` builds at 0 errors / 0 undefined refs / 0 undefined citations /
-**151 pages**. Structural changes: the thesis gained a **Discussion chapter**
+**155 pages**. Structural changes: the thesis gained a **Discussion chapter**
 (7 chapters + appendix), Chapter 2 was rewritten as a critical review, and the
 subgroup analysis gained a 100-event interpretability floor. Licence decided
 (Apache-2.0, scoped — §7). The confirmatory canary held: H1–H6 bit-identical.
@@ -151,9 +170,8 @@ Everything below is the run of 2026-08-06 23:17–00:42 with Amendments 3 and 4 
 force and the stage-08 eICU rewrite. **Every internal number is bit-identical to
 the 2026-08-05 run** — the GBT canary held, so the run reproduced and the only
 movement is external, which is where the fix was. The thesis is re-synced:
-`pipeline_constants.tex` carries **1,240 macros, 3 missing** (the eICU GBT
-comparator, §9), and `index.pdf` builds at 0 errors, 0 undefined references,
-0 undefined citations, 119 pages.
+`pipeline_constants.tex` carries **1,337 macros, 0 missing**, and `index.pdf`
+builds at 0 errors, 0 undefined references, 0 undefined citations, 155 pages.
 
 ### Confirmatory verdicts (Holm, m=6, FWER 0.05)
 
@@ -215,15 +233,19 @@ second on the point estimate without being established at that confidence.
   antibiotic *tables* (59,304) against a *cohort* denominator. Fixed in stage
   08; the ladder is monotone, so the "240 vs 2,824" question is answered —
   they were different quantities, and 232 is the both-limbs count.
-- Equity: **no** race contrast survives BH (smallest q=0.347). Label-sensitivity
+- Equity: **no** race contrast survives BH (smallest q in family E1 is 0.0660,
+  the Private-insurance/GBT contrast; no *race* contrast is below q=0.16). Label-sensitivity
   contrasts do: race-Unknown +3.01 pp (q=0.006), Unable-to-obtain +3.49 pp
   (q=0.009), Spanish +2.61 pp (q=0.006), Private insurance −1.76 pp (q=0.006).
 - **Sample size, on the correct unit (stage 04, rewritten round 7).** Riley
   assumes independent observations, so the criterion is parameterised on the
-  **stay**: min-N **1,491 / 1,437 / 855** stays (A/B/C) at stay-level prevalence
+  **stay**: min-N **1,729 / 1,666 / 991** stays (A/B/C) at stay-level prevalence
   8.78 / 9.16 / 17.76 %, against **52,946** training stays — margins
-  **35.5x / 36.8x / 61.9x**. The per-hour minima (52,201 / 51,012 / 24,069) are
-  retained as a labelled reference only. **Never compare a per-hour minimum
+  **30.6x / 31.8x / 53.4x**. The per-hour minima (60,553 / 59,174 / 27,920) are
+  retained as a labelled reference only. **Updated round 10**: the parameter
+  count supplied to `pmsampsize` was corrected from 25 to **29**, the number of
+  terms the model actually estimates per outcome (22 covariates + 6 spline
+  columns + intercept). Margins fall ~14 % and remain enormous. **Never compare a per-hour minimum
   against the 2.3 M row count.**
 - **Equity, after the 100-event interpretability floor (round 7).** Family E1
   shrank from **30 contrasts to 6**, and **none survives BH** (was one: the
@@ -771,6 +793,17 @@ insurance. Top 8 levels each.
 | Vivas | **29–30 October** |
 | Presentation | 15 min + 15 min questions |
 
+**Untracked as of round 10.** The freeze was right while results were moving,
+but it stopped being right once the repository became a submission deliverable:
+both decks were tracked, `presentation-v2/index.pdf` was committed, and an
+examiner browsing the repo the thesis points them at would have found a deck
+tagging **H6 as REJECTED** — contradicting the thesis's headline positive
+result — alongside primary AUROC 0.607 and the withdrawn "Variant B collapse"
+claim. `git rm -r --cached` was applied and both directories added to
+`.gitignore`. **The files are still on disk and nothing was deleted.** Before
+either deck is shown or re-tracked it must be rebuilt against
+`pipeline_constants.tex`.
+
 **Do not work on `presentation*/`.** This is a standing instruction, not an
 oversight: results moved in every feedback round, so any polish before the
 results settled would have been discarded. The skeleton (11 section files, same
@@ -830,9 +863,9 @@ drafted in `feedback/v2.md` §29.4.
 
 **Nothing is pending.** The three pieces of work that were patched-but-unexecuted
 (9a eICU GBT comparator, 9b Protocol Amendment 5 ablation, 9c feedback round 7)
-have all run. `thesis_constants.R` reports **1,330 macros, 0 missing**;
+have all run. `thesis_constants.R` reports **1,337 macros, 0 missing**;
 `index.pdf` builds at 0 errors, 0 undefined references, 0 undefined citations,
-147 pages. Results are folded into §3 above.
+155 pages. Results are folded into §3 above.
 
 Verification checks that were specified in advance and passed:
 
@@ -862,8 +895,41 @@ input is touched and there is no GBT-drift exposure; 07 must run **unrestricted*
 fallback; 11 the resulting external operating points; 12 the inference layer; 04
 is cheap and independent.
 
+### Round 10 — examiner-audit remediation (text and config only; no results moved)
+
+An external-examiner-style audit was run over the whole repository. Nothing it
+found changed a result; what it found was claim-bearing text that had drifted
+from the code, plus a pre-registration that had stopped being current. Applied:
+
+| Fix | Where |
+|---|---|
+| **Amendments 5 and 6 written into the pre-registration** (§19 ablation, §20 subgroup interpretability floor). Amendment 5 existed only in the thesis and `methodology.tex` cited it as "§16", which is Amendment 2. Amendment 6 had never been recorded at all | `00_preregistration.md`; `methodology.tex`, `appendix.tex`, `README.md`, `declaration.tex` now say 1–6 |
+| **H6 restated as non-inferiority.** The thesis said the interval "lies entirely inside the 0.02 equivalence margin". It does not: CI is [−0.0272, +0.0019] and −0.0272 is outside. Only the upper side is tested (`boot_pvalue(..., 0.02, "greater")`), so what holds is *GBT is not better by more than the margin*, not two-sided equivalence | `evaluation.tex` §H6 (+ new `\label{sec:h6}`), `conclusion.tex`, `discussion.tex` ×3, `README.md` |
+| **H5's estimand substitution disclosed.** The tested contrast is internal−external AUROC, not the pre-registered utility-vs-AUROC proportional divergence, and it was not among Amendment 1's degenerate cases. Now recorded in §13.6 with three constraints, and flagged in the H5 box and in Limitations | `00_preregistration.md` §13.6; `evaluation.tex`, `discussion.tex` |
+| **Prediction framing corrected.** Methodology claimed a 6-hour horizon; the models estimate the **current-hour cause-specific hazard** and every AUROC/AUPRC/calibration figure scores that. The 6 h window enters only via the Utility Score reward and the episode/lead metrics | `methodology.tex` §Prediction Framing; new Limitation |
+| **Feature list corrected.** Methodology named a lactate slope (does not exist) and P/F ratio as a value predictor (only its order flag is one), and omitted the heart-rate slope. Counts reconciled: **22 covariates, 29 terms per outcome** | `methodology.tex` §Feature Construction; `evaluation.tex` |
+| **`P_CANDIDATE_PREDICTORS` 25 → 29** with the binary-criterion-on-a-multinomial caveat stated. **Needs a stage-04 re-run** (cheap, independent, touches no hypothesis) | `config.R`, `methodology.tex` §Sample Size (now uses `\pcNCandidatePredictors`) |
+| **Abstract's utility ceiling scoped.** "No model exceeds 0.039 at any threshold" was false — GBT/Variant C reaches 0.112 | `abstract.tex` |
+| **`BASE_FEATURES`/`MISSINGNESS_FEATURES` consolidated into `config.R`.** They were declared three times (05, 06, 08). Stage 08's copy sets the stored GBT model's column order, so an order divergence would have produced permuted external predictions that are still well-formed numbers. `check_model_features()` now **errors** on a mismatch and logs loudly when falling back | `config.R`, `05`, `06`, `08`; `design.tex`, `README.md` |
+| Introduction no longer claims everything outside H1–H6 is exploratory (the register marks nine more analyses confirmatory) | `introduction.tex` |
+| Lead-time "compares favourably with the literature" removed — the next paragraph retracts it | `evaluation.tex` |
+| C6's "reproduces every reported estimate exactly" now carries the XGBoost exception | `conclusion.tex` |
+| Front matter: `\pagenumbering{arabic}` moved after a `\cleardoublepage`, so Acknowledgments no longer takes body page 1; `\today` on the title page replaced with `\submissiondate` | `index.tex` |
+| `requirements.txt` **pinned** to the versions the results were produced under; `install_requirements.R` added (the old documented one-liner passed comment lines to `install.packages()`); `/Users/arif/...` fallback in `config.R` replaced with a `stop()` | `project/` |
+| Presentation decks **untracked** (`git rm --cached`, added to `.gitignore`). Still on disk. They contradicted the thesis: H6 tagged REJECTED, primary AUROC 0.607, the withdrawn "Variant B collapse" claim | `.gitignore` |
+
+**Nothing in `output/processed_data/` was touched, and no macro value changed.**
+The one config change that alters a pipeline output is `P_CANDIDATE_PREDICTORS`.
+
 ### Still open
 
+~~Re-run stage 04 for `P_CANDIDATE_PREDICTORS = 29`~~ — **DONE**, full run
+  2026-08-10 10:47–13:20, 12/12 stages. The **only** macros that moved in the
+  whole document were the 15 Riley ones; every AUROC, CI, verdict, equity and
+  external quantity is byte-identical. Canary: H4 and H6 bit-identical, H1
+  −0.137549186942963 vs −0.137549147378645 (Δ = 4e-8, eight orders below any
+  reported precision — a summation-order artefact, not drift). Notably the GBT
+  refit reproduced exactly despite xgboost's usual non-determinism.
 - [ ] **`thesis/declaration.tex` must be read and amended by the author.**
       Added round 8. ATU's Academic Integrity Policy (AQAE022 §4) makes
       *undeclared* AI assistance misconduct, and the thesis previously carried
@@ -876,9 +942,73 @@ is cheap and independent.
       Both are tracked and examiner-visible. `.claude/` and `CLAUDE.md` are
       *not* tracked (gitignored) but do exist in history — `ccb96b9` and
       `934ba03`.
-- [ ] **Cluster-robust covariances are coded but not run.** See the
-      `vcovHC`/`multinom` entry in §4: `./run_pipeline.sh 05` then `07 12`,
-      then check the canary.
+~~Cluster-robust covariances are coded but not run~~ — **RUN, 2026-08-10.**
+  `estfun.multinom` works: all nine fits produced a covariance with zero
+  failures, **87 parameters** (29 terms × 3 non-reference outcomes) for the full
+  arm and 63 (21 × 3) for the ablated arm, median SE 0.0105.
+  `05_vcov_cluster[_ablated]_<vid>.rds` now exist for A/B/C/D/E/F. Coefficients
+  were unaffected, as predicted — `Hess = TRUE` runs after the optimiser stops.
+  Described in the thesis as a **ridge-regularised** sandwich, because
+  `decay > 0` makes it the covariance of the penalised estimator.
+
+- [ ] **PENDING RUN: `./run_pipeline.sh 05` then `./run_pipeline.sh 12`.**
+      Protocol Amendment 7 (§21) is coded and the thesis is written against it,
+      but the producing stages have not run, so **8 macros and
+      `table_htwouncertainty.tex` are currently red `??` in `index.pdf`**. The
+      generator degrades correctly rather than crashing — verified. Stage 05
+      now attaches `se_cluster` to the coefficient table via
+      `attach_cluster_se()` (joined on `"<outcome>:<term>"`, never by
+      position); stage 12 calls `h2_stability_uncertainty()` and writes
+      `12_h2_stability_uncertainty`. Only 05 and 12 are needed: 05's
+      coefficients are unchanged, so 07/11 outputs stay as they are.
+      **Re-check the canary afterwards** (H1 −0.137549, H4 −0.016543,
+      H6 −0.012931); stage 06 must NOT be re-run, or GBT drifts.
+      Expected result, dry-run against the existing `.rds` files on
+      2026-08-10: 6 flagged, 3 exceed noise, 3 do not, all 3 exceeders
+      action-derived, z from 0.61 to 15.51 with a clean gap between 1.07 and
+      2.48.
+
+- [x] ~~The covariance is computed but nothing consumes it~~ — **closed by
+      Amendment 7.** The record of what it found: `05_coef_table_primary_*.parquet` still has no `se`
+      column, no stage reads the `.rds`, and no thesis table shows a standard
+      error — so the thesis now says a cluster-robust covariance is computed
+      and then shows none. The obvious examiner follow-up is **"then does H2's
+      instability exceed its standard error?"**, and that is answerable from
+      files already on disk with no refit. Computed 2026-08-10 for the three
+      A/B/C fits, sepsis outcome, max cross-variant coefficient difference over
+      the pooled SE of the two extremes:
+
+      | Covariate | β_A | β_B | β_C | max diff | pooled SE | \|d\|/SE |
+      |---|---|---|---|---|---|---|
+      | bilirubin_total | 0.0014 | −0.0016 | −0.0020 | 0.0034 | 0.0056 | **0.61** |
+      | platelets | 0.0002 | 0.0001 | 0.0003 | 0.0002 | 0.0002 | **1.07** |
+      | vaso_any | −0.0374 | 0.0271 | 0.0025 | 0.0645 | 0.0864 | **0.75** |
+      | creatinine_measured | 0.2877 | 0.2303 | 0.0343 | 0.2534 | 0.1024 | 2.48 |
+      | platelets_measured | −0.2563 | −0.5614 | −0.8173 | 0.5610 | 0.0529 | 10.60 |
+      | wbc_measured | 0.0969 | 0.5374 | 0.8989 | 0.8020 | 0.0517 | 15.51 |
+
+      **Three of H2's six "unstable" covariates move by less than their own
+      estimation noise**, and the three that genuinely move are *all* order
+      indicators — action-derived features. The pre-registered count of 6 of 22
+      is therefore a loose **upper bound**: a threshold rule on point estimates
+      cannot tell a coefficient that moved from one never estimated precisely
+      enough for a doubling to mean anything.
+
+      **Decided 2026-08-10: keep the pre-registered count, add the diagnostic
+      beside it.** H2's headline stays 6 of 22 — restating it as 3 would swap a
+      post-hoc estimand for a pre-registered one, which is exactly the move the
+      thesis criticises elsewhere, and the swap would be *flattering*, which is
+      a reason for more caution rather than less. §21.3 makes the ordering
+      binding.
+
+      Two cautions carried into the thesis text. The diagnostic is **not a
+      test**: the three fits share stays, so the differenced estimates are
+      correlated and the pooled SE assumes otherwise, and the sandwich is
+      ridge-regularised. And its agreement with the Amendment 5 ablation is
+      **not independent corroboration** — the ablation's by-kind split, the
+      ablation arm and this diagnostic all come from the same three fits and
+      share the flagged set. Three readings of one body of evidence, and the
+      thesis says so (§21.4).
 - [ ] **Variant D on the full eICU cohort** — the one cheap external
       experiment left. D needs no culture anchor, so it can run on all 181,589
       stays instead of the 2,824-stay sub-cohort, which would put the

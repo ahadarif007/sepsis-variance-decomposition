@@ -522,6 +522,33 @@ for (k in c("action-derived", "physiological")) {
   put(paste0("HTwoPctUnstable", tok), cell(hk, "pct_unstable", kind = k), digits = 1)
 }
 
+# Amendment 7: does a flagged coefficient move by more than it is estimated to
+# within? Reported beside the pre-registered count, never in place of it. The
+# table is generated whole because the flagged set is not a fixed row count --
+# a one-macro-per-cell grid would leave unresolved cells or silently drop a
+# covariate if the count moved.
+sec("H2 instability uncertainty diagnostic (Amendment 7)")
+hu <- rd("12_h2_stability_uncertainty")
+local({
+  tf <- function(x) x %in% c(TRUE, "TRUE")
+  n_flag   <- if (is.null(hu)) NA else nrow(hu)
+  ex       <- if (is.null(hu)) logical(0) else tf(hu$exceeds_noise)
+  act      <- if (is.null(hu)) logical(0) else tf(hu$is_action)
+  put("HTwoNFlagged",     n_flag,                                    digits = 0)
+  put("HTwoNRobust",      if (is.null(hu)) NA else sum(ex),          digits = 0)
+  put("HTwoNNoise",       if (is.null(hu)) NA else sum(!ex),         digits = 0)
+  put("HTwoNRobustAction", if (is.null(hu)) NA else sum(ex & act),   digits = 0)
+  put("HTwoZMin",  if (is.null(hu)) NA else min(as.numeric(hu$z_ratio), na.rm = TRUE), digits = 2)
+  put("HTwoZMax",  if (is.null(hu)) NA else max(as.numeric(hu$z_ratio), na.rm = TRUE), digits = 2)
+  # Largest z among those that do NOT clear the threshold: the headroom
+  # statement in the results chapter depends on this being well below 1.96.
+  put("HTwoZMaxNoise", if (is.null(hu) || !any(!ex)) NA else
+        max(as.numeric(hu$z_ratio)[!ex], na.rm = TRUE),              digits = 2)
+  put("HTwoZMinRobust", if (is.null(hu) || !any(ex)) NA else
+        min(as.numeric(hu$z_ratio)[ex], na.rm = TRUE),               digits = 2)
+})
+
+
 # Protocol Amendment 5: feature ablation
 sec("Feature ablation (Protocol Amendment 5)")
 ab  <- rd("07_ablation_metrics")
@@ -932,6 +959,28 @@ signed <- function(x, d = 2) {
 
 # --- Label sensitivity by racial subgroup (tab:equity_label) ----------------
 ls_ci <- rd("12_subgroup_labelsens_ci")
+local({
+  if (is.null(hu) || nrow(hu) == 0) { write_table("htwouncertainty", "l", "", NULL); return(invisible(NULL)) }
+  d  <- hu[order(-as.numeric(hu$z_ratio)), , drop = FALSE]
+  tf <- function(x) x %in% c(TRUE, "TRUE")
+  esc <- function(s) gsub("_", "\\\\_", as.character(s))
+  rows <- sprintf("\\texttt{%s} & %s & %s & %s & %s & %s & %s & %s",
+                  esc(d$term),
+                  formatC(as.numeric(d$coef_A), format = "f", digits = 4),
+                  formatC(as.numeric(d$coef_B), format = "f", digits = 4),
+                  formatC(as.numeric(d$coef_C), format = "f", digits = 4),
+                  formatC(as.numeric(d$max_diff),  format = "f", digits = 4),
+                  formatC(as.numeric(d$pooled_se), format = "f", digits = 4),
+                  formatC(as.numeric(d$z_ratio),   format = "f", digits = 2),
+                  ifelse(tf(d$is_action), "action", "physiol."))
+  write_table("htwouncertainty",
+              "lrrrrrrl",
+              paste("\\textbf{Covariate} & \\textbf{$\\beta_A$} & \\textbf{$\\beta_B$}",
+                    "& \\textbf{$\\beta_C$} & \\textbf{Max diff.} & \\textbf{Pooled SE}",
+                    "& \\textbf{Ratio} & \\textbf{Kind}"),
+              rows)
+})
+
 write_table("equitylabel", "lrcccc",
   paste("\\textbf{Racial group} & \\textbf{Stays} & \\textbf{A (\\%)}",
         "& \\textbf{B (\\%)} & \\textbf{C (\\%)}",

@@ -793,10 +793,11 @@ and the onset hour, over septic stays that were alerted at all.
 
 Median lead time is \pcLeadMedianPrimaryC--\pcLeadMedianPrimaryB{} hours for
 the primary model, with \pcFracLeadGeSixPrimaryB{} of septic stays alerted at
-least six hours ahead under the primary label, which compares favourably with
-the 4--12 hour horizons reported in the literature
-\cite{henry2015trewscore, moor2023review}.
-These numbers must be read against the previous subsection. Lead time is
+least six hours ahead under the primary label.
+
+These numbers are reported for completeness and should not be compared with the
+4--12 hour horizons in the literature \cite{henry2015trewscore, moor2023review},
+because they are not measuring the same thing. Lead time is
 measured over stays that were alerted, and at these thresholds almost every
 stay is alerted; an alarm that fires on every patient will, mechanically,
 fire early on the septic ones. The right-skewed distribution in
@@ -1854,10 +1855,10 @@ being read too broadly:
 
 \begin{itemize}
     \item The model-class spread compares six estimators ranging from a
-          six-item bedside score to a 29-covariate hazard model, so it is a
+          six-item bedside score to a 29-term hazard model, so it is a
           heterogeneous factor by construction. Between the two \emph{flexible}
           estimators the spread is \pcHSixEst{}: smaller than the label's
-          (H6, equivalence holds).
+          (H6, non-inferiority established in the direction that matters).
     \item The label factor is small \emph{in discrimination}, which is not the
           same as small in consequence. The three variants disagree about which
           patients are septic at $\kappa = \pcKappaVsBA$ (A vs B), so they
@@ -1935,8 +1936,9 @@ might have confirmed.
 The pattern is worth stating plainly before the individual verdicts. H1 and H4
 fail \emph{directionally}: the label does not out-vary the model, and the random
 split does not flatter the model. H5 fails \emph{for want of precision}, not for
-want of an effect. H6 alone ``fails'' in the study's favour, its null of
-equivalence is not rejected, which is a positive finding about interpretable
+want of an effect. H6 alone ``fails'' in the study's favour: its null is not
+rejected in the one direction the test addresses, so the boosted trees are not
+better by more than the margin, which is a positive finding about interpretable
 models rather than a negative one. A pre-registered design that returns four
 non-confirmations is doing what pre-registration is for: the point estimates
 under the original protocol, without intervals, would have supported three
@@ -1969,7 +1971,7 @@ spread runs from rule-based scores (qSOFA \pcAurocQsofaB, SIRS \pcAurocSirsB,
 NEWS2 \pcAurocNewsB) through a static Cox model (\pcAurocCoxB) to the two
 flexible estimators (primary \pcAurocPrimaryB, GBT \pcAurocGbtB). It is
 therefore not a comparison of like with like: it is dominated by the gap between
-a six-item bedside score and a fitted hazard model with 29 covariates, and a
+a six-item bedside score and a fitted hazard model with 22 covariates, and a
 gap of that size is not surprising. The label spread, by contrast, is measured
 with the model held fixed and is genuinely small: the three variants disagree
 about \emph{which} patients are septic far more than they disagree about how
@@ -2025,16 +2027,22 @@ separately.
 \end{mdframed}
 
 H2 is a stability criterion, not a contrast between two estimable quantities,
-so no p-value is defined for it. Quantifying the sampling variability of a
-coefficient here would require either standard errors from the fitted
-multinomial model, which the stored fit does not carry, or a bootstrap that
-refits the model on 2.3 million training rows for each of 2,000 replicates,
-which is not tractable. The instability is therefore reported as a count and
-interpreted as descriptive evidence, and no inferential claim is attached to
-it. Its magnitude is also conditional on the fit being identified: a penalised
-specification with a unique maximum is a precondition for the question
-``does this coefficient change sign across labels?'' to have an answer at all,
-and Section~\ref{sec:primary_model_spec} states the penalty used.
+so no p-value is defined for it. The count above is the pre-registered answer
+and is reported unmodified. Its magnitude is conditional on the fit being
+identified: a penalised specification with a unique maximum is a precondition
+for the question ``does this coefficient change sign across labels?'' to have
+an answer at all, and Section~\ref{sec:primary_model_spec} states the penalty
+used.
+
+The criterion has a weakness that its own form conceals, and which is worth
+making explicit before the composition of the list is read. A threshold rule
+applied to point estimates cannot separate a coefficient that genuinely takes
+different values under different labels from one estimated so imprecisely that
+a doubling falls within its noise. For a covariate whose standard error is of
+the order of its estimate, the second is close to certain and says nothing
+about label sensitivity. The count of \pcHTwoEst{} is therefore an
+\emph{upper bound} on the instability present, and how loose a bound was, until
+now, unmeasured.
 
 \begin{table}[H]
     \centering
@@ -2056,6 +2064,70 @@ and Section~\ref{sec:primary_model_spec} states the penalty used.
     flags are in \texttt{12\_h2\_coefficient\_stability.csv}.}
     \label{tab:coef_instability}
 \end{table}
+
+\subsubsection{Does the instability exceed its own estimation noise? (Protocol
+Amendment 7)}
+\label{sec:h2_uncertainty}
+
+The bound above can now be tightened. A cluster-robust covariance for the
+primary model, clustered on stay, is available
+(Section~\ref{sec:primary_model_spec}), so each flagged covariate carries a
+standard error under each label. For the two variants at the extremes of a
+covariate's estimated range, the difference between them can be referred to the
+pooled standard error of those two estimates. Table~\ref{tab:h2_uncertainty}
+reports that ratio.
+
+\begin{table}[H]
+    \centering\footnotesize\setlength{\tabcolsep}{4pt}
+    \adjustbox{max width=\textwidth}{\input{table_htwouncertainty}}
+    \caption[H2 instability against estimation noise]{Each covariate flagged by
+    H2, with its coefficient under each label variant, the difference between
+    the two extremes, the pooled cluster-robust standard error of those two
+    estimates, and their ratio. \pcHTwoNRobust{} of the \pcHTwoNFlagged{}
+    flagged covariates move by more than roughly twice their pooled standard
+    error; the remaining \pcHTwoNNoise{} move by less, the largest such ratio
+    being \pcHTwoZMaxNoise. The separation is clean rather than marginal: no
+    covariate falls between \pcHTwoZMaxNoise{} and \pcHTwoZMinRobust, so the
+    split does not depend on where the cut is placed. ``Kind'' marks whether
+    the covariate records clinician action or patient physiology
+    (Section~\ref{sec:h2_action}). \textbf{This is a diagnostic, not a test}:
+    the three fits share stays, so the estimates being differenced are
+    correlated and the pooled standard error assumes they are not; and because
+    the specification is ridge-penalised out of necessity, the covariance is
+    that of the penalised estimator. No $p$-value is computed and none should
+    be inferred from the ratio.}
+    \label{tab:h2_uncertainty}
+\end{table}
+
+Two things follow, and they should be kept apart.
+
+First, \textbf{H2's count is the pre-registered answer and stands}. The
+criterion was fixed before any modelling, it is met, and
+\pcHTwoEst{} of \pcHTwoNTerms{} covariates satisfy it. This diagnostic is
+post-hoc, is disclosed as Protocol Amendment 7, and does not replace that
+count. Restating the headline as the number surviving the diagnostic would
+substitute a post-hoc estimand for a pre-registered one, which is precisely the
+practice this thesis objects to elsewhere; the fact that the substitution would
+be flattering here is a reason for more caution, not less.
+
+Second, \textbf{the flagged set is not homogeneous, and the inhomogeneity has a
+pattern}. The covariates whose movement survives comparison with their own
+standard errors are \pcHTwoNRobustAction{} of \pcHTwoNRobust{} action-derived,
+with ratios from \pcHTwoZMinRobust{} to \pcHTwoZMax. Those that do not clear
+the threshold include both physiological covariates in the flagged set. The
+reading is that the label-sensitivity H2 detects is real but narrower than the
+raw count suggests, and that it sits where the previous subsection and the
+ablation both locate it: in the features that record what a clinician did
+rather than what the patient's body was doing.
+
+That convergence is worth stating carefully, because it is easy to overstate.
+It is not independent corroboration. The ablation's split by feature kind
+(Section~\ref{sec:h2_action}), the ablation arm of
+Section~\ref{sec:ablation} and this diagnostic are all computed from the same
+three fitted models and share the same flagged set. They are three readings of
+one body of evidence, and they agree because they are looking at the same
+thing from different angles, not because three separate experiments returned
+the same answer.
 
 \subsubsection{The instability is concentrated in the action-derived features}
 \label{sec:h2_action}
@@ -2297,6 +2369,21 @@ the limitations (Section~\ref{sec:limitations}).
 Neither arm of H5 supports the hypothesis, and the reason differs sharply
 between them.
 
+\paragraph{The estimand tested is a substitute, and the adjusted $p$-value
+belongs to it.} H5 as pre-registered compares two \emph{proportional} declines,
+and that contrast cannot be formed here: a proportional decline requires a
+baseline to be proportional to, and the internal Utility Score under the primary
+label is \pcUtilityPrimaryB{} at the default cut-off and \pcUtilityMaxPrimaryB{}
+at its best threshold. What occupies H5's slot in the confirmatory family is
+therefore the AUROC limb alone --- internal minus external AUROC, against
+$\theta_0 = 0$ --- and the Holm-adjusted value of \pcHFivePHolm{} reported above
+applies to that substituted contrast, not to the metric-divergence estimand the
+protocol specified. The substitution, its motivation and the constraints placed
+on it are recorded in \S13.6 of \texttt{00\_preregistration.md} alongside the
+two hypotheses that are degenerate outright. It should be read with one caution
+stated in the same place: this substituted contrast produces the smallest raw
+$p$-value in the family, and it is still a non-confirmation.
+
 The AUROC arm fails on precision rather than on direction. External
 discrimination on eICU-CRD is \pcExtAurocPrimaryB{} against \pcAurocPrimaryB{}
 internally, a degradation of \pcHFiveEst{}: the sign H5 predicted, and
@@ -2361,26 +2448,48 @@ still a well-formed number, which is precisely what makes it dangerous. The
 event-rate reconciliation in Table~\ref{tab:external_rates} exists so that this
 check is performed and reported rather than assumed.
 
-\subsection{H6: Model-Class Null (Not Rejected, Equivalence Holds)}
+\subsection{H6: Model-Class Null (Not Rejected; Non-Inferiority Established)}
+\label{sec:h6}
 
 \begin{mdframed}[backgroundcolor=ATUSand!30, linecolor=ATUGreen]
     \textbf{H6 [C]:} $|\Delta_\text{AUROC}(\text{GBT} - \text{primary})| \leq 0.02$.
 
     \textbf{Result:} $\Delta = \pcHSixEst$ (GBT \pcAurocGbtB, primary
-    \pcAurocPrimaryB), 95\% CI \pcHSixCiLo--\pcHSixCiHi. The whole interval lies
-    inside the equivalence bound $\theta_0 = 0.02$.
-    \textbf{H6 NOT REJECTED: equivalence holds, with the interpretable model
-    marginally ahead on point estimates.}
+    \pcAurocPrimaryB), 95\% CI \pcHSixCiLo--\pcHSixCiHi. The \emph{upper} limit
+    lies inside the bound $\theta_0 = 0.02$; the lower limit does not.
+    \textbf{H6 NOT REJECTED. What this establishes is non-inferiority of the
+    interpretable model --- the boosted trees are not better by more than the
+    margin --- and not two-sided equivalence.}
 \end{mdframed}
 
-This is the strongest positive result in the study. An interpretable multinomial
-hazard model with 29 covariates and a spline baseline matches gradient-boosted
+This is the strongest positive result in the study, and it is worth stating
+exactly what it is and is not.
+
+An interpretable multinomial hazard model with 29 terms per outcome
+(22 covariates, a six-column natural-spline baseline in elapsed hours, and an
+intercept) is not outperformed by gradient-boosted
 trees on discrimination under the primary label: \pcAurocPrimaryB{} against
-\pcAurocGbtB, with the interval on the difference,
-[\pcHSixCiLo, \pcHSixCiHi], contained within the pre-registered equivalence
-margin. Both models are scored on the same person-hours, so the contrast is
-paired and the interval is correspondingly tight. The ordering is the same under
-the other two labels (Table~\ref{tab:confirmatory}).
+\pcAurocGbtB. Both models are scored on the same person-hours, so the contrast
+is paired and the interval is correspondingly tight. The ordering is the same
+under the other two labels (Table~\ref{tab:confirmatory}).
+
+\paragraph{What the interval supports, and what it does not.} The pre-registered
+statement is two-sided, $|\theta| \leq 0.02$, but the test performed against it
+is one-sided: the bootstrap $p$-value is computed for $\theta > 0.02$ alone,
+which is the direction in which the boosted trees would beat the hazard model.
+That direction is comfortably excluded, the interval's upper limit being
+\pcHSixCiHi. Establishing two-sided equivalence would require the second of the
+two one-sided tests as well, and the data do not deliver it: the lower limit
+\pcHSixCiLo{} falls outside $-0.02$, so a difference of up to roughly
+\pcHSixCiLo{} in the \emph{interpretable} model's favour remains consistent with
+these data. The defensible reading is therefore asymmetric --- the boosted trees
+buy nothing here, but the two estimators have not been shown to be
+interchangeable, and a claim of strict equivalence would overstate the evidence.
+
+The asymmetry does not weaken the methodological conclusion, because the
+conclusion only ever needed one side of it. The argument for preferring an
+opaque model over a transparent one is an argument that the opaque model
+performs better; the interval excludes that in the only direction it is made.
 
 The methodological consequence is direct. On tabular ICU time-series of this
 kind, the accuracy argument for preferring an opaque model over a transparent
@@ -2449,6 +2558,7 @@ how much of this chapter is exploratory.
         Per-patient detection and lead time       & [C] & \S6     & none (estimation)                      \\
         H1 label dominance                        & [C] & \S7     & Holm ($m=6$)                           \\
         H2 coefficient instability                & [C] & \S7     & slot reserved; no test statistic       \\
+        H2 instability vs.\ estimation noise      & [E] & Amd.\ 7 & none; ratio to pooled SE, not a test   \\
         H3 treatment leakage                      & [C] & \S7     & slot reserved; exact bound             \\
         H4 split optimism                         & [C] & \S7     & Holm ($m=6$)                           \\
         H5 metric divergence                      & [C] & \S7     & Holm ($m=6$)                           \\

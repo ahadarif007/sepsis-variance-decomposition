@@ -51,8 +51,9 @@ designed, and the resolution is sharper than either hypothesis anticipated,
 because both resolve in the same direction, which the pre-registration treated
 as unlikely.
 
-H6 is \emph{not} rejected: the two flexible estimators are equivalent to within
-\pcHSixEst{} AUROC, the whole interval inside the 0.02 bound. H1 is also not
+H6 is \emph{not} rejected: the two flexible estimators differ by \pcHSixEst{}
+AUROC, and the interval's upper limit sits inside the 0.02 bound, so the
+boosted trees are not better by more than the margin. H1 is also not
 confirmed, and by a wide margin in the direction opposite to the one
 hypothesised: the model-class spread \pcSpreadModelClass{} exceeds the label
 spread \pcSpreadLabel{} by \pcHOneEst, with an interval
@@ -77,14 +78,14 @@ outcomes on tabular data, and Fagerstr{\"o}m et al.\ \cite{fagerstrom2019lisep}
 showed it breaking on the temporal early-warning axis, where a deep model
 detected patients up to twenty hours earlier than a Cox baseline. Here, with
 the label, the split, the feature set and the evaluation held fixed, an
-interpretable discrete-time hazard model and gradient-boosted trees are
-statistically equivalent, and the interpretable model is marginally ahead on
-point estimates. That is not a contradiction of Fagerstr{\"o}m et al.: their
-comparison was against a static Cox specification, which is exactly the
-comparator this study retains as the deliberately weak one, and which loses by
-a wide margin here too (\pcAurocCoxB{} against \pcAurocPrimaryB). The
-equivalence holds between the primary model and the boosted trees; it does not
-hold between either of them and the field's default survival specification.
+interpretable discrete-time hazard model is not outperformed by
+gradient-boosted trees, and is marginally ahead on point estimates. That is not
+a contradiction of Fagerstr{\"o}m et al.: their comparison was against a static
+Cox specification, which is exactly the comparator this study retains as the
+deliberately weak one, and which loses by a wide margin here too
+(\pcAurocCoxB{} against \pcAurocPrimaryB). The result holds between the primary
+model and the boosted trees; nothing of the kind holds between either of them
+and the field's default survival specification.
 
 This is also the clearest illustration in the thesis of why the inference layer
 was necessary. On point estimates alone, H1 would have been read as confirmed
@@ -409,10 +410,14 @@ underpowered for a fairness question can report one as answered.
     \cite{fagerstrom2019lisep} report a recurrent architecture detecting
     septic-shock onset up to twenty hours earlier than a Cox baseline on the
     same features and target, so the absence of a deep temporal comparator is
-    the one place where H6's equivalence result is genuinely incomplete: it
-    establishes equivalence between the primary model and gradient-boosted
-    trees, not between the primary model and every flexible estimator. This
-    does not affect the structural findings about the label.
+    one of two places where H6's result is incomplete. It establishes
+    non-inferiority against gradient-boosted trees, not against every flexible
+    estimator. The second gap is inferential rather than architectural: the
+    contrast is tested one-sidedly, so what is excluded is the boosted trees
+    outperforming the hazard model, and two-sided equivalence between the two is
+    not established --- the interval's lower limit, \pcHSixCiLo, falls outside
+    the 0.02 margin (Section~\ref{sec:h6}). Neither gap affects the structural
+    findings about the label.
 
     \item \textbf{Limited feature set.} Clinical notes, procedure codes, and
     ventilator settings were not included. Richer features might improve
@@ -429,15 +434,48 @@ underpowered for a fairness question can report one as answered.
     separation is post-hoc (Protocol Amendment 2) and rests on two variants,
     not on a systematic survey of alternative definitions.
 
-    \item \textbf{The primary model has no analytic standard errors.} A
-    cluster-robust sandwich estimator is not defined for the fitted multinomial
-    object, so no per-coefficient variance is available
-    (Section~\ref{sec:primary_model_spec}). Every interval reported for the
-    primary model comes from the stay-level cluster bootstrap, which respects
-    the same clustering but cannot supply a coefficient-level standard error.
-    H2 is reported as a descriptive count for this reason, and any effect
-    estimate from this model should be read as a point estimate without an
-    attached uncertainty.
+    \item \textbf{Discrimination is measured on the current-hour hazard, not on
+    a six-hour horizon.} The models estimate the cause-specific hazard of onset
+    in the current hour, and every AUROC, AUPRC and calibration figure in this
+    thesis scores that hazard against an indicator marking the onset hour among
+    the at-risk hours (Section~\ref{sec:framing}). Three consequences follow.
+    The reported discrimination is not comparable, quantity for quantity, with
+    published AUROCs from studies that classify a binary ``onset within the next
+    $k$ hours'' label, whose positives are $k$ times more numerous and whose task
+    is correspondingly easier to score well on; comparisons with such figures in
+    Chapter~\ref{ch:review} are therefore indicative rather than exact. The
+    covariates entering the prediction for the onset hour are contemporaneous
+    with it, so the discrimination figures measure detection at the recorded
+    onset rather than anticipation of it, and the quantity that speaks to
+    anticipation is the lead-time distribution, which
+    Section~\ref{sec:clinical_utility} shows to be uninformative at these alert
+    rates. And a cumulative six-hour risk, which is what a deployed instrument
+    would display, is a functional of this hazard together with the
+    competing-cause hazards and is not reported here. A design that estimated
+    and scored both would be stronger; the horizon-free hazard was chosen
+    because the competing-risks formulation makes it the more primitive
+    quantity, not because the six-hour risk is uninteresting.
+
+    \item \textbf{The primary model's coefficient standard errors are those
+    of a penalised estimator, and H2 still carries no uncertainty.} A
+    cluster-robust sandwich covariance is computed for the fitted multinomial
+    (Section~\ref{sec:primary_model_spec}), but two limits apply. Because the
+    specification requires a ridge penalty to be identified at all, it is the
+    covariance of the penalised estimator rather than of a maximum-likelihood
+    one, so the usual asymptotic interpretation of a Wald interval is
+    approximate here. And it bears on coefficients only: H2's estimand is a
+    count of covariates crossing a stability threshold across three separate
+    fits, which is not a smooth function of one fit's parameters and has no
+    analytic variance, so H2 remains a descriptive count with no interval and no
+    test. The Amendment 7 diagnostic narrows what can be said about that count
+    without removing this limit: it establishes that
+    \pcHTwoNNoise{} of the \pcHTwoNFlagged{} flagged covariates move by less
+    than their own estimation noise, so the pre-registered count is a loose
+    upper bound on the instability present, but the count itself still has no
+    sampling distribution and the diagnostic's own ratio is not a test statistic
+    (Section~\ref{sec:h2_uncertainty}). Every performance interval in this
+    thesis comes from the stay-level cluster bootstrap and is unaffected by
+    either limit.
 
     \item \textbf{The specification requires a penalty to be identified at all.}
     The unpenalised likelihood is completely separated on this design under
@@ -553,30 +591,62 @@ underpowered for a fairness question can report one as answered.
     \emph{combination} of analyses; each component separately has clear
     precedent, which Section~\ref{sec:search_strategy} identifies.
 
-    \item \textbf{Five protocol amendments are post-hoc.} The inference layer
+    \item \textbf{Seven protocol amendments are post-hoc.} The inference layer
     (intervals and multiplicity control, Section~\ref{sec:inference}), the
     alternative label limbs D and E (Section~\ref{sec:alt_labels}), the model
     identification and data-plausibility changes
     (Section~\ref{sec:primary_model_spec}), the standard onset timing of
-    Variant F (Section~\ref{sec:variant_f}) and the action-derived feature
-    ablation (Section~\ref{sec:ablation}) were all specified after the
+    Variant F (Section~\ref{sec:variant_f}), the action-derived feature
+    ablation (Section~\ref{sec:ablation}), the subgroup interpretability
+    floor (Section~\ref{sec:equity_strata}) and the H2 uncertainty diagnostic
+    (Section~\ref{sec:h2_uncertainty}) were all specified after the
     pre-registered analyses had been run and inspected. None changes an
     estimand, threshold, direction or hypothesis, and H1--H6 and families E1/E2
     are computed from unchanged inputs; but a reader should treat the verdicts
     as a pre-specified hypothesis set analysed under a retrospectively specified
-    error-control plan, and the amendment results as exploratory. Amendment 4 in
-    particular enlarges family E3, which tightens rather than relaxes the
+    error-control plan, and the amendment results as exploratory. Three of the
+    seven warrant a specific note, and they do not all point the same way.
+    Amendment 4 enlarges family E3, which tightens rather than relaxes the
     correction applied within it.
+    Amendment 6 \emph{reduces} family E1 from thirty contrasts to six, which is
+    on its face the manoeuvre the inference plan's own rule against shrinking a
+    family prohibits; it is admitted because the criterion is the stratum event
+    count alone and is blind to outcome, because the reduction removed the
+    family's only surviving discovery rather than creating one, and because
+    nothing in E1 survives correction under either denominator. A reader who
+    rejects that reasoning may read the thirty-contrast correction instead and
+    will reach the same conclusion.
+    Amendment 7 is the one whose result is \emph{favourable} to the thesis's own
+    argument, which is the case for treating it most sceptically. It reports
+    that the covariates whose cross-label movement survives comparison with
+    their standard errors are the action-derived ones, which is what this thesis
+    would like to be true. Three things bound it. It changes no estimand: H2's
+    count is reported first and unmodified, and the diagnostic never replaces
+    it. It is not a test, for the reasons given in
+    Section~\ref{sec:h2_uncertainty}. And it is not independent evidence: it is
+    computed from the same three fits as the ablation and shares the same
+    flagged set, so it is a second reading of one body of evidence rather than a
+    second experiment agreeing with the first.
 
-    \item \textbf{Two hypotheses admit no test statistic.} H2 is a stability
-    criterion rather than a contrast, and the fitted multinomial carries no
-    variance estimate; H3 is degenerate because its outcome is absent from the
-    evaluation window \emph{by construction} rather than by chance, so no test
-    of it could ever have been informative. Both are reported descriptively
-    while still consuming a slot in the family size, which makes the correction
-    on the remaining four hypotheses stricter, not weaker. For H1, H4 and H6
-    the correction determines nothing, each carries an adjusted $p$-value of
-    1.000 and each fails on its point estimate. H5 is the exception: its
-    adjusted value is \pcHFivePHolm, and it fails on the width of its interval
-    rather than on its direction.
+    \item \textbf{Two hypotheses admit no test statistic, and a third is tested
+    on a substituted estimand.} H2 is a stability criterion rather than a
+    contrast, and the fitted multinomial carries no variance estimate; H3 is
+    degenerate because its outcome is absent from the evaluation window
+    \emph{by construction} rather than by chance, so no test of it could ever
+    have been informative. Both are reported descriptively while still
+    consuming a slot in the family size, which makes the correction on the
+    remaining four hypotheses stricter, not weaker. H5 is a third and different
+    case: its pre-registered form compares two proportional declines, which
+    cannot be formed against an internal Utility Score of
+    \pcUtilityMaxPrimaryB, so the AUROC limb alone occupies its slot and the
+    adjusted $p$-value belongs to that substituted contrast
+    (Section~\ref{sec:h5}). The substitution is disclosed in the pre-registration
+    rather than reconstructed from the results, but it is a departure from the
+    protocol and not merely a degeneracy in it, and a reader is entitled to
+    treat H5's verdict as weaker evidence than H1's or H4's for that reason.
+    For H1, H4 and H6 the correction determines nothing: each carries an
+    adjusted $p$-value of 1.000 and each fails on its point estimate. H5 is the
+    exception on precision --- its adjusted value is \pcHFivePHolm, and it fails
+    on the width of its interval rather than on its direction --- which is
+    precisely why the substitution needed disclosing rather than absorbing.
 \end{enumerate}

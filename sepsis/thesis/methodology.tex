@@ -420,15 +420,44 @@ Following Lauritsen et al.\ \cite{lauritsen2021framing} and Reyna et al.\
 \begin{itemize}
     \item \textbf{Observation window:} Expanding from ICU admission, uses all
     data available up to the current hour.
-    \item \textbf{Prediction horizon:} 6 hours (will sepsis onset occur within the
-    next 6 hours?).
+    \item \textbf{Estimand:} the \emph{cause-specific discrete-time hazard} of
+    sepsis onset in the current hour, conditional on the stay being at risk at
+    the start of it --- $\Pr(\text{onset at hour } t \mid \text{at risk at } t,
+    \mathbf{x}_t)$, with discharge and death as competing causes.
     \item \textbf{Prediction frequency:} Every hour.
     \item \textbf{Start time:} 1 hour after ICU admission.
     \item \textbf{End time:} 72 hours after ICU admission (right-censored).
+    \item \textbf{Alerting window:} 6 hours. An alert counts as timely if it is
+    issued in the six hours up to onset; this governs the Utility Score and the
+    per-patient detection metrics, not the quantity the models estimate.
 \end{itemize}
 
-This framing matches the PhysioNet/CinC 2019 Challenge
-\cite{reyna2020utility}.
+\paragraph{What is estimated and what is scored, stated separately.} These are
+two different objects in this design and conflating them would misdescribe every
+discrimination number in Chapter~\ref{ch:evaluation}. The models estimate a
+per-hour hazard, and the ranking metrics --- AUROC, AUPRC and the calibration
+curves --- are computed on that hazard against an indicator that takes the value
+one at the onset hour and zero at every other at-risk hour. They therefore
+measure how well a model separates the hour in which onset is recorded from the
+hours that precede it in the same and other stays; they are not the AUROC of a
+``sepsis within the next six hours'' classifier, and they should not be read as
+one. The six-hour window enters through the clinically oriented metrics instead:
+the Utility Score pays a reward that decays linearly in lead time over that
+window (Section~\ref{sec:metrics}), episode sensitivity asks whether an
+alert fired inside it, and the lead-time distribution is reported against it
+directly.
+
+The choice follows from the competing-risks formulation rather than sitting
+beside it. A cumulative six-hour risk is a functional of the hazard together
+with the competing-cause hazards over the same window, so estimating the hazard
+is the more primitive operation and leaves the horizon a reporting decision
+rather than a modelling one. The cost is that a single number cannot be quoted
+as ``six-hour discrimination'', and the corresponding limitation is recorded in
+Section~\ref{sec:limitations}.
+
+The alerting window and the utility scoring rule match the PhysioNet/CinC 2019
+Challenge \cite{reyna2020utility}; the estimand does not, the Challenge having
+scored a binary label defined over the window itself.
 
 
 \section{Person-Hour Table and Competing Events}
@@ -457,22 +486,38 @@ Features are extracted at each person-hour from chartevents, labevents,
 inputevents, and outputevents. The feature set includes:
 
 \begin{enumerate}
-    \item \textbf{Vital signs} (last value carried forward per hour): heart rate,
-    respiratory rate, SpO$_2$, MAP (invasive or noninvasive), temperature
+    \item \textbf{Vital signs}, 6 (last value carried forward per hour): heart
+    rate, respiratory rate, SpO$_2$, MAP (invasive or noninvasive), temperature
     ($^\circ$C), GCS total.
-    \item \textbf{Laboratory values} (last value carried forward): lactate,
-    creatinine, total bilirubin, platelet count, WBC, P/F ratio.
-    \item \textbf{Vasopressor indicators:} any vasopressor (yes/no); any
+    \item \textbf{Laboratory values}, 5 (last value carried forward): lactate,
+    creatinine, total bilirubin, platelet count, WBC.
+    \item \textbf{Vasopressor indicators}, 2: any vasopressor (yes/no); any
     norepinephrine or epinephrine (yes/no).
-    \item \textbf{Six-hour trends:} rolling slopes for respiratory rate, MAP,
-    and lactate.
-    \item \textbf{Missingness indicators:} whether each lab test was ordered in
-    the current hour (one flag per test).
+    \item \textbf{Six-hour trends}, 3: rolling slopes for heart rate,
+    respiratory rate and MAP.
+    \item \textbf{Missingness indicators}, 6: whether each of lactate,
+    creatinine, bilirubin, platelets, white cells and a blood gas
+    (P/F ratio) was ordered in the current hour, one flag per test.
 \end{enumerate}
 
 Temperature in Fahrenheit is converted to Celsius. FiO$_2$ values above 1.0
-(percentage format) are divided by 100. In total, 25 candidate predictors are
-used.
+(percentage format) are divided by 100.
+
+Two boundaries of this list are worth stating because they are easy to
+misread. The P/F ratio enters as an \emph{order indicator} only: it is used in
+the SOFA respiratory component that constructs the label, and its measurement
+flag is a covariate, but the ratio itself is not a model input, because it is
+recorded for a minority of person-hours and its forward-filled value carries
+more information about ventilation practice than about the current hour. And
+there is no lactate slope: rolling slopes are computed for the three variables
+sampled densely enough to support one.
+
+The declared set therefore holds \textbf{22 covariates}, and the fitted model
+carries \textbf{29 terms per outcome} once the six-column natural-spline
+baseline in elapsed hours and the intercept are counted. The vector is defined
+once, in \texttt{config.R}, and every stage that fits or transports a model
+reads it from there; \texttt{require\_features()} raises an error rather than
+proceeding if any declared predictor is absent from a panel.
 
 
 \section{Model Classes}
@@ -530,17 +575,49 @@ against a unique maximiser, and an unpenalised fit can land in a degenerate
 region under one label and a benign region under another, manufacturing an
 apparent label effect where none exists.
 
-\paragraph{Uncertainty for this model comes from the bootstrap, not from the fit.}
-A cluster-robust sandwich estimator clustered on stay would be the natural
-choice for standard errors, since person-hours are nested within stays. It is
-not available: \texttt{sandwich}'s score-function method is not defined for
-\texttt{multinom} objects, so no analytic variance is computed for the primary
-model at all. All uncertainty reported for it therefore comes from the
-stay-level cluster bootstrap of Section~\ref{sec:inference}, which resamples
-whole stays and so respects the same clustering the sandwich estimator would
-have. The one quantity this cannot supply is a per-coefficient standard error,
-which is why H2 is reported as a descriptive count rather than a test
-(Section~\ref{sec:h2}).
+\paragraph{Uncertainty for this model comes from the bootstrap, with a
+cluster-robust covariance alongside it.}
+Person-hours are nested within stays, so a cluster-robust sandwich estimator
+clustered on stay is the natural choice for coefficient standard errors. It is
+not available off the shelf: \texttt{sandwich} supplies a \emph{bread} method
+for \texttt{multinom} objects but no score-function method, so the whole
+sandwich family fails on this class. The obstacle is narrow rather than
+fundamental, and the missing piece is supplied here. For row $i$ and
+non-reference category $k$ the score with respect to the coefficient on
+covariate $j$ is $x_{ij}(y_{ik} - p_{ik})$, a residual matrix the fitted object
+already stores; providing it, and fitting with the Hessian retained, yields a
+clustered covariance for the primary model.
+
+Two qualifications attach to it and neither is cosmetic. Because the
+specification is ridge-penalised out of necessity
+(Section~\ref{sec:primary_model_spec}), what the estimator returns is the
+covariance of the \emph{penalised} estimator: the bread is the inverse penalised
+Hessian, so the two factors are mutually consistent, but this is a
+ridge-regularised sandwich and is described as one throughout. And it gives
+standard errors on \emph{coefficients}, not on H2's count of unstable
+covariates, which is a threshold rule applied across three separate fits and
+admits no analytic variance of its own. H2 therefore remains a descriptive
+count (Section~\ref{sec:h2}).
+
+What the covariance does permit is a diagnostic on that count, added as
+\textbf{Protocol Amendment 7} (post-hoc, \S21 of
+\texttt{00\_preregistration.md}). A rule that flags a coefficient for doubling
+in magnitude cannot distinguish a coefficient that genuinely moves from one
+estimated too imprecisely for a doubling to mean anything, so for each flagged
+covariate the difference between its two extreme estimates is referred to the
+pooled standard error of those two. The ratio is reported alongside the
+pre-registered count and never in place of it
+(Section~\ref{sec:h2_uncertainty}). It is deliberately not a test: the three
+fits share stays, so the differenced estimates are correlated and a pooled
+standard error assuming independence is conservative by an unquantified amount,
+and the penalisation qualification above applies to it as well. No $p$-value is
+computed for it and it enters no corrected family.
+
+Every interval on a performance quantity in this thesis continues to come from
+the stay-level cluster bootstrap of Section~\ref{sec:inference}, which
+resamples whole stays and so respects the same clustering. The analytic
+covariance is reported for the coefficients and does not enter any hypothesis
+verdict.
 
 \subsection{Comparator: Gradient-Boosted Trees (GBT)}
 
@@ -693,10 +770,26 @@ external cohort.
 \label{sec:sample_size}
 
 Sample size is calculated using the Riley et al.\ \cite{riley2019sample}
-method, targeting a shrinkage factor $\geq 0.9$ with 25 candidate predictors
-and an anticipated $C$-statistic of 0.846 from Moor et al.\
+method, targeting a shrinkage factor $\geq 0.9$ with \pcNCandidatePredictors{}
+parameters and an anticipated $C$-statistic of 0.846 from Moor et al.\
 \cite{moor2023review}. Each label variant is evaluated separately; an
 underpowered variant is a finding, not a failure.
+
+\paragraph{The parameter count, and the criterion's fit to this model.}
+\pcNCandidatePredictors{} is the number of terms the model estimates for one
+outcome: 22 covariates, the six-column spline baseline and an intercept
+(Section~\ref{sec:features}). The mapping is imperfect and the imperfection runs
+against the study, so it is stated rather than left implicit. Riley et al.'s
+criteria are derived for a \emph{binary} outcome, whereas the primary model is a
+four-category multinomial estimating those \pcNCandidatePredictors{} terms for
+\emph{each} of three non-reference outcomes, three times that count in all.
+Taking the
+per-outcome count treats each cause-specific sub-model as the unit, which is the
+closest defensible reading of a binary criterion in this setting but still
+understates the dimensionality of the whole fit. The minimum sample size scales
+approximately linearly in the parameter count, so the margins reported below
+absorb even the all-outcomes reading with a factor of ten to spare, and the
+adequacy verdict does not depend on which reading is taken.
 
 \paragraph{The unit the criterion applies to.} Riley et al.'s criteria are
 derived for a sample of \emph{independent} observations, and person-hours are
@@ -837,8 +930,8 @@ predictive value is well established and is usually read as evidence that
 measurement patterns encode clinical suspicion, which is precisely the problem:
 a model that leans on them is partly learning when clinicians became worried.
 
-\textbf{Protocol Amendment 5} (post-hoc, recorded as \S16 of
-\texttt{00\_preregistration.md}) therefore adds an ablated arm. The primary
+\textbf{Protocol Amendment 5} (post-hoc, dated 6 August 2026 and recorded as
+\S19 of \texttt{00\_preregistration.md}) therefore adds an ablated arm. The primary
 model and the gradient-boosted comparator are re-fitted on the same training
 rows, the same splits and the same hyperparameters, with the
 \pcAblNDropped{} action-derived features removed and every physiological

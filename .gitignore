@@ -102,3 +102,11 @@ secrets.json
 *.swp
 *.swo
 *~
+
+# ---- Presentation decks ----
+# Excluded from the submission repository: both decks predate several rounds of
+# pipeline fixes and state superseded results (H6 tagged REJECTED, primary
+# AUROC 0.607, the withdrawn "Variant B collapse" claim). They must be rebuilt
+# against thesis/pipeline_constants.tex before they are shown or re-tracked.
+sepsis/presentation/
+sepsis/presentation-v2/

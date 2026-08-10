@@ -46,8 +46,15 @@ is read by several stages and must mean the same thing in all of them. A
 constant duplicated across two scripts is a constant that can silently diverge,
 and in a study about definitional sensitivity such a divergence would be
 indistinguishable from a finding. \texttt{config.R} is therefore the single
-source of truth for every path, identifier, window, threshold, seed, family size
-and event floor in the pipeline, and no other file hard-codes any of them. The
+source of truth for every path, identifier, window, threshold, seed, family
+size, event floor and covariate vector in the pipeline, and no other file
+hard-codes any of them. The covariate vector is the case that matters most and
+was the last to be brought inside the rule: it is read by the two fitting
+stages and again by the external-validation stage, which reconstructs a stored
+model's column order from it, so a divergence between copies would have
+produced a permuted design matrix and predictions that are wrong while
+remaining perfectly well-formed. Where a stored model records its own feature
+names, disagreeing with the declaration is an error rather than a warning. The
 same discipline extends to the thesis: \texttt{thesis\_constants.R} writes the
 reported numbers into the document from the result tables, so a value cannot
 disagree between the code and the text either.

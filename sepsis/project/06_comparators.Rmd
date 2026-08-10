@@ -66,14 +66,12 @@ step("=== Phase 3b: Comparator models ===")
 Same feature set as the primary model.
 
 ```{r feature-set}
-BASE_FEATURES <- c(
-  "hr", "resp_rate", "spo2", "map", "temp_c", "gcs",
-  "lactate", "creatinine", "bilirubin_total", "platelets", "wbc",
-  "vaso_any", "norepi_epi_any",
-  "hr_slope6h", "resp_rate_slope6h", "map_slope6h",
-  "lactate_measured", "creatinine_measured", "bilirubin_total_measured",
-  "platelets_measured", "wbc_measured", "pf_ratio_measured"
-)
+# The comparators are fitted on the same covariate vector as the primary model,
+# in the same order. It is declared once in config.R; `model_features()`
+# returns BASE_FEATURES followed by MISSINGNESS_FEATURES, which is the order
+# the stored xgboost design matrix was built in and the order stage 08 must
+# reconstruct.
+MODEL_FEATURES <- model_features()
 ```
 
 ## Fit Comparators Per Variant
@@ -91,8 +89,8 @@ fit_comparators <- function(vid) {
   train <- ph[temporal_split == "train"]
   test  <- ph[temporal_split == "test"]
 
-  avail_feats <- intersect(BASE_FEATURES, names(ph))
-  require_features(BASE_FEATURES, available = names(ph))
+  avail_feats <- intersect(MODEL_FEATURES, names(ph))
+  require_features(MODEL_FEATURES, available = names(ph))
   for (f in avail_feats) {
     if (is.numeric(train[[f]])) train[is.na(get(f)), (f) := 0]
     if (is.logical(train[[f]])) train[is.na(get(f)), (f) := FALSE]
@@ -282,10 +280,10 @@ fit_gbt_ablated <- function(vid) {
   train <- ph[temporal_split == "train"]
   test  <- ph[temporal_split == "test"]
 
-  require_features(BASE_FEATURES, available = names(ph))
-  gbt_feats <- arm_features(intersect(BASE_FEATURES, names(ph)), "ablated")
+  require_features(MODEL_FEATURES, available = names(ph))
+  gbt_feats <- arm_features(intersect(MODEL_FEATURES, names(ph)), "ablated")
   cat(sprintf("  Ablated arm: %d features (from %d)\n",
-              length(gbt_feats), length(intersect(BASE_FEATURES, names(ph)))))
+              length(gbt_feats), length(intersect(MODEL_FEATURES, names(ph)))))
 
   for (f in gbt_feats) {
     if (is.numeric(train[[f]])) train[is.na(get(f)), (f) := 0]
@@ -373,8 +371,8 @@ if ("random_split" %in% names(ph)) {
   train_r <- ph[random_split == "train"]
   test_r  <- ph[random_split == "test"]
 
-  avail_feats <- intersect(BASE_FEATURES, names(ph))
-  require_features(BASE_FEATURES, available = names(ph))
+  avail_feats <- intersect(MODEL_FEATURES, names(ph))
+  require_features(MODEL_FEATURES, available = names(ph))
   for (f in avail_feats) {
     if (is.numeric(train_r[[f]])) train_r[is.na(get(f)), (f) := 0]
     if (is.logical(train_r[[f]])) train_r[is.na(get(f)), (f) := FALSE]

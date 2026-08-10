@@ -117,11 +117,20 @@ source of variation; if H6 is rejected, the model also matters. Both outcomes
 are informative.
 
 These six form a single confirmatory family and are tested with
-Holm--Bonferroni control of the family-wise error rate. Every other analysis in
-this thesis, including the entire equity analysis, is exploratory and is
-reported with cluster-bootstrap intervals and Benjamini--Hochberg
-false-discovery control. Section~\ref{sec:inference} sets out the plan and
-states plainly that it was written after the analyses had been run.
+Holm--Bonferroni control of the family-wise error rate. Every analysis reported
+in this thesis carries an explicit status --- confirmatory, exploratory or
+descriptive --- and the status is not assigned in the prose: it is held in a
+machine-readable analysis register that the inference stage writes from the
+same objects it corrects, and reproduced in Table~\ref{tab:register}. Alongside
+H1--H6 the register marks a further nine analyses confirmatory because their
+estimand was fixed before any modelling, among them the internal performance
+estimates, calibration, decision-curve net benefit, per-patient detection and
+the external validation; most of these are estimation rather than testing and
+so take no multiplicity correction. The equity analyses are exploratory: §9 of
+the protocol fixed their scope but not the levels, the reference or the
+direction of any contrast, so they are corrected by Benjamini--Hochberg within
+their own families. Section~\ref{sec:inference} sets out the plan and states
+plainly that it was written after the analyses had been run.
 
 
 \section{Contributions}

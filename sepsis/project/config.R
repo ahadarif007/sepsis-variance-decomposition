@@ -53,7 +53,14 @@ if (nchar(PROJECT_ROOT) == 0) {
     if (parent == candidate) break
     candidate <- parent
   }
-  if (!found) PROJECT_ROOT <- "/Users/arif/Desktop/RESEARCH"
+  # No fallback to a developer's absolute path: a wrong root must fail here,
+  # loudly, rather than three stages later as a missing-file error that looks
+  # like a data problem.
+  if (!found)
+    stop("Could not locate 'data/mimic-iv-3.1' by walking up from ", SCRIPT_DIR,
+         ".\nSet MIMIC_RESEARCH_ROOT to the directory that contains data/, e.g.\n",
+         "  MIMIC_RESEARCH_ROOT=/path/to/RESEARCH Rscript run_pipeline.R\n",
+         "See the Prerequisites section of README.md.", call. = FALSE)
 }
 PROJECT_ROOT <- normalizePath(PROJECT_ROOT, mustWork = FALSE)
 
@@ -232,6 +239,47 @@ active_variants <- function(all_ids = ALL_VARIANTS) {
 }
 
 # --------------------------------------------------------------------------- #
+# The model covariate vector: the single declaration.
+#
+# These two vectors used to be re-declared inside 05_primary_model.Rmd,
+# 06_comparators.Rmd and 08_external_validation.Rmd. Three copies of one
+# constant is the exact hazard the design chapter argues against, and it is not
+# hypothetical here: the project's worst defect was a predictor silently absent
+# from every fitted model because one list said "hr" and the panel column was
+# called "heart_rate". Stage 08 compounded it, reconstructing the stored GBT
+# model's column names from its own copy whenever xgboost had not persisted
+# them -- so a divergence in ORDER between the stage-06 copy and the stage-08
+# copy would have produced permuted external predictions that are still
+# well-formed numbers. Declared once here, that failure mode is unreachable.
+#
+# ORDER IS LOAD-BEARING. The design matrix handed to xgboost is built by
+# indexing with this vector, so appending is safe and reordering is not. If a
+# feature must be inserted mid-list, refit stages 05 and 06 rather than
+# assuming a stored model will still line up; check_model_features() below is
+# the guard that turns such a mismatch into an error instead of a wrong number.
+# --------------------------------------------------------------------------- #
+BASE_FEATURES <- c(
+  "hr", "resp_rate", "spo2", "map", "temp_c", "gcs",
+  "lactate", "creatinine", "bilirubin_total", "platelets", "wbc",
+  "vaso_any", "norepi_epi_any",
+  "hr_slope6h", "resp_rate_slope6h", "map_slope6h"
+)
+
+MISSINGNESS_FEATURES <- c(
+  "lactate_measured", "creatinine_measured", "bilirubin_total_measured",
+  "platelets_measured", "wbc_measured", "pf_ratio_measured"
+)
+
+#' The full declared covariate vector, in the order the design matrix uses.
+#'
+#' Note that `pf_ratio` itself is deliberately NOT a covariate: the ratio feeds
+#' the SOFA respiratory component that builds the label, but it is recorded for
+#' a minority of person-hours and its forward-filled value carries more
+#' information about ventilation practice than about the current hour. Only its
+#' order indicator is a predictor.
+model_features <- function() c(BASE_FEATURES, MISSINGNESS_FEATURES)
+
+# --------------------------------------------------------------------------- #
 # Action-derived features: Protocol Amendment 5 (post-hoc)
 #
 # The thesis argues that the Sepsis-3 label is constituted by clinician action.
@@ -257,6 +305,45 @@ ACTION_DERIVED_FEATURES <- c(
   "lactate_measured", "creatinine_measured", "bilirubin_total_measured",
   "platelets_measured", "wbc_measured", "pf_ratio_measured"
 )
+
+#' Assert that a stored model's own feature names agree with `config.R`.
+#'
+#' Applying a frozen model to a new cohort (stage 08) requires building the
+#' design matrix in the order the model was trained on. Where the stored object
+#' remembers that order, disagreeing with it must be an error: a permuted
+#' design matrix produces predictions that are wrong and yet perfectly
+#' well-formed, which is the failure mode this pipeline is least able to
+#' detect downstream. Where the object does NOT remember it -- xgboost does not
+#' always persist `feature_names` -- the declared vector is the only available
+#' answer, and the caller is told loudly that it is being trusted.
+#'
+#' @param stored character vector of feature names from the model, or NULL.
+#' @param expected the declared vector the caller intends to use.
+#' @param tag identifier for the log line.
+#' @return `expected`, invisibly, when the check passes or cannot be made.
+check_model_features <- function(stored, expected, tag = "") {
+  if (is.null(stored) || !length(stored)) {
+    if (exists("v2_log"))
+      v2_log(sprintf(paste0("  [%s] stored model carries no feature names; ",
+                            "falling back to the config.R vector (%d features). ",
+                            "This is safe only while that vector is unchanged ",
+                            "since the fit."), tag, length(expected)),
+             level = "WARN")
+    return(invisible(expected))
+  }
+  if (!identical(as.character(stored), as.character(expected))) {
+    stop(sprintf(paste0("[%s] stored model features do not match config.R.\n",
+                        "  stored   (%d): %s\n",
+                        "  expected (%d): %s\n",
+                        "The model was fitted on a different design matrix. ",
+                        "Refit stages 05/06 rather than scoring across the ",
+                        "mismatch."),
+                 tag, length(stored), paste(stored, collapse = ", "),
+                 length(expected), paste(expected, collapse = ", ")),
+         call. = FALSE)
+  }
+  invisible(expected)
+}
 
 #' Restrict the fitting stages (05, 06) to one arm.
 #'
@@ -579,4 +666,23 @@ MIN_SUBGROUP_EVENTS_INTERPRET <- MIN_EXTERNAL_EVENTS
 # Sample size (Riley et al., 2019): reference anticipated AUC
 # --------------------------------------------------------------------------- #
 ANTICIPATED_AUC <- 0.846  # Moor et al. (2023) internal AUC
-P_CANDIDATE_PREDICTORS <- 25  # approximate number of candidate predictors
+
+# Number of parameters supplied to pmsampsize. This is the count the fitted
+# model actually estimates for ONE outcome: length(BASE_FEATURES) +
+# length(MISSINGNESS_FEATURES) = 22 covariates, plus the six-column natural
+# spline in `hour`, plus the intercept = 29. It was 25 ("approximate number of
+# candidate predictors"), which understated the fit and matched no object in
+# the pipeline.
+#
+# The mapping to Riley's criterion is imperfect in a way that must be reported
+# rather than hidden: the criterion is derived for a binary outcome, whereas
+# the primary model is a four-category multinomial estimating 29 terms for each
+# of three non-reference outcomes, i.e. 87 parameters in total. Using the
+# per-outcome count treats each cause-specific sub-model as the unit, which is
+# the closest defensible reading of a binary criterion here but is still an
+# understatement of the whole fit's dimensionality. The minimum N scales
+# roughly linearly in the parameter count, so the observed margins (>35x on the
+# stay-level criterion) absorb even the 87-parameter reading comfortably; the
+# adequacy verdict does not turn on the choice. See methodology.tex,
+# Section "Sample Size".
+P_CANDIDATE_PREDICTORS <- 29

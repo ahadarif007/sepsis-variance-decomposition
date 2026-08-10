@@ -92,14 +92,17 @@ strengthened form: on the cohort where the label is fully observed, AUROC and
 clinical utility are close to uncorrelated, discrimination sitting in the high
 0.7s while usable clinical value never materialises at any threshold.
 
-\paragraph{H6 (Model-class null): Not rejected, equivalence holds.}
-The interpretable hazard model matches gradient-boosted trees:
-\pcAurocPrimaryB{} against \pcAurocGbtB, a difference of \pcHSixEst{} whose
-interval [\pcHSixCiLo, \pcHSixCiHi] lies entirely inside the pre-registered
-0.02 equivalence margin, with the interpretable model marginally ahead on point
-estimates. This is the strongest positive result in the study: on tabular ICU
-time-series of this kind the accuracy case for preferring an opaque model is
-not supported. What little AUROC separates them buys nothing clinically: at their
+\paragraph{H6 (Model-class null): Not rejected; non-inferiority established.}
+The interpretable hazard model is not outperformed by gradient-boosted trees:
+\pcAurocPrimaryB{} against \pcAurocGbtB, a difference of \pcHSixEst{} with an
+interval of [\pcHSixCiLo, \pcHSixCiHi]. The upper limit sits inside the
+pre-registered 0.02 margin, so the trees are not better by more than it; the
+lower limit falls outside, so two-sided equivalence is \emph{not} established
+and a difference of up to roughly \pcHSixCiLo{} in the interpretable model's
+favour remains consistent with these data. This is the strongest positive
+result in the study, and it is strongest in exactly the direction that matters:
+on tabular ICU time-series of this kind the accuracy case for preferring an
+opaque model is not supported. What little AUROC separates them buys nothing clinically: at their
 respective
 best thresholds the two models are separated by less than one hundredth of a
 Utility Score point (\pcUtilityMaxGbtB{} against \pcUtilityMaxPrimaryB{}), both
@@ -215,7 +218,10 @@ than the patient's deterioration.
     \item \textbf{C6 (Reproducible pipeline):} A pre-registered,
     TRIPOD+AI-conformant pipeline with fixed seeds and a single orchestration
     script, which reproduces every reported estimate exactly from the raw
-    databases, and which emits the numbers in this document as generated
+    databases --- with the one documented exception of the gradient-boosted
+    comparator, whose fitting is not bit-reproducible across library builds and
+    whose rows therefore serve as the designated consistency check on any
+    re-run --- and which emits the numbers in this document as generated
     constants so that text and code cannot diverge
     (Section~\ref{sec:code_availability}, Appendix~\ref{app:code}).
 

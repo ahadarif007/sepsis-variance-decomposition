@@ -83,6 +83,17 @@
 \newdateformat{monthyeardate}{\monthname[\THEMONTH], \THEYEAR}
 
 %------------------------------------------------------------------------------------------------------
+% Submission date on the title page.
+%
+% SET THIS BEFORE SUBMITTING. It was \today, which printed whichever day the
+% PDF happened to be compiled on -- so a rebuild after the deadline would have
+% shown a post-deadline date on the cover of a thesis submitted before it.
+% Defaulted to the published deadline; change it if the actual submission date
+% differs.
+%------------------------------------------------------------------------------------------------------
+\newcommand{\submissiondate}{19 October 2026}
+
+%------------------------------------------------------------------------------------------------------
 % Source-code repository. Cited in Appendix A and in the Code Availability
 % section of Chapter 4. Set once here so the two can never disagree.
 %------------------------------------------------------------------------------------------------------
@@ -144,7 +155,7 @@
         \normalsize
         \textbf{By \\ \textcolor{ATUGreen}{\reportauthor}}\\
         \vspace{15mm}
-        {\scshape \today} \\[0.3\baselineskip]
+        {\scshape \submissiondate} \\[0.3\baselineskip]
         \vspace{75mm}
         \Large {\textcolor{ATUGreen}{\textbf{{\reporttype}}}} \\
         \bigskip
@@ -162,6 +173,12 @@
 \input{declaration}
 \input{acknowledgments}
 
+% The arabic reset has to be issued on a page of its own, after the last piece
+% of front matter has been shipped out. Placed immediately after
+% \input{acknowledgments} it took effect while the acknowledgments page was
+% still open, so that page was numbered 1 and the table of contents listed
+% "Acknowledgments ... 1" against "Introduction ... 2".
+\cleardoublepage
 \pagenumbering{arabic}
 \setcounter{page}{1}
 

@@ -67,17 +67,10 @@ step("=== Phase 3a: Primary discrete-time competing-risks model ===")
 Predictors include vitals, lab values, vasopressor exposure, and 6-hour rolling slopes. Missingness indicators let the model distinguish normal values from unmeasured ones.
 
 ```{r feature-set}
-BASE_FEATURES <- c(
-  "hr", "resp_rate", "spo2", "map", "temp_c", "gcs",
-  "lactate", "creatinine", "bilirubin_total", "platelets", "wbc",
-  "vaso_any", "norepi_epi_any",
-  "hr_slope6h", "resp_rate_slope6h", "map_slope6h"
-)
-MISSINGNESS_FEATURES <- c(
-  "lactate_measured", "creatinine_measured", "bilirubin_total_measured",
-  "platelets_measured", "wbc_measured", "pf_ratio_measured"
-)
-
+# BASE_FEATURES and MISSINGNESS_FEATURES are declared once, in config.R, and
+# read from there by every stage that fits or transports a model. They used to
+# be re-declared here, in 06 and in 08; see the comment at the declaration for
+# why three copies of the covariate vector was the wrong arrangement.
 cat("Base features:", paste(BASE_FEATURES, collapse = ", "), "\n")
 cat("Missingness indicators:", paste(MISSINGNESS_FEATURES, collapse = ", "), "\n")
 ```
@@ -204,6 +197,15 @@ fit_primary_model <- function(vid, arm = "full") {
   coef_table$variant <- vid
   coef_table$model   <- "discrete_time_competing_risks"
   coef_table$arm     <- arm
+
+  # The cluster-robust standard error travels with the coefficient from the
+  # point it is produced, rather than being rejoined from the saved covariance
+  # later. H2 asks whether a coefficient changes across label variants, and
+  # that question is unanswerable from point estimates alone: a threshold rule
+  # cannot tell a coefficient that moved from one that was never estimated
+  # precisely enough to say. The join is by "<outcome>:<term>", never by
+  # position.
+  coef_table <- attach_cluster_se(coef_table, vcov_robust)
 
   # Test-set predictions
   test <- ph[temporal_split == "test"]
@@ -404,8 +406,11 @@ if (length(prereg_run) > 0) {
   coef_b_sepsis <- all_coefs[outcome == "sepsis" & variant == "B" &
                                 !grepl("^ns\\(|^\\(Intercept\\)", as.character(term))]
   if (nrow(coef_b_sepsis) > 0) {
-    knitr::kable(head(coef_b_sepsis[order(-abs(coef)), .(term, coef, variant)], 15),
-                 caption = "Top 15 sepsis-outcome coefficients (Variant B, by |coef|)")
+    prev_cols <- c("term", "coef", "se_cluster", "variant")
+    prev_cols <- intersect(prev_cols, names(coef_b_sepsis))
+    knitr::kable(head(coef_b_sepsis[order(-abs(coef)), ..prev_cols], 15),
+                 caption = paste("Top 15 sepsis-outcome coefficients (Variant B,",
+                                 "by |coef|), with cluster-robust standard errors"))
   }
 } else {
   cat("No pre-registered variants in this run; 05_coef_all_variants left unchanged.\n")

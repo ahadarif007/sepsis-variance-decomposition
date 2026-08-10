@@ -552,6 +552,90 @@ multinom_vcov_cluster <- function(fit, cluster, tag = "") {
 #' @param mag_ratio magnitude-change threshold
 #' @return data.table(term, sign_flip, mag_flip), one row per covariate shared
 #'   by all `variants`; spline basis and intercept terms are excluded.
+#' Attach cluster-robust standard errors to a melted coefficient table.
+#'
+#' `multinom_vcov_cluster()` returns a matrix whose dimnames are
+#' `"<outcome>:<term>"`, which is exactly the key the melted coefficient table
+#' carries in its two id columns. Joining on that key rather than on position
+#' matters: a silent misalignment here would pair every coefficient with the
+#' wrong standard error and produce a table that looks entirely normal.
+#'
+#' Returns the table unchanged but with an `se_cluster` column of NA when no
+#' covariance is available, so downstream code has one shape to handle.
+attach_cluster_se <- function(coef_table, vcov_robust) {
+  ct <- as.data.table(coef_table)
+  ct[, se_cluster := NA_real_]
+  if (is.null(vcov_robust) || !is.matrix(vcov_robust)) return(ct[])
+  se  <- sqrt(diag(vcov_robust))
+  key <- paste0(as.character(ct$outcome), ":", as.character(ct$term))
+  hit <- match(key, names(se))
+  ct[, se_cluster := unname(se[hit])]
+  n_ok <- sum(!is.na(hit))
+  if (n_ok == 0L && exists("v2_log"))
+    v2_log(paste0("  attach_cluster_se: no coefficient matched the covariance ",
+                  "dimnames; se_cluster left NA. Check the naming convention."),
+           level = "WARN")
+  ct[]
+}
+
+#' Does an H2 instability exceed its own estimation noise?
+#'
+#' H2 flags a covariate when its point estimate changes sign or doubles in
+#' magnitude across label variants. That is a threshold rule applied to point
+#' estimates, so it cannot distinguish a coefficient that genuinely moves from
+#' one that is imprecisely estimated in the first place. With a cluster-robust
+#' covariance available this becomes checkable: for the two variants at the
+#' extremes of a covariate's range, form the difference and refer it to the
+#' pooled standard error of those two estimates.
+#'
+#' Deliberately NOT a hypothesis test, and no p-value is emitted. The variants
+#' are fitted on overlapping stays, so the two estimates are correlated and the
+#' pooled SE, which assumes independence, is conservative in an unquantified
+#' direction. It answers "is this difference of the order of the noise, or an
+#' order of magnitude above it", which is the question the count of six needs
+#' answered, and it is reported as a ratio rather than dressed up as inference.
+#'
+#' @return one row per flagged covariate: the per-variant estimates, the
+#'   extreme difference, the pooled SE and the ratio, with `exceeds_noise` at
+#'   the conventional 1.96.
+h2_stability_uncertainty <- function(coef_dt, flags, variants = c("A", "B", "C"),
+                                     z_crit = 1.96) {
+  ct   <- as.data.table(coef_dt)
+  fl   <- as.data.table(flags)
+  unst <- fl[sign_flip | mag_flip, as.character(term)]
+  if (length(unst) == 0L || !"se_cluster" %in% names(ct))
+    return(data.table(term = character(0), max_diff = numeric(0),
+                      pooled_se = numeric(0), z_ratio = numeric(0),
+                      exceeds_noise = logical(0)))
+
+  cs <- ct[outcome == "sepsis"]
+  rbindlist(lapply(unst, function(tm) {
+    b <- vapply(variants, function(v) {
+      r <- cs[variant == v & as.character(term) == tm, coef]
+      if (length(r) == 0) NA_real_ else as.numeric(r[1])
+    }, numeric(1))
+    s <- vapply(variants, function(v) {
+      r <- cs[variant == v & as.character(term) == tm, se_cluster]
+      if (length(r) == 0) NA_real_ else as.numeric(r[1])
+    }, numeric(1))
+    if (any(is.na(b)) || any(is.na(s)))
+      return(data.table(term = tm, max_diff = NA_real_, pooled_se = NA_real_,
+                        z_ratio = NA_real_, exceeds_noise = NA))
+    i <- which.max(b); j <- which.min(b)
+    d  <- b[i] - b[j]
+    ps <- sqrt(s[i]^2 + s[j]^2)
+    z  <- if (ps > 0) abs(d) / ps else NA_real_
+    out <- data.table(term = tm, max_diff = d, pooled_se = ps, z_ratio = z,
+                      exceeds_noise = !is.na(z) & z >= z_crit,
+                      hi_variant = variants[i], lo_variant = variants[j])
+    for (k in seq_along(variants)) {
+      set(out, j = paste0("coef_", variants[k]), value = b[k])
+      set(out, j = paste0("se_",   variants[k]), value = s[k])
+    }
+    out
+  }), fill = TRUE)
+}
+
 coef_stability_flags <- function(coef_dt, variants = c("A", "B", "C"),
                                  mag_ratio = 2) {
   ct <- as.data.table(coef_dt)
