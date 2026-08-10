@@ -424,9 +424,23 @@ put("ExtNMicroStays",    cell(cv, "n_micro_covered_stays"), big = TRUE)
 put("ExtMicroCoverage",  cell(cv, "pct_micro_covered"),     digits = 2)
 put("ExtNAbxStays",      cell(cv, "n_abx_stays"),           big = TRUE)
 put("ExtAbxCoverage",    cell(cv, "pct_abx_covered"),       digits = 2)
+put("ExtNBothLimbStays", cell(cv, "n_both_limbs_stays"),    big = TRUE)
+put("ExtBothLimbCoverage", cell(cv, "pct_both_limbs"),      digits = 3)
 put("ExtPanelHoursFull", cell(cv, "panel_person_hours_full"),  big = TRUE)
 put("ExtPanelHoursMicro",cell(cv, "panel_person_hours_micro"), big = TRUE)
 put("ExtMinEvents",      cell(cv, "min_external_events"),   digits = 0)
+
+# The two limbs narrow the cohort in stages, and the stages are reported
+# separately so that no single percentage stands in for the whole constraint:
+# stays whose suspicion pair fires inside the variant's window, and stays that
+# additionally meet the organ-dysfunction criterion.
+ls_ <- rd("08_eicu_label_summary")
+for (v in PREREG) {
+  put(paste0("ExtNSuspicion", v),
+      cell(ls_, "n_suspicion", variant = v, anchor = "sepsis3"), big = TRUE)
+  put(paste0("ExtNOnsetStays", v),
+      cell(ls_, "n_onsets",    variant = v, anchor = "sepsis3"), big = TRUE)
+}
 
 # Event-rate reconciliation against the development cohort.
 rc <- rd("08_event_rate_reconciliation")

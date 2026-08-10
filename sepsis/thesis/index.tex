@@ -44,6 +44,16 @@
 \usepackage{booktabs}
 \usepackage{float}
 \usepackage{rotating}
+% Wide tables. \adjustbox{max width=\textwidth}{...} scales a tabular down only
+% when its natural width exceeds the text block, and leaves it untouched
+% otherwise. A tabular is typeset at its natural width and TeX raises no
+% Overfull warning when it exceeds the margin, so an over-wide table is silent
+% and has to be constrained rather than detected.
+\usepackage{adjustbox}
+% Long \texttt{} file names and identifiers cannot hyphenate, so one at the end
+% of a line has nowhere to break and runs into the margin. Extra emergency
+% stretch lets TeX loosen the surrounding lines instead of overflowing.
+\setlength{\emergencystretch}{3em}
 \setlength{\textfloatsep}{8pt plus 2pt minus 2pt}
 \setlength{\floatsep}{8pt plus 2pt minus 2pt}
 \setlength{\intextsep}{8pt plus 2pt minus 2pt}
@@ -149,6 +159,7 @@
 
 
 \input{abstract}
+\input{declaration}
 \input{acknowledgments}
 
 \pagenumbering{arabic}

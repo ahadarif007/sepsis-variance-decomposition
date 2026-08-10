@@ -87,11 +87,19 @@ equivalence holds between the primary model and the boosted trees; it does not
 hold between either of them and the field's default survival specification.
 
 This is also the clearest illustration in the thesis of why the inference layer
-was necessary. On point estimates, H1 confirmed and the study told a tidy story
-in which the label dominates. With intervals attached, that story is not
-supportable, and the defensible finding is the more interesting one: two
-sources of variance of comparable size, only one of which the field routinely
-reports.
+was necessary. On point estimates alone, H1 would have been read as confirmed
+and the study would have told a tidy story in which the label dominates
+discrimination. With intervals attached that story is not supportable: the
+label spread is \pcSpreadLabel{} [\pcSpreadLabelCiLo, \pcSpreadLabelCiHi]
+against a model-class spread of \pcSpreadModelClass{}
+[\pcSpreadModelClassCiLo, \pcSpreadModelClassCiHi], and the two intervals do
+not overlap. The two sources are not of comparable size, and the defensible
+finding is the less convenient one: the label moves discrimination by roughly
+an order of magnitude less than the model class, while moving the cohort, the
+event count and the denominator of every clinical quantity computed on it. The
+label effect is real and consequential, but it is not an effect on
+learnability, which is the only channel through which the field's usual metric
+could have detected it.
 
 
 \section{What the External Estimate Can Support}
@@ -339,7 +347,9 @@ underpowered for a fairness question can report one as answered.
     cohort size.} eICU-CRD contains \pcExtNCohortStays{} unit stays, but the
     Sepsis-3 suspicion anchor requires a microbiology culture and
     \texttt{microLab} documents one for only \pcExtMicroCoverage\% of the
-    analysis cohort. The primary external analysis is confined to that
+    analysis cohort --- and both limbs of the anchor together for
+    \pcExtBothLimbCoverage\% (\pcExtNBothLimbStays{} stays). The primary
+    external analysis is confined to the culture-covered
     sub-cohort, because in the remaining stays no onset is observable under any
     variant; the resulting \pcExtNEventsB{} events under the primary label sit
     below the \pcExtMinEvents{}-event interpretability floor

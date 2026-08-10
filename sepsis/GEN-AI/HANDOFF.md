@@ -206,8 +206,15 @@ second on the point estimate without being established at that confidence.
 - **Event rate now reconciles.** Events per 1,000 person-hours, Variant B:
   MIMIC 1.895 · eICU Sepsis-3 0.179 (ratio 0.094) · eICU antibiotic-only 0.805
   (ratio 0.425). Was ratio ≈0.004. Two orders of magnitude recovered, and the
-  residual gap localises to the **culture limb**: eICU documents antibiotics
-  for 32.66 % of stays and cultures for 1.55 %.
+  residual gap localises to the **culture limb**. **Coverage ladder, corrected
+  round 8** — all four counts restricted to the 181,589-stay cohort: antibiotic
+  limb documented **55,273 (30.44 %)**, culture limb **2,824 (1.555 %)**,
+  **both limbs at any offset 232 (0.128 %)**, suspicion pair firing inside the
+  variant window **186 / 196 / 211** (A/B/C), Sepsis-3 onsets **27 / 31 / 73**.
+  The old "32.66 %" was a defect: `n_abx_stays` counted distinct stays in the
+  antibiotic *tables* (59,304) against a *cohort* denominator. Fixed in stage
+  08; the ladder is monotone, so the "240 vs 2,824" question is answered —
+  they were different quantities, and 232 is the both-limbs count.
 - Equity: **no** race contrast survives BH (smallest q=0.347). Label-sensitivity
   contrasts do: race-Unknown +3.01 pp (q=0.006), Unable-to-obtain +3.49 pp
   (q=0.009), Spanish +2.61 pp (q=0.006), Private insurance −1.76 pp (q=0.006).
@@ -370,11 +377,27 @@ not**: 3.2 % of its person-hours have no GCS after LOCF, so switching would
 move every NEWS2 number in the thesis and needs a full 03–12 re-run. That is
 an open decision, flagged at the call site and in `feedback/v2.md` §22.
 
-### `sandwich::vcovHC()` does not work on `multinom`
-No `estfun` method exists for that class, so the stage-05 call fails, is caught as a
-warning, and `vcov_robust` is silently `NULL`. **Cluster-robust SEs for the primary
-model were never actually computed**, though the methodology claims them. Unresolved —
-see `feedback/v2.md` §6.3.
+### `sandwich::vcovHC()` does not work on `multinom` — **fixed round 8**
+`sandwich` ships a `bread` method for that class but **no `estfun`**, so the
+stage-05 call failed, was caught as a warning, and `vcov_robust` was silently
+`NULL`. Cluster-robust SEs for the primary model were never computed, though
+the methodology claimed them.
+
+`utils.R` now supplies `estfun.multinom` (score for row *i*, non-reference
+category *k*, is `x_ij (y_ik − p_ik)`; `multinom` already stores that residual
+matrix), registers it **into the `sandwich` namespace** — `registerS3method`
+against the global env fails with "object 'estfun' not found" — and adds
+`multinom_vcov_cluster()`, which returns `NULL` **with a logged reason** rather
+than silently. Stage 05 fits with `Hess = TRUE` (bread needs it) and saves
+`05_vcov_cluster[_arm]_<vid>.rds`.
+
+Verified on synthetic data: scores sum to ~0 at the optimum and an unclustered
+unadjusted sandwich reproduces `vcov(fit)`. **Not yet run on the real fits** —
+needs `./run_pipeline.sh 05` then `07 12`. `Hess = TRUE` runs after the
+optimiser stops, so coefficients should be bit-identical, but **check the canary
+(H1 −0.13755, H4 −0.01654, H6 −0.01293) before trusting the run**. With
+`decay > 0` this is the covariance of the *penalised* estimator; describe it as
+a ridge-regularised sandwich. Full account: `feedback/v3.md` §5b.
 
 ### GBT drift + thesis sync — now automated, use it
 **Fixed 2026-08-04.** `project/thesis_constants.R` reads the result tables and
@@ -421,6 +444,40 @@ On 2026-07-30 a re-run refit GBT slightly differently. **Every non-GBT number st
 matched; every GBT number was stale**, cascading into H1, H6, the decomposition,
 abstract and conclusion. **Use the GBT rows as the canary** — if they match, the
 rest almost certainly does.
+
+### A caption is prose, and prose is outside the macro guarantee
+`thesis_constants.R` protects *values*: a missing quantity typesets as a red
+`??`. It cannot protect a **qualitative claim**, and a number in a caption is
+protected only if it is written as a `\pc` macro. That is how Figure 5.9 kept
+"Both are of similar size" through the H1 reversal (round 8), and how
+`discussion.tex` kept "two sources of variance of comparable size". No
+mechanism could have caught either; only a read.
+
+**When a headline reverses, grep the prose for the old claim's adjectives**,
+not just for its numbers:
+
+```bash
+grep -niE "comparable|similar size|slightly exceeds|same order|label (dominates|rivals)|no patient develops|inflates? AUROC|transports intact|harder than either limb" thesis/*.tex
+```
+
+Legitimate hits describe prior work's claim, the study's stated expectation, or
+an explicit negation. Anything asserting the reversed claim in the thesis's own
+voice is a leak.
+
+### TeX does not warn about an over-wide table
+A `tabular` is typeset at its natural width, so there is no target width for it
+to be overfull *against*: it silently runs past the right margin and `Overfull
+\hbox` never fires. Round 8 found **seven tables and two TikZ diagrams** over
+the margin (worst +125 pt) with **zero** LaTeX warnings, by measuring glyph
+positions in the built PDF against the footer's right edge.
+
+`adjustbox` is loaded in `index.tex`; wrap a wide table as
+`\adjustbox{max width=\textwidth}{...}` — inert unless the natural width
+exceeds the text block. The four generated equity tables are wrapped **at the
+`\input` site**, so `write_table()` keeps emitting complete `tabular`
+environments. Long `\texttt{}` file names have no break points and need
+`\allowbreak` (`\emergencystretch` is set to 3 em; `hyphenat[htt]` was tried
+and rejected — it fixes the overflow but adds 31 font-shape warnings).
 
 ### The thesis must never expose its own review history
 `feedback/` and this file are **internal implementation records**. The thesis is
@@ -807,6 +864,29 @@ is cheap and independent.
 
 ### Still open
 
+- [ ] **`thesis/declaration.tex` must be read and amended by the author.**
+      Added round 8. ATU's Academic Integrity Policy (AQAE022 §4) makes
+      *undeclared* AI assistance misconduct, and the thesis previously carried
+      **no statement of tooling at all** while the tracked repository visibly
+      records the use of an AI assistant (`GEN-AI/HANDOFF.md` opens with "Work
+      by Claude (Anthropic) with Abdul Ahad"; `feedback/` is tracked too). The
+      declaration is drafted from what the repository record shows; only the
+      author can confirm each clause is accurate. **Blocking for submission.**
+- [ ] **Decide whether `GEN-AI/` and `feedback/` stay in the public repo.**
+      Both are tracked and examiner-visible. `.claude/` and `CLAUDE.md` are
+      *not* tracked (gitignored) but do exist in history — `ccb96b9` and
+      `934ba03`.
+- [ ] **Cluster-robust covariances are coded but not run.** See the
+      `vcovHC`/`multinom` entry in §4: `./run_pipeline.sh 05` then `07 12`,
+      then check the canary.
+- [ ] **Variant D on the full eICU cohort** — the one cheap external
+      experiment left. D needs no culture anchor, so it can run on all 181,589
+      stays instead of the 2,824-stay sub-cohort, which would put the
+      treatment-independent label's transport on a properly powered event
+      count. **Not a config change**: stage 08 loops over `LABEL_VARIANTS`
+      only, so it needs an external alt-label branch writing to a separate
+      output and kept out of H5 the way D is kept out of H1. The frozen model
+      already exists. `feedback/v3.md` §1.
 - [ ] **MIMIC's `avpu_alert`** collapses unmeasured GCS to `FALSE`, which
       `news2()` charges 3 points. 3.2 % of MIMIC person-hours after LOCF (vs
       100 % in eICU, which is fixed). Needs a full 03–12 re-run. **Author's

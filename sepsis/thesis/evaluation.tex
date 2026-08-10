@@ -658,6 +658,7 @@ five-hour alert run counts once rather than five times.
 
 \begin{table}[H]
     \centering\small
+    \adjustbox{max width=\textwidth}{%
     \begin{tabular}{llrrrrr}
         \toprule
         \textbf{Var} & \textbf{Model}
@@ -680,7 +681,7 @@ five-hour alert run counts once rather than five times.
         C & NEWS2   & \pcEpSensWindowNewsC & \pcEpSensPreNewsC & \pcPatientPpvNewsC & \pcPctStaysAlertedNewsC & \pcFaEpPerPtDayNewsC \\
         C & Cox     & \pcEpSensWindowCoxC & \pcEpSensPreCoxC & \pcPatientPpvCoxC & \pcPctStaysAlertedCoxC & \pcFaEpPerPtDayCoxC \\
         \bottomrule
-    \end{tabular}
+    \end{tabular}}
     \caption{Per-patient detection at the 80\% per-hour sensitivity operating
     point, on \pcNTestStays{} test stays of which \pcNSepsisStaysA{} (A),
     \pcNSepsisStaysB{} (B) and \pcNSepsisStaysC{} (C) are septic. Ep.\ sens (6\,h): fraction of septic stays alerted
@@ -712,6 +713,7 @@ test patients would go through the ICU without triggering it.
 
 \begin{table}[H]
     \centering\small
+    \adjustbox{max width=\textwidth}{%
     \begin{tabular}{llrrrrrr}
         \toprule
         \textbf{Var} & \textbf{Model}
@@ -731,7 +733,7 @@ test patients would go through the ICU without triggering it.
         C & GBT     & \pcSensGbtC & \pcEpSensPreGbtC & \pcPpvGbtC & \pcPatientPpvGbtC & \pcFaPerPtDayGbtC & \pcFaEpPerPtDayGbtC \\
         C & NEWS2   & \pcSensNewsC & \pcEpSensPreNewsC & \pcPpvNewsC & \pcPatientPpvNewsC & \pcFaPerPtDayNewsC & \pcFaEpPerPtDayNewsC \\
         \bottomrule
-    \end{tabular}
+    \end{tabular}}
     \caption{The same operating point viewed per person-hour and per patient.
     Both views are correct; they differ by a factor of roughly 25 in PPV and
     20 in alarm count. A study reporting only one column of each pair can
@@ -831,6 +833,23 @@ asymmetry is decisive: in a stay with no culture record the Sepsis-3
 conjunction cannot fire under \emph{any} variant, whatever the patient's
 physiology.
 
+Coverage of a single limb, however, is an upper bound on what the conjunction
+can reach rather than a description of it, and the two quantities differ by an
+order of magnitude. Requiring \emph{both} limbs to be documented at all --- at
+any offset, before any window is imposed --- leaves \pcExtNBothLimbStays{}
+stays, \pcExtBothLimbCoverage\% of the cohort. Requiring them to co-occur
+inside a variant's own antibiotic--culture window, which is what suspicion of
+infection means, leaves \pcExtNSuspicionA{}, \pcExtNSuspicionB{} and
+\pcExtNSuspicionC{} stays under Variants A, B and C. Adding the
+organ-dysfunction criterion leaves \pcExtNOnsetStaysA{},
+\pcExtNOnsetStaysB{} and \pcExtNOnsetStaysC{} labelled stays. The four counts
+answer four different questions and are stated together here because a single
+percentage cannot carry the constraint: \pcExtMicroCoverage\% is the sub-cohort
+in which an onset is \emph{observable}, and it is the denominator of the
+external analysis; \pcExtBothLimbCoverage\% is the ceiling on how many stays
+the conjunction could ever label; and the labelled counts are what the AUROC
+estimates actually rest on.
+
 This has a direct consequence for how an external event rate may be read.
 Applying the conjunction across all \pcExtPanelHoursFull{} person-hours would
 place the overwhelming majority of the denominator in stays where the numerator
@@ -841,6 +860,7 @@ which an onset is observable in principle.
 
 \begin{table}[H]
     \centering\small
+    \adjustbox{max width=\textwidth}{%
     \begin{tabular}{llrrr}
         \toprule
         \textbf{Var} & \textbf{Cohort} & \textbf{Person-hours}
@@ -858,7 +878,7 @@ which an onset is observable in principle.
         C & eICU, microbiology-covered    & \pcExtNRowsC  & \pcExtNEventsC  & \pcExtRateEicuC \\
         C & eICU, antibiotic-only anchor  & \pcExtAbxNRows & \pcExtAbxNEventsC & \pcExtRateEicuAbxC \\
         \bottomrule
-    \end{tabular}
+    \end{tabular}}
     \caption{Event-rate reconciliation. The rate is stated for the development
     cohort and for both external anchors so that the comparison is made
     explicitly rather than inferred. The antibiotic-only anchor is not
@@ -1202,6 +1222,7 @@ once the rule is changed, and separates three distinct rows.
 
 \begin{table}[H]
     \centering\small
+    \adjustbox{max width=\textwidth}{%
     \begin{tabular}{llrrl}
         \toprule
         \textbf{Var} & \textbf{Label} & \textbf{Pre-treatment person-h}
@@ -1214,7 +1235,7 @@ once the rule is changed, and separates three distinct rows.
         D & Deterioration & \pcPreTreatPersonHoursVarD & \textbf{\pcPreTreatOnsetsVarD}
           & \pcPreTreatAurocPrimaryD{} / \pcPreTreatAurocGbtD \\
         \bottomrule
-    \end{tabular}
+    \end{tabular}}
     \caption{Events in the treatment-anchored (pre-treatment) evaluation window.
     E's and B's zeros are entailed by Proposition~\ref{prop:h3}. Variant F holds
     the Sepsis-3 conjunction and the labelled stays fixed and changes only the
@@ -1385,6 +1406,7 @@ exploratory and enters no hypothesis or decomposition.
 
 \begin{table}[H]
     \centering\small
+    \adjustbox{max width=\textwidth}{%
     \begin{tabular}{llrrrrr}
         \toprule
         \textbf{Var} & \textbf{Model} & \textbf{AUROC full} & \textbf{AUROC ablated}
@@ -1400,7 +1422,7 @@ exploratory and enters no hypothesis or decomposition.
         C & Primary & \pcAurocPrimaryC & \pcAblAurocPrimaryC & \pcAblDeltaAurocPrimaryC & \pcUtilityMaxPrimaryC & \pcAblUtilityMaxPrimaryC \\
         C & GBT     & \pcAurocGbtC     & \pcAblAurocGbtC     & \pcAblDeltaAurocGbtC     & \pcUtilityMaxGbtC     & \pcAblUtilityMaxGbtC \\
         \bottomrule
-    \end{tabular}
+    \end{tabular}}
     \caption{Discrimination and best-threshold Utility Score with and without
     the \pcAblNDropped{} action-derived features. Both arms are fitted on the
     same training rows and scored on the same test rows.
@@ -1566,7 +1588,7 @@ one per level. Of the racial strata, \pcNSubgroupsAboveFloor{} clear the floor.
 
 \begin{table}[H]
     \centering\footnotesize
-    \input{table_equityperformance}
+    \adjustbox{max width=\textwidth}{\input{table_equityperformance}}
     \caption{AUROC by racial stratum (Variant B, temporal test) with 95\%
     stay-level cluster-bootstrap intervals, stratified within stratum,
     $B = 2{,}000$. Levels are ordered by exposure; interval width grows by
@@ -1604,7 +1626,7 @@ ranges, each against the reference level on the same bootstrap replicates.
 
 \begin{table}[H]
     \centering\footnotesize
-    \input{table_equitycontrasts}
+    \adjustbox{max width=\textwidth}{\input{table_equitycontrasts}}
     \caption{Subgroup AUROC differences against the reference level, for the
     racial strata clearing the \pcMinSubgroupEvents{}-event floor.
     $q_{\text{BH}}$ is the Benjamini--Hochberg adjusted $p$-value over
@@ -1668,7 +1690,7 @@ drawn from them.
 
 \begin{table}[H]
     \centering\footnotesize
-    \input{table_equitylabel}
+    \adjustbox{max width=\textwidth}{\input{table_equitylabel}}
     \caption{Percentage of stays labelled as septic by racial subgroup and label
     variant, with a 95\% stratified cluster-bootstrap interval on the A--C
     range. The fraction roughly doubles from Variant A to C across all groups.
@@ -1690,7 +1712,7 @@ it in full.
 
 \begin{table}[H]
     \centering\footnotesize
-    \input{table_equitylabelcontrasts}
+    \adjustbox{max width=\textwidth}{\input{table_equitylabelcontrasts}}
     \caption{Difference in label sensitivity (A--C range) against the reference
     group (White). $q_{\text{BH}}$ is adjusted over exploratory family E2, all
     18 label-sensitivity contrasts across race, language and insurance. Two
@@ -1977,8 +1999,11 @@ separately.
     \centering
     \includegraphics[width=0.85\textwidth]{images/09_label_variance_auroc.png}
     \caption{AUROC by label variant for each model (temporal split). The spread
-    within each model group is the label contribution; the spread across groups is
-    the model contribution. Both are of similar size.}
+    within each model group is the label contribution (\pcSpreadLabel);
+    the spread across groups is the model contribution
+    (\pcSpreadModelClass). The model contribution is the larger of the two by
+    roughly an order of magnitude, which is the reverse of the ordering H1
+    predicted.}
     \label{fig:label_variance_auroc}
 \end{figure}
 

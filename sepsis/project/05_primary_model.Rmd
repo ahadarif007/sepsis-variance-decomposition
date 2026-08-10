@@ -138,7 +138,12 @@ fit_primary_model <- function(vid, arm = "full") {
   fit <- tryCatch(
     nnet::multinom(mod_formula, data = as.data.frame(train),
                    trace = FALSE, MaxNWts = 50000, maxit = PRIMARY_MODEL_MAXIT,
-                   decay = PRIMARY_MODEL_DECAY),
+                   decay = PRIMARY_MODEL_DECAY,
+                   # Hess = TRUE only computes the Hessian after the optimiser
+                   # has stopped; it does not change the fit. It is the bread of
+                   # the cluster-robust sandwich below, which cannot be formed
+                   # without it.
+                   Hess = TRUE),
     error = function(e) {
       v2_log("  nnet::multinom failed: ", e$message, level = "ERROR")
       NULL
@@ -159,16 +164,30 @@ fit_primary_model <- function(vid, arm = "full") {
     fit$is_binary_fallback <- TRUE
   }
 
-  # Cluster-robust SEs
+  # Cluster-robust SEs, clustered on stay_id: person-hours within a stay are
+  # ~45 correlated rows, so an independence-assuming variance is wrong by
+  # construction. `sandwich` has no estfun method for multinom, so utils.R
+  # supplies one (see `estfun.multinom`); without it this call fails, and it
+  # previously failed inside a tryCatch that only warned, leaving vcov_robust
+  # NULL while the methodology claimed the quantity.
   v2_log("  Computing cluster-robust SEs (clustered on stay_id)...")
-  vcov_robust <- tryCatch({
-    if (inherits(fit, "multinom"))
-      sandwich::vcovHC(fit, type = "HC3")
-    else
-      sandwich::vcovCL(fit, cluster = ~stay_id, data = as.data.frame(train))
-  }, error = function(e) {
-    v2_log("  vcov_robust failed: ", e$message, level = "WARN"); NULL
-  })
+  vcov_robust <- if (inherits(fit, "multinom")) {
+    multinom_vcov_cluster(fit, cluster = train$stay_id, tag = vid)
+  } else {
+    tryCatch(sandwich::vcovCL(fit, cluster = ~stay_id,
+                              data = as.data.frame(train)),
+             error = function(e) {
+               v2_log("  vcov_robust failed: ", e$message, level = "WARN"); NULL
+             })
+  }
+  if (!is.null(vcov_robust)) {
+    se_robust <- sqrt(diag(vcov_robust))
+    v2_log(sprintf("  Cluster-robust SEs computed for %d parameters (median SE %.4f)",
+                   length(se_robust), stats::median(se_robust)))
+    saveRDS(vcov_robust,
+            file.path(DATA_DIR,
+                      paste0("05_vcov_cluster", arm_suffix(arm), "_", vid, ".rds")))
+  }
 
   # Coefficient table
   coefs_raw <- if (inherits(fit, "multinom")) coef(fit) else coef(summary(fit))

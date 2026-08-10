@@ -94,7 +94,12 @@ its no-pressor value.
 suspicion anchor requires a culture, and \texttt{microLab} covers
 \pcExtMicroCoverage\% of the analysis cohort (\pcExtNMicroStays{} of
 \pcExtNCohortStays{} unit stays). In the remaining stays the conjunction cannot
-fire under \emph{any} variant, whatever the patient's physiology. Including
+fire under \emph{any} variant, whatever the patient's physiology. Coverage of
+the culture limb is an upper bound on the conjunction rather than a measure of
+it: both limbs are documented for only \pcExtNBothLimbStays{} stays
+(\pcExtBothLimbCoverage\%), and the counts narrow further once the window and
+the organ-dysfunction criterion are applied
+(Section~\ref{sec:external_coverage} states each stage separately). Including
 those person-hours in the denominator would not estimate a low sepsis
 incidence; it would report the coverage of one source table as though it were
 an epidemiological quantity. The primary external analysis is therefore
@@ -170,6 +175,7 @@ Figure~\ref{fig:consort} shows the patient flow through each exclusion step.
 
 \begin{figure}[H]
     \centering
+\adjustbox{max width=\textwidth}{%
     \begin{tikzpicture}[
         node distance=0.6cm,
         box/.style={rectangle, draw=ATUGreen, thick, rounded corners=2pt,
@@ -206,7 +212,7 @@ Figure~\ref{fig:consort} shows the patient flow through each exclusion step.
 \draw[arr] (final.south) -- (vb.north);
 \draw[arr] (final.south) -- ++(0,-0.3) -| (vc.north);
 
-    \end{tikzpicture}
+    \end{tikzpicture}}
     \caption{CONSORT-style patient flow diagram. All 65,078 stays enter all three
     label variants; only the sepsis outcome differs. Exclusion counts are from the
     pipeline's cohort extraction log (script \texttt{02\_cohort\_labels.Rmd}).}
@@ -226,6 +232,7 @@ antibiotic-culture time windows and the SOFA baseline
 
 \begin{table}[H]
     \centering\small
+    \adjustbox{max width=\textwidth}{%
     \begin{tabular}{llccccc}
         \toprule
         \textbf{ID} & \textbf{Name} & \textbf{ABX$\to$cx} & \textbf{cx$\to$ABX}
@@ -235,7 +242,7 @@ antibiotic-culture time windows and the SOFA baseline
         B & Seymour-Std & 72\,h & 24\,h & 48\,h & 24\,h & Admission     \\
         C & Liberal     & 72\,h & 72\,h & 48\,h & 24\,h & Rolling 24\,h \\
         \bottomrule
-    \end{tabular}
+    \end{tabular}}
     \caption{Three pre-registered Sepsis-3 label variants. ABX = antibiotic;
     cx = culture; SOFA$-$/SOFA$+$ = hours before/after suspicion time in which
     a SOFA rise of $\geq 2$ must be observed. Baseline = SOFA reference value.}
@@ -277,15 +284,15 @@ split and each limb is labelled on its own
 
 \begin{table}[H]
     \centering\small
-    \begin{tabular}{llccc}
+    \begin{tabular}{llccp{3.1cm}}
         \toprule
         \textbf{ID} & \textbf{Name} & \textbf{Suspicion anchor}
-        & \textbf{Organ dysfunction} & \textbf{Uses treatment timing?} \\
+        & \textbf{Organ dysf.} & \textbf{Uses treatment timing?} \\
         \midrule
-        B & Seymour-Std    & required     & required     & yes, for membership and timing \\
-        E & Anchor-Only    & required     & not required & yes \\
-        D & Deterioration  & not required & required     & \textbf{no} \\
-        F & Sepsis-3 Early-Onset & required & required   & membership only \\
+        B & Seymour-Std    & required     & required     & \raggedright membership and timing\tabularnewline
+        E & Anchor-Only    & required     & not required & \raggedright yes\tabularnewline
+        D & Deterioration  & not required & required     & \raggedright \textbf{no}\tabularnewline
+        F & Sepsis-3 Early & required     & required     & \raggedright membership only\tabularnewline
         \bottomrule
     \end{tabular}
     \caption{The two limbs of the Sepsis-3 conjunction, labelled separately
@@ -793,7 +800,8 @@ rather than relying on a single blanket statement in this chapter:
 \end{itemize}
 
 The tags are held in a machine-readable analysis register
-(\texttt{12\_analysis\_register.parquet}) produced by the pipeline, and are
+(\texttt{12\_analysis\_\allowbreak register\allowbreak .parquet}) produced by
+the pipeline, and are
 reproduced in Table~\ref{tab:register}.
 
 \subsection{Status of the Inference Plan Itself}

@@ -816,13 +816,30 @@ if (!is.null(ext_df) && file.exists(internal_path)) {
 # Microbiology coverage is the quantity that governs how much of the eICU
 # cohort the Sepsis-3 anchor can reach at all, so it is persisted rather than
 # left in the log.
+#
+# Three different denominators are in play and each is recorded separately,
+# because they are easy to confuse and they answer different questions:
+#   - a limb is *documented* for a stay (either table holds a record);
+#   - *both* limbs are documented for a stay, at any offset — the ceiling on how
+#     many stays the Sepsis-3 conjunction could reach even with an unbounded
+#     window;
+#   - the pair fires *within a variant's window*, which is the suspicion count
+#     in 08_eicu_label_summary and is necessarily no larger than the ceiling.
+# Every count is restricted to the analysis cohort so that numerator and
+# denominator describe the same set of stays.
+abx_cohort_stays  <- intersect(unique(eicu_abx$stay_id), cohort_ids)
+both_limb_stays   <- intersect(abx_cohort_stays, micro_stays)
+
 cov_dt <- data.table(
   n_cohort_stays        = length(cohort_ids),
   n_micro_covered_stays = length(micro_stays),
   pct_micro_covered     = round(100 * length(micro_stays) /
                                   max(length(cohort_ids), 1), 3),
-  n_abx_stays           = uniqueN(eicu_abx$stay_id),
-  pct_abx_covered       = round(100 * uniqueN(eicu_abx$stay_id) /
+  n_abx_stays           = length(abx_cohort_stays),
+  pct_abx_covered       = round(100 * length(abx_cohort_stays) /
+                                  max(length(cohort_ids), 1), 3),
+  n_both_limbs_stays    = length(both_limb_stays),
+  pct_both_limbs        = round(100 * length(both_limb_stays) /
                                   max(length(cohort_ids), 1), 3),
   panel_person_hours_full  = nrow(panel),
   panel_person_hours_micro = nrow(panel_primary),

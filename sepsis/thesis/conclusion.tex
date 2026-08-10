@@ -285,10 +285,26 @@ than the patient's deterioration.
 
 \section{Closing Remark}
 
-This research achieves something the conventional approach cannot: it produces
-a meaningful result regardless of how the performance numbers turn out. The
-hypothesis framework ensures that confirmed, rejected, and superseded
-hypotheses are all equally informative about the underlying problem.
+The premise this study was built on did not survive the study. It was designed
+around the expectation that the analyst's discretionary choices would rival the
+choice of model as a source of performance variation, and that expectation
+fails: the label moves discrimination by \pcSpreadLabel{} against the model
+class's \pcSpreadModelClass{}, and the split method moves it not at all. Of the
+four hypotheses that could be tested, none is confirmed, and two fail in the
+direction opposite to the one predicted. That outcome is reported here in the
+same detail it would have received had it gone the other way, which is the
+reason the pre-registration and the inference layer were worth their cost: they
+fix what the answer means before the answer is known, and on point estimates
+alone this thesis would have claimed the opposite of what it can defend.
+
+The premise inverted; the motivating problem did not. What the decomposition
+establishes is that the label's consequence does not run through
+discrimination, which is where the field looks for it. It runs through cohort
+membership --- the three variants agree at $\kappa = \pcKappaVsBA$ on which
+patients are septic --- and through onset timing, which fixes what a real-time
+model can be asked to anticipate at all. Those are the channels the reported
+metric is blind to, which is why a literature that has optimised AUROC for a
+decade has not converged on models that help.
 
 The central finding, that the Sepsis-3 label on MIMIC-IV is constituted by
 clinical action, is not a failure of the model. It is a finding about the label

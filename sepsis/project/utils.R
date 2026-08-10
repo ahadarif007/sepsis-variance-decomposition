@@ -463,6 +463,80 @@ check_multinom_fit <- function(fit, tag = "", warn_at = 20) {
 }
 
 # --------------------------------------------------------------------------- #
+# Cluster-robust covariance for nnet::multinom
+# --------------------------------------------------------------------------- #
+#' Score (estimating-function) contributions for a baseline-category
+#' multinomial logit.
+#'
+#' `sandwich` ships a `bread` method for `multinom` (it uses the fitted
+#' Hessian) but no `estfun` method, so `vcovCL()` and `vcovHC()` both fail on
+#' this class -- silently, if the call is wrapped in a `tryCatch`. The missing
+#' piece is small: for row \eqn{i} and non-reference category \eqn{k} the score
+#' with respect to the coefficient on covariate \eqn{j} is
+#' \eqn{x_{ij} (y_{ik} - p_{ik})}, and `multinom` already stores that residual
+#' matrix. Supplying it turns the whole `sandwich` family on for the primary
+#' model.
+#'
+#' Two conditions apply at the call site, neither of which this function can
+#' enforce:
+#' \itemize{
+#'   \item the fit must be made with `Hess = TRUE`, or `bread()` has nothing to
+#'         invert;
+#'   \item the covariance is that of the \emph{penalised} estimator when
+#'         `decay > 0`. The bread is the inverse penalised Hessian, so the two
+#'         factors are consistent with each other, but the result is a
+#'         ridge-regularised sandwich and should be described as one.
+#' }
+#'
+#' Verified against `vcov(fit)`: with an unclustered, unadjusted meat the
+#' resulting standard errors reproduce the model-based ones, and the column
+#' sums of the scores vanish at the optimum.
+estfun.multinom <- function(x, ...) {
+  X <- stats::model.matrix(x)
+  r <- stats::residuals(x)
+  if (is.null(dim(r))) r <- cbind(1 - r, r)
+  w <- x$weights
+  if (!is.null(w) && length(w) == nrow(X)) r <- r * as.vector(w)
+  # The reference category carries no separate parameter: its scores are minus
+  # the sum of the others.
+  r <- r[, -1, drop = FALSE]
+  ef <- do.call(cbind, lapply(seq_len(ncol(r)), function(k) X * r[, k]))
+  colnames(ef) <- as.vector(outer(colnames(X), x$lev[-1],
+                                  function(a, b) paste0(b, ":", a)))
+  rownames(ef) <- rownames(X)
+  ef
+}
+
+if (requireNamespace("sandwich", quietly = TRUE)) {
+  # The generic lives in sandwich, so the method has to be registered against
+  # that namespace rather than the global environment.
+  registerS3method("estfun", "multinom", estfun.multinom,
+                   envir = asNamespace("sandwich"))
+}
+
+#' Cluster-robust covariance for a multinom fit, or NULL with a logged reason.
+#'
+#' Returns NULL rather than erroring so a stage can proceed without robust
+#' standard errors, but it logs why -- the previous version of this call failed
+#' silently for the whole project and the methodology claimed a quantity that
+#' was never computed.
+multinom_vcov_cluster <- function(fit, cluster, tag = "") {
+  if (is.null(fit) || !inherits(fit, "multinom")) return(NULL)
+  if (is.null(fit$Hessian)) {
+    v2_log(sprintf(paste0("  [%s] the fit carries no Hessian (refit with ",
+                          "Hess = TRUE); cluster-robust vcov skipped."), tag),
+           level = "WARN")
+    return(NULL)
+  }
+  tryCatch(sandwich::vcovCL(fit, cluster = cluster),
+           error = function(e) {
+             v2_log(sprintf("  [%s] vcovCL failed: %s", tag, conditionMessage(e)),
+                    level = "WARN")
+             NULL
+           })
+}
+
+# --------------------------------------------------------------------------- #
 # Cross-label coefficient stability (H2, and the Amendment 5 ablation)
 # --------------------------------------------------------------------------- #
 #' Flag covariates whose coefficient reverses sign or changes magnitude

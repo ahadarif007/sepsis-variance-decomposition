@@ -1,0 +1,69 @@
+% =====================================================================
+% DECLARATION — front matter.
+%
+% AUTHOR ACTION REQUIRED BEFORE SUBMISSION.
+%
+% ATU's Academic Integrity Policy (AQAE022) defines Unauthorised Content
+% Generation as academic work produced "using unapproved or undeclared human
+% or technological assistance", and states that "the undeclared and/or
+% unauthorised use of AI tools to produce work to earn academic credit is a
+% form of academic misconduct". Declaration is therefore the mechanism that
+% makes assisted work authorised; ATU publishes no prescribed wording, so the
+% statement below is written to be specific rather than formulaic.
+%
+% The repository accompanying this thesis is visible to the examiners and
+% visibly records the use of an AI coding assistant (sepsis/GEN-AI/HANDOFF.md,
+% sepsis/feedback/). This section must be an accurate account of that record.
+% Read every clause below and amend anything that does not describe what
+% actually happened. Do not submit it unread.
+% =====================================================================
+\chapter*{Declaration}
+\addcontentsline{toc}{chapter}{Declaration}
+
+I declare that this thesis is my own work, that it has not been submitted for
+any other academic award, and that all sources consulted are acknowledged in
+the text and listed in the references. The research question, the
+pre-registered hypotheses, the study design and the interpretation of the
+findings are my own, as are the decisions recorded as Protocol Amendments 1--5
+and the judgements about what the evidence does and does not support.
+
+\section*{Use of Generative AI}
+
+In accordance with ATU's Academic Integrity Policy, I declare the following use
+of generative AI. An AI coding assistant (Anthropic's Claude, accessed through
+Claude Code) was used throughout the development of this project, and the
+repository accompanying this thesis records that use rather than concealing it.
+Specifically, it was used to:
+
+\begin{itemize}
+    \item implement, refactor and debug the R and Python pipeline in
+    \texttt{sepsis/\allowbreak project/}, working from specifications and
+    design decisions I set;
+
+    \item audit that pipeline for defects, including several that materially
+    changed the results reported here and that are documented in
+    \texttt{sepsis/feedback/};
+
+    \item draft and revise prose in this document, which I then edited,
+    verified against the pipeline output, and accepted or rejected line by
+    line;
+
+    \item prepare the internal development record in
+    \texttt{sepsis/GEN-AI/} and \texttt{sepsis/feedback/}, which are working
+    documents for the project rather than part of this submission.
+\end{itemize}
+
+It was \emph{not} used to generate data, to produce or alter any result, or to
+decide what the results mean. Every quantity reported in this thesis is written
+into the document mechanically from the pipeline's own output tables by
+\texttt{thesis\_constants.R} (Appendix~\ref{app:repro}); no result value is
+typed by hand, by me or by any tool, and a quantity the pipeline did not
+produce typesets as a visible marker rather than as a plausible number. The
+analytical claims, the hypothesis verdicts and the limitations are mine, and I
+take full responsibility for the content of this thesis.
+
+\vspace{1.5em}
+\noindent\textbf{Signed:} \rule{6cm}{0.4pt} \hfill \textbf{Date:} \rule{3cm}{0.4pt}
+
+\vspace{0.5em}
+\noindent\reportauthor

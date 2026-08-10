@@ -140,6 +140,7 @@ performed in this form.
 
 \begin{figure}[H]
 \centering
+\adjustbox{max width=\textwidth}{%
 \begin{tikzpicture}[
   node distance=0.55cm,
   box/.style={rectangle, draw=ATUGreen, thick, rounded corners=2pt,
@@ -197,7 +198,7 @@ performed in this form.
 \node[phase, left=1.2cm of verif] {Verification};
 \node[phase, left=1.2cm of incl]  {Included};
 
-\end{tikzpicture}
+\end{tikzpicture}}
 \caption{Search, verification and inclusion flow. Counts are auditable at every
   stage, following the reporting logic of PRISMA 2020 \cite{page2021prisma},
   but this is not a PRISMA flow diagram: no title-and-abstract screening pass

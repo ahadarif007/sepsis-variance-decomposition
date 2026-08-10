@@ -1,97 +1,48 @@
 \chapter*{Abstract}
 \addcontentsline{toc}{chapter}{Abstract}
+% The abstract is required to sit on a single page; the book class's default
+% gap under a chapter heading is what pushes the keywords onto a second one.
+\vspace*{-3\baselineskip}
 
 Over ninety AI models have been built to predict sepsis in real time, yet they
-fail in practice. Wang et al.\ (2025) showed that while AUROC barely changes
-between internal and external testing (0.811 to 0.783), the clinical Utility
-Score collapses from $+0.381$ to $-0.164$, meaning these models cause more
-harm than benefit when deployed. This thesis investigates why: is the problem
-the model, the sepsis label, or the researcher's methodological choices?
+fail in practice: Wang et al.\ (2025) report a clinical Utility Score falling
+from $+0.381$ internally to $-0.164$ externally while AUROC barely moves. This
+thesis asks whether that failure belongs to the model, to the sepsis label, or
+to the analyst's discretionary choices.
 
-The study uses MIMIC-IV v3.1 (65,078 adult ICU stays), with external validation
-on eICU-CRD v2.0 restricted to the stays in which the Sepsis-3 anchor is
-recoverable at all. Three
-Sepsis-3 label variants (Narrow, Seymour-Standard, Liberal) are tested with a
-dynamic discrete-time competing-risks hazard model, gradient-boosted trees (GBT),
-a static Cox model, and rule-based scores (NEWS2, qSOFA, SIRS). Because all
-three variants share one culture-plus-antibiotic anchor, the Sepsis-3
-conjunction is additionally split into its two limbs and each is labelled
-separately, including a deterioration label that uses no treatment timestamp at
-all, and Sepsis-3 is relabelled a third time under the standard
-$\min(t_{\text{susp}}, t_{\text{SOFA}})$ onset timing of Seymour et al.\ (2016)
-and the PhysioNet/CinC 2019 Challenge, which allows an onset to precede
-treatment.
+Using MIMIC-IV v3.1 (65,078 adult ICU stays) with external validation on
+eICU-CRD v2.0, three pre-registered Sepsis-3 label variants are crossed with
+five model classes, two split designs and two evaluation metrics, under
+stay-level cluster-bootstrap intervals with Holm and Benjamini--Hochberg
+correction. Because all three variants share one culture-plus-antibiotic
+anchor, the conjunction is additionally split into its limbs --- including a
+deterioration label using no treatment timestamp --- and re-timed under the
+standard $\min(t_{\text{susp}}, t_{\text{SOFA}})$ onset rule.
 
-The results invert the study's own premise. Model class dominates the
-decomposition, moving AUROC by \pcSpreadModelClass{} against the label
-definition's \pcSpreadLabel{}: a difference of \pcHOneEst{} whose interval
-[\pcHOneCiLo, \pcHOneCiHi] excludes zero. Yet the three labels disagree sharply
-about \emph{which} patients are septic ($\kappa = \pcKappaVsBA$ between the two
-narrowest readings, at near-identical prevalence), so label choice sets the
-cohort and the denominator of every downstream clinical claim without much
-affecting how learnable that cohort is. \pcHTwoEst{} of \pcHTwoNTerms{} shared
-covariates are unstable across labels, including a sign reversal on vasopressor
-exposure. Random data splits do \emph{not} inflate AUROC relative to time-based
-splits (\pcHFourEst, 95\% CI \pcHFourCiLo--\pcHFourCiHi). Discrimination does
-fall on transport to eICU-CRD, by \pcHFiveEst{} (95\% CI
-\pcHFiveCiLo--\pcHFiveCiHi), close to the 0.085 anticipated from the
-literature, but estimated on \pcExtNEventsB{} external events, because the
-Sepsis-3 anchor is recoverable in only \pcExtMicroCoverage\% of eICU-CRD stays.
-The direction is established and the magnitude is not. An interpretable hazard
-model matches
-gradient-boosted trees to within \pcHSixEst{} AUROC
-[\pcHSixCiLo, \pcHSixCiHi], inside the pre-registered equivalence margin. The
-pre-treatment evaluation window, the hours before the first antibiotic or
-culture, contains \textbf{zero sepsis events} in
-\pcPreTreatPersonHoursVarB{} person-hours. That zero is proved here to be a
-logical consequence of the conjunction-based onset rule rather than a discovery
-about the data: when the onset of the \emph{same} labelled stays is timed by the
-standard $\min(t_{\text{susp}}, t_{\text{SOFA}})$ rule instead,
-\pcFNMovedEarlier{} onsets (\pcFPctMovedEarlier\%) move earlier and
-\textbf{\pcPreTreatOnsetsVarF{} fall before treatment begins}, identified at
-\pcPreTreatAurocPrimaryF{} AUROC. Sepsis-3 onsets can precede clinical action;
-it is the conjunction-based onset rule, widely used in this literature, that
-prevents them from being recorded. Sweeping the alert threshold rather than
-scoring at an arbitrary cut-off, \textbf{no model exceeds a Utility Score of
-\pcUtilityMaxGbtB{}} under the primary label (a few per cent above the
-strategy of issuing no alerts at all, on a scale whose upper bound is 1), and
-that maximum is bought at \pcUtilityOptBurdenGbtB{} false alerts for every true
-one, against a benchmark of 1.4. Under that label four of the six models have
-no threshold at which alerting beats silence at all.
+The results invert the study's premise. Model class dominates the
+decomposition, moving AUROC by \pcSpreadModelClass{} against the label's
+\pcSpreadLabel{} on an interval excluding zero; none of the four testable
+hypotheses is confirmed and two fail in the direction opposite to the one
+predicted. An interpretable hazard model matches gradient-boosted trees to
+within \pcHSixEst{} AUROC, and random splits do not inflate AUROC relative to
+temporal ones. Discrimination does degrade on transport, but the Sepsis-3
+anchor is recoverable in only \pcExtMicroCoverage\% of eICU-CRD stays, so the
+direction is established and the magnitude is not.
 
-Splitting the definition shows how much of the label effect is definitional and
-how much is real. The onset \emph{time} under every pre-registered Sepsis-3
-variant is fixed entirely by the treatment anchor, the organ-dysfunction
-criterion selecting which stays are labelled without moving any onset by an
-hour: an implementation choice, not a property of Sepsis-3. Yet a
-treatment-independent deterioration label agrees with Sepsis-3 at
-$\kappa = \pcKappaVsBD$, close to chance, so the label effect is not an artefact
-of re-reading one definition. The treatment anchor alone is as predictable as
-Sepsis-3 built on top of it (anchor-attributable fraction
-\pcPhiAnchorPrimary, 95\% CI \pcPhiAnchorCiLoPrimary--\pcPhiAnchorCiHiPrimary,
-including 1), so the organ-dysfunction requirement selects which stays are
-labelled without selecting the separable ones. Re-timing the onset, by contrast,
-does change separability: Variant F is \pcAltDeltaPrimaryF{} AUROC above
-Variant B on the same patients. Critically, the deterioration label records
-\textbf{\pcPreTreatOnsetsVarD{}
-onsets in the pre-treatment window}, at \pcPreTreatAurocPrimaryD{} AUROC:
-patients do deteriorate before clinicians act, and the empty window is a
-limitation of how the onset was timed rather than a fact about the patients.
+The label's consequence lies elsewhere. No model exceeds a Utility Score of
+\pcUtilityMaxGbtB{} at any threshold, on a scale bounded by 1; the three
+variants agree at only $\kappa = \pcKappaVsBA{}$ on which patients are septic,
+so the label fixes the cohort and the denominator of every clinical quantity
+computed on it. And the pre-treatment window contains zero Sepsis-3 events ---
+proved here to follow from the conjunction-based onset rule rather than
+discovered in the data. Re-timing the \emph{same} labelled stays by the
+standard rule places \pcPreTreatOnsetsVarF{} onsets before treatment begins;
+the treatment-independent label places \pcPreTreatOnsetsVarD{} there.
 
-All estimates carry stay-level cluster-bootstrap intervals; the six
-pre-registered hypotheses are corrected by Holm--Bonferroni and all subgroup
-analyses by Benjamini--Hochberg. Under correction, subgroup discrimination
-differences by race are too imprecisely estimated to support any claim, while
-differential \emph{label} sensitivity does survive: patients whose race is
-undocumented, and Spanish-speaking patients, change sepsis status across label
-definitions significantly more often than the reference groups.
+Better models cannot repair a label whose \emph{membership} is constituted by
+the actions it is meant to anticipate, and whose onset \emph{timing} decides
+whether anticipation is measurable at all.
 
-The collapse in clinical utility is not a model problem, and on this evidence it
-is not primarily a discrimination problem either. It is a label problem. Better
-models cannot fix a label whose \emph{membership} is constituted by the very
-actions it is meant to anticipate, and how that label's onset is
-\emph{timed} determines whether anticipation can be measured at all.
-
+\vspace{0.4em}
 \noindent\textbf{Keywords:} sepsis; MIMIC-IV; discrete-time survival analysis;
-competing risks; label definition; variance decomposition; clinical utility;
-temporal dataset shift; treatment-anchored labels; TRIPOD+AI.
+label definition; variance decomposition; clinical utility; TRIPOD+AI.
