@@ -527,6 +527,14 @@ conf[, verdict := fifelse(is.na(p_raw), "Descriptive (not testable)",
                            fifelse(hypothesis == "H6", "H6 not rejected", "NOT confirmed")))]
 conf[hypothesis == "H2", verdict := "Descriptive: instability present"]
 conf[hypothesis == "H3", verdict := "Structural: outcome absent from window"]
+# H5's slot is occupied by a substituted estimand (pre-registration 13.6): the
+# proportional utility-versus-AUROC divergence cannot be formed against an
+# internal Utility Score indistinguishable from zero, so the AUROC limb alone
+# is tested. A bare "NOT confirmed" would read as a hypothesis that was tested
+# and failed. The verdict names the substitution so that every table printing
+# it carries the qualification with it.
+conf[hypothesis == "H5",
+     verdict := "Not evaluable as pre-registered; substituted AUROC contrast inconclusive"]
 conf[, family := "confirmatory (pre-registered)"]
 conf[, correction := sprintf("Holm-Bonferroni, m=%d, FWER=%.2f", m_fam, FWER_ALPHA)]
 

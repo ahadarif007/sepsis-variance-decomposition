@@ -214,7 +214,7 @@ and reports their sizes. The pipeline stops if any table is missing.
     within each variant's time windows. Surveillance cultures are excluded.
 
     \item \textbf{SOFA organ dysfunction:} SOFA components are computed from
-    chartevents, labevents, inputevents, and outputevents. A SOFA rise
+    chartevents, labevents and inputevents. A SOFA rise
     $\geq 2$ within each variant's windows defines organ dysfunction.
 
     \item \textbf{Onset time:} For the pre-registered variants A--C, the
@@ -252,8 +252,8 @@ memory. For each person-hour:
 
 \begin{itemize}
     \item Vitals and labs are LOCF-imputed from the most recent measurement.
-    \item Six-hour rolling slopes are computed for respiratory rate, MAP, and
-    lactate.
+    \item Six-hour rolling slopes are computed for heart rate, respiratory
+    rate and MAP.
     \item Vasopressor indicators are set from concurrent infusions.
     \item Missingness flags are set for each lab test.
     \item The competing-event code (0/1/2/3) is assigned based on the hour's
@@ -375,7 +375,11 @@ decomposition by varying one factor at a time while holding all others fixed:
     \item \textbf{Label spread (H1):} AUROC range across Variants A/B/C.
     \item \textbf{Model-class spread:} AUROC range across all models.
     \item \textbf{Split optimism (H4):} Random vs.\ temporal split comparison.
-    \item \textbf{Metric divergence (H5):} AUROC vs.\ Utility Score decline.
+    \item \textbf{Metric divergence (H5):} the pre-registered contrast between
+    the AUROC and Utility Score declines is attempted, found to be undefined
+    against an internal Utility Score indistinguishable from zero, and recorded
+    as such; the substituted internal-minus-external AUROC contrast is written
+    to its own row (Section~\ref{sec:h5}).
 \end{itemize}
 
 It then runs the \textbf{label-anchor attribution} of Protocol Amendment 2:
@@ -415,9 +419,11 @@ to onset, for both MIMIC-IV and eICU-CRD.
 \texttt{12\_inference.Rmd} is the inference layer. It reads only the Parquet
 outputs of the earlier stages, so it can be re-run without refitting anything,
 and it produces three things: stay-level cluster-bootstrap confidence intervals
-for every headline and subgroup estimate; the Holm-corrected confirmatory tests
-of H1--H6 and the Benjamini--Hochberg-corrected exploratory families (E1 and E2
-subgroup analyses, E3 alternative-label contrasts); and the machine-readable
+for every headline and subgroup estimate; the Holm-corrected confirmatory family
+for H1--H6, which contains formal tests where one is defined, descriptive or
+definitional records for H2 and H3, and the separately identified contrast
+substituted for H5, alongside the Benjamini--Hochberg-corrected exploratory
+families (E1 and E2 subgroup analyses, E3 alternative-label contrasts); and the machine-readable
 analysis register that supplies the status tags used
 throughout Chapter~\ref{ch:evaluation}. The bootstrap resamples ICU stays, never
 person-hours, and evaluates AUROC and AUPRC as weighted rank statistics on
@@ -442,12 +448,21 @@ label variant.
 
 \subsection{Fixed Random Seed}
 
-All random operations use a single fixed seed (\texttt{42}) to ensure bitwise
+All random operations use a single fixed seed (\texttt{42}) to ensure
 reproducibility. Every Rmd script sets \texttt{set.seed(42)} in its setup
 chunk before any computation. The same value is used for the patient-level
 random split (\texttt{RANDOM\_SPLIT\_SEED} in \texttt{config.R}), the
 \texttt{pmsampsize} sample-size calculation, and all model-fitting calls. No
 seed is drawn from wall-clock time or left to the system default.
+
+Seeding fixes the pseudo-random draws; it does not by itself make a result
+bitwise reproducible across environments. Within one environment every estimate
+here is intended to reproduce, and the train/test partition is invariant by
+construction because it is defined by admission year rather than by sampling.
+Across differing library builds, thread counts or architectures the
+gradient-boosted comparator is the one step that need not reproduce to the last
+bit, which is why its rows are designated the consistency check on any re-run
+(Appendix~\ref{app:repro}).
 
 The full pipeline can be reproduced on any MIMIC-IV v3.1 installation by
 setting the environment variable \texttt{MIMIC\_RESEARCH\_ROOT} to the
@@ -472,5 +487,7 @@ excluded from version control by design, because the PhysioNet Credentialed
 Data Use Agreement (Section~\ref{sec:ethics}) prohibits redistribution of the
 underlying data. A reader wishing to reproduce these results must obtain
 MIMIC-IV v3.1 and eICU-CRD v2.0 through their own PhysioNet credentialing, then
-re-run the pipeline; with the fixed seed above it reproduces the reported
-estimates exactly.
+re-run the pipeline. Within the pinned analysis environment and with the fixed
+seed above, it reproduces the reported estimates; the gradient-boosted
+comparator is the one output that may vary slightly across library builds or
+architectures.

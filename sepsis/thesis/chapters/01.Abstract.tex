@@ -12,22 +12,33 @@ to the analyst's discretionary choices.
 
 Using MIMIC-IV v3.1 (\pcNStays{} adult ICU stays) with external validation on
 eICU-CRD v2.0, three pre-registered Sepsis-3 label variants are crossed with
-five model classes, two split designs and two evaluation metrics, under
+six model specifications (a discrete-time hazard model, gradient-boosted trees,
+a static Cox baseline and three bedside scores), two split designs and two
+evaluation metrics, under
 stay-level cluster-bootstrap intervals with Holm and Benjamini--Hochberg
-correction. Because all three variants share one culture-plus-antibiotic
+correction. The models estimate the cause-specific hazard of onset in the
+current hour, so every AUROC reported here scores discrimination of the onset
+hour among at-risk hours rather than anticipation of onset over a future
+horizon. Because all three variants share one culture-plus-antibiotic
 anchor, the conjunction is additionally split into its limbs (including a
-deterioration label using no treatment timestamp) and re-timed under the
-standard $\min(t_{\text{susp}}, t_{\text{SOFA}})$ onset rule.
+label built from physiology alone, with no treatment timestamp) and re-timed
+under the standard $\min(t_{\text{susp}}, t_{\text{SOFA}})$ onset rule.
 
 The results invert the study's premise. Model class dominates the
 decomposition, moving AUROC by \pcSpreadModelClass{} against the label's
-\pcSpreadLabel{} on an interval excluding zero; none of the four testable
-hypotheses is confirmed and two fail in the direction opposite to the one
-predicted. An interpretable hazard model is not outperformed by gradient-boosted trees,
-leading them by \pcHSixAbsEst{} AUROC, and random splits do not inflate AUROC relative to
-temporal ones. Discrimination degrades on transport under every label, but
-the Sepsis-3 anchor is recoverable in only \pcExtMicroCoverage\% of eICU-CRD
-stays, so the degradation is reported as a direction and not as a magnitude.
+\pcSpreadLabel{} on an interval excluding zero. Of the three pre-registered
+hypotheses admitting formal statistical evaluation, H1 and H4 are not confirmed
+and both fail in the direction opposite to the one predicted, while H6 supports
+one-sided non-inferiority but not two-sided equivalence. H2 is evaluated
+descriptively, H3 and H5 are not evaluable as pre-registered, and the amended
+contrast standing in for H5 is inconclusive. An interpretable hazard model is not outperformed by gradient-boosted trees,
+leading them by \pcHSixAbsEst{} AUROC, and the results do not support the
+pre-registered claim that random splitting inflates AUROC by at least 0.02
+relative to temporal splitting. Every external point estimate is lower than its internal
+counterpart, but the Sepsis-3 anchor is recoverable in only
+\pcExtMicroCoverage\% of eICU-CRD stays and the tested contrast's interval
+covers zero, so neither degradation nor its magnitude is established for the
+Sepsis-3 target.
 
 The label's consequence lies elsewhere. Under the primary label no model
 exceeds a Utility Score of \pcUtilityMaxGbtB{} at any threshold, or
@@ -40,11 +51,12 @@ computed on it. And the pre-treatment window contains zero Sepsis-3 events,
 proved here to follow from the conjunction-based onset rule rather than
 discovered in the data. Re-timing the \emph{same} labelled stays by the
 standard rule places \pcPreTreatOnsetsVarF{} onsets before treatment begins;
-the treatment-independent label places \pcPreTreatOnsetsVarD{} there.
+the anchor-independent label places \pcPreTreatOnsetsVarD{} there.
 
-Better models cannot repair a label whose \emph{membership} is constituted by
-the actions it is meant to anticipate, and whose onset \emph{timing} decides
-whether anticipation is measurable at all.
+Improving discrimination alone does not resolve the membership and timing
+limitations of a treatment-anchored label: its \emph{membership} is
+constituted by clinical actions, and its onset \emph{timing} decides whether a
+prediction task defined before those actions can be posed at all.
 
 \vspace{0.4em}
 \noindent\textbf{Keywords:} sepsis; MIMIC-IV; discrete-time survival analysis;

@@ -730,6 +730,11 @@ local({
         sum(tf(h2a$sign_flip) | tf(h2a$mag_flip)),                             digits = 0)
   put("AblHTwoPctUnstable", if (is.null(h2a) || nrow(h2a) == 0) NA else
         round(100 * sum(tf(h2a$sign_flip) | tf(h2a$mag_flip)) / nrow(h2a), 1), digits = 1)
+  # Full-arm counterpart. tab:ablation_stability printed a literal "n/a" here,
+  # which reads as a quantity that could not be computed rather than one that
+  # simply had not been emitted.
+  put("HTwoPctUnstable", if (is.null(h2) || nrow(h2) == 0) NA else
+        round(100 * sum(tf(h2$sign_flip) | tf(h2$mag_flip)) / nrow(h2), 1), digits = 1)
 })
 
 sec("Per-model AUROC intervals, Variant B")

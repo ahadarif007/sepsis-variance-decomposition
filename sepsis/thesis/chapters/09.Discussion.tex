@@ -8,7 +8,7 @@ states the central finding and Section~\ref{sec:discussion_h1h6} resolves the
 tension the pre-registration deliberately built between H1 and H6.
 Sections~\ref{sec:external_interpretability} to~\ref{sec:ablation_establishes}
 bound the three analyses whose readings are most easily over-extended, the
-external estimate, the treatment-independent label, and the feature ablation.
+external estimate, the anchor-independent label, and the feature ablation.
 Section~\ref{sec:implications} draws out what the findings imply for how
 studies of this kind should be reported, and
 Section~\ref{sec:limitations} sets out the limitations in full.
@@ -21,18 +21,25 @@ The most important finding is definitional, not numerical: under a
 conjunction-based onset rule the Sepsis-3 label on MIMIC-IV \emph{cannot}
 contain an event before clinical action begins (Proposition~\ref{prop:h3}), and
 under the standard $\min(t_{\text{susp}}, t_{\text{SOFA}})$ rule applied to the
-identical stays it contains \pcPreTreatOnsetsVarF{} of them at
-\pcPreTreatAurocPrimaryF{} AUROC. A published MIMIC-IV sepsis result is
+identical stays it contains \pcPreTreatOnsetsVarF{} of them, separable from
+their surrounding at-risk hours at \pcPreTreatAurocPrimaryF{} AUROC on the
+onset-hour estimand. A published MIMIC-IV sepsis result is
 therefore only as informative about physiological deterioration as its onset
 rule permits, and a result reported without the timing branch is measuring
-anticipation of clinician behaviour inside a window that behaviour opened.
-The Utility Score stays close to the no-alert strategy for every model because
-the temporal split exposes them to a test population where the same
-treatment-related signals do not rescue performance as consistently as in the
-training years, and because the score charges for every false-alert hour while
-crediting only the first correct one. AUROC survives because the ordinal
-ranking of patients is preserved even as the achievable alert volume becomes
-unusable.
+discrimination around a clinician-action-defined onset, inside a window that
+action opened.
+The Utility Score stays close to the no-alert strategy for every model, and
+one reason for that is a property of the score itself rather than of the data:
+it charges for every false-alert hour while crediting only the first correct
+one, so at an hourly event rate below 0.2 per cent the false-alert term
+dominates any attainable reward. Whether the temporal split contributes a
+second reason, by exposing the models to an admission era in which
+treatment-related signals are recorded differently, is a plausible explanation
+and not one this study tests: no analysis here decomposes the score into
+era-related and metric-related components. AUROC survives the same conditions
+because the ordinal ranking of patients is preserved even as the achievable
+alert volume becomes unusable, and that contrast is what the metric-choice
+finding rests on.
 
 That divergence is what Wang et al.\ \cite{wang2025srpm} documented across
 ninety-one models moving from internal to external validation, and what
@@ -62,9 +69,11 @@ spread \pcSpreadLabel{} by \pcHOneEst, with an interval
 Read together these are not in conflict; they locate the model-class effect
 precisely. The large model-class spread is the distance between \emph{families}
 of estimator, a six-item bedside score against a fitted hazard model, not
-between one fitted model and another. Within the family of flexible estimators
-the choice is free (H6), and across families it is the single largest factor in
-the decomposition (H1). The conventional literature, which fixes the label and
+between one fitted model and another. Between the two flexible estimators
+evaluated here the difference is small in absolute terms, though the paired
+contrast favours the primary model and two-sided equivalence is not established
+(H6); across families it is the single largest factor in the decomposition
+(H1). The conventional literature, which fixes the label and
 compares flexible models to each other, is therefore measuring the one contrast
 that has almost no room left in it, while the choice that would move the number (fit anything flexible at all, rather than deploy a score) is not in
 dispute and the choice that moves the cohort, the label, is invisible to
@@ -137,9 +146,9 @@ chance under the two narrower labels, while NEWS2 scores
 score therefore ranks ahead of the boosted model under every label in this arm.
 The internal model-class ordering does not transport. That is worth stating
 plainly for two reasons. It qualifies H6 in a way the internal analysis cannot:
-the two flexible estimators are indistinguishable inside the development
-cohort, but only one of them stays ahead of a bedside score outside it, and the
-one that does is the interpretable model. And it cuts against this study's own
+the two flexible estimators are close in magnitude inside the development
+cohort, with the paired contrast favouring the primary model, but only one of
+them stays ahead of a bedside score outside it, and it is the same one. And it cuts against this study's own
 comparators as much as for them, since a rule-based score overtaking a fitted
 model externally is not the result a modelling thesis would choose. The event
 count supports the ordering; it does not license a claim about the size of any
@@ -155,9 +164,11 @@ cannot supply for itself. The degradation it shows is of the same sign, the same
 label ordering and a somewhat larger magnitude than the Sepsis-3 arm's, on a
 sample large enough to resolve it. Two estimates that disagree by two orders of
 magnitude in event count and agree on direction are better evidence of a
-direction than either is alone, which is the strongest statement the external
-analysis in this thesis supports, and deliberately weaker than a claim about how
-much discrimination is lost.
+direction than either alone would be. Because the two arms label different
+targets, that agreement is descriptive: it does not establish degradation for
+the Sepsis-3 target, and the Sepsis-3 interval covers zero. It is the strongest
+statement the external analysis supports, and it is deliberately weaker than a
+claim that discrimination degrades or by how much.
 
 Against the published record assembled in Section~\ref{sec:generalisation},
 the direction is unsurprising and the magnitude is unresolvable. Moor et al.\
@@ -183,8 +194,8 @@ Three things it does establish:
 
 \begin{enumerate}
     \item \textbf{The label sensitivity is not wholly definitional.} At
-    $\kappa = \pcKappaVsBD$ and a \pcPctExactMatchD\% onset match, a
-    treatment-independent label
+    $\kappa = \pcKappaVsBD$ and a \pcPctExactMatchD\% onset match, an
+    anchor-independent label
     disagrees with Sepsis-3 about both membership and timing. Had D closely
     tracked B, the H1 result would have been an artefact of how one definition
     is read; it is not.
@@ -216,9 +227,10 @@ Three things it does establish:
     is reversed by changing the label; what changes the ordering is changing
     the metric. A third and different reversal appears if every model is scored
     at the same 0.5 cut-off, which rewards a model for being too poorly
-    calibrated to reach it. The metric-choice finding (H5) rests on the gap
-    between discrimination and achievable utility, and these three orderings
-    are what that gap looks like when it is written out.
+    calibrated to reach it. The concern H5 was written to address, that the
+    verdict depends on the metric reported, is what these three orderings
+    illustrate; they are not a test of H5's internal-to-external contrast,
+    which is reported in Section~\ref{sec:h5}.
 \end{enumerate}
 
 
@@ -335,11 +347,16 @@ state the event count the estimate rests on rather than the stay count.
 \paragraph{Model-class comparisons are the least informative axis available.}
 Section~\ref{sec:false_dichotomy} argued that the statistics-versus-machine-learning
 partition does not carve the field. The decomposition supports a stronger
-version: within the family of flexible estimators the choice is free to within
-\pcHSixAbsEst{} AUROC, so a study comparing one flexible model against another is
-measuring the axis with the least room left in it, while the label choice that
-sets its cohort goes unreported. The reporting recommendation follows directly: fit any flexible estimator, report which one and stop defending the choice,
-and spend the space on the label and the onset rule instead.
+version, bounded by what was actually fitted. Between the two flexible
+estimators evaluated here the choice moves AUROC by \pcHSixAbsEst{}, against
+\pcSpreadModelClass{} across the six specifications, so on this comparison the
+model-class axis has much less room left in it than the range suggests, while
+the label choice that sets the cohort goes unreported. Two estimators are a
+narrow base for a general claim: no deep temporal model was fitted, and the
+boosted comparator was not tuned. The reporting recommendation is
+correspondingly bounded: report which flexible estimator was fitted rather than
+defending the choice at length, and spend the space on the label and the onset
+rule instead.
 
 \paragraph{A subgroup analysis needs an interpretability floor declared in
 advance.}
@@ -397,7 +414,9 @@ underpowered for a fairness question can report one as answered.
     so it stands as an unquantified limit on generalisability rather than a
     bias with a known sign. The consequence is specific and
     should not be over-read in either direction: the study establishes that
-    discrimination degrades on transport, and cannot establish by how much.
+    every external point estimate is lower than its internal counterpart, and
+    the Sepsis-3 arm establishes neither that discrimination degrades nor by
+    how much.
     External Utility Score and AUPRC are not interpreted at all. The
     antibiotic-only sensitivity arm is well powered and agrees on direction,
     but it labels a different target and cannot stand in for the Sepsis-3
@@ -493,7 +512,15 @@ underpowered for a fairness question can report one as answered.
     onset rather than anticipation of it, and the quantity that speaks to
     anticipation is the lead-time distribution, which
     Section~\ref{sec:clinical_utility} shows to be uninformative at these alert
-    rates. And a cumulative six-hour risk, which is what a deployed instrument
+    rates. Contemporaneity is exact only to the hour: measurements are binned
+    by the elapsed hour in which they were charted, and the onset hour is binned
+    the same way, so within that single hour a covariate charted after the onset
+    timestamp still enters the prediction assigned to it. Hourly binning is the
+    convention in this literature and the effect is confined to the one scored
+    hour per septic stay, but it means the onset-hour figures should be read as
+    detection at the recorded onset hour and not as evidence of any lead. A
+    design that lagged every predictor by one hour, or applied a sub-hour
+    timestamp cut-off, would separate the two and is not implemented here. And a cumulative six-hour risk, which is what a deployed instrument
     would display, is a functional of this hazard together with the
     competing-cause hazards and is not reported here. A design that estimated
     and scored both would be stronger; the horizon-free hazard was chosen
@@ -560,7 +587,7 @@ underpowered for a fairness question can report one as answered.
     cannot be detected. A design that pre-specified both timing rules across all
     three variants would be stronger than one that adds the second afterwards.
 
-    \item \textbf{The treatment-independent label is not a validated construct.}
+    \item \textbf{The anchor-independent label is not a validated construct.}
     Variant D is an operational deterioration label built for this comparison,
     not a consensus definition with an evidence base behind it, and its onsets
     have no external adjudication. Its label is also a threshold function of
@@ -703,9 +730,13 @@ underpowered for a fairness question can report one as answered.
     rather than reconstructed from the results, but it is a departure from the
     protocol and not merely a degeneracy in it, and a reader is entitled to
     treat H5's verdict as weaker evidence than H1's or H4's for that reason.
-    For H1, H4 and H6 the correction determines nothing: their adjusted
-    $p$-values are \pcHOnePHolm, \pcHFourPHolm{} and \pcHSixPHolm, and each
-    fails on its point estimate too. H5 is the exception on precision (its adjusted value is \pcHFivePHolm, and it fails
-    on the width of its interval rather than on its direction), which is
-    precisely why the substitution needed disclosing rather than absorbing.
+    For H1, H4 and H6 the multiplicity correction does not change the
+    substantive interpretation: their adjusted $p$-values are \pcHOnePHolm,
+    \pcHFourPHolm{} and \pcHSixPHolm, and H1 and H4 are not confirmed from
+    their point estimates and intervals, while H6 supports one-sided
+    non-inferiority but not two-sided equivalence. The contrast substituted for H5 is the
+    exception: its adjusted value is \pcHFivePHolm{} and it is inconclusive
+    because its interval is wide and covers zero, though its point estimate is
+    in the predicted direction. That is precisely why the substitution needed
+    disclosing rather than absorbing.
 \end{enumerate}

@@ -64,7 +64,8 @@ against the tracked file list before release.
         \texttt{config.R} &
         All constants: label-variant parameters, feature lists, plausibility
         ranges, seeds, bootstrap sizes, multiplicity families, event floors.
-        No numeric constant is defined anywhere else \\
+        No pipeline configuration constant is defined in another analysis
+        script \\
         \addlinespace
         \texttt{utils.R} &
         Shared helpers, including \texttt{require\_features()} (errors on a
@@ -126,8 +127,9 @@ pointed at with the \texttt{MIMIC\_RESEARCH\_ROOT} environment variable.
 \noindent
 which runs stages 01--12 in order and, on success, regenerates the thesis
 constants and figures. Individual stages or phases can be run by number. Every
-stochastic step is seeded, so a repeated run reproduces the reported estimates
-exactly; the one exception is noted below.
+stochastic step is seeded, so within the pinned analysis environment a repeated
+run reproduces the reported estimates; the gradient-boosted comparator may vary
+slightly across library builds or architectures, as noted below.
 
 \paragraph{How the thesis stays aligned with the pipeline.} No quantity
 estimated by this study is typed by hand into this document; the exceptions are
@@ -185,7 +187,7 @@ directly.
         \texttt{02\_alt\_label\_variance\_table} \\
         \addlinespace
         03 & \texttt{02\_cohort\_*}; \texttt{chartevents}, \texttt{labevents},
-        \texttt{inputevents}, \texttt{outputevents} (streamed) &
+        \texttt{inputevents} (streamed) &
         \texttt{03\_person\_hours\_\{A..F\}}, \texttt{03\_early\_onset\_shift} \\
         \addlinespace
         04 & \texttt{03\_person\_hours\_*} (three columns) &

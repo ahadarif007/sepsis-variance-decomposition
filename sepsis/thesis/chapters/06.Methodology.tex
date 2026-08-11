@@ -13,7 +13,9 @@ according to TRIPOD+AI \cite{collins2024tripodai} and PROBAST+AI
 treating the label definition, validation split, and evaluation metric as
 primary variables rather than fixed background choices.
 
-All code is implemented in R (v4.x) and Python (v3.11), with a single
+All code is implemented in R (4.5.2) and Python (3.14, \texttt{pandas} 3.0.4),
+which are the versions the reported results were produced under; Appendix~\ref{app:repro} records the
+minimum supported versions and the dependency pins. The pipeline is driven by a single
 configuration module (\texttt{config.R}) as the sole source of truth for all
 paths, clinical identifiers, and thresholds.
 
@@ -263,7 +265,7 @@ Variant B (Seymour-Standard) is the \textbf{primary analysis}. Variants A and C
 are pre-specified sensitivity analyses for the variance decomposition.
 
 
-\section{Beyond Sepsis-3: A Treatment-Independent Label}
+\section{Beyond Sepsis-3: An Anchor-Independent Label}
 \label{sec:alt_labels}
 
 Variants A, B and C are three readings of one definition, and all three fire on
@@ -328,13 +330,25 @@ patient's admission baseline (the mean of each component over hours 0--3).
 "Physiology-only" means the vasopressor and catecholamine terms are withheld,
 so the cardiovascular component is scored from mean arterial pressure alone.
 No antibiotic order, culture draw or drug administration enters the definition
-at any point: Variant D is the treatment-independent labelling that the
+at any point: Variant D is the anchor-independent labelling that the
 pre-registered family lacked. Both variants are fitted with the identical model
 specification, feature set and temporal split, so the label is the only thing
 that changes.
 
+The term needs bounding, because it is easy to read as more than it is.
+``Anchor-independent'' means independent of the treatment \emph{timestamps}
+that anchor Sepsis-3: no antibiotic, culture or vasopressor event contributes
+to membership or to onset timing. The label is called anchor-independent rather
+than treatment-independent throughout this thesis for exactly that reason. It
+does not mean independent of clinical care in any broader sense. Variant D is built from measurements that exist because
+somebody ordered them, on patients whose physiology already reflects whatever
+treatment they had received, and recorded at a frequency that itself tracks how
+closely a patient is being watched. Anchor-independence is what the comparison
+needs and what it has; causal independence from treatment is neither claimed
+nor constructible from routinely collected ICU data.
+
 The PhysioNet/CinC 2019 operationalisation \cite{reyna2020utility} was
-considered as the \emph{treatment-independent} alternative label and rejected
+considered as the \emph{anchor-independent} alternative label and rejected
 for that purpose. It sets onset to
 $\min(t_{\text{susp}}, t_{\text{SOFA}})$ with the same
 culture-plus-antibiotic trigger, so membership is still anchored to treatment
@@ -394,8 +408,8 @@ $t_{\text{SOFA}}$ is the \emph{full} score, vasopressor components included, as
 Seymour et al.\ specify; vasopressor administration is itself a treatment, so an
 onset placed by the cardiovascular component is free of the
 antibiotic-and-culture anchor that defines the pre-treatment window but is not
-free of treatment in general. Variant D remains the fully treatment-independent
-comparison.
+free of treatment in general. Variant D remains the anchor-independent
+comparison, within the bound stated above.
 
 Second, F and B label the same stays septic, membership is identical at the
 level of the stay, so the informative agreement statistic for F is the onset
@@ -479,7 +493,7 @@ risk. Following Heyard et al.\ \cite{heyard2019dynamic}, each hour is
 assigned one of four outcomes:
 
 \begin{itemize}
-    \item 0: Still at risk (censored at this hour)
+    \item 0: No event in this hour; the stay remains at risk
     \item 1: Sepsis onset (the event of interest)
     \item 2: Discharged alive without sepsis (competing event)
     \item 3: Died without sepsis (competing event)
@@ -493,8 +507,8 @@ avoids this problem.
 \section{Feature Construction}
 \label{sec:features}
 
-Features are extracted at each person-hour from chartevents, labevents,
-inputevents, and outputevents. The feature set includes:
+Features are extracted at each person-hour from chartevents, labevents and
+inputevents. The feature set includes:
 
 \begin{enumerate}
     \item \textbf{Vital signs}, 6 (last value carried forward per hour): heart
@@ -1034,7 +1048,8 @@ stability, are given in Section~\ref{sec:ablation}.
 The full protocol was locked before the cohort extraction reported here. All six hypotheses,
 label variants, model classes, splits, metrics, and decision thresholds are
 specified in \texttt{00\_preregistration.md}. Any analysis not specified there
-is labelled as exploratory, and, following
+is labelled exploratory or descriptive, according to whether it carries an
+inferential claim, and, following
 Section~\ref{sec:inference}, each individual result carries its status tag in
 the results table itself rather than inheriting it from this statement alone.
 Reporting follows TRIPOD+AI \cite{collins2024tripodai}; code availability and

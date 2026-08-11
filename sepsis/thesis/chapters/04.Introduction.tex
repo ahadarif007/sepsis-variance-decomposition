@@ -108,8 +108,11 @@ Six hypotheses were pre-registered before any of the modelling reported here:
     \item[H4 (Split optimism)] Time-based testing gives at least 0.02 lower AUROC
     than random testing.
     \item[H5 (Metric divergence)] The Utility Score declines more than AUROC when
-    moving from internal to external validation. This is tested, for the reasons
-    given in Section~\ref{sec:h5}, on the AUROC limb alone.
+    moving from internal to external validation. This proved not to be evaluable,
+    for the reasons given in Section~\ref{sec:h5}: there is no internal Utility
+    Score for a decline to be proportional to. A substituted
+    internal-to-external AUROC contrast was analysed in its place and retains
+    H5's slot in the multiplicity correction.
     \item[H6 (Model-class null)] The primary statistical model is not
     outperformed by gradient-boosted trees by more than 0.02 AUROC. The
     pre-registered statement is two-sided; only the upper side is testable
@@ -158,8 +161,9 @@ plainly that it was written after the analyses had been run.
     the MIMIC-IV literature, makes pre-treatment prediction structurally
     impossible, together with the measurement that the standard
     $\min(t_{\text{susp}}, t_{\text{SOFA}})$ rule applied to the identical stays
-    recovers \pcPreTreatOnsetsVarF{} pre-treatment onsets at
-    \pcPreTreatAurocPrimaryF{} AUROC. Kamran et al.'s
+    recovers \pcPreTreatOnsetsVarF{} pre-treatment onsets, separable from
+    their surrounding at-risk hours at \pcPreTreatAurocPrimaryF{} AUROC on the
+    onset-hour estimand. Kamran et al.'s
     \cite{kamran2024evaluation} concern is confirmed for label \emph{membership}
     and narrowed for label \emph{timing}.
 
@@ -202,7 +206,7 @@ plainly that it was written after the analyses had been run.
     results follow. The onset \emph{time} under every pre-registered Sepsis-3
     variant is fixed entirely by the treatment anchor, the organ-dysfunction
     criterion filters which stays are labelled and moves no onset by a single
-    hour, while a treatment-independent deterioration label agrees with
+    hour, while an anchor-independent deterioration label agrees with
     Sepsis-3 at $\kappa = \pcKappaVsBD$, close to chance. And the treatment
     anchor alone is about as predictable as the Sepsis-3 conjunction built on
     top of it, so the difficulty lies not in the conjunction but in when the
@@ -214,7 +218,7 @@ plainly that it was written after the analyses had been run.
     [\pcPhiAnchorCiLoGbt, \pcPhiAnchorCiHiGbt] for the gradient-boosted
     comparator, which excludes it. The same
     comparison shows the empty pre-treatment window of C2 to be a property of
-    the onset rule, not of the patients: a treatment-independent label records
+    the onset rule, not of the patients: an anchor-independent label records
     \pcPreTreatOnsetsVarD{} onsets there at \pcPreTreatAurocPrimaryD{} AUROC,
     and Sepsis-3 itself records \pcPreTreatOnsetsVarF{} once its onset is timed
     as the standard specifies (Section~\ref{sec:label_anchor_results}).
