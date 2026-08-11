@@ -103,6 +103,14 @@ secrets.json
 *.swo
 *~
 
+# ---- Internal development record ----
+# The engineering handoff, the review rounds and the companion literature
+# review are working documents, not part of the submission. AI handoff
+# instructions and feedback are deliberately kept out of the tracked tree.
+sepsis/GEN-AI/
+sepsis/feedback/
+sepsis/lr-rp/
+
 # ---- Presentation decks ----
 # Excluded from the submission repository: both decks predate several rounds of
 # pipeline fixes and state superseded results (H6 tagged REJECTED, primary
