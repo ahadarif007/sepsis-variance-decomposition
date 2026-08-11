@@ -27,10 +27,11 @@ found encounter-level AUROC between 0.82 and 0.92 alongside positive predictive
 value of 0.13 to 0.26: 21 to 35 alerts investigated for every sepsis case
 identified.
 
-The key question is therefore not ``which model is best?'' but something more
-fundamental: \textit{how much of a model's reported performance comes from the
-model itself, and how much comes from how the study was designed: how sepsis
-was defined, how data was split, and which metric was reported?}
+``Which model is best?'' is therefore the wrong question to lead with. The
+question this thesis asks instead is \textit{how much of a model's reported
+performance comes from the model itself, and how much comes from how the study
+was designed: how sepsis was defined, how data was split, and which metric was
+reported?}
 
 Cohen et al.\ \cite{cohen2024subtle} showed on MIMIC-III that varying only
 the Sepsis-3 definition changed the identified cohort from 867 to 2,178
@@ -119,9 +120,9 @@ Six hypotheses were pre-registered before any of the modelling reported here:
     against these data, as Section~\ref{sec:h6} sets out.
 \end{description}
 
-H1 and H6 are in deliberate tension: if H1 is confirmed, the label is the main
-source of variation; if H6 is rejected, the model also matters. Both outcomes
-are informative.
+H1 and H6 pull against each other by design. If H1 is confirmed, the label is
+the main source of variation. Rejecting H6 would instead put weight back on the
+model, and there is no outcome here that leaves the question unanswered.
 
 These six form a single confirmatory family and are tested with
 Holm--Bonferroni control of the family-wise error rate. Every analysis reported
@@ -228,14 +229,12 @@ plainly that it was written after the analyses had been run.
 \section{Thesis Structure}
 
 Chapter~\ref{ch:review} reviews the evidence that motivated this study's design.
-Chapter~\ref{ch:methodology} describes the data, labels, models, and evaluation
-plan.
-Chapter~\ref{ch:design} explains the pipeline architecture and its twelve
-scripts.
+The data, the labels, the models and the evaluation plan are set out in
+Chapter~\ref{ch:methodology}, and Chapter~\ref{ch:design} explains the pipeline
+architecture and its twelve scripts.
 Chapter~\ref{ch:evaluation} presents all results, organised around the six
-hypotheses.
-Chapter~\ref{ch:discussion} interprets them, bounds what each estimate can
-support, and states the limitations.
+hypotheses. Chapter~\ref{ch:discussion} interprets them, bounds what each
+estimate can support, and states the limitations, before
 Chapter~\ref{ch:conclusion} draws conclusions and outlines future work.
 Appendix~\ref{app:code} gives the source-code repository and the procedure for
 reproducing every reported number.

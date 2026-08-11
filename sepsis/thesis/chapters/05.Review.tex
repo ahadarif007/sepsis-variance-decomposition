@@ -7,21 +7,20 @@ rather than around a catalogue of studies, because the design decisions taken
 in Chapter~\ref{ch:methodology} are responses to specific unresolved disputes,
 not to a consensus.
 
-Four such disputes structure what follows. The first is taxonomic: the field
+Four such disputes structure what follows. The first is taxonomic. The field
 routinely partitions itself into ``statistical'' and ``machine-learning''
 traditions, and Section~\ref{sec:false_dichotomy} argues that this partition
-does not carve the problem at its joints. The second concerns the outcome
-itself: what counts as sepsis onset, and whether it is a stable enough
-object to support the interpretable effect estimates that motivate statistical
-modelling (Sections~\ref{sec:label_object} and~\ref{sec:label_action}). The
-third concerns validation: what the published external-validation record
-actually shows, and why discrimination and clinical utility tell opposite
-stories about it (Sections~\ref{sec:generalisation}
-and~\ref{sec:auroc_illusion}). The fourth is methodological, and is genuinely
-open in the statistical literature rather than merely under-reported: no
-survival formulation for ICU event data satisfies all of its own assumptions,
-and Section~\ref{sec:survival_dispute} takes a position on which set of
-violations is acceptable.
+does not carve the problem at its joints. Next comes the outcome itself: what
+counts as sepsis onset, and whether it is a stable enough object to support the
+interpretable effect estimates that motivate statistical modelling
+(Sections~\ref{sec:label_object} and~\ref{sec:label_action}). Validation
+supplies the third: what the published external-validation record actually
+shows, and why discrimination and clinical utility tell opposite stories about
+it (Sections~\ref{sec:generalisation} and~\ref{sec:auroc_illusion}). The
+last is methodological, and it is genuinely open in the statistical literature
+rather than merely under-reported. No survival formulation for ICU event data
+satisfies all of its own assumptions, and Section~\ref{sec:survival_dispute}
+takes a position on which set of violations is acceptable.
 
 Sections~\ref{sec:comparator_choice} and~\ref{sec:equity_lit} then treat two
 narrower questions (which rule-based comparator is worth beating, and
@@ -380,8 +379,8 @@ streams in which the quantity of interest is a lead time. On precisely that
 axis Fagerstr{\"o}m et al.\ report the deep model detecting patients up to
 twenty hours earlier than the Cox model at comparable sensitivity and
 specificity. The defensible position is therefore narrower than ``statistics
-matches machine learning'': it is that the equivalence is established for
-static risk stratification and is contested for the temporal early-warning
+matches machine learning''. The equivalence is established for static risk
+stratification and contested for the temporal early-warning
 task. H6 in this study is a direct test of that narrower proposition, on one
 dataset, under one label, with the split and the evaluation held fixed: the
 conditions Christodoulou et al.\ find are usually absent.
@@ -441,8 +440,8 @@ Sepsis Event, 0.07 for SEP-1) and decision-curve analysis showing higher
 standardised net benefit under Sepsis-3 and SEP-1. Cohen et al.\ established
 definitional sensitivity retrospectively, in MIMIC-III, at $n \approx 2{,}000$,
 with research models; Dutta et al.\ reproduce it prospectively, in a live
-deployment, at $n \approx 200{,}000$, with a commercial model. The finding is
-robust to dataset, scale, model class and setting.
+deployment, at $n \approx 200{,}000$, with a commercial model. The finding
+holds across dataset, scale, model class and setting.
 
 The critical gap in this line of work is what makes it the starting point for
 this study rather than its conclusion. Both papers demonstrate \emph{that} the
@@ -532,7 +531,7 @@ Lactate is drawn because someone is worried; the predictor and the outcome
 share a common cause in the clinician's suspicion, and no amount of
 proportional-hazards testing detects this, because the model is correctly
 estimating the hazard of a contaminated event. The remedy is definitional
-rather than statistical: evaluation must be anchored to a prediction time that
+rather than statistical. Evaluation must be anchored to a prediction time that
 precedes clinical action.
 
 Lauritsen et al.\ \cite{lauritsen2021framing} generalise the problem beyond the
@@ -544,7 +543,7 @@ discrimination and calibration, and, critically, can produce opposing
 interpretations of the same physiological variable: their worked example is
 SpO$_2$, whose apparent relationship to sepsis risk reverses direction with the
 framing. A model with strong discrimination \emph{and} strong calibration may
-nonetheless be clinically unusable.
+still be clinically unusable.
 
 Taken together these two results close a trap around the argument for
 interpretable models. If framing can flip the sign of a coefficient, then the
@@ -636,7 +635,7 @@ direction, if not in significance, with Wang et al.'s meta-level 0.811
 $\rightarrow$ 0.783. The number is specific enough to pre-specify, which is
 what H5 does; and a study observing a substantially \emph{smaller} drop should
 first suspect that its external cohort is insufficiently distant rather than
-conclude that its model is unusually robust.
+conclude that its model is unusually stable.
 
 \paragraph{Rank order does not transfer.} Reyna et al.\ report that team
 Utility Scores were strongly rank-correlated between the two hospital systems
@@ -737,7 +736,7 @@ The consequence for this study's evaluation plan is direct. A study reporting
 AUROC, sensitivity, specificity and lead time, and concluding that its model
 generalises, would have failed to measure the thing that fails. Calibration,
 AUPRC, the Utility Score, alert burden and decision-curve analysis are not
-enhancements to that list; they are the list. This is why the Utility Score is
+additions to that list; they are the list. This is why the Utility Score is
 the primary metric here and AUROC is descriptive, and, given that the
 Challenge metric is threshold-dependent, why it is reported across a swept grid
 of operating points rather than at a single cut-off
@@ -801,20 +800,21 @@ and Ngwa et al.\ \cite{ngwa2016comparison} confirmed the equivalence by
 simulation. One-hour ICU intervals with hourly sepsis probability below 1\%
 satisfy both conditions comfortably.
 
-Its properties answer the dispute point by point. It is native to the data's
-structure, because ICU data is already binned hourly by convention
+Its properties answer the dispute point by point. The formulation is native to
+the data's structure, because ICU data is already binned hourly by convention
 \cite{reyna2020utility, nemati2018aise}: a discrete-time hazard model
 \emph{is} an hourly risk score, and no reconciliation between the model's time
-scale and the deployment's is required. It does not require proportional
-hazards, so item (1) is dissolved rather than tested. It accommodates competing
-risks directly through a multinomial cause-specific formulation over the
+scale and the deployment's is required. Proportional hazards is not required,
+so item (1) is dissolved rather than tested. Competing risks are
+accommodated directly through a multinomial cause-specific formulation over the
 person-hour \cite{rescherigon2006competing, heyard2019dynamic}, so that
 discharge alive and death without sepsis are modelled as what they are, which
-answers item (2) without incurring item (3). It answers Schoenfeld's objection
-in item (3) on its own terms, being a logistic regression, while retaining the
-time-to-event structure he would discard. Its coefficients are log-odds of
-onset in the next hour given survival sepsis-free to this hour: arguably a
-more clinically legible quantity than a hazard ratio. And it emits exactly the
+answers item (2) without incurring item (3). Schoenfeld's objection in item (3)
+is met on its own terms, since the model is a logistic regression, and the
+time-to-event structure he would discard is retained. Its coefficients are
+log-odds of onset in the next hour given survival sepsis-free to this hour,
+arguably a more clinically legible quantity than a hazard ratio. And it emits
+exactly the
 object the Challenge utility metric consumes, an hourly risk score, so it is
 directly comparable with the machine-learning literature. Heyard et al.\
 \cite{heyard2019dynamic, heyard2020evaluation} supply the corresponding
@@ -929,10 +929,10 @@ holds given a stable and explicitly specified estimand, and the field has not
 supplied one. The discipline required to supply one is precisely the discipline
 a classical specification is better equipped to impose. A coefficient shown to
 be stable across three defensible readings of the Sepsis-3 onset rule is a
-genuinely interpretable quantity; one shown to \emph{flip} across those
-readings is a genuinely important negative result. Either way the analysis is
-informative, and it is an analysis this search did not find performed for a
-survival model on MIMIC-IV.
+genuinely interpretable quantity. One that \emph{flips} across those readings is
+a negative result worth reporting. Either way the analysis is informative, and
+it is an analysis this search did not find performed for a survival model on
+MIMIC-IV.
 
 That observation is the seed of the research question in
 Section~\ref{sec:rq}. The field has established that the label matters
@@ -940,12 +940,12 @@ Section~\ref{sec:rq}. The field has established that the label matters
 (Section~\ref{sec:label_action}), that the split design is not neutral
 (Section~\ref{sec:generalisation}), and that the metric conventionally reported
 cannot see the failure (Section~\ref{sec:auroc_illusion}). Each of these has
-been demonstrated separately, in different databases, under different models,
-by different groups. What has not been done is to hold one database and one
-pipeline fixed and ask how much of the reported performance each of these
-analyst decisions accounts for, relative to the choice of model that the
-literature spends most of its effort on. That question is answerable, it is
-answerable with the intervals the constituent studies lack, and it is what this
+been demonstrated separately, by different groups working in different
+databases with different models. What has not been done is to hold one database
+and one pipeline fixed and ask how much of the reported performance each of
+these analyst decisions accounts for, relative to the choice of model that the
+literature spends most of its effort on. That question is answerable, and
+answerable with the intervals the constituent studies lack. It is what this
 thesis does.
 
 

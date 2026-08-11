@@ -67,8 +67,9 @@ reported numbers into the document from the result tables, so a value cannot
 disagree between the code and the text either.
 
 \paragraph{An interface between stages must fail loudly or not at all.}
-The pipeline's most dangerous failure mode is not a crash but a stage that
-quietly does less than it was asked to. Selecting predictors by intersecting a
+A crash is not the pipeline's most dangerous failure mode. That would be a
+stage that quietly does less than it was asked to. Selecting predictors by
+intersecting a
 declared feature list with the columns actually present, for instance, silently
 drops any predictor whose name does not match: the model still fits, the
 metrics still compute, and nothing in the output indicates that a variable is
@@ -317,7 +318,7 @@ headline number rests on.
 person-hour. GBT models are fitted under both temporal and random splits. GBT
 feature importance is exported for each variant.
 
-The gradient-boosted comparator is additionally fitted on the ablated feature
+The gradient-boosted comparator is also fitted on the ablated feature
 set with identical hyperparameters. NEWS2, qSOFA and SIRS never used the
 ablated features, and the Cox comparator's role here is the
 proportional-hazards check rather than discrimination, so neither is ablated.
@@ -440,7 +441,7 @@ The pipeline is orchestrated by \texttt{run\_\allowbreak pipeline.R} (or the equ
 \texttt{run\_\allowbreak pipeline.sh}), which executes all stages sequentially or by phase,
 renders each stage to PDF in \texttt{output/pdf/}, and writes a per-stage and a
 combined run log to \texttt{output/logs/}. All intermediate outputs are Parquet
-(compressed, columnar). Small result tables ($<$1,000 rows) are additionally
+(compressed, columnar). Small result tables ($<$1,000 rows) are also
 written as CSV for readability. The end-to-end run reported in this thesis
 completed in 60 minutes on an Apple silicon workstation; the dominant cost is
 stage 05, which fits the multinomial model on 2.3 million person-hours for each

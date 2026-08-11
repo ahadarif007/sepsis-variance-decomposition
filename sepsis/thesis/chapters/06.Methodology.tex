@@ -9,9 +9,9 @@ de-identified critical-care data. It follows a pre-registered protocol
 (\texttt{00\_preregistration.md}, locked before any of the modelling reported
 here) and reports
 according to TRIPOD+AI \cite{collins2024tripodai} and PROBAST+AI
-\cite{moons2025probastai} guidelines. The central design innovation is
-treating the label definition, validation split, and evaluation metric as
-primary variables rather than fixed background choices.
+\cite{moons2025probastai} guidelines. The design treats the label definition,
+validation split and evaluation metric as primary variables rather than as
+fixed background choices.
 
 All code is implemented in R (4.5.2) and Python (3.14, \texttt{pandas} 3.0.4),
 which are the versions the reported results were produced under; Appendix~\ref{app:repro} records the
@@ -413,7 +413,7 @@ comparison, within the bound stated above.
 
 Second, F and B label the same stays septic, membership is identical at the
 level of the stay, so the informative agreement statistic for F is the onset
-\emph{shift}, not the overlap. Agreement is nonetheless not perfect once
+\emph{shift}, not the overlap. Agreement is still not perfect once
 restricted to the modelled horizon, which leads to the third property.
 
 Third, moving an onset earlier can move it \emph{into} the 72-hour prediction
@@ -595,7 +595,7 @@ by less than 0.02 for every variant, and that insensitivity, not an
 optimisation, is the justification for the constant. Every fit is checked
 after estimation and flagged if $\max|\beta|$ exceeds 20.
 
-Penalisation is not a refinement here; it is a precondition. Coefficient
+Penalisation here is a precondition rather than a refinement. Coefficient
 comparisons across label variants (H2, Section~\ref{sec:h2}) are only meaningful
 against a unique maximiser, and an unpenalised fit can land in a degenerate
 region under one label and a benign region under another, manufacturing an
@@ -761,7 +761,7 @@ alarm volume is not a deployable operating point.
 
 \textbf{Calibration} is assessed via calibration intercept and slope, following
 Heyard et al.\ \cite{heyard2020evaluation}, and, following Van Calster et al.\
-\cite{vancalster2019calibration}, is additionally reported as a flexible
+\cite{vancalster2019calibration}, is also reported as a flexible
 calibration curve (restricted cubic spline of the outcome on the logit of
 predicted risk) summarised by the Integrated Calibration Index (ICI), E50, E90,
 E\textsubscript{max}, and the scaled Brier score. Predicted probabilities are

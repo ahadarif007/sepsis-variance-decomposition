@@ -314,7 +314,7 @@ under Variant C, and GBT reaches \pcUtilityMaxGbtB{} and \pcUtilityMaxGbtC{}.
 A claim that these models are worse than doing nothing would be an artefact of
 the operating point, and is not made here.
 
-\textbf{The margin is nonetheless very small.} On a scale whose upper bound is
+\textbf{The margin is still very small.} On a scale whose upper bound is
 1, the best a model achieves under the primary label is
 \pcUtilityMaxGbtB{}. No minimally important difference has been established for
 this score, so the gain is characterised by what it costs rather than by an
@@ -735,7 +735,7 @@ headline.
 
 The fifth column shows what it costs. To achieve it, the models alert on
 \pcPctStaysAlertedCoxB--\pcPctStaysAlertedPrimaryA{} per cent of \emph{all}
-stays. Patient-level PPV is consequently \pcPatientPpvPrimaryB{} under Variant
+stays. Patient-level PPV falls to \pcPatientPpvPrimaryB{} under Variant
 B and \pcPatientPpvPrimaryC{} under Variant C, which are, to three decimal
 places, the septic fractions of the cohort themselves
 (\pcNSepsisStaysB/\pcNTestStays{} and
@@ -1161,7 +1161,7 @@ agree on the hour almost always: \pcPctExactMatchA\% for A, \pcPctExactMatchC\%
 for C. The pre-registered label variance is therefore a disagreement about
 \emph{which patients}, essentially never about \emph{when}, because the
 ``when'' is fixed by the treatment anchor in all three. That disagreement is
-nonetheless substantial: A and B share only \pcSensToBA{} of B's septic stays
+still substantial: A and B share only \pcSensToBA{} of B's septic stays
 ($\kappa = \pcKappaVsBA$) despite near-identical prevalence.
 
 Variant D breaks the pattern completely. A label built from physiology alone
@@ -1731,7 +1731,7 @@ ranges, each against the reference level on the same bootstrap replicates.
     across race, language and insurance and for both fitted models, ordered by
     adjusted $p$-value. $q_{\text{BH}}$ is the Benjamini--Hochberg adjusted
     value over the whole family. \textbf{No contrast is significant}, on race or
-    on any other variable. Two intervals nonetheless exclude zero, which is the
+    on any other variable. Two intervals still exclude zero, which is the
     distinction the surrounding text turns on: an unadjusted interval and a
     family-corrected verdict answer different questions, and only the second is
     read here. The reference level is the largest stratum of its own variable
@@ -1931,7 +1931,7 @@ the underlying quantities are identical, so a range over six is expected to
 exceed a range over three by roughly half again. The bootstrap does not remove
 this: the bias is present in every replicate.
 
-The ordering nonetheless does not rest on the statistic. The model-class range
+But the ordering does not rest on the statistic. The model-class range
 spans a structural gap rather than sampling scatter, between the two fitted
 models and the four rule-based and static comparators, and \emph{any} single
 contrast across that gap is larger than the whole label range. The narrowest of
@@ -2637,7 +2637,7 @@ close to zero, and the \pcExtNEventsB{} external events are in any case too few
 to estimate an external Utility Score reliably.
 
 The finding that replaces H5 is therefore not ``utility degrades faster than
-AUROC'' but something the internal results establish on their own, without
+AUROC''. It is something the internal results establish on their own, without
 needing the external arm at all: \textbf{no evaluated operating point combines
 usable clinical value with a tolerable alert burden, at any
 threshold, on the cohort where the label is fully observed}. The broader

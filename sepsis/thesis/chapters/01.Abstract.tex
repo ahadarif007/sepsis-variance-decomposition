@@ -4,8 +4,8 @@
 % gap under a chapter heading is what pushes the keywords onto a second one.
 \vspace*{-3\baselineskip}
 
-Over ninety AI models have been built to predict sepsis in real time, yet they
-fail in practice: Wang et al.\ (2025) report a clinical Utility Score falling
+Over ninety AI models have been built to predict sepsis in real time. In
+practice they fail. Wang et al.\ (2025) report a clinical Utility Score falling
 from $+0.381$ internally to $-0.164$ externally while AUROC barely moves. This
 thesis asks whether that failure belongs to the model, to the sepsis label, or
 to the analyst's discretionary choices.
@@ -20,7 +20,7 @@ correction. The models estimate the cause-specific hazard of onset in the
 current hour, so every AUROC reported here scores discrimination of the onset
 hour among at-risk hours rather than anticipation of onset over a future
 horizon. Because all three variants share one culture-plus-antibiotic
-anchor, the conjunction is additionally split into its limbs (including a
+anchor, the conjunction is also split into its limbs (including a
 label built from physiology alone, with no treatment timestamp) and re-timed
 under the standard $\min(t_{\text{susp}}, t_{\text{SOFA}})$ onset rule.
 
@@ -54,9 +54,9 @@ standard rule places \pcPreTreatOnsetsVarF{} onsets before treatment begins;
 the anchor-independent label places \pcPreTreatOnsetsVarD{} there.
 
 Improving discrimination alone does not resolve the membership and timing
-limitations of a treatment-anchored label: its \emph{membership} is
-constituted by clinical actions, and its onset \emph{timing} decides whether a
-prediction task defined before those actions can be posed at all.
+limitations of a treatment-anchored label. Clinical actions constitute its
+\emph{membership}, and its onset \emph{timing} decides whether a prediction
+task defined before those actions can be posed at all.
 
 \vspace{0.4em}
 \noindent\textbf{Keywords:} sepsis; MIMIC-IV; discrete-time survival analysis;
