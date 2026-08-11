@@ -348,7 +348,7 @@ underpowered for a fairness question can report one as answered.
     cohort size.} eICU-CRD contains \pcExtNCohortStays{} unit stays, but the
     Sepsis-3 suspicion anchor requires a microbiology culture and
     \texttt{microLab} documents one for only \pcExtMicroCoverage\% of the
-    analysis cohort --- and both limbs of the anchor together for
+    analysis cohort, and both limbs of the anchor together for
     \pcExtBothLimbCoverage\% (\pcExtNBothLimbStays{} stays). The primary
     external analysis is confined to the culture-covered
     sub-cohort, because in the remaining stays no onset is observable under any
@@ -415,7 +415,7 @@ underpowered for a fairness question can report one as answered.
     estimator. The second gap is inferential rather than architectural: the
     contrast is tested one-sidedly, so what is excluded is the boosted trees
     outperforming the hazard model, and two-sided equivalence between the two is
-    not established --- the interval's lower limit, \pcHSixCiLo, falls outside
+    not established: the interval's lower limit, \pcHSixCiLo, falls outside
     the 0.02 margin (Section~\ref{sec:h6}). Neither gap affects the structural
     findings about the label.
 
@@ -644,9 +644,9 @@ underpowered for a fairness question can report one as answered.
     rather than reconstructed from the results, but it is a departure from the
     protocol and not merely a degeneracy in it, and a reader is entitled to
     treat H5's verdict as weaker evidence than H1's or H4's for that reason.
-    For H1, H4 and H6 the correction determines nothing: each carries an
-    adjusted $p$-value of 1.000 and each fails on its point estimate. H5 is the
-    exception on precision --- its adjusted value is \pcHFivePHolm, and it fails
-    on the width of its interval rather than on its direction --- which is
+    For H1, H4 and H6 the correction determines nothing: their adjusted
+    $p$-values are \pcHOnePHolm, \pcHFourPHolm{} and \pcHSixPHolm, and each
+    fails on its point estimate too. H5 is the exception on precision (its adjusted value is \pcHFivePHolm, and it fails
+    on the width of its interval rather than on its direction), which is
     precisely why the substitution needed disclosing rather than absorbing.
 \end{enumerate}

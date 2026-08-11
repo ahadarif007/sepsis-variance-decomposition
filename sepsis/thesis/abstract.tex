@@ -15,8 +15,8 @@ eICU-CRD v2.0, three pre-registered Sepsis-3 label variants are crossed with
 five model classes, two split designs and two evaluation metrics, under
 stay-level cluster-bootstrap intervals with Holm and Benjamini--Hochberg
 correction. Because all three variants share one culture-plus-antibiotic
-anchor, the conjunction is additionally split into its limbs --- including a
-deterioration label using no treatment timestamp --- and re-timed under the
+anchor, the conjunction is additionally split into its limbs (including a
+deterioration label using no treatment timestamp) and re-timed under the
 standard $\min(t_{\text{susp}}, t_{\text{SOFA}})$ onset rule.
 
 The results invert the study's premise. Model class dominates the
@@ -36,7 +36,7 @@ the two
 narrowest readings agree at only $\kappa = \pcKappaVsBA{}$ on which patients are
 septic,
 so the label fixes the cohort and the denominator of every clinical quantity
-computed on it. And the pre-treatment window contains zero Sepsis-3 events ---
+computed on it. And the pre-treatment window contains zero Sepsis-3 events,
 proved here to follow from the conjunction-based onset rule rather than
 discovered in the data. Re-timing the \emph{same} labelled stays by the
 standard rule places \pcPreTreatOnsetsVarF{} onsets before treatment begins;

@@ -188,6 +188,7 @@ find "$SCRIPT_DIR" -maxdepth 1 -name '*.knit.md' -delete 2>/dev/null
 # ---------------------------------------------------------------------------
 CONSTANTS_INCOMPLETE=0
 INCONSISTENT=0
+UNPROVENANCED=0
 if [ $FAILED -eq 0 ]; then
   echo "" | tee -a "$LOG_FILE"
   echo "Regenerating thesis constants..." | tee -a "$LOG_FILE"
@@ -210,6 +211,19 @@ if [ $FAILED -eq 0 ]; then
     INCONSISTENT=0
   else
     INCONSISTENT=1
+  fi
+
+  # Literal provenance in the thesis sources. The generator can only govern the
+  # numbers that pass through it; this is what notices a study quantity typed
+  # beside a macro instead of as one, which is how a value goes stale on the
+  # next run. It also prints the advisory list of comparative claims -- the
+  # sentences whose truth depends on values they do not print.
+  echo "" | tee -a "$LOG_FILE"
+  echo "Checking thesis literal provenance..." | tee -a "$LOG_FILE"
+  if Rscript "$SCRIPT_DIR/check_thesis_numbers.R" 2>&1 | tee -a "$LOG_FILE"; then
+    UNPROVENANCED=0
+  else
+    UNPROVENANCED=1
   fi
 else
   echo "" | tee -a "$LOG_FILE"
@@ -242,9 +256,16 @@ if [ $INCONSISTENT -ne 0 ]; then
   echo "  !! Cross-file consistency checks FAILED. Two reported quantities" | tee -a "$LOG_FILE"
   echo "     disagree; see the check output above. Fix the source, not the check." | tee -a "$LOG_FILE"
 fi
+if [ $UNPROVENANCED -ne 0 ]; then
+  echo "" | tee -a "$LOG_FILE"
+  echo "  !! The thesis types a result-shaped number with no recorded" | tee -a "$LOG_FILE"
+  echo "     provenance. Make it a macro, or add it to the allow-list in" | tee -a "$LOG_FILE"
+  echo "     check_thesis_numbers.R with the reason it is not one." | tee -a "$LOG_FILE"
+fi
 
 echo "======================================================" | tee -a "$LOG_FILE"
 
 [ $FAILED -eq 0 ] || exit 1
 [ $CONSTANTS_INCOMPLETE -eq 0 ] || exit 2
 [ $INCONSISTENT -eq 0 ] || exit 3
+[ $UNPROVENANCED -eq 0 ] || exit 4

@@ -24,16 +24,25 @@
 > Only open a data file when you need a number that is *not* here, and then open
 > the single file named in §5 — never dump the whole `processed_data/` directory.
 
-Last updated: **2026-08-06** — feedback round 7 complete **and executed**.
-All three previously-pending runs (§9a eICU GBT, §9b ablation, §9c round 7) have
-now run. `pipeline_constants.tex` carries **1,337 macros, 0 missing** and
-`index.pdf` builds at 0 errors / 0 undefined refs / 0 undefined citations /
-**155 pages**. Structural changes: the thesis gained a **Discussion chapter**
-(7 chapters + appendix), Chapter 2 was rewritten as a critical review, and the
-subgroup analysis gained a 100-event interpretability floor. Licence decided
-(Apache-2.0, scoped — §7). The confirmatory canary held: H1–H6 bit-identical.
-Rounds 8–9 added Chapter 4's design-principles section and Appendix B; the
-presentation decks are **deliberately untouched** (§7a).
+Last updated: **2026-08-10** — **feedback round 12 complete** (`feedback/v6.md`),
+an external-examiner-style audit applied to the thesis text and the checks.
+`pipeline_constants.tex` carries **1,398 macros, 0 missing**; `index.pdf` builds
+at 0 errors / 0 undefined refs / 0 undefined citations / **164 pages**, with
+**zero** placeholder markers. Nothing in rounds 10–12 moved a result, an
+interval or a verdict.
+
+Structural history, so the older text below reads correctly: round 7 gave the
+thesis a **Discussion chapter** (7 chapters + appendix), rewrote Chapter 2 as a
+critical review and added the 100-event interpretability floor; rounds 8–9 added
+Chapter 4's design-principles section and Appendix B; the licence was decided in
+round 7 (Apache-2.0, scoped — §7). The confirmatory canary has held through
+every round: H1 −0.137549, H4 −0.016543, H6 −0.012931.
+
+**Two stages are patched but not yet re-run** (§9, Still open): stage 08's
+labelled-versus-scored instrumentation and stage 12's register de-duplication.
+Both stages' code is newer than their outputs, which is why
+`check_consistency.R` reports 4 failures. Neither refits GBT.
+
 Work by Claude (Anthropic) with **Abdul Ahad** (ATU MSc, student ID G00486649).
 
 > ## Where things stand
@@ -108,7 +117,8 @@ RESEARCH/sepsis/
 ├── project/       ← pipeline: config.R, utils.R, clinical_scores.R,
 │                    thesis_constants.R, utility_score.py,
 │                    00_preregistration.md,
-│                    01..12_*.Rmd, run_pipeline.{R,sh}, output/
+│                    01..12_*.Rmd, run_pipeline.{R,sh}, output/,
+│                    check_consistency.R, check_thesis_numbers.R (see §4a)
 └── thesis/        ← LaTeX: index.tex + chapters, images/, build.sh,
                      pipeline_constants.tex + table_*.tex (GENERATED — see §4)
 ```
@@ -146,8 +156,10 @@ Scripts are **01–12** (an older version of this file said 01–13; that was wr
 
 Run: `./run_pipeline.sh` (all) · `./run_pipeline.sh 10 11 12` (subset) ·
 `Rscript run_pipeline.R --phase 4`. Thesis: `cd ../thesis && ./build.sh`.
-Full run ≈ **60 min** (≈85 min with D/E); stage 05 dominates. Stage 12 alone
-≈ 14 min (bootstrap).
+Full run ≈ **2 h 30 m** end to end (measured on the run that produced the
+reported results); stage 05 dominates at ≈73 min, stage 12 ≈19 min (bootstrap),
+stages 03 and 08 ≈16 min each. `README.md` carries the per-stage table and is
+the authoritative one.
 
 `V2_VARIANTS=D,E ./run_pipeline.sh 02 03 05 06 07` restricts the per-variant
 loops in 02–07 to a subset. **Use it whenever you add a variant** — it is the
@@ -164,14 +176,15 @@ never overwritten.
 
 ---
 
-## 3. Current status — **2026-08-06 full clean run, 12/12 stages, all variants**
+## 3. Current status — **2026-08-10 full clean run, 12/12 stages, all variants**
 
-Everything below is the run of 2026-08-06 23:17–00:42 with Amendments 3 and 4 in
-force and the stage-08 eICU rewrite. **Every internal number is bit-identical to
-the 2026-08-05 run** — the GBT canary held, so the run reproduced and the only
-movement is external, which is where the fix was. The thesis is re-synced:
-`pipeline_constants.tex` carries **1,337 macros, 0 missing**, and `index.pdf`
-builds at 0 errors, 0 undefined references, 0 undefined citations, 155 pages.
+The numbers below come from the full run of 2026-08-10 (the 2026-08-06 run they
+first appeared in reproduced exactly; only the 15 Riley macros moved, when
+`P_CANDIDATE_PREDICTORS` went 25 → 29). **Every AUROC, interval, verdict, equity
+and external quantity is byte-identical across the two runs** — the GBT canary
+held. The thesis is re-synced: `pipeline_constants.tex` carries **1,398 macros,
+0 missing**, and `index.pdf` builds at 0 errors, 0 undefined references,
+0 undefined citations, **164 pages**, zero placeholder markers.
 
 ### Confirmatory verdicts (Holm, m=6, FWER 0.05)
 
@@ -595,6 +608,85 @@ did not; `run_pipeline.R` always did). Fix the warning, don't just delete the lo
 
 ---
 
+## 4a. The three checkers — all wired, none needs remembering
+
+**All three now run automatically.** `run_pipeline.sh` calls
+`check_consistency.R` and `check_thesis_numbers.R` at its tail after
+`thesis_constants.R`; `build.sh` calls `check_thesis_margins.R` on the PDF it
+just produced. Run them by hand only when you have edited the thesis without
+re-running anything:
+
+```bash
+cd sepsis/project
+Rscript check_consistency.R       # cross-file arithmetic + claim predicates
+Rscript check_thesis_numbers.R    # literal provenance over the thesis sources
+Rscript check_thesis_margins.R    # does anything actually pass the text block
+```
+
+`run_pipeline.sh` exit codes: **1** a stage failed · **2** a macro or table body
+is unresolved · **3** a consistency check failed · **4** the thesis types a
+result-shaped number with no recorded provenance. `build.sh` exits non-zero if
+a page runs past the text block.
+
+None of them executes the pipeline; all read files already on disk and take
+seconds. They exist because `thesis_constants.R` guarantees that a number in
+the thesis *is* the number the pipeline produced, and cannot check the three
+things that actually went wrong repeatedly.
+
+**`check_consistency.R`** asserts identities that must hold between tables
+written by different stages: the decomposition row against its hypothesis
+estimate, every printed rate against its own events/person-hours, the eICU
+labelled count against the scored count, H2's counts across the three files
+that report them, the cohort ladder's arithmetic, family sizes against row
+counts, and (added round 12) that no analysis is registered twice. A failure is
+a defect in the results or in how they are reported. **Fix the source, not the
+check.**
+
+**`check_thesis_numbers.R`** (added round 12) enforces the Declaration's claim
+that no quantity this study estimates is typed by hand. It sorts every
+result-shaped literal in `thesis/*.tex` into CITED (a citation in the same
+paragraph), ALLOWED (an explicit list of design constants and source-data
+facts, each with its reason written beside it) or REVIEW, and exits non-zero
+while anything is in REVIEW. It is currently **0 review / 15 allowed / 51
+cited**.
+
+**`check_thesis_margins.R`** (added round 12) measures the built PDF. LaTeX
+cannot answer this question at all: a `tabular` is set at its natural width, so
+there is no target width for it to be overfull *against*, and it passes the
+right margin in silence. The script infers the text block's right edge from the
+document itself (the *mode* of per-page maxima, since pages ending mid-paragraph
+drag an average left of the true edge) and reports any page beyond it. Page 1 is
+exempt by design: the ATU title page sets its own `\newgeometry` for the green
+bar. Regression-tested against the pre-fix PDF, where it correctly reports the
+40 pt overrun.
+
+### What is checked mechanically and what is not
+
+`check_consistency.R` §9 holds the **claim predicates**: the sentences the
+thesis states in words, written as assertions on the result tables. Currently
+eight, among them "the two counts sum to seven across six covariates", "both
+sign reversals fall below their own estimation noise", "model class moves AUROC
+more than tenfold the label", and the abstract's scoped utility ceiling. **Add
+one whenever a chapter asserts a relation rather than a value** — that is the
+only way a re-run can tell you a sentence has become false.
+
+What stays a human read: `check_thesis_numbers.R` prints an **advisory** list of
+comparative claims ("an order of magnitude", "twice as many", "tenfold") that
+carry no macro in their sentence. It does not gate on them, deliberately:
+gating would need an allow-list of every idiom, and a checker people silence by
+reflex is worse than none. Twenty-five is a scannable list, and it is the right
+thing to re-read after a run that moved numbers.
+
+Two design points, both learned the expensive way. Value-matching a literal
+against `pipeline_constants.tex` does *not* work: with 1,398 macros a
+three-decimal figure from the literature collides with one by chance often
+enough that the match means nothing, so the classification is by **provenance**,
+not arithmetic. And one- and two-decimal numbers are excluded on purpose: here
+they are pre-registered thresholds, file sizes and TikZ geometry, and a checker
+that fires on those is one people stop reading.
+
+---
+
 ## 5. Ground truth — read ONE of these, not the directory
 
 All under `project/output/processed_data/`. **CSV mirrors exist for 11_* and 12_*
@@ -630,6 +722,8 @@ All under `project/output/processed_data/`. **CSV mirrors exist for 11_* and 12_
 | Subgroup AUROC + BH contrasts | `12_subgroup_auroc_ci.csv`, `12_subgroup_auroc_contrasts.csv` |
 | Subgroup label sensitivity | `12_subgroup_labelsens_ci.csv`, `12_subgroup_labelsens_contrasts.csv` |
 | Confirmatory/exploratory register | `12_analysis_register.csv` |
+| **CONSORT cohort ladder (counts + exclusions)** | `02_cohort_flow.csv` |
+| **H2 instability vs pooled SE (Amendment 7)** | `12_h2_stability_uncertainty.csv` |
 | **Ablation ΔAUROC / ΔUtility (Amendment 5)** | `07_ablation_metrics.csv` |
 | Ablated-arm coefficient stability | `05_h2_stability_ablated.csv` |
 | H2 instability split by feature kind | `12_h2_stability_by_kind.csv` |
@@ -875,11 +969,16 @@ drafted in `feedback/v2.md` §29.4.
 
 ## 9. Runs — all complete
 
-**Nothing is pending.** The three pieces of work that were patched-but-unexecuted
+The three pieces of work that were patched-but-unexecuted at round 7
 (9a eICU GBT comparator, 9b Protocol Amendment 5 ablation, 9c feedback round 7)
-have all run. `thesis_constants.R` reports **1,337 macros, 0 missing**;
-`index.pdf` builds at 0 errors, 0 undefined references, 0 undefined citations,
-155 pages. Results are folded into §3 above.
+have all run, as has the full pipeline of 2026-08-10.
+`thesis_constants.R` reports **1,398 macros, 0 missing**; `index.pdf` builds at
+0 errors, 0 undefined references, 0 undefined citations, **164 pages**. Results
+are folded into §3 above.
+
+**Two stages are patched but not yet re-run** — see *Still open* at the end of
+this section. Until they are, `check_consistency.R` reports 4 failures, all of
+them the outputs being older than the code.
 
 Verification checks that were specified in advance and passed:
 
@@ -935,7 +1034,43 @@ from the code, plus a pre-registration that had stopped being current. Applied:
 **Nothing in `output/processed_data/` was touched, and no macro value changed.**
 The one config change that alters a pipeline output is `P_CANDIDATE_PREDICTORS`.
 
+### Round 12 — examiner audit of the thesis text (`feedback/v6.md`)
+
+Nine defects, none of which moved a result, an interval or a verdict. All nine
+are fixed. The three worth remembering, because each is a *class*:
+
+| Defect | Class |
+|---|---|
+| The conclusion said two Utility Scores differ "by less than one hundredth"; 0.039 − 0.025 = 0.0142 | a qualitative comparison written beside two macros |
+| A caption said the per-hour/per-patient views differ "20-fold in alarm count"; its own rows give 8–11 | a caption not re-derived from the table under it |
+| **Both** of H2's sign reversals sit *below* their own estimation noise (ratios 0.61 and 0.75), yet three chapters led with the vasopressor reversal | an Amendment's consequence not propagated to the chapters that cite it |
+
+The third is the one to keep in mind. Amendment 7 narrows H2 to three order
+indicators, and the Introduction, Conclusion and C4 were still emphasising a
+sign reversal the diagnostic does not support. All three now carry the
+narrowing. **When an amendment qualifies a headline, grep for every place the
+headline is stated, not just the section the amendment lives in.**
+
+Also applied: fifty-two em dashes removed from the thesis prose (the three left
+in the PDF are inside cited paper *titles* in the bibliography and must stay);
+four hand-typed study quantities converted to macros, found by the new linter.
+
 ### Still open
+
+- [ ] **PENDING RUN: stages 08 and 12.** Both stages' code is newer than their
+      outputs, so `check_consistency.R` reports 4 failures that are staleness,
+      not defects: three are round 11's stage-08 labelled-vs-scored
+      instrumentation, one is a duplicated Amendment 7 row in
+      `12_analysis_register` that stage 12 already removes in code. Neither
+      stage refits GBT, so there is no drift exposure.
+
+      ```bash
+      cd sepsis/project && ./run_pipeline.sh 08 && ./run_pipeline.sh 12
+      Rscript check_consistency.R && Rscript check_thesis_numbers.R
+      Rscript thesis_constants.R && cd ../thesis && ./build.sh
+      ```
+
+      Canary to check afterwards: H1 −0.137549, H4 −0.016543, H6 −0.012931.
 
 ~~Re-run stage 04 for `P_CANDIDATE_PREDICTORS = 29`~~ — **DONE**, full run
   2026-08-10 10:47–13:20, 12/12 stages. The **only** macros that moved in the

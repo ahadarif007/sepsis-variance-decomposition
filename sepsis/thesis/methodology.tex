@@ -426,7 +426,7 @@ Following Lauritsen et al.\ \cite{lauritsen2021framing} and Reyna et al.\
     data available up to the current hour.
     \item \textbf{Estimand:} the \emph{cause-specific discrete-time hazard} of
     sepsis onset in the current hour, conditional on the stay being at risk at
-    the start of it --- $\Pr(\text{onset at hour } t \mid \text{at risk at } t,
+    the start of it, $\Pr(\text{onset at hour } t \mid \text{at risk at } t,
     \mathbf{x}_t)$, with discharge and death as competing causes.
     \item \textbf{Prediction frequency:} Every hour.
     \item \textbf{Start time:} 1 hour after ICU admission.
@@ -439,8 +439,8 @@ Following Lauritsen et al.\ \cite{lauritsen2021framing} and Reyna et al.\
 \paragraph{What is estimated and what is scored, stated separately.} These are
 two different objects in this design and conflating them would misdescribe every
 discrimination number in Chapter~\ref{ch:evaluation}. The models estimate a
-per-hour hazard, and the ranking metrics --- AUROC, AUPRC and the calibration
-curves --- are computed on that hazard against an indicator that takes the value
+per-hour hazard, and the ranking metrics (AUROC, AUPRC and the calibration
+curves) are computed on that hazard against an indicator that takes the value
 one at the onset hour and zero at every other at-risk hour. They therefore
 measure how well a model separates the hour in which onset is recorded from the
 hours that precede it in the same and other stays; they are not the AUROC of a
@@ -527,7 +527,8 @@ proceeding if any declared predictor is absent from a panel.
 \section{Model Classes}
 \label{sec:models}
 
-\subsection{Primary Model: Dynamic Discrete-Time Competing-Risks Hazard Model}
+\subsection[Primary Model: Dynamic Discrete-Time Competing-Risks Hazard Model]%
+{Primary Model: Dynamic Discrete-Time Compet\-ing-Risks Hazard Model}
 \label{sec:primary_model_spec}
 
 The primary model is a multinomial pooled logistic regression over person-hours,
@@ -898,16 +899,16 @@ question on the same warrant, so the two cannot drift apart.
 
 This is \textbf{Protocol Amendment 6}, adopted post-hoc on 6 August 2026 and
 recorded as \S20 of the pre-registration. It must be read against the rule
-stated two paragraphs above --- that the correction denominator is the number of
-contrasts computed, not the number selected for presentation --- because
-restricting E1 from thirty computed contrasts to
-\pcNSubgroupContrasts{} is on its face the manoeuvre that rule prohibits.
+stated two paragraphs above, namely that the correction denominator is the
+number of contrasts computed rather than the number selected for presentation.
+Restricting E1 from thirty computed contrasts to \pcNSubgroupContrasts{} is on
+its face the manoeuvre that rule prohibits.
 Three facts bear on whether it is admissible, and \S20.4 of the
 pre-registration sets out the full argument for a reader who wishes to reject
 it. The criterion is outcome-blind, depending only on a stratum's event count.
 The direction is exculpatory: the reduction removed the family's only surviving
 discovery, a language contrast resting on twelve events, rather than creating
-one --- a family narrowed to manufacture significance narrows \emph{around} its
+one; a family narrowed to manufacture significance narrows \emph{around} its
 significant results. And the verdict is invariant to the choice: no contrast in
 E1 survives Benjamini--Hochberg under either denominator, the smallest adjusted
 value being $q = \pcSubgroupMinQ$ at $m = \pcNSubgroupContrasts$.

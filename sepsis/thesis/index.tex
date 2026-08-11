@@ -164,14 +164,19 @@
     \end{titlepage}
     \restoregeometry
     \pagenumbering{roman}
-    \tableofcontents
-    \listoffigures
-    \listoftables
 
-
+% The abstract, declaration and acknowledgments precede the contents. Placed
+% after them, the abstract opened on page xv, behind thirteen pages of
+% contents, figures and tables, which is not where a reader looks for it and
+% not where a signed declaration belongs. \addcontentsline in each file still
+% registers them, so all three appear in the contents either way.
 \input{abstract}
 \input{declaration}
 \input{acknowledgments}
+
+    \tableofcontents
+    \listoffigures
+    \listoftables
 
 % The arabic reset has to be issued on a page of its own, after the last piece
 % of front matter has been shipped out. Placed immediately after

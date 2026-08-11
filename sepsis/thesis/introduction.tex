@@ -122,8 +122,8 @@ are informative.
 
 These six form a single confirmatory family and are tested with
 Holm--Bonferroni control of the family-wise error rate. Every analysis reported
-in this thesis carries an explicit status --- confirmatory, exploratory or
-descriptive --- and the status is not assigned in the prose: it is held in a
+in this thesis carries an explicit status (confirmatory, exploratory or
+descriptive), and the status is not assigned in the prose: it is held in a
 machine-readable analysis register that the inference stage writes from the
 same objects it corrects, and reproduced in Table~\ref{tab:register}. Alongside
 H1--H6 the register marks a further nine analyses confirmatory because their
@@ -173,9 +173,12 @@ plainly that it was written after the analyses had been run.
 
     \item \textbf{C4 (Coefficient instability).} \pcHTwoEst{} of the
     \pcHTwoNTerms{} shared clinical covariates are unstable across label
-    variants, \pcHTwoNSign{} of them by direction (including vasopressor
-    exposure, a treatment indicator), supporting Lauritsen et al.'s
-    \cite{lauritsen2021framing} framing-instability finding on MIMIC-IV.
+    variants, \pcHTwoNSign{} of them by direction, supporting Lauritsen et
+    al.'s \cite{lauritsen2021framing} framing-instability finding on MIMIC-IV.
+    Referring each flagged covariate to its own cluster-robust standard error
+    narrows this to \pcHTwoNRobust{} whose movement exceeds its estimation
+    noise, all of them indicators of whether a test was ordered
+    (Section~\ref{sec:h2_uncertainty}).
 
     \item \textbf{C5 (Equity-by-label analysis).} Subgroup performance
     disparity and subgroup variation in who gets labelled are both reported by

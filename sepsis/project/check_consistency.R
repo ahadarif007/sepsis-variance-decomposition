@@ -194,7 +194,126 @@ local({
   }
 })
 
-# --- 8. Combined tables must hold their full variant set ------------------
+# --- 8. The analysis register must have one row per analysis --------------
+# The thesis states that the register is written by the inference stage from
+# the objects it corrects, and reproduces it as a table. A duplicated row makes
+# the printed table and the machine-readable file disagree on how many analyses
+# the study ran, which is the one thing the register exists to settle. Stage 12
+# once added the Amendment 7 diagnostic twice; this is the assertion that would
+# have caught it.
+local({
+  reg <- rd("12_analysis_register")
+  if (is.null(reg)) { chk("analysis register", NA); return() }
+  dup <- reg[duplicated(analysis), unique(analysis)]
+  chk("no analysis name appears twice in the register", length(dup) == 0L,
+      sprintf("duplicated: %s", paste(dup, collapse = "; ")))
+  # Two rows under different names reporting into the same table are the same
+  # analysis registered twice, which the name check cannot see. Stage 12 added
+  # the Amendment 7 diagnostic as both "H2 instability uncertainty diagnostic"
+  # and "H2 instability vs. estimation noise (Amendment 7)", and the printed
+  # table in the thesis has one row where the file had two.
+  dst <- reg[duplicated(reported_in), unique(reported_in)]
+  chk("no two register rows report into the same table", length(dst) == 0L,
+      sprintf("shared destination: %s -- rows: %s",
+              paste(dst, collapse = "; "),
+              paste(reg[reported_in %in% dst, analysis], collapse = " | ")))
+  chk("every register row carries a status",
+      all(reg$status %in% c("confirmatory", "exploratory", "descriptive")),
+      sprintf("unexpected status values: %s",
+              paste(setdiff(unique(reg$status),
+                            c("confirmatory", "exploratory", "descriptive")),
+                    collapse = ", ")))
+})
+
+# --- 9. Comparative claims the thesis states in words ---------------------
+# The generator guarantees that a number in the thesis is the number the
+# pipeline produced. It cannot check a sentence *about* those numbers, and
+# round 12 found four defects of exactly that kind: a gap described as "less
+# than one hundredth" that was 0.0142, a ratio described as twentyfold that was
+# eleven, two counts that summed to seven against a stated total of six, and an
+# emphasis on sign reversals that the uncertainty diagnostic does not support.
+#
+# Each check below is a claim the thesis makes in words, written as a predicate
+# on the result tables. If a re-run makes one of these sentences false, this is
+# what says so. Add one whenever a chapter asserts a relation rather than a
+# value.
+local({
+  fl <- rd("12_h2_coefficient_stability"); un <- rd("12_h2_stability_uncertainty")
+  if (is.null(fl)) { chk("H2 count arithmetic", NA) } else {
+    n_sign <- sum(fl$sign_flip); n_mag <- sum(fl$mag_flip)
+    n_both <- sum(fl$sign_flip & fl$mag_flip)
+    n_unst <- sum(fl$sign_flip | fl$mag_flip)
+    # conclusion.tex: "N reverse sign and M change magnitude ... which is why
+    # the two counts sum to seven across six covariates".
+    chk("H2: sign + magnitude - overlap == unstable total",
+        n_sign + n_mag - n_both == n_unst,
+        sprintf("%d + %d - %d != %d", n_sign, n_mag, n_both, n_unst))
+    chk("H2: exactly one covariate meets both criteria", n_both == 1L,
+        sprintf("%d covariates meet both; the prose says one", n_both))
+  }
+  # evaluation.tex sec:h2_uncertainty: "Those that do not clear the threshold
+  # include ... both sign reversals: bilirubin and vasopressor exposure carry
+  # the two smallest ratios in the table."
+  if (!is.null(fl) && !is.null(un) && "z_ratio" %in% names(un)) {
+    flipped <- sub("TRUE$", "", fl[sign_flip == TRUE, term])
+    uterm   <- sub("TRUE$", "", un$term)
+    two_smallest <- uterm[order(un$z_ratio)][seq_len(min(2L, nrow(un)))]
+    chk("H2: the two smallest noise ratios are the two sign reversals",
+        setequal(two_smallest, flipped),
+        sprintf("smallest ratios: %s; sign reversals: %s",
+                paste(two_smallest, collapse = ", "), paste(flipped, collapse = ", ")))
+    chk("H2: no sign reversal exceeds its own pooled SE",
+        all(un[uterm %in% flipped, z_ratio] < 1),
+        sprintf("ratios for sign reversals: %s",
+                paste(round(un[uterm %in% flipped, z_ratio], 2), collapse = ", ")))
+  }
+})
+
+local({
+  sp <- rd("12_spread_ci")
+  if (is.null(sp)) { chk("model spread vs label spread", NA); return() }
+  lab <- as.numeric(sp[quantity == "label", estimate][1])
+  mod <- as.numeric(sp[quantity == "model", estimate][1])
+  # conclusion.tex "more than tenfold"; evaluation.tex and discussion.tex
+  # "roughly an order of magnitude".
+  chk("model-class spread is at least tenfold the label spread",
+      !is.na(lab) && !is.na(mod) && lab > 0 && mod / lab >= 10,
+      sprintf("model %.4f / label %.4f = %.1fx, and the thesis says tenfold",
+              mod, lab, mod / lab))
+})
+
+local({
+  um <- rd("07_utility_max")
+  if (is.null(um)) { chk("utility ceiling", NA); return() }
+  pre <- um[variant %in% c("A", "B", "C") & eval_window == "unrestricted" &
+              split_type == "temporal"]
+  if (!nrow(pre)) { chk("utility ceiling", NA); return() }
+  top <- pre[which.max(utility_normalised)]
+  # abstract.tex: "no model exceeds <GbtB> under the primary label, or <GbtC>
+  # under any pre-registered variant". Both halves are asserted here.
+  chk("utility ceiling over pre-registered variants is GBT under Variant C",
+      top$model == "gbt" && top$variant == "C",
+      sprintf("highest is %s/%s at %.4f", top$model, top$variant,
+              top$utility_normalised))
+  b <- pre[variant == "B"][which.max(utility_normalised)]
+  chk("utility ceiling under the primary label is GBT under Variant B",
+      b$model == "gbt",
+      sprintf("highest under B is %s at %.4f", b$model, b$utility_normalised))
+})
+
+local({
+  la <- rd("09_label_agreement")
+  if (is.null(la)) { chk("kappa ordering", NA); return() }
+  ka <- as.numeric(la[variant == "A", kappa_vs_B][1])
+  kc <- as.numeric(la[variant == "C", kappa_vs_B][1])
+  # abstract, conclusion: "the two narrowest readings agree at ONLY kappa=...".
+  # The "only" depends on A-vs-B being the lower of the two Sepsis-3 pairings.
+  chk("kappa(A,B) is the lower of the two Sepsis-3 pairings",
+      !is.na(ka) && !is.na(kc) && ka < kc,
+      sprintf("kappa(A,B) = %.3f, kappa(C,B) = %.3f", ka, kc))
+})
+
+# --- 10. Combined tables must hold their full variant set -----------------
 # Catches a partial pass having truncated a merged table.
 local({
   alt <- rd("07_metric_results_altlabel"); cf <- rd("05_coef_all_variants")

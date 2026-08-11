@@ -59,6 +59,9 @@ RESEARCH/
 | `run_pipeline.sh` / `run_pipeline.R` | Orchestration; runs all stages or a named subset |
 | `thesis_constants.R` | Reads the result tables and emits every number in the thesis as a LaTeX macro |
 | `utility_score.py` | Reference implementation of the PhysioNet Utility Score, maintained as a mirror of the R scoring rule |
+| `check_consistency.R` | Cross-file assertions over the generated result tables. A failure means two reported quantities disagree |
+| `check_thesis_numbers.R` | Literal-number linter for the thesis sources. Fails on any result-shaped number typed without recorded provenance |
+| `check_thesis_margins.R` | Measures the built PDF for anything running past the text block, which LaTeX does not warn about for tables |
 
 | # | Stage | Phase |
 |---|---|---|
@@ -140,6 +143,50 @@ any variant not in the current run and logging that it did so.
 cd sepsis/project && Rscript thesis_constants.R
 cd ../thesis && ./build.sh
 ```
+
+`build.sh` refuses to produce a PDF in which any macro a chapter references is
+unresolved, because such a macro typesets as a conspicuous red marker on the
+page.
+
+### Checking it
+
+Three read-only checks, none of which runs the pipeline. **All three are
+wired in**: `run_pipeline.sh` runs the first two after regenerating the thesis
+constants, and `build.sh` runs the third on the PDF it has just produced. Run
+them by hand only after editing the thesis without re-running anything:
+
+```bash
+cd sepsis/project
+Rscript check_consistency.R       # cross-file arithmetic + claim predicates
+Rscript check_thesis_numbers.R    # literal provenance over the thesis sources
+Rscript check_thesis_margins.R    # does anything pass the text block
+```
+
+The first asserts identities that must hold between tables written by different
+stages: a printed rate against its own numerator and denominator, a
+decomposition row against the hypothesis estimate it duplicates, the external
+labelled event count against the scored one, the cohort ladder's arithmetic. It
+also holds the **claim predicates** — sentences the thesis states in words,
+written as assertions on the result tables, so that a re-run which makes one of
+them false says so.
+
+The second sorts every result-shaped number typed in the thesis into *cited*
+(quoting prior work), *allow-listed* (a design constant or a fact about the
+source data, each with its reason recorded) or *unaccounted for*, and fails on
+the third.
+
+The third measures the built PDF, because LaTeX cannot: a table is set at its
+natural width, so it has no target width to be overfull against and runs past
+the right margin without a warning.
+
+Together they cover the gap the generator cannot reach. It guarantees that a
+number in the thesis is the number the pipeline produced; it cannot check that
+two numbers which must agree do, that a number was not typed beside a macro
+instead of as one, or that what was typeset fits on the page.
+
+`run_pipeline.sh` exit codes: **1** a stage failed, **2** a macro or generated
+table body is unresolved, **3** a consistency check failed, **4** the thesis
+types a result-shaped number with no recorded provenance.
 
 ---
 

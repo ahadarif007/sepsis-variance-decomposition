@@ -3,10 +3,12 @@
 **Abdul Ahad** · G00486649 · M.Sc. Computing, ATU Galway
 *Model, Label, or Analyst? A Variance Decomposition of Real-Time Sepsis Onset Prediction on MIMIC-IV*
 
-Three supervisory feedback rounds and one full examiner-style audit, all
-closed. This is the one-page-per-section summary; `v1.md`, `v2.md`, `v3.md` and
-`v4.md` in this directory hold the full record with file locations and
-diagnostics.
+Three supervisory feedback rounds and three full examiner-style audits, all
+closed. This is the one-page-per-section summary; `v1.md` through `v6.md` in
+this directory hold the full record with file locations and diagnostics. The
+three audits are `v4.md` (round 10), `v5.md` (round 11) and `v6.md` (round 12);
+none of the three moved a result, an interval or a verdict, and each found a
+narrower class of defect than the one before it.
 
 ---
 
@@ -177,16 +179,22 @@ Stated so it is not discovered at viva.
 
 ## 7. Current state
 
-Pipeline: 12 stages, 12/12 succeeding, seed-fixed, ~60 min end to end.
-Thesis: 162 pages, 0 errors, 0 undefined references, 0 undefined citations,
-1,337 generated constants.
-Code: Apache-2.0, no patient data, 70 tracked files —
+Pipeline: 12 stages, 12/12 succeeding, seed-fixed, ~2 h 30 m end to end.
+Thesis: 164 pages, 0 errors, 0 undefined references, 0 undefined citations,
+1,398 generated constants, zero placeholder markers.
+Two read-only checkers gate a build: `check_consistency.R` (cross-file
+arithmetic over the result tables) and `check_thesis_numbers.R` (every
+result-shaped literal in the thesis is cited, allow-listed with a reason, or a
+defect).
+Code: Apache-2.0, code and documentation only, no patient data —
 `https://github.com/ahadarif007/RESEARCH`. **The repository must be made public
 (or shared with the panel) before submission**: two sentences in the thesis
 assert that it is.
 
-Outstanding: read and amend the Declaration (blocking); make the repository
-public; record the screencast; rebuild the presentation in October against the
-generated constants. The decks were **untracked in round 10** — they predate
+Outstanding: re-run stages 08 and 12, whose code is newer than their outputs,
+then resync and rebuild (this closes the four `check_consistency.R` failures
+and neither stage refits GBT); read, amend and sign the Declaration (blocking);
+make the repository public; record the screencast; rebuild the presentation in
+October against the generated constants. The decks were **untracked in round 10** — they predate
 these results and invert the H6 verdict, and an examiner following the
 repository URL in the thesis would have found them.

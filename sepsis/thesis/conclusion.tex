@@ -30,13 +30,18 @@ are.
 
 \paragraph{H2 (Coefficient instability): Criterion met, descriptively.}
 \pcHTwoEst{} of the \pcHTwoNTerms{} shared covariates are unstable across label
-variants: \pcHTwoNSign{} reverse sign (bilirubin and, more consequentially,
-vasopressor exposure), and \pcHTwoNMag{} change magnitude at least twofold,
-three of those being missingness indicators rather than physiological values.
-H2 is a stability criterion rather than a contrast, so no test statistic is
-defined for it. The instability is narrower than a bare count suggests, but it
-is sufficient that a published hazard ratio for a treatment indicator from a
-model of this kind cannot be interpreted without knowing the exact label
+variants: \pcHTwoNSign{} reverse sign (bilirubin and vasopressor exposure) and
+\pcHTwoNMag{} change magnitude at least twofold, three of the latter being
+missingness indicators rather than physiological values. Vasopressor exposure
+meets both criteria, which is why the two counts sum to seven across six
+covariates. H2 is a stability criterion rather than a contrast, so no test
+statistic is defined for it, and the diagnostic of
+Section~\ref{sec:h2_uncertainty} shows the count to be a loose upper bound:
+\pcHTwoNNoise{} of the \pcHTwoNFlagged{} flagged covariates, both sign
+reversals among them, move by less than their own estimation noise. What
+survives that comparison is confined to the order indicators, so the
+defensible reading is narrower than the count: an effect estimate for whether
+a test was ordered cannot be interpreted without knowing the exact label
 definition.
 
 \paragraph{H3 (Treatment leakage): Definitional, plus its empirical counterpart.}
@@ -102,10 +107,10 @@ and a difference of up to roughly \pcHSixCiLo{} in the interpretable model's
 favour remains consistent with these data. This is the strongest positive
 result in the study, and it is strongest in exactly the direction that matters:
 on tabular ICU time-series of this kind the accuracy case for preferring an
-opaque model is not supported. What little AUROC separates them buys nothing clinically: at their
-respective
-best thresholds the two models are separated by less than one hundredth of a
-Utility Score point (\pcUtilityMaxGbtB{} against \pcUtilityMaxPrimaryB{}), both
+opaque model is not supported. What little AUROC separates them buys nothing
+clinically: at their respective best thresholds the two models reach
+\pcUtilityMaxGbtB{} and \pcUtilityMaxPrimaryB{} on the Utility Score, a gap of
+little more than a hundredth of a point on a scale bounded by 1, and both sit
 within a few per cent of the no-alert strategy. Discrimination and clinical
 value part company here not by re-ordering the models but by disagreeing about
 whether the difference matters.
@@ -199,10 +204,14 @@ than the patient's deterioration.
     would otherwise apply to it.
 
     \item \textbf{C4 (Coefficient instability):} \pcHTwoEst{} of the
-    \pcHTwoNTerms{} shared covariates are unstable across labels (\pcHTwoNSign{} by sign, including vasopressor exposure, and \pcHTwoNMag{}
-    by magnitude), supporting Lauritsen et al.'s
+    \pcHTwoNTerms{} shared covariates are unstable across labels
+    (\pcHTwoNSign{} by sign and \pcHTwoNMag{} by magnitude, vasopressor
+    exposure meeting both), supporting Lauritsen et al.'s
     \cite{lauritsen2021framing} framing-instability claim on MIMIC-IV for
-    specific effect estimates, measured against an identified fit.
+    specific effect estimates, measured against an identified fit. Referred to
+    their own cluster-robust standard errors, \pcHTwoNRobust{} of the
+    \pcHTwoNFlagged{} survive, and all \pcHTwoNRobust{} are order indicators
+    (Section~\ref{sec:h2_uncertainty}).
 
     \item \textbf{C5 (Equity-by-label):} Subgroup discrimination and subgroup
     label sensitivity measured on the same strata in the same
@@ -218,10 +227,10 @@ than the patient's deterioration.
     \item \textbf{C6 (Reproducible pipeline):} A pre-registered,
     TRIPOD+AI-conformant pipeline with fixed seeds and a single orchestration
     script, which reproduces every reported estimate exactly from the raw
-    databases --- with the one documented exception of the gradient-boosted
+    databases (with the one documented exception of the gradient-boosted
     comparator, whose fitting is not bit-reproducible across library builds and
     whose rows therefore serve as the designated consistency check on any
-    re-run --- and which emits the numbers in this document as generated
+    re-run), and which emits the numbers in this document as generated
     constants so that text and code cannot diverge
     (Section~\ref{sec:code_availability}, Appendix~\ref{app:code}).
 
@@ -306,9 +315,9 @@ alone this thesis would have claimed the opposite of what it can defend.
 The premise inverted; the motivating problem did not. What the decomposition
 establishes is that the label's consequence does not run through
 discrimination, which is where the field looks for it. It runs through cohort
-membership --- the three variants agree at $\kappa = \pcKappaVsBA$ on which
-patients are septic --- and through onset timing, which fixes what a real-time
-model can be asked to anticipate at all. Those are the channels the reported
+membership, the two narrowest readings agreeing at $\kappa = \pcKappaVsBA$ on
+which patients are septic, and through onset timing, which fixes what a
+real-time model can be asked to anticipate at all. Those are the channels the reported
 metric is blind to, which is why a literature that has optimised AUROC for a
 decade has not converged on models that help.
 

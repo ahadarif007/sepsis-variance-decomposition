@@ -73,6 +73,16 @@ if [ "$N_ERR" -gt 0 ] || [ "$N_REF" -gt 0 ] || [ "$N_CIT" -gt 0 ]; then
 fi
 echo "------------------------------------------------------------"
 
+# ---------------------------------------------------------------------------
+# Measure the PDF. LaTeX cannot answer this one: a tabular is set at its
+# natural width, so it has no target width to be overfull against and runs
+# past the right margin in silence. Round 8 found nine such objects with zero
+# warnings and round 12 found another at 40 pt, so the check is a measurement
+# of the built file rather than a reading of the log.
+# ---------------------------------------------------------------------------
+Rscript ../project/check_thesis_margins.R index.pdf
+MARGIN_STATUS=$?
+
 # clean build artifacts
 rm -f index.aux index.bbl index.bcf index.blg index.lof index.log index.lot \
       index.out index.run.xml index.toc \
@@ -81,3 +91,4 @@ rm -f index.aux index.bbl index.bcf index.blg index.lof index.log index.lot \
       discussion.aux evaluation.aux introduction.aux methodology.aux review.aux
 
 echo "Done → index.pdf"
+exit $MARGIN_STATUS

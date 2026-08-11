@@ -390,7 +390,8 @@ it is calibrated under \emph{every} label variant: its intercept sits within
 \pcCalibIntMaxAbsPrimary{} of zero, its slope within
 \pcCalibSlopeMaxDevPrimary{} of one
 (\pcCalibSlopePrimaryA, \pcCalibSlopePrimaryB, \pcCalibSlopePrimaryC), and its
-ICI stays below 0.0005, roughly a quarter of the 0.2 per cent event rate.
+largest ICI across the three variants is \pcIciPrimaryC{}, under a fifth of
+the 0.2 per cent event rate.
 Its scaled Brier score is positive under all three, though barely
 (\pcBrierScaledPrimaryA{} to \pcBrierScaledPrimaryC), meaning it improves on
 the null model by less than one per cent. Calibration this close to the diagonal
@@ -553,7 +554,7 @@ favourable result in this thesis, and it is still a weak one. At a
 threshold equal to the prevalence, the primary model captures
 \pcSnbPctPrimaryA\% (Variant A), \pcSnbPctPrimaryB\% (Variant B) and
 \pcSnbPctPrimaryC\% (Variant C) of the attainable net benefit. The three
-variants agree closely --- they span barely three percentage points --- so
+variants agree closely, spanning barely three percentage points, so
 unlike discrimination, where the label moves the answer, the share of
 attainable benefit captured is insensitive to which reading of Sepsis-3 is
 used. This is genuine, if modest, value over both defaults, and it is the same
@@ -562,9 +563,9 @@ Table~\ref{tab:utility_optimum}: a small positive margin for the fitted models
 once the threshold is set on the right scale, and nothing at all for the
 rule-based comparators. The two metrics still differ in magnitude, because they
 price errors differently: net benefit weights a false alarm by $t/(1-t)$, which
-at $t=0.002$ is almost nothing, whereas the Utility Score imposes a fixed
-$-0.05$ penalty per false-alert hour regardless of threshold. That is why net
-benefit is the more generous of the two here, and why the gap between them
+at $t = \pcPrevalenceB$ is almost nothing, whereas the Utility Score imposes a
+fixed $-0.05$ penalty per false-alert hour regardless of threshold. That is why
+net benefit is the more generous of the two here, and why the gap between them
 widens as the alert rate rises. Which pricing is right is a clinical judgement,
 not a statistical one, and the divergence is itself an instance of H5.
 
@@ -630,7 +631,7 @@ alerted person-hours per true event hour; under the Seymour-Standard label the
 same model requires \pcNnePrimaryB. Every configuration generates between
 \pcFaPerPtDayPrimaryC{} and \pcFaPerPtDayNewsA{} false-alert hours per
 patient-day. At the best operating point that is \pcFaPerPtDayPrimaryC{} false
-alert-hours per occupied bed per day --- a twelve-bed unit would field roughly
+alert-hours per occupied bed per day: a twelve-bed unit would field roughly
 125 of them daily, every day, before a single true alert is counted.
 
 The ordering here is also the one that matters clinically, and it is not the
@@ -749,9 +750,10 @@ test patients would go through the ICU without triggering it.
         \bottomrule
     \end{tabular}}
     \caption{The same operating point viewed per person-hour and per patient.
-    Both views are correct; they differ by a factor of roughly 25 in PPV and
-    20 in alarm count. A study reporting only one column of each pair can
-    make the same model look either useless or usable.}
+    Both views are correct; across these rows they differ by more than
+    twentyfold in PPV and by roughly tenfold in alarm count. A study reporting
+    only one column of each pair can make the same model look either useless
+    or usable.}
     \label{tab:hour_vs_patient}
 \end{table}
 
@@ -850,8 +852,8 @@ physiology.
 
 Coverage of a single limb, however, is an upper bound on what the conjunction
 can reach rather than a description of it, and the two quantities differ by an
-order of magnitude. Requiring \emph{both} limbs to be documented at all --- at
-any offset, before any window is imposed --- leaves \pcExtNBothLimbStays{}
+order of magnitude. Requiring \emph{both} limbs to be documented at all, at
+any offset and before any window is imposed, leaves \pcExtNBothLimbStays{}
 stays, \pcExtBothLimbCoverage\% of the cohort. Requiring them to co-occur
 inside a variant's own antibiotic--culture window, which is what suspicion of
 infection means, leaves \pcExtNSuspicionA{}, \pcExtNSuspicionB{} and
@@ -864,7 +866,7 @@ AUROC is computed on, and it accounts for the only discrepancy between the two:
 under Variant B, \pcExtNOnsetStaysB{} stays are labelled but
 \pcExtNEventsB{} events are scored. An onset falling after a stay's last
 observed hour cannot be predicted from inside that stay's panel, so it is
-treated as right-censoring rather than as an event --- the same horizon rule the
+treated as right-censoring rather than as an event, the same horizon rule the
 development cohort applies at 72 hours. Two of Variant B's onsets fall that way;
 none of Variant A's or Variant C's do, which is why only Variant B moves between
 the two tables. No labelled onset hour is lost for any other reason: every one
@@ -1086,6 +1088,7 @@ by a single hour.
 
 \begin{table}[H]
     \centering\small
+    \adjustbox{max width=\textwidth}{%
     \begin{tabular}{llrrrrr}
         \toprule
         \textbf{Var} & \textbf{Label} & \textbf{Onsets ($\leq$72\,h)} & \textbf{\%}
@@ -1100,7 +1103,7 @@ by a single hour.
         D & Deterioration   & \pcNPositiveD  & \pcPctOnsetsDPanel  & \textbf{\pcKappaVsBD} & \pcSensToBD & \textbf{\pcPctExactMatchD\%} \\
         F & Sepsis-3 Early  & \pcNPositiveF  & \pcPctOnsetsFPanel  & \pcKappaVsBF & \textbf{\pcSensToBF} & \pcPctExactMatchF\% \\
         \bottomrule
-    \end{tabular}
+    \end{tabular}}
     \caption{Onset agreement with Variant B across all five comparison variants,
     on the \pcNStays{} shared stays. Counts are restricted to onsets inside the
     72\,h modelling horizon so that Variant D, whose onsets exist only within the
@@ -1497,7 +1500,7 @@ great deal: the unstable count falls from \pcHTwoEst{} of \pcHTwoNTerms{} to
 subset relation, and the difference is worth stating: the single flag that
 remains in the ablated arm falls on \texttt{lactate}, a covariate the full fit
 does \emph{not} flag. Removing the action-derived features does not simply
-delete unstable coefficients, it re-estimates the ones that remain --- which is
+delete unstable coefficients, it re-estimates the ones that remain, which is
 what a refit does, and why the ablated count is a property of the ablated
 specification rather than a subset of the full one.
 
@@ -1537,9 +1540,10 @@ the assumption individually at $\alpha = 0.05$, led by GCS, bilirubin,
 respiratory rate and creatinine. These are per-covariate tests reported without
 multiplicity adjustment; the global test alone is sufficient for the
 pre-registered check, and the smallest p-values survive Bonferroni correction
-over the covariate set by many orders of magnitude. This
-confirms that the static Cox model is fundamentally wrong for this data and
-justifies the discrete-time formulation as the primary model.
+over the covariate set by many orders of magnitude. The assumption the static
+Cox comparator rests on therefore fails on these data, so its coefficients
+cannot be read as time-constant hazard ratios, and the discrete-time
+formulation is the better-founded choice for the primary model.
 
 \subsection{GBT Feature Importance \texorpdfstring{[E]}{[E]}}
 \label{sec:feature_importance}
@@ -1952,9 +1956,9 @@ could not have been obtained by fixing three factors and varying one.
 
 \textbf{None of the four testable hypotheses is confirmed}, and for three of
 them multiplicity control is not what does the work. H1, H4 and H6 return
-adjusted p-values of 1.000: each would have failed at any correction and each
-fails on its uncorrected value too. What overturns them is quantifying
-uncertainty at all, and, for H1 and H4, the estimate landing on the opposite
+adjusted p-values of \pcHOnePHolm, \pcHFourPHolm{} and \pcHSixPHolm: each
+would have failed at any correction, and each fails on its uncorrected value
+too. What overturns them is quantifying uncertainty at all, and, for H1 and H4, the estimate landing on the opposite
 side of zero from the one predicted.
 
 H5 is the exception and is worth separating. Its estimate does fall on the
@@ -2148,8 +2152,13 @@ be flattering here is a reason for more caution, not less.
 Second, \textbf{the flagged set is not homogeneous, and the inhomogeneity has a
 pattern}. The covariates whose movement survives comparison with their own
 standard errors are \pcHTwoNRobustAction{} of \pcHTwoNRobust{} action-derived,
-with ratios from \pcHTwoZMinRobust{} to \pcHTwoZMax. Those that do not clear
-the threshold include both physiological covariates in the flagged set. The
+with ratios from \pcHTwoZMinRobust{} to \pcHTwoZMax, and all
+\pcHTwoNRobust{} are indicators of whether a test was ordered. Those that do
+not clear the threshold include both physiological covariates in the flagged
+set and, equally, \emph{both sign reversals}: bilirubin and vasopressor
+exposure carry the two smallest ratios in the table. The direction changes that
+a bare count makes most striking are therefore the two the diagnostic supports
+least, and no claim in this thesis rests on either of them individually. The
 reading is that the label-sensitivity H2 detects is real but narrower than the
 raw count suggests, and that it sits where the previous subsection and the
 ablation both locate it: in the features that record what a clinician did
@@ -2410,8 +2419,8 @@ and that contrast cannot be formed here: a proportional decline requires a
 baseline to be proportional to, and the internal Utility Score under the primary
 label is \pcUtilityPrimaryB{} at the default cut-off and \pcUtilityMaxPrimaryB{}
 at its best threshold. What occupies H5's slot in the confirmatory family is
-therefore the AUROC limb alone --- internal minus external AUROC, against
-$\theta_0 = 0$ --- and the Holm-adjusted value of \pcHFivePHolm{} reported above
+therefore the AUROC limb alone (internal minus external AUROC, against
+$\theta_0 = 0$), and the Holm-adjusted value of \pcHFivePHolm{} reported above
 applies to that substituted contrast, not to the metric-divergence estimand the
 protocol specified. The substitution, its motivation and the constraints placed
 on it are recorded in \S13.6 of \texttt{00\_preregistration.md} alongside the
@@ -2493,8 +2502,8 @@ check is performed and reported rather than assumed.
     \pcAurocPrimaryB), 95\% CI \pcHSixCiLo--\pcHSixCiHi. The \emph{upper} limit
     lies inside the bound $\theta_0 = 0.02$; the lower limit does not.
     \textbf{H6 NOT REJECTED. What this establishes is non-inferiority of the
-    interpretable model --- the boosted trees are not better by more than the
-    margin --- and not two-sided equivalence.}
+    interpretable model (the boosted trees are not better by more than the
+    margin) and not two-sided equivalence.}
 \end{mdframed}
 
 This is the strongest positive result in the study, and it is worth stating
@@ -2517,7 +2526,7 @@ That direction is comfortably excluded, the interval's upper limit being
 two one-sided tests as well, and the data do not deliver it: the lower limit
 \pcHSixCiLo{} falls outside $-0.02$, so a difference of up to roughly
 \pcHSixCiLo{} in the \emph{interpretable} model's favour remains consistent with
-these data. The defensible reading is therefore asymmetric --- the boosted trees
+these data. The defensible reading is therefore asymmetric: the boosted trees
 buy nothing here, but the two estimators have not been shown to be
 interchangeable, and a claim of strict equivalence would overstate the evidence.
 
@@ -2628,9 +2637,9 @@ exploratory.
     family E3, so every BH-adjusted p-value in that family is stricter than it
     would be without the amendment. $^\S$A6 = Protocol Amendment 6 (\S20), the
     subgroup interpretability floor; post-hoc, and it \emph{reduces} family E1,
-    which the inference plan's own denominator rule prohibits on its face ---
+    which the inference plan's own denominator rule prohibits on its face;
     Section~\ref{sec:multiplicity} states the tension and \S20.4 of the
-    pre-registration gives the argument. $^\P$These three analyses are scored
+    pre-registration gives the argument. $^\P$These two analyses are scored
     outside the inference stage and enter no corrected family, so they have no
     row in \texttt{12\_analysis\_register}; they are listed here so that the
     exploratory record in this chapter is complete.}
