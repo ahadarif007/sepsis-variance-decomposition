@@ -1,9 +1,9 @@
-# Pre-registered Protocol — V2 Sepsis Prediction Study
+# Pre-registered Protocol: V2 Sepsis Prediction Study
 # "Model, Label, or Analyst? A Variance Decomposition of Real-Time Sepsis Onset Prediction on MIMIC-IV"
 
 **Version:** 2.0  
 **Date:** 2026-07-13  
-**Status:** Pre-registered (Phase 0 deliverable — must be locked before any modelling)
+**Status:** Pre-registered (Phase 0 deliverable; locked before any of the modelling reported in this study)
 
 ---
 
@@ -63,7 +63,7 @@ A materially smaller observed drop = evidence external data is insufficiently di
 ## 5. Primary Evaluation Metrics
 
 1. **PhysioNet Utility Score** (Reyna et al., 2020): rewards early prediction; penalises late,
-   missed, and false alerts. **Can go negative** — this is the metric that reveals the collapse
+   missed, and false alerts. **Can go negative**, and it is the metric that reveals the collapse
    documented by Wang et al. (2025).
 2. **Calibration** (intercept, slope, flexible curve): Achilles heel of predictive analytics
    (Van Calster et al., 2019). Cause-specific calibration for the competing-risks model
@@ -89,10 +89,10 @@ Utility Score +0.381→−0.164 across 91 models).
 | ID | Hypothesis | Threshold | Source |
 |----|-----------|-----------|--------|
 | H1 | Label dominance: spread in AUROC across label variants ≥ spread across model classes | Label swing 0–6% ≥ model gain 1–5% | Cohen et al. (2024) |
-| H2 | Coefficient instability: ≥1 covariate changes sign OR magnitude ≥ 2× across label variants | — | Lauritsen et al. (2021) |
+| H2 | Coefficient instability: ≥1 covariate changes sign OR magnitude ≥ 2× across label variants | n/a | Lauritsen et al. (2021) |
 | H3 | Leakage: restricting to pre-treatment hours reduces AUROC by ≥ 0.03 | Δ ≥ 0.03 | Kamran et al. (2024) |
 | H4 | Split optimism: temporal-split AUROC < random-split AUROC by ≥ 0.02 | Δ ≥ 0.02 | Guo et al. (2022) |
-| H5 | Metric divergence: proportional decline internal→external substantially larger for Utility Score than AUROC; Utility Score may cross zero | — | Wang et al. (2025) |
+| H5 | Metric divergence: proportional decline internal→external substantially larger for Utility Score than AUROC; Utility Score may cross zero | n/a | Wang et al. (2025) |
 | H6 | Model-class null: discrete-time hazard model not inferior to gradient-boosted trees by more than 0.02 AUROC (under fixed label, fixed temporal split) | |Δ| ≤ 0.02 | Christodoulou et al. (2019) vs. Fagerström et al. (2019) |
 
 H1 and H6 are in productive tension: both outcomes are informative.
@@ -104,10 +104,10 @@ H1 and H6 are in productive tension: both outcomes are informative.
 | Comparator | Role | Warrant |
 |-----------|------|---------|
 | NEWS2 | **Headline rule-based comparator** | Evans et al. (2021): qSOFA not recommended as sole screener |
-| SIRS, qSOFA | Descriptive reference only | — |
+| SIRS, qSOFA | Descriptive reference only | n/a |
 | Static Cox PH | Deliberately weak baseline (Schoenfeld residual testing required) | Quantify cost of field's default choice |
 | Gradient-boosted trees | **Mandatory ML comparator** (in-house, identical conditions) | Reyna et al. (2020): published comparisons do not transfer |
-| Dynamic deep survival (stretch, optional) | — | Only if time permits |
+| Dynamic deep survival (stretch, optional) | n/a | Only if time permits |
 
 ---
 
@@ -129,7 +129,7 @@ Formal calculation per label variant:
 - Targets: shrinkage factor ≥ 0.9; |apparent − adjusted Nagelkerke R²| ≤ 0.05
 - Calculated using `pmsampsize::pmsampsize()` (binary outcome, person-hour level)
 - Note: effective information governed by onset events (not person-hours)
-- If a variant is underpowered, this is a finding — not a failure.
+- If a variant is underpowered, this is a finding, not a failure.
 
 ---
 
@@ -153,7 +153,7 @@ Formal calculation per label variant:
 
 ---
 
-# Amendment 1 — Inference, Multiplicity, and Analysis Status
+# Amendment 1: Inference, Multiplicity, and Analysis Status
 
 **Date:** 2026-07-30
 **Status:** **POST-HOC.** Written after the analyses in notebooks 02–11 had been
@@ -172,7 +172,7 @@ one reported.
 **13.1 Resampling unit.** Person-hours are nested within ICU stays. All
 intervals come from a **stay-level (cluster) bootstrap**: whole stays are
 resampled with replacement and every person-hour of a drawn stay is carried
-with it. Row-level resampling is prohibited — it would treat ~45 correlated
+with it. Row-level resampling is prohibited: it would treat ~45 correlated
 hours per stay as independent and produce intervals several times too narrow.
 
 **13.2 Interval type and replicates.** Percentile intervals at the 95% level.
@@ -221,8 +221,8 @@ p-value is invented:
   observable external events no external Utility Score can be estimated
   reliably in any case.
 
-  **What is tested in its place** is the AUROC limb alone — internal minus
-  external AUROC for the primary model under Variant B, against θ₀ = 0 — and it
+  **What is tested in its place** is the AUROC limb alone, internal minus
+  external AUROC for the primary model under Variant B, against θ₀ = 0, and it
   is this substituted contrast that occupies H5's slot in the Holm family and
   carries the adjusted p-value reported for H5. Three constraints apply to it,
   fixed here rather than after the fact:
@@ -281,7 +281,7 @@ family-wise control, because a single false confirmation invalidates the claim.
 An exploratory scan exists to generate hypotheses, and only needs its
 false-discovery proportion bounded. Applying FWER to the exploratory families
 would be over-strict; applying FDR to the confirmatory family would be too
-weak. Both are reported so a reader may substitute their own preference —
+weak. Both are reported so a reader may substitute their own preference:
 Bonferroni-adjusted p-values are also emitted for every exploratory contrast.
 
 ## 15. Confirmatory vs. Exploratory Status
@@ -308,7 +308,7 @@ individual result rather than sitting once in the methodology chapter.
 
 ---
 
-# Amendment 2 — A Label That Does Not Depend on Treatment Timing
+# Amendment 2: A Label That Does Not Depend on Treatment Timing
 
 **Date:** 2026-08-02
 **Status:** **POST-HOC.** Written after the analyses in notebooks 02–12 had been
@@ -340,7 +340,7 @@ they cannot be pooled with A–C by accident.
 
 ## 16. Alternative Label Variants
 
-Sepsis-3 is a conjunction — *suspected infection* **and** *acute organ
+Sepsis-3 is a conjunction: *suspected infection* **and** *acute organ
 dysfunction*. The conjunction is split and each limb is labelled on its own.
 
 | Variant | Name | Suspicion anchor | Organ dysfunction | Uses treatment timing? |
@@ -401,8 +401,8 @@ a point estimate with a 95% percentile interval. It is a ratio with no
 meaningful null at zero, so **no p-value is computed for it** and it sits
 outside the corrected family.
 
-**17.2 Exploratory family E3.** The AUROC differences against Variant B —
-{D, E} × {primary, GBT} — form a new exploratory family corrected by
+**17.2 Exploratory family E3.** The AUROC differences against Variant B,
+{D, E} × {primary, GBT}, form a new exploratory family corrected by
 **Benjamini–Hochberg at q = 0.05**, on the same terms as E1 and E2 (§14.2).
 Contrasts are paired within replicate: all variants are labelled on the same
 test stays, so one replicate draw applies to all of them.
@@ -421,7 +421,7 @@ stay.
 
 ---
 
-# Amendment 3 — Fit Identification and Data Plausibility
+# Amendment 3: Fit Identification and Data Plausibility
 
 **Date:** 2026-08-03
 **Status:** **POST-HOC.** See `../feedback/v2.md` for the full diagnosis.
@@ -436,13 +436,13 @@ silently dropped heart rate from every fitted model via `intersect()`.
 Fixes: `PLAUSIBLE_RANGES` + `apply_plausibility()` applied in stages 03 and 08
 before forward-fill; `PRIMARY_MODEL_DECAY = 1e-4` with `check_multinom_fit()`
 guards; `require_features()` errors on any declared-but-absent feature. The
-penalty value is **not tuned** — test AUROC moves < 0.02 across a 20-point ridge
+penalty value is **not tuned**: test AUROC moves < 0.02 across a 20-point ridge
 path for every variant, and that insensitivity is the justification. It must
 never be presented as optimised.
 
 ---
 
-# Amendment 4 — Standard Sepsis-3 Onset Timing (Variant F)
+# Amendment 4: Standard Sepsis-3 Onset Timing (Variant F)
 
 **Date:** 2026-08-05
 **Status:** **POST-HOC.** Written in response to supervisory review of the H3
@@ -460,8 +460,8 @@ was an over-reading of it. External evidence contradicts the absolute claim
 directly (Epic Sepsis Model v2: median lead times 1.4–7.1 h ahead of clinician
 recognition at encounter AUROC 0.80–0.90).
 
-The standard operationalisation — Seymour et al. (2016) and the PhysioNet/CinC
-2019 Challenge — assigns `t_onset = min(t_susp, t_SOFA)`, which permits an onset
+The standard operationalisation, Seymour et al. (2016) and the PhysioNet/CinC
+2019 Challenge, assigns `t_onset = min(t_susp, t_SOFA)`, which permits an onset
 to precede treatment whenever the SOFA rise is detected first. Amendment 2
 considered and rejected that operationalisation as a *treatment-independent*
 comparator, correctly (its membership is still anchored). That was not a reason
@@ -473,7 +473,7 @@ families E1/E2 are computed from exactly the same inputs. Variant F is held
 outside `LABEL_VARIANTS` in `config.R` and its metrics go to the alternative-label
 files.
 
-## 18. Variant F — Sepsis-3 Early-Onset
+## 18. Variant F: Sepsis-3 Early-Onset
 
 | Variant | Membership | Onset time | Uses treatment timing? |
 |---------|-----------|------------|------------------------|
@@ -497,7 +497,7 @@ detected.
 
 **18.2 Estimands.** Descriptive: number and percentage of onsets moved earlier,
 median and extreme shift, and the count of onsets falling before
-`min(first_abx_hour, first_culture_hour)` — the number the conjunction rule
+`min(first_abx_hour, first_culture_hour)`, the number the conjunction rule
 fixes at zero. Exploratory: F's AUROC and its ΔAUROC against B join family
 **E3**, which is thereby enlarged, making every Benjamini–Hochberg adjustment in
 that family stricter than before this amendment.
@@ -515,7 +515,7 @@ difference is the count of stays whose `t_susp` fell past hour 72 but whose
 
 ---
 
-# Amendment 5 — Action-Derived Feature Ablation
+# Amendment 5: Action-Derived Feature Ablation
 
 **Date:** 2026-08-06
 **Status:** **POST-HOC.** Written after the analyses in notebooks 02–12 had been
@@ -587,7 +587,7 @@ gradient-boosted tree fitting is not bit-stable across runs.
 
 ---
 
-# Amendment 6 — Subgroup Interpretability Floor
+# Amendment 6: Subgroup Interpretability Floor
 
 **Date:** 2026-08-06
 **Status:** **POST-HOC.** Written after the subgroup analyses of §9 and family
@@ -643,7 +643,7 @@ reject them and read the m = 30 correction instead:
    enters it, and the same constant governs the external analysis, where it was
    fixed before the eICU event counts were known.
 3. **The direction is exculpatory.** The reduction *removed* the family's only
-   surviving discovery — a language contrast estimated on 12 events — rather
+   surviving discovery (a language contrast estimated on 12 events) rather
    than creating one. A family narrowed to manufacture significance narrows
    around its significant results; this one discarded its own.
 4. **The verdict is invariant to the choice.** Nothing in E1 survives
@@ -652,7 +652,7 @@ reject them and read the m = 30 correction instead:
    is concluded from them.
 
 **20.5 What must be reported.** Both floors, the count of strata clearing the
-interpretation floor, and the fact that only two racial strata clear it — one
+interpretation floor, and the fact that only two racial strata clear it, one
 of which (`UNKNOWN`) is a missingness category, so the study contains no
 sufficiently powered comparison between two racial strata that both record an
 actual demographic answer. That sentence is the finding; it must not be
@@ -666,7 +666,7 @@ unresolved cells or silently drop a stratum).
 
 ---
 
-# Amendment 7 — Uncertainty Diagnostic for H2
+# Amendment 7: Uncertainty Diagnostic for H2
 
 **Date:** 2026-08-10
 **Status:** **POST-HOC.** Written after H1–H6 had been run, reported and
@@ -680,7 +680,7 @@ yields a cluster-robust covariance clustered on stay. Standard errors for the
 primary model's coefficients now exist.
 
 Their availability exposes a weakness in H2 that was previously unfalsifiable.
-H2's criterion is a **threshold rule on point estimates** — a sign reversal, or
+H2's criterion is a **threshold rule on point estimates**: a sign reversal, or
 a magnitude ratio of at least two, across variants A, B and C. Such a rule
 cannot distinguish the two situations it conflates:
 
@@ -717,7 +717,7 @@ both of which would have to be resolved before any inferential reading:
 1. **The estimates are correlated.** Variants A, B and C are fitted on
    overlapping stays, so the two coefficients being differenced are not
    independent. The pooled standard error assumes they are, which makes it
-   conservative — but by an amount this design does not quantify.
+   conservative, but by an amount this design does not quantify.
 2. **The covariance is that of the penalised estimator.** `PRIMARY_MODEL_DECAY`
    is a precondition for identification (Amendment 3), not a tuning choice, so
    the sandwich is ridge-regularised and its bread is the inverse *penalised*
@@ -749,3 +749,81 @@ of one body of evidence and must be described as such.
 **Deliverables:** `se_cluster` column in `05_coef_table_primary_*` and
 `05_coef_all_variants`; `12_h2_stability_uncertainty`; the generated table
 `table_htwouncertainty`.
+
+---
+
+# Amendment 8: Comparator Fit Isolation
+
+**Date:** 2026-08-11
+**Status:** **POST-HOC.** Like Amendments 1–7, not pre-specified. It is a defect
+correction of the same class as Amendment 3, and is recorded here for the same
+reason: the fix changes reported numbers, so it must be traceable.
+
+**The defect.** Stage 06 fitted the gradient-boosted comparator with
+
+```r
+evals = list(train = dtrain, test = dtest), early_stopping_rounds = 30
+```
+
+`xgb.train` selects `best_iteration` against the **last** element of `evals`.
+That element was the temporal test set, so the number of boosting rounds, a
+model-selection choice, was made on the rows the model was then scored on. The
+same pattern was present in all three arms: the main fit, the Amendment 5
+ablated arm, and the H4 random-split arm.
+
+§8 of this protocol specifies the comparator as "in-house, identical
+conditions" and fixes no hyperparameters, so this is an implementation defect
+rather than a departure from the protocol. It is nonetheless leakage, it is not
+what the thesis described, and it was found by audit rather than by any guard in
+the pipeline.
+
+**The fix.** `gbt_valid_split()` in `utils.R` carves an early-stopping set out of
+the **training** rows. Three properties are fixed here rather than chosen after
+seeing the result:
+
+**22.1 The split is on the stay, not the row.** Person-hours are roughly 45
+correlated observations per stay, so a row-level split would leave the same
+patient on both sides and would not break the dependence it exists to break.
+This is the same unit the cluster bootstrap (§13) and Riley's criterion (§10,
+Amendment 6 note) use, and for the same reason.
+
+**22.2 Nothing is tuned.** `GBT_VALID_FRACTION = 0.15` and
+`GBT_VALID_SEED = 42L` are constants in `config.R`. Neither is searched over,
+no hyperparameter is re-tuned alongside the fix, and the fraction is the
+conventional one. The comparator is a reference point, not the object of study;
+tuning it would confound the model-class contrast with a search budget, which is
+the objection §19.2 already records for the ablated arm.
+
+**22.3 The same held-out stays serve the full and ablated arms**, since both
+call the helper with the same seed and fraction. The Amendment 5 contrast
+therefore remains a contrast in the feature set alone.
+
+**22.4 Direction of the correction, recorded before the re-run.** Removing an
+optimistic bias from the comparator is expected to lower GBT's discrimination
+slightly. That runs *against* the study's own argument in one place and *with*
+it in another, and both are recorded now so neither can be presented as a
+discovery afterwards:
+
+- **H6** contrasts GBT against the primary model. A weaker GBT widens the gap
+  in the interpretable model's favour, which is the direction this thesis
+  argues for. The verdict must therefore be read with that in mind: the
+  pre-correction fits already supported non-inferiority, so the correction
+  strengthens an existing finding rather than creating one.
+- **The utility ceiling** under Variants B and C was held by GBT. If the
+  correction moves the ceiling to the primary model, the *holder* changes while
+  the substantive claim (the ceiling sits a few per cent above the no-alert
+  strategy) does not. The claim predicates in `check_consistency.R` assert the
+  holder, so a change is reported by the pipeline rather than left to a read.
+- **H1's model-class range** is bounded by the primary model above and qSOFA
+  below. GBT sits at neither extreme, so the range is expected to be
+  essentially unchanged.
+
+**22.5 Guard.** `gbt_valid_split()` `stop()`s if either side of the split
+carries no positive case, rather than falling back to a watchlist that would
+reintroduce the defect silently. This follows the architectural principle the
+`intersect()` and NEWS2 defects established: an interface fails loudly or not
+at all.
+
+**Deliverables:** no new output files. Every `06_*` fit, and every downstream
+quantity that reads a GBT prediction, is re-estimated: `07_*`, `08_*`
+(GBT external rows), `09_*`, `11_*`, `12_*`.

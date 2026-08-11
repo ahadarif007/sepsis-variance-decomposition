@@ -566,6 +566,24 @@ PRIMARY_MODEL_DECAY <- 1e-4
 PRIMARY_MODEL_MAXIT <- 1000
 
 # --------------------------------------------------------------------------- #
+# Gradient-boosted comparator fitting (Protocol Amendment 8)
+# --------------------------------------------------------------------------- #
+# The boosting-round count is chosen by early stopping, which requires a set the
+# model is not fitted on. Until Amendment 8 that set was the temporal *test*
+# set, so the number of rounds -- a model-selection choice -- was made on the
+# rows the model was then scored on. The fix carves the early-stopping set out
+# of the training rows instead, and it is split on the STAY, never on the row:
+# person-hours are ~45 correlated observations per stay, so a row-level split
+# would put the same patient on both sides of it and leave the leak in place.
+#
+# The fraction and the seed are constants, not tuned. Neither the fraction nor
+# the seed is searched over: the arm is a comparator, not the object of study.
+GBT_VALID_FRACTION <- 0.15   # share of TRAINING stays held out for early stopping
+GBT_VALID_SEED     <- 42L    # fixed; the split is reproducible across runs
+GBT_NROUNDS_MAX    <- 300L   # upper bound on boosting rounds
+GBT_EARLY_STOP     <- 30L    # rounds without improvement before stopping
+
+# --------------------------------------------------------------------------- #
 # Prediction framing (pre-registered; Lauritsen et al., 2021)
 # --------------------------------------------------------------------------- #
 PREDICTION_HORIZON_H <- 6     # predict onset within next 6h (matches Reyna et al., 2020)

@@ -434,6 +434,61 @@ require_features <- function(..., available, strict = TRUE) {
   invisible(FALSE)
 }
 
+#' Split training rows into a fitting set and an early-stopping set, by stay
+#'
+#' Protocol Amendment 8. Early stopping needs a set the model is not fitted on
+#' to decide when to stop adding trees. Until this helper existed, stage 06
+#' passed the temporal *test* set as the watchlist's last element, which is what
+#' `xgb.train` selects `best_iteration` against: the number of boosting rounds
+#' was chosen on the rows the model was then scored on.
+#'
+#' The split is on the STAY, never on the row. Person-hours are roughly 45
+#' correlated observations per stay, so a row-level split leaves the same
+#' patient on both sides and does not break the dependence it is meant to break.
+#'
+#' `stop()`s rather than falls back if the fitting side would carry no events:
+#' a silent fallback here would reintroduce the defect this function exists to
+#' remove.
+#'
+#' @param stay_ids  vector of stay identifiers, one per training row
+#' @param y         binary outcome, one per training row (used only to assert
+#'                  that both sides carry events)
+#' @param frac      share of stays assigned to the early-stopping set
+#' @param seed      fixed seed; the split must be reproducible across runs
+#' @param tag       label used in the log lines
+#' @return a logical vector, TRUE for rows in the early-stopping set
+gbt_valid_split <- function(stay_ids, y, frac = GBT_VALID_FRACTION,
+                            seed = GBT_VALID_SEED, tag = "") {
+  stays <- unique(stay_ids)
+  if (length(stays) < 2L)
+    stop(sprintf("[%s] cannot carve an early-stopping set from %d stay(s).",
+                 tag, length(stays)), call. = FALSE)
+
+  old <- if (exists(".Random.seed", envir = .GlobalEnv))
+    get(".Random.seed", envir = .GlobalEnv) else NULL
+  set.seed(seed)
+  n_valid     <- max(1L, round(length(stays) * frac))
+  valid_stays <- sample(stays, n_valid)
+  if (!is.null(old)) assign(".Random.seed", old, envir = .GlobalEnv)
+
+  is_valid <- stay_ids %in% valid_stays
+  n_ev_fit <- sum(y[!is_valid] == 1L, na.rm = TRUE)
+  n_ev_val <- sum(y[is_valid]  == 1L, na.rm = TRUE)
+
+  cat(sprintf(paste0("  GBT early-stopping split [%s]: %d fitting stays / ",
+                     "%d held-out stays (%.1f%%); events %d / %d\n"),
+              tag, length(stays) - n_valid, n_valid, 100 * n_valid / length(stays),
+              n_ev_fit, n_ev_val))
+
+  if (n_ev_fit == 0L || n_ev_val == 0L)
+    stop(sprintf(paste0("[%s] early-stopping split leaves %d events on the ",
+                        "fitting side and %d on the held-out side; one side ",
+                        "carries no positive case."),
+                 tag, n_ev_fit, n_ev_val), call. = FALSE)
+
+  is_valid
+}
+
 #' Report convergence and separation diagnostics for a multinom fit
 #'
 #' `nnet::multinom` reports `convergence = 0` whenever its BFGS stopping rule is

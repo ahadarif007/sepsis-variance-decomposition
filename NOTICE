@@ -2,7 +2,7 @@ Model, Label, or Analyst? A Variance Decomposition of Real-Time Sepsis
 Onset Prediction on MIMIC-IV
 
 Copyright 2026 Abdul Ahad
-Atlantic Technological University (ATU), Galway — M.Sc. in Computing
+Atlantic Technological University (ATU), Galway. M.Sc. in Computing
 
 Licensed under the Apache License, Version 2.0 (the "License"); you may not
 use the files in this repository except in compliance with the License. You
@@ -21,7 +21,7 @@ apart.
 
 
 --------------------------------------------------------------------------------
-1. COVERED BY APACHE-2.0 — the author's original work
+1. COVERED BY APACHE-2.0: the author's original work
 --------------------------------------------------------------------------------
 
   sepsis/project/            all source code, in full:
@@ -34,18 +34,18 @@ apart.
   .gitignore, .gitattributes
 
 Everything above was written for this study. Where a routine implements a
-published method, the implementation is original and the method is cited — see
+published method, the implementation is original and the method is cited. See
 section 3.
 
 
 --------------------------------------------------------------------------------
-2. NOT COVERED — third-party material, all rights reserved by its owners
+2. NOT COVERED: third-party material, all rights reserved by its owners
 --------------------------------------------------------------------------------
 
   Atlantic Technological University thesis template and brand assets
   ----------------------------------------------------------------------------
   sepsis/thesis/index.tex          (title-page layout, ATU colour definitions,
-                                    page furniture — the template supplied by
+                                    page furniture: the template supplied by
                                     the institution)
   sepsis/thesis/images/atu-logo-green.png
   sepsis/thesis/images/atu-logo-navy.png

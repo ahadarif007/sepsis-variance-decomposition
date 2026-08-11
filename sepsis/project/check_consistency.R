@@ -302,6 +302,94 @@ local({
 })
 
 local({
+  um <- rd("07_utility_max")
+  if (is.null(um)) { chk("burden range over positive maxima", NA); return() }
+  u <- um[eval_window == "unrestricted" & split_type == "temporal" &
+          variant %in% c("A", "B", "C") &
+          as.numeric(utility_normalised) > 0 & is.finite(as.numeric(alert_burden))]
+  if (!nrow(u)) { chk("burden range over positive maxima", NA); return() }
+  lo <- u[which.min(as.numeric(alert_burden))]
+  hi <- u[which.max(as.numeric(alert_burden))]
+  # evaluation.tex, sec:utility_threshold: "Every maximum that is positive at
+  # all is attained at between <primary/C> and <GBT/B> false alerts per true
+  # alert, twenty to thirty-seven times the benchmark." Both endpoints are
+  # named by macro and the multiples are typed, so a refit can falsify the
+  # sentence without touching a number in it.
+  chk("burden range endpoints are primary/C and GBT/B",
+      identical(as.character(lo$model), "primary") && identical(as.character(lo$variant), "C") &&
+      identical(as.character(hi$model), "gbt")     && identical(as.character(hi$variant), "B"),
+      sprintf("min %s/%s at %.2f; max %s/%s at %.2f",
+              lo$model, lo$variant, as.numeric(lo$alert_burden),
+              hi$model, hi$variant, as.numeric(hi$alert_burden)))
+  # 1.4 is Moor et al.'s benchmark. Written literally rather than read from
+  # config.R, because this script deliberately reads only files on disk: its
+  # job is to check outputs against each other, not against the configuration
+  # that produced them.
+  mult <- range(as.numeric(u$alert_burden)) / 1.4
+  chk("burden range is twenty to thirty-seven times the benchmark",
+      mult[1] >= 20 && mult[1] < 21 && mult[2] >= 36 && mult[2] < 38,
+      sprintf("multiples run %.1fx to %.1fx", mult[1], mult[2]))
+})
+
+local({
+  am <- rd("07_ablation_metrics")
+  if (is.null(am)) { chk("ablation bound", NA); return() }
+  d <- abs(as.numeric(am$delta_auroc))
+  w <- am[which.max(d)]
+  # evaluation.tex, sec:ablation: the largest ablation cost "for either model
+  # under any variant" is quoted by macro, and the macro names a specific
+  # model/variant cell. If the extreme moves, the sentence points at the wrong
+  # cell while still typesetting a real number.
+  chk("largest ablation |delta AUROC| is primary under Variant C",
+      identical(as.character(w$model), "primary") && identical(as.character(w$variant), "C"),
+      sprintf("largest is %s/%s at %.4f", w$model, w$variant, as.numeric(w$delta_auroc)))
+  chk("every ablation |delta AUROC| is below 0.01",
+      all(d < 0.01), sprintf("max |delta| = %.4f", max(d)))
+})
+
+local({
+  ab <- rd("08_external_validation_results_abxonly")
+  if (is.null(ab) || !nrow(ab)) { chk("abx-only model ordering", NA); return() }
+  g <- ab[model == "pred_gbt",   .(variant, gbt   = as.numeric(auroc))]
+  n <- ab[model == "pred_news2", .(variant, news2 = as.numeric(auroc))]
+  p <- ab[model == "pred_sepsis",.(variant, prim  = as.numeric(auroc))]
+  m <- merge(merge(g, n, by = "variant"), p, by = "variant")
+  # discussion.tex, sec:external_interpretability: in the antibiotic-only arm a
+  # bedside score "ranks ahead of the boosted model under the two narrower
+  # labels and level with it under the Liberal one", and the primary model
+  # stays ahead of NEWS2 throughout. Amendment 8 refits GBT, so both relations
+  # can change and neither is protected by a macro.
+  chk("abx-only arm: NEWS2 is not below GBT under any label",
+      all(m$news2 >= m$gbt),
+      paste(sprintf("%s: news2 %.4f vs gbt %.4f", m$variant, m$news2, m$gbt),
+            collapse = "; "))
+  chk("abx-only arm: the primary model leads NEWS2 under every label",
+      all(m$prim > m$news2),
+      paste(sprintf("%s: primary %.4f vs news2 %.4f", m$variant, m$prim, m$news2),
+            collapse = "; "))
+})
+
+local({
+  sct <- rd("12_subgroup_auroc_contrasts")
+  if (is.null(sct) || !nrow(sct)) { chk("E1 smallest-q contrast", NA); return() }
+  top <- sct[order(as.numeric(p_bh), as.numeric(p_raw))][1]
+  # evaluation.tex, sec:equity: "The smallest adjusted value in the family
+  # belongs to a contrast on insurance rather than on race", and the paragraph
+  # after it names that contrast. Both sentences become false if a re-run moves
+  # the ordering, and neither is protected by a macro on its own.
+  chk("smallest adjusted p in family E1 is an insurance contrast",
+      identical(as.character(top$subgroup_col), "insurance"),
+      sprintf("smallest q is %s/%s at q = %.3f",
+              top$subgroup_col, top$subgroup_val, as.numeric(top$p_bh)))
+  # Same section: "No contrast is significant, on race or on any other
+  # variable." The table caption states it for the whole family, not just race.
+  chk("no contrast in family E1 survives BH",
+      !any(sct$significant_bh %in% c(TRUE, "TRUE")),
+      sprintf("%d of %d contrasts flagged significant",
+              sum(sct$significant_bh %in% c(TRUE, "TRUE")), nrow(sct)))
+})
+
+local({
   la <- rd("09_label_agreement")
   if (is.null(la)) { chk("kappa ordering", NA); return() }
   ka <- as.numeric(la[variant == "A", kappa_vs_B][1])

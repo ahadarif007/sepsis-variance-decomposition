@@ -851,7 +851,7 @@ if (!is.null(ext_df) && file.exists(internal_path)) {
 # Three different denominators are in play and each is recorded separately,
 # because they are easy to confuse and they answer different questions:
 #   - a limb is *documented* for a stay (either table holds a record);
-#   - *both* limbs are documented for a stay, at any offset — the ceiling on how
+#   - *both* limbs are documented for a stay, at any offset: the ceiling on how
 #     many stays the Sepsis-3 conjunction could reach even with an unbounded
 #     window;
 #   - the pair fires *within a variant's window*, which is the suspicion count

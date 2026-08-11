@@ -39,7 +39,7 @@ if [ -z "${V2_ALLOW_MISSING:-}" ]; then
   fi
 
   if [ -n "$BLOCKING" ] || [ -n "$PLACEHOLDER_TABLES" ]; then
-    echo "REFUSING TO BUILD — these WOULD typeset as a red ?? on the page:"
+    echo "REFUSING TO BUILD. These WOULD typeset as a red ?? on the page:"
     for m in $BLOCKING; do echo "  \\$m"; done
     for t in $PLACEHOLDER_TABLES; do echo "  $t (generated table body is a placeholder)"; done
     echo ""

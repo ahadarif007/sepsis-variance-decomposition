@@ -95,7 +95,7 @@ MIMIC-IV, how much of the reported performance variation comes from (a) the
 choice of model, and (b) the researcher's decisions: how sepsis is defined,
     how data is split, when prediction is made, and how performance is measured?}
 
-Six hypotheses were pre-registered before any modelling:
+Six hypotheses were pre-registered before any of the modelling reported here:
 
 \begin{description}
     \item[H1 (Label dominance)] Changing the sepsis definition affects AUROC at
@@ -204,10 +204,15 @@ plainly that it was written after the analyses had been run.
     criterion filters which stays are labelled and moves no onset by a single
     hour, while a treatment-independent deterioration label agrees with
     Sepsis-3 at $\kappa = \pcKappaVsBD$, close to chance. And the treatment
-    anchor alone is as predictable as the Sepsis-3 conjunction built on top of
-    it ($\phi_{\text{anchor}} = \pcPhiAnchorPrimary$, interval including 1), so
-    the difficulty lies not in the conjunction but in when the label is
-    stamped. The same
+    anchor alone is about as predictable as the Sepsis-3 conjunction built on
+    top of it, so the difficulty lies not in the conjunction but in when the
+    label is stamped. That second result is model-dependent and is reported as
+    such: the anchor-attributable fraction is
+    $\phi_{\text{anchor}} = \pcPhiAnchorPrimary$
+    [\pcPhiAnchorCiLoPrimary, \pcPhiAnchorCiHiPrimary] for the primary model,
+    an interval including 1, and $\pcPhiAnchorGbt$
+    [\pcPhiAnchorCiLoGbt, \pcPhiAnchorCiHiGbt] for the gradient-boosted
+    comparator, which excludes it. The same
     comparison shows the empty pre-treatment window of C2 to be a property of
     the onset rule, not of the patients: a treatment-independent label records
     \pcPreTreatOnsetsVarD{} onsets there at \pcPreTreatAurocPrimaryD{} AUROC,

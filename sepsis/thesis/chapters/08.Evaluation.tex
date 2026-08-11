@@ -319,8 +319,8 @@ in this group.
 
 \textbf{The alarm volume is the binding constraint.} Every maximum that is
 positive at all is attained at between \pcUtilityOptBurdenPrimaryC{} and
-\pcUtilityOptBurdenNewsC{} false alerts per true alert, twenty to
-thirty-five times the benchmark of 1.4 \cite{moor2023review}, and the two
+\pcUtilityOptBurdenGbtB{} false alerts per true alert, twenty to
+thirty-seven times the benchmark of 1.4 \cite{moor2023review}, and the two
 fitted models detect only \pcUtilityOptDetectPctPrimaryB{} to
 \pcUtilityOptDetectPctGbtC{} per cent of septic stays in the actionable window
 there. The Utility Score's own optimum is a configuration that misses most
@@ -965,10 +965,16 @@ inputs, not the patients, differ.
     \label{tab:external}
 \end{table}
 
-\textbf{Discrimination degrades under transport, under every label.} The primary
+\textbf{The point estimate falls under every label.} The primary
 model falls from \pcAurocPrimaryA{} to \pcExtAurocPrimaryA{} (Narrow), from
 \pcAurocPrimaryB{} to \pcExtAurocPrimaryB{} (Seymour-Standard) and from
-\pcAurocPrimaryC{} to \pcExtAurocPrimaryC{} (Liberal). The Seymour-Standard
+\pcAurocPrimaryC{} to \pcExtAurocPrimaryC{} (Liberal). Only the
+Seymour-Standard contrast carries an interval, because only it is the tested
+contrast of H5, and that interval covers zero
+(Section~\ref{sec:h5}); the Narrow and Liberal figures are point estimates on
+\pcExtNEventsA{} and \pcExtNEventsC{} events with no interval attached, so
+``under every label'' describes the direction of three estimates and not three
+established degradations. The Seymour-Standard
 drop of \pcHFiveEst{} is about three-quarters of the 0.085 that Moor et al.\
 \cite{moor2023review} report as typical, so the pre-registered expectation is
 approximately met on the point estimate. Section~\ref{sec:external_interpretability}
@@ -981,10 +987,14 @@ label determines not only which cohort exists but how well what is learned from
 it travels.
 
 NEWS2 degrades further and faster, to \pcExtAurocNewsB{} under the primary
-label: effectively chance. A model fitted on one database therefore retains
-more of its advantage over a bedside score externally than the score retains of
-its own internal performance, which is the one comparison in this section that
-favours the fitted model.
+label: effectively chance. On this arm, then, the fitted models retain more of
+their advantage over a bedside score than the score retains of its own internal
+performance. That is the one comparison in this section that favours the fitted
+model, and it should not be carried further than the arm it is computed on:
+Section~\ref{sec:external_interpretability} reports the same three comparators
+under the antibiotic-only anchor, where the event count is two orders of
+magnitude larger and the ordering between the boosted model and NEWS2 does not
+hold.
 
 Two further properties of the table are diagnostic rather than substantive, and
 both are worth stating because their violation would be invisible otherwise.
@@ -1386,14 +1396,25 @@ license is set out in Section~\ref{sec:variant_d_establishes}.
     \label{tab:e3_contrasts}
 \end{table}
 
-Every contrast is positive, and all but one survive correction. The exception
-is the one that matters most for the anchor-attribution argument: \textbf{E
-against B for the primary model is not significant}
+Every contrast is positive, and two of the six do not survive correction. The
+first is the one that matters most for the anchor-attribution argument:
+\textbf{E against B for the primary model is not significant}
 ($\Delta = \pcAltDeltaPrimaryE$, 95\% CI \pcAltDeltaCiLoPrimaryE--\pcAltDeltaCiHiPrimaryE,
 $q = \pcAltDeltaPBhPrimaryE$), so on the interpretable model the treatment
 anchor alone and the full Sepsis-3 conjunction are statistically
 indistinguishable. The corresponding GBT contrast is significant but small
 ($\pcAltDeltaGbtE$).
+
+The second is F against B for GBT ($\Delta = \pcAltDeltaGbtF$,
+95\% CI \pcAltDeltaCiLoGbtF--\pcAltDeltaCiHiGbtF,
+$q = \pcAltDeltaPBhGbtF$), and it is a difference between the two models rather
+than a difference between the two labels. Re-timing the onset separates the
+labels for the interpretable model ($\pcAltDeltaPrimaryF$, significant) and not
+for the boosted one. The onset-timing argument of
+Section~\ref{sec:pretreatment_label} rests on the event counts F recovers in
+the pre-treatment window rather than on this contrast, so it is unaffected;
+what the split does show is that a claim about how much easier the re-timed
+label is to predict is model-specific and should not be stated in general.
 
 The anchor-attributable fraction reflects this directly:
 $\phi_{\text{anchor}} = \pcPhiAnchorPrimary$ (95\% CI
@@ -1406,8 +1427,9 @@ discrimination where it was. The SOFA gate selects \emph{which} stays are
 labelled without selecting the separable ones.
 
 The two contrasts that do move substantially are D, a different construct
-entirely, and F, which is Sepsis-3 with a different clock. The latter is the
-more surprising of the two, because F's membership is B's exactly.
+entirely, and F for the interpretable model, which is Sepsis-3 with a different
+clock. The latter is the more surprising of the two, because F's membership is
+B's exactly.
 
 One caution on reading these intervals. They quantify sampling uncertainty
 only. They say nothing about the construct differences between the labels:
@@ -1494,7 +1516,7 @@ The second alternative is what the data show, and on both readings at once.
 Discrimination barely moves: removing \pcAblNDropped{} of the \pcHTwoNTerms{}
 covariates costs \pcAblDeltaAurocPrimaryB{} AUROC for the primary model and
 \pcAblDeltaAurocGbtB{} for GBT under the primary label, and no more than
-\pcAblDeltaAurocPrimaryA{} for either model under any variant. Stability moves a
+\pcAblDeltaAurocPrimaryC{} for either model under any variant. Stability moves a
 great deal: the unstable count falls from \pcHTwoEst{} of \pcHTwoNTerms{} to
 \pcAblHTwoNUnstable{} of \pcAblHTwoNTerms, or
 \pcAblHTwoPctUnstable\% of the remaining specification. The reduction is not a
@@ -1659,8 +1681,9 @@ effect size at all.
 What the intervals show is that the apparent spread is largely a function of
 how few events the small strata contain. Of the racial strata,
 \pcNSubgroupsAboveFloor{} carry at least \pcMinSubgroupEvents{} onsets; the
-remainder are estimated on counts between \pcEquityRaceEightNEvents{} and
-\pcEquityRaceFourNEvents, and their intervals are correspondingly wide.
+remaining \pcEquityRaceBelowFloorN{} are estimated on counts between
+\pcEquityRaceBelowFloorMin{} and \pcEquityRaceBelowFloorMax, and their
+intervals are correspondingly wide.
 
 Table~\ref{tab:equity_contrasts} therefore reports contrasts rather than
 ranges, each against the reference level on the same bootstrap replicates.
@@ -1668,22 +1691,39 @@ ranges, each against the reference level on the same bootstrap replicates.
 \begin{table}[H]
     \centering\footnotesize
     \adjustbox{max width=\textwidth}{\input{generated/table_equitycontrasts.tex}}
-    \caption{Subgroup AUROC differences against the reference level, for the
-    racial strata clearing the \pcMinSubgroupEvents{}-event floor.
-    $q_{\text{BH}}$ is the Benjamini--Hochberg adjusted $p$-value over
-    exploratory family E1, which contains all \pcEquityNContrastsEOne{} eligible
-    subgroup contrasts across race, language and insurance for both models,
-    not only those shown here. \textbf{No racial contrast is significant.}
-    The reference level is the largest stratum of its own variable and is a
-    residual administrative category, not a population
-    (Section~\ref{sec:equity_strata}). \textbf{[E] exploratory.}}
+    \caption{Exploratory family E1 in full: all \pcEquityNContrastsEOne{}
+    subgroup AUROC contrasts clearing the \pcMinSubgroupEvents{}-event floor,
+    across race, language and insurance and for both fitted models, ordered by
+    adjusted $p$-value. $q_{\text{BH}}$ is the Benjamini--Hochberg adjusted
+    value over the whole family. \textbf{No contrast is significant}, on race or
+    on any other variable. Two intervals nonetheless exclude zero, which is the
+    distinction the surrounding text turns on: an unadjusted interval and a
+    family-corrected verdict answer different questions, and only the second is
+    read here. The reference level is the largest stratum of its own variable
+    and, for race, is a residual administrative category rather than a
+    population (Section~\ref{sec:equity_strata}). \textbf{[E] exploratory.}}
     \label{tab:equity_contrasts}
 \end{table}
 
 Applying the floor leaves \pcEquityNContrastsEOne{} contrasts in family E1
 across all three equity variables and both models, and \textbf{none survives
 false-discovery correction}. The smallest adjusted value in the family belongs
-to a contrast on insurance, not on race.
+to a contrast on insurance rather than on race: \pcEquityTopEOneLevel{}
+insurance against the Medicare reference, \pcEquityTopEOneDelta{} AUROC for the
+gradient-boosted model, with a bootstrap interval of
+[\pcEquityTopEOneCiLo, \pcEquityTopEOneCiHi] and
+$q_{\text{BH}} = \pcEquityTopEOneQ$.
+
+That row is worth pausing on, because it is where an unadjusted interval and a
+corrected verdict part company. The interval excludes zero; the adjusted
+$p$-value does not clear the threshold. Both statements are correct, and the
+second is the one this study reads, because the contrast was not pre-specified:
+§9 of the protocol fixed the scope of the equity analysis but neither the
+levels, nor the reference, nor the direction of any contrast, so an uncorrected
+interval selected after the fact from six is not evidence of the strength it
+appears to have. The contrast is reported rather than suppressed, and it is not
+claimed. Reading it as a finding would be exactly the practice this thesis
+objects to elsewhere.
 
 One consequence deserves stating plainly, because it bounds the whole analysis.
 Of the racial strata, only two carry enough events to be interpreted, and one of
@@ -1865,6 +1905,16 @@ exceeds the label range by a factor of eight and involves no order statistic at
 all. An asymmetry worth about half again cannot account for a difference of
 \pcSpreadModelClass{} against \pcSpreadLabel.
 
+A variance-components partition would be the more usual instrument, and it is
+not used here for two reasons. The AUROCs being compared are computed on the
+same test rows rather than on independent samples, so the design does not supply
+the error term such a model needs. And \S7 of the pre-registration fixed the
+estimand as the \emph{spread} before any modelling; replacing it now with a
+variance component would substitute a post-hoc quantity for a pre-registered
+one, which is the practice this thesis objects to elsewhere. The range is
+reported as what it is, a descriptive summary carrying a bootstrap interval,
+rather than as a partition of variance.
+
 Two of the six hypotheses turn out not to admit a test statistic at all, for
 reasons that are properties of their design rather than of the data. Those are
 stated where each is reported, and the consequence for the correction (that both still consume a slot in the family, which makes the adjustment on the
@@ -1879,10 +1929,12 @@ Section~\ref{sec:confirmatory_verdicts}.
         \toprule
         \textbf{Factor (others fixed)}         & \textbf{$\Delta$AUROC} & \textbf{95\% CI} & \textbf{H} \\
         \midrule
-        Model class (label B, temporal)        & \pcSpreadModelClass & \pcSpreadModelClassCiLo--\pcSpreadModelClassCiHi & H6 \\
+        Model class (label B, temporal)        & \pcSpreadModelClass & \pcSpreadModelClassCiLo--\pcSpreadModelClassCiHi & n/a \\
         Label definition (primary, temporal)   & \pcSpreadLabel      & \pcSpreadLabelCiLo--\pcSpreadLabelCiHi & H1 \\
         Split method (primary, label B)        & \pcSpreadSplit      & \pcHFourCiLo--\pcHFourCiHi & H4 \\
         External transport (primary, label B)  & \pcSpreadMetric     & \pcHFiveCiLo--\pcHFiveCiHi & H5 \\
+        \midrule
+        Primary $-$ GBT (label B, temporal)    & \pcHSixEst          & \pcHSixCiLo--\pcHSixCiHi & H6 \\
         \bottomrule
     \end{tabular}
     \caption{Variance decomposition with 95\% stay-level cluster-bootstrap
@@ -1890,7 +1942,11 @@ Section~\ref{sec:confirmatory_verdicts}.
     none. External transport is second by point estimate but carries by far the
     widest interval, because it is the only row not measured on the full test
     cohort (Section~\ref{sec:external_interpretability}). Most studies fix three
-    of these factors and compare only models. \textbf{[C] confirmatory.}}
+    of these factors and compare only models. The first row tests no hypothesis:
+    it is the range over six model classes, and H1 contrasts it against the
+    label range. H6 is a different quantity on the same axis, the contrast
+    between the two \emph{flexible} estimators alone, and is shown below the
+    rule for that reason. \textbf{[C] confirmatory.}}
     \label{tab:decomposition}
 \end{table}
 
@@ -1916,7 +1972,8 @@ being read too broadly:
     \item The model-class spread compares six estimators ranging from a
           six-item bedside score to a 29-term hazard model, so it is a
           heterogeneous factor by construction. Between the two \emph{flexible}
-          estimators the spread is \pcHSixEst{}: smaller than the label's
+          estimators the gap is \pcHSixAbsEst{}, an order of magnitude below
+          the six-class range and of the same order as the label's
           (H6, non-inferiority established in the direction that matters).
     \item The label factor is small \emph{in discrimination}, which is not the
           same as small in consequence. The three variants disagree about which
@@ -2065,12 +2122,14 @@ separately.
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.85\textwidth]{images/09_label_variance_auroc.png}
-    \caption{AUROC by label variant for each model (temporal split). The spread
-    within each model group is the label contribution (\pcSpreadLabel);
-    the spread across groups is the model contribution
-    (\pcSpreadModelClass). The model contribution is the larger of the two by
-    roughly an order of magnitude, which is the reverse of the ordering H1
-    predicted.}
+    \caption{AUROC by label variant for each model (temporal split). Both
+    quantities are \emph{ranges}, largest minus smallest: the range within each
+    model group is the label contribution (\pcSpreadLabel, over three variants)
+    and the range across groups is the model-class contribution
+    (\pcSpreadModelClass, over six model classes). The model-class contribution
+    is the larger by roughly an order of magnitude, which is the reverse of the
+    ordering H1 predicted; Section~\ref{sec:decomposition} sets out why the
+    unequal group counts do not account for the gap.}
     \label{fig:label_variance_auroc}
 \end{figure}
 
@@ -2428,7 +2487,8 @@ the limitations (Section~\ref{sec:limitations}).
     Variant B) $= \pcHFiveEst$ (95\% CI \pcHFiveCiLo--\pcHFiveCiHi); internal
     \pcAurocPrimaryB, eICU-CRD \pcExtAurocPrimaryB{} on \pcExtNEventsB{}
     external events. Holm-adjusted $p = \pcHFivePHolm$.
-    \textbf{Discrimination does degrade, but not measurably so.}
+    \textbf{The point estimate falls, but the interval does not exclude no
+    change.}
 
     \textbf{Non-testable arm:} the internal Utility Score is
     \pcUtilityPrimaryB{} at the default cut-off and \pcUtilityMaxPrimaryB{} at
@@ -2550,11 +2610,25 @@ which is the direction in which the boosted trees would beat the hazard model.
 That direction is comfortably excluded, the interval's upper limit being
 \pcHSixCiHi. Establishing two-sided equivalence would require the second of the
 two one-sided tests as well, and the data do not deliver it: the lower limit
-\pcHSixCiLo{} falls outside $-0.02$, so a difference of up to roughly
-\pcHSixCiLo{} in the \emph{interpretable} model's favour remains consistent with
-these data. The defensible reading is therefore asymmetric: the boosted trees
-buy nothing here, but the two estimators have not been shown to be
-interchangeable, and a claim of strict equivalence would overstate the evidence.
+\pcHSixCiLo{} falls outside $-0.02$, so a difference larger than the margin in
+the \emph{interpretable} model's favour remains consistent with these data. The
+defensible reading is therefore asymmetric: the boosted trees buy nothing here,
+but the two estimators have not been shown to be interchangeable, and a claim of
+strict equivalence would overstate the evidence.
+
+One further property of the interval is worth reading off, because it is
+stronger than non-inferiority and weaker than it might appear. The interval
+lies entirely below zero, so these data are not consistent with the two
+estimators discriminating equally well: on the primary label the interpretable
+model is ahead, not merely not behind. The size of that lead is what keeps the
+statement modest. It is \pcHSixEst{} of AUROC, of the same order as the label
+spread and far smaller than the model-class range, and the utility comparison
+below shows it buys nothing at any operating point. The claim this licenses is that
+the accuracy case for the opaque model fails, not that the transparent one
+should be preferred on accuracy grounds; those are different claims and only
+the first is needed. A methodological caution on the comparator's fitting
+procedure, which bears on the direction of this result, is stated in
+Section~\ref{sec:limitations}.
 
 The asymmetry does not weaken the methodological conclusion, because the
 conclusion only ever needed one side of it. The argument for preferring an
@@ -2574,8 +2648,10 @@ matters more. At the default cut-off the primary model appears far ahead
 (\pcUtilityPrimaryB{} against \pcUtilityGbtB{}) purely because it never crosses
 0.5 and GBT does; that contrast measures calibration, not clinical value. Once
 each model is evaluated at its own best threshold the two are close and GBT is
-marginally ahead, \pcUtilityMaxGbtB{} against \pcUtilityMaxPrimaryB{}, so
-the discrimination tie is not hiding a utility gap in either direction. Both
+marginally ahead, \pcUtilityMaxGbtB{} against \pcUtilityMaxPrimaryB{}. The two
+metrics therefore order the models oppositely, and both differences are too
+small to act on: whichever way the comparison is run, neither model is worth
+choosing over the other on clinical value. Both
 maxima sit a few per cent above the no-alert strategy, which is the more
 important observation: \textbf{the model-class choice is nearly free, because
 neither class delivers clinical value worth choosing between.}
@@ -2587,8 +2663,9 @@ neither class delivers clinical value worth choosing between.}
     estimators are indistinguishable from one another and clearly ahead of the
     rule-based scores and the static Cox model; the best maximum Utility Score
     among them is \pcUtilityMaxGbtB{}, barely above the no-alert strategy. The
-    model-class spread of \pcSpreadModelClass{} is an order of magnitude larger
-    than the label spread of \pcSpreadLabel.}
+    model-class range of \pcSpreadModelClass{} over six model classes is an
+    order of magnitude larger than the label range of \pcSpreadLabel{} over
+    three variants (Section~\ref{sec:decomposition}).}
     \label{fig:model_class_auroc}
 \end{figure}
 

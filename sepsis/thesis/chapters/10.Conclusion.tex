@@ -103,17 +103,20 @@ The interpretable hazard model is not outperformed by gradient-boosted trees:
 interval of [\pcHSixCiLo, \pcHSixCiHi]. The upper limit sits inside the
 pre-registered 0.02 margin, so the trees are not better by more than it; the
 lower limit falls outside, so two-sided equivalence is \emph{not} established
-and a difference of up to roughly \pcHSixCiLo{} in the interpretable model's
-favour remains consistent with these data. This is the strongest positive
+and a difference larger than the margin, in the interpretable model's favour,
+remains consistent with these data. The interval also lies wholly below zero,
+so the interpretable model is ahead rather than merely not behind, though by an
+amount of the same order as the label spread. This is the strongest positive
 result in the study, and it is strongest in exactly the direction that matters:
 on tabular ICU time-series of this kind the accuracy case for preferring an
 opaque model is not supported. What little AUROC separates them buys nothing
-clinically: at their respective best thresholds the two models reach
+clinically. At their respective best thresholds the two models reach
 \pcUtilityMaxGbtB{} and \pcUtilityMaxPrimaryB{} on the Utility Score, a gap of
-little more than a hundredth of a point on a scale bounded by 1, and both sit
-within a few per cent of the no-alert strategy. Discrimination and clinical
-value part company here not by re-ordering the models but by disagreeing about
-whether the difference matters.
+well under a hundredth of a point on a scale bounded by 1, and both sit within
+a few per cent of the no-alert strategy. The two metrics in fact order the pair
+oppositely, the interpretable model ahead on discrimination and the boosted one
+ahead on utility, which is the clearest illustration in the study of how little
+either difference means: neither is large enough to choose on.
 
 
 \section{The Central Lesson}
@@ -136,11 +139,14 @@ not a model problem. It is a label problem. The Sepsis-3 label on MIMIC-IV:
     $\kappa = \pcKappaVsBA$. Discrimination is largely insensitive to this
     (\pcSpreadLabel{} of AUROC); every count, rate and denominator built on the
     label is not.
-    \item \textbf{Produces unusable alert behaviour:} no model, under any label
-    variant, has a threshold at which it both beats the no-alert strategy by a
-    clinically meaningful margin and raises an alarm volume a ward could
-    absorb. The best configuration under the primary label reaches
-    \pcUtilityMaxGbtB{} at \pcUtilityOptBurdenGbtB{} false alerts per true one.
+    \item \textbf{Produces unusable alert behaviour:} no model, under any
+    pre-registered label variant, has a threshold at which it both beats the
+    no-alert strategy by a clinically meaningful margin and raises an alarm
+    volume a ward could absorb. The best configuration under the primary label
+    reaches \pcUtilityMaxGbtB{} at \pcUtilityOptBurdenGbtB{} false alerts per
+    true one. The post-hoc variants reach higher ceilings, Variant D's being
+    the highest, but they label different targets, and each still attains its
+    own optimum at an alert burden several times the benchmark.
 \end{enumerate}
 
 These three problems are independent of model complexity. A better model
@@ -159,14 +165,24 @@ treatment timing, agrees with Sepsis-3 barely better than chance
 definitional.
 
 The same comparison relocates the difficulty, and not where the conjunction
-framing expected. The treatment anchor on its own is as predictable as Sepsis-3
-built on top of it (the anchor-attributable fraction is
-\pcPhiAnchorPrimary{} with an interval
-[\pcPhiAnchorCiLoPrimary, \pcPhiAnchorCiHiPrimary] that includes 1), so
-requiring both limbs is not what makes the label hard. Sepsis-3 with a better
-clock is easier again (\pcAltAurocFullPrimaryF{} against \pcAurocPrimaryB), and
-that is a like-for-like comparison because Variant F holds the labelled stays
-fixed and changes only the clock. Variant D's higher figure is not offered in
+framing expected. The treatment anchor on its own is about as predictable as
+Sepsis-3 built on top of it, so requiring both limbs is not what makes the
+label hard. The strength of that statement depends on which model is asked. The
+anchor-attributable fraction is \pcPhiAnchorPrimary{}
+[\pcPhiAnchorCiLoPrimary, \pcPhiAnchorCiHiPrimary] for the primary model, an
+interval that includes 1, and \pcPhiAnchorGbt{}
+[\pcPhiAnchorCiLoGbt, \pcPhiAnchorCiHiGbt] for the gradient-boosted
+comparator, an interval that does not. What both agree on is the sign and the
+size: the anchor limb is no harder than the conjunction, and on the boosted
+model it is slightly easier. Neither supports the reading the conjunction
+framing predicted, that Sepsis-3 is harder than either of its limbs.
+
+Sepsis-3 with a better clock is easier again (\pcAltAurocFullPrimaryF{} against
+\pcAurocPrimaryB). Variant F holds cohort membership fixed and changes only the
+onset timestamp, which is what makes that contrast interpretable. It is not
+computed on an identical event set: moving an onset earlier can move it inside
+the 72-hour horizon, so F carries \pcFNExtraInHorizon{} stays that conjunction
+timing discards (Section~\ref{sec:pretreatment_label}). Variant D's higher figure is not offered in
 support here: its discrimination level is set in part by its own construction
 and is not comparable with Variant B's
 (Section~\ref{sec:variant_d_establishes}); what D contributes is its
@@ -245,9 +261,12 @@ than the patient's deterioration.
     Sepsis-3 variants, shows that the label effect is not an artefact of how one
     definition is read: it agrees with Sepsis-3 at $\kappa = \pcKappaVsBD$ and
     matches its onset hour in \pcPctExactMatchD\% of shared stays. The same
-    comparison shows that the treatment anchor alone is as predictable as
-    Sepsis-3 built on top of it ($\phi_{\text{anchor}} = \pcPhiAnchorPrimary$,
-    interval including 1), and that the pre-treatment window empty of Sepsis-3
+    comparison shows that the treatment anchor alone is about as predictable as
+    Sepsis-3 built on top of it ($\phi_{\text{anchor}} = \pcPhiAnchorPrimary$
+    [\pcPhiAnchorCiLoPrimary, \pcPhiAnchorCiHiPrimary] for the primary model,
+    an interval including 1; $\pcPhiAnchorGbt$
+    [\pcPhiAnchorCiLoGbt, \pcPhiAnchorCiHiGbt] for the boosted comparator,
+    which excludes it), and that the pre-treatment window empty of Sepsis-3
     onsets contains
     \pcPreTreatOnsetsVarD{} treatment-independent deterioration onsets
     identified at \pcPreTreatAurocPrimaryD{} AUROC, and

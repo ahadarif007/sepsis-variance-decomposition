@@ -18,10 +18,11 @@ choice of model.
 
 **Research question.** In real-time sepsis onset prediction on MIMIC-IV, how is
 performance partitioned between (a) model class and (b) the analyst's
-discretionary choices — label operationalisation, temporal versus random split,
+discretionary choices: label operationalisation, temporal versus random split,
 prediction-time anchoring, and evaluation metric?
 
-Six hypotheses (H1–H6) were pre-registered before any modelling. Three Sepsis-3
+Six hypotheses (H1–H6) were pre-registered before any of the modelling reported
+here. Three Sepsis-3
 label variants (A Narrow, B Seymour-Standard, C Liberal) are the primary
 analysis; three further variants (D, E, F) were added under disclosed protocol
 amendments to separate definitional from empirical label variance.
@@ -46,11 +47,11 @@ The working documents for the project (the engineering handoff, the review
 rounds and the companion critical literature review) are deliberately not
 tracked here. They are development records rather than part of the submission.
 
-### The pipeline — `sepsis/project/`
+### The pipeline: `sepsis/project/`
 
 | File | Role |
 |---|---|
-| `00_preregistration.md` | The pre-registration, including the G0 analysis gate and Protocol Amendments 1–7, each dated and disclosed as post-hoc |
+| `00_preregistration.md` | The pre-registration, including the G0 analysis gate and Protocol Amendments 1–8, each dated and disclosed as post-hoc |
 | `config.R` | **Sole source of truth** for every constant: label-variant parameters, the covariate vector, plausibility ranges, seeds, bootstrap sizes, multiplicity families, event floors. `check_model_features()` turns a stored model whose columns disagree with it into an error rather than a wrong number |
 | `utils.R` | Shared helpers, including `require_features()` (errors rather than silently dropping a declared predictor) and `check_multinom_fit()` |
 | `clinical_scores.R` | SOFA, NEWS2, qSOFA, SIRS |
@@ -64,18 +65,18 @@ tracked here. They are development records rather than part of the submission.
 
 | # | Stage | Phase |
 |---|---|---|
-| 01 | Setup — verify source tables | 1 |
-| 02 | Cohort and labels — five variants | 2 |
+| 01 | Setup: verify source tables | 1 |
+| 02 | Cohort and labels, six variants (A--F) | 2 |
 | 03 | Person-hour panel (streams ~6 GB) | 2 |
 | 04 | Sample size (Riley et al.) | 3 |
-| 05 | Primary model — multinomial discrete-time competing risks | 4 |
-| 06 | Comparators — GBT, Cox, NEWS2/qSOFA/SIRS | 4 |
+| 05 | Primary model: multinomial discrete-time competing risks | 4 |
+| 06 | Comparators: GBT, Cox, NEWS2/qSOFA/SIRS | 4 |
 | 07 | Metrics suite, including the utility threshold sweep | 5 |
 | 08 | External validation on eICU-CRD | 6 |
 | 09 | Variance decomposition and label-anchor attribution | 7 |
 | 10 | Equity analysis | 7 |
-| 11 | Clinical metrics — calibration, DCA, operating points, lead time | 8 |
-| 12 | Inference — cluster bootstrap, Holm + BH, analysis register | 9 |
+| 11 | Clinical metrics: calibration, DCA, operating points, lead time | 8 |
+| 12 | Inference: cluster bootstrap, Holm + BH, analysis register | 9 |
 
 ---
 
@@ -165,7 +166,7 @@ The first asserts identities that must hold between tables written by different
 stages: a printed rate against its own numerator and denominator, a
 decomposition row against the hypothesis estimate it duplicates, the external
 labelled event count against the scored one, the cohort ladder's arithmetic. It
-also holds the **claim predicates** — sentences the thesis states in words,
+also holds the **claim predicates**: sentences the thesis states in words,
 written as assertions on the result tables, so that a re-run which makes one of
 them false says so.
 
@@ -202,7 +203,7 @@ exceptions are figures quoted from prior work, thresholds fixed by the
 pre-registration, and prose roundings of a macro stated exactly in the adjacent
 table. `thesis_constants.R` reads
 the result tables and writes every reported quantity into
-`sepsis/thesis/pipeline_constants.tex` as a LaTeX macro, which the document
+`sepsis/thesis/generated/pipeline_constants.tex` as a LaTeX macro, which the document
 includes; larger tables are generated whole. A quantity the pipeline did not
 produce typesets as a conspicuous marker rather than as a stale value, so a
 partial run cannot silently leave an outdated number in the text.
@@ -213,13 +214,16 @@ partial run cannot silently leave an outdated number in the text.
 
 - **Model class dominates discrimination, not the label.** The model-class
   spread is an order of magnitude larger than the label spread, and the interval on the
-  difference excludes zero — the reverse of the pre-registered hypothesis.
+  difference excludes zero. That is the reverse of the pre-registered
+  hypothesis.
 - **An interpretable hazard model is not outperformed by gradient-boosted
   trees.** The trees are not better by more than the pre-registered 0.02
-  margin, and the interpretable model is marginally ahead on point estimates.
-  This is non-inferiority rather than two-sided equivalence — the interval
-  extends past the margin on the side that favours the interpretable model —
-  and it is the strongest positive result in the study.
+  margin, and the interval on the difference lies wholly below zero, so the
+  interpretable model is ahead rather than merely not behind. This is
+  non-inferiority rather than two-sided equivalence, because the interval
+  extends past the margin on the side that favours the interpretable model. It
+  is the strongest positive result in the study, and the lead is small enough
+  that the Utility Score orders the two models the other way round.
 - **What the label determines is which cohort exists**, not how learnable it is:
   the two narrowest Sepsis-3 readings agree on which stays are septic at
   κ = 0.267 despite near-identical prevalence.
@@ -241,21 +245,21 @@ Both databases are de-identified and publicly available to credentialed
 researchers under the PhysioNet Credentialed Health Data Use Agreement. This
 analysis is retrospective and observational, involves no patient contact and no
 intervention, and required no additional ethical approval beyond that
-agreement. Its terms — including the prohibition on redistribution and on
-attempted re-identification — were observed throughout, and `.gitignore` is
+agreement. Its terms, including the prohibition on redistribution and on
+attempted re-identification, were observed throughout, and `.gitignore` is
 configured so that no patient-derived file can be committed.
 
 ## Licence
 
 The pipeline source code written for this study is released under the
-**Apache License 2.0** — see [`LICENSE`](LICENSE).
+**Apache License 2.0**. See [`LICENSE`](LICENSE).
 
 The grant is scoped, and [`NOTICE`](NOTICE) states the boundary in full. In
 short:
 
-- **Covered** — everything under `sepsis/project/`, plus the repository
+- **Covered**: everything under `sepsis/project/`, plus the repository
   documentation. All of it was written for this study.
-- **Not covered** — the ATU thesis template and brand assets in
+- **Not covered**: the ATU thesis template and brand assets in
   `sepsis/thesis/` (reproduced only so the thesis will typeset; ATU's
   rights, not mine), and the MIMIC-IV and eICU-CRD databases, which are not in
   this repository and cannot be redistributed under any licence.

@@ -6,7 +6,8 @@
 
 This is a retrospective, observational prediction-modelling study on
 de-identified critical-care data. It follows a pre-registered protocol
-(\texttt{00\_preregistration.md}, locked before any modelling) and reports
+(\texttt{00\_preregistration.md}, locked before any of the modelling reported
+here) and reports
 according to TRIPOD+AI \cite{collins2024tripodai} and PROBAST+AI
 \cite{moons2025probastai} guidelines. The central design innovation is
 treating the label definition, validation split, and evaluation metric as
@@ -376,10 +377,16 @@ antibiotic or culture; dropping it makes the pre-treatment window empty as a
 matter of arithmetic (Proposition~\ref{prop:h3} in
 Chapter~\ref{ch:evaluation}).
 
+Variant F was added for that reason and only that reason. The pre-registered
+onset rule was found to make H3 unfalsifiable, so a variant carrying the
+standard timing was needed for the question to be answerable at all; the
+amendment was fixed before Variant F was fitted, and nothing about its
+performance entered the decision to add it.
+
 \textbf{Variant F (Sepsis-3 Early-Onset)} restores it and changes nothing else.
 The suspicion windows, SOFA threshold, evaluation window and baseline are
-Variant B's, so the two variants label exactly the same stays; only the
-timestamp moves, and only ever earlier. Variant F therefore isolates the timing
+Variant B's, so the two variants label exactly the same stays cohort-wide; only
+the timestamp moves, and only ever earlier. Variant F therefore isolates the timing
 branch as cleanly as Variants D and E isolate the two limbs.
 
 Three properties are worth stating in advance. First, the SOFA score used for
@@ -625,10 +632,28 @@ covariance is reported for the coefficients and does not enter any hypothesis
 verdict.
 
 \subsection{Comparator: Gradient-Boosted Trees (GBT)}
+\label{sec:gbt_spec}
 
-An XGBoost model is fitted under the same conditions for each label variant
-and split. Settings: maximum depth 6, learning rate 0.1, early stopping on a
-15\% internal validation set, log-loss objective.
+An XGBoost model is fitted under the same conditions for each label variant and
+split. Settings: logistic objective, area under the precision-recall curve as
+the evaluation metric, maximum depth 6, learning rate 0.05, row and column
+subsampling at 0.8, minimum child weight 5, and positive-class weighting by the
+observed class ratio. None of these is tuned; they are the library's
+conventional starting values, fixed once and applied identically to every
+variant, split and feature arm. Tuning the comparator would confound the
+model-class contrast with a difference in search budget, which is the same
+objection that keeps the ablated arm on the full arm's hyperparameters
+(Section~\ref{sec:ablation_method}).
+
+The number of boosting rounds is the one quantity that is chosen rather than
+fixed, and it is chosen by early stopping, which needs a set the model is not
+fitted on. That set is carved out of the \emph{training} rows: 15 per cent of
+training stays are held out, the model is fitted on the remainder, and boosting
+stops after 30 rounds without improvement on the holdout. The split is on the
+stay rather than the person-hour, because person-hours are roughly forty-five
+correlated rows per stay and a row-level split would leave the same patient on
+both sides of it. The test set is never used to select the number of rounds
+(Protocol Amendment 8).
 
 \subsection{Comparator: Static Cox Model}
 
@@ -1006,7 +1031,7 @@ stability, are given in Section~\ref{sec:ablation}.
 
 \section{Pre-Registration and Reporting}
 
-The full protocol was locked before any data extraction. All six hypotheses,
+The full protocol was locked before the cohort extraction reported here. All six hypotheses,
 label variants, model classes, splits, metrics, and decision thresholds are
 specified in \texttt{00\_preregistration.md}. Any analysis not specified there
 is labelled as exploratory, and, following

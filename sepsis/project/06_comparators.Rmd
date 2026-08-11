@@ -76,7 +76,7 @@ MODEL_FEATURES <- model_features()
 
 ## Fit Comparators Per Variant
 
-Per variant: NEWS2/qSOFA/SIRS scores are read from the person-hour table (no fitting); Cox is fitted with Schoenfeld testing; XGBoost uses early stopping, class-imbalance weighting, and AUCPR.
+Per variant: NEWS2/qSOFA/SIRS scores are read from the person-hour table (no fitting); Cox is fitted with Schoenfeld testing; XGBoost uses class-imbalance weighting, an AUCPR evaluation metric, and early stopping on a 15% stay-level holdout carved out of the *training* rows (Protocol Amendment 8). The test set is never in the watchlist.
 
 ```{r fit-comparators-fn, code_folding="hide"}
 fit_comparators <- function(vid) {
@@ -180,11 +180,21 @@ fit_comparators <- function(vid) {
   X_train <- apply(X_train, 2, as.numeric)
   X_test  <- apply(X_test,  2, as.numeric)
 
-  dtrain <- xgboost::xgb.DMatrix(data = X_train, label = y_train)
-  dtest  <- xgboost::xgb.DMatrix(data = X_test,  label = y_test)
+  # Protocol Amendment 8: the early-stopping set is carved out of the TRAINING
+  # stays. `xgb.train` selects `best_iteration` against the last element of
+  # `evals`, so passing the test set there would choose the number of boosting
+  # rounds on the rows the model is then scored on.
+  is_valid <- gbt_valid_split(train$stay_id, y_train, tag = paste0("full/", vid))
+  dfit     <- xgboost::xgb.DMatrix(data = X_train[!is_valid, , drop = FALSE],
+                                   label = y_train[!is_valid])
+  dvalid   <- xgboost::xgb.DMatrix(data = X_train[is_valid, , drop = FALSE],
+                                   label = y_train[is_valid])
+  dtest    <- xgboost::xgb.DMatrix(data = X_test,  label = y_test)
 
-  n_pos      <- sum(y_train, na.rm = TRUE)
-  n_neg      <- sum(!y_train, na.rm = TRUE)
+  # Class-imbalance weighting is computed on the fitting side only, for the same
+  # reason: it is a property of the data the model sees.
+  n_pos      <- sum(y_train[!is_valid], na.rm = TRUE)
+  n_neg      <- sum(!y_train[!is_valid], na.rm = TRUE)
   scale_pos  <- n_neg / max(n_pos, 1)
 
   gbt_params <- list(
@@ -200,13 +210,12 @@ fit_comparators <- function(vid) {
   )
 
   gbt_fit <- tryCatch({
-    watchlist <- list(train = dtrain, test = dtest)
     xgboost::xgb.train(
       params                = gbt_params,
-      data                  = dtrain,
-      nrounds               = 300,
-      evals                 = watchlist,
-      early_stopping_rounds = 30,
+      data                  = dfit,
+      nrounds               = GBT_NROUNDS_MAX,
+      evals                 = list(fit = dfit, valid = dvalid),
+      early_stopping_rounds = GBT_EARLY_STOP,
       verbose               = 0
     )
   }, error = function(e) {
@@ -301,8 +310,16 @@ fit_gbt_ablated <- function(vid) {
   y_train <- train$event_bin
   y_test  <- test$event_bin
 
-  dtrain <- xgboost::xgb.DMatrix(data = X_train, label = y_train)
-  dtest  <- xgboost::xgb.DMatrix(data = X_test,  label = y_test)
+  # Protocol Amendment 8, as in the full arm: early stopping on TRAINING stays.
+  # The split uses the same seed and fraction, so the two arms hold out the same
+  # stays and the ablation contrast is not confounded by a different held-out
+  # set.
+  is_valid <- gbt_valid_split(train$stay_id, y_train, tag = paste0("ablated/", vid))
+  dfit     <- xgboost::xgb.DMatrix(data = X_train[!is_valid, , drop = FALSE],
+                                   label = y_train[!is_valid])
+  dvalid   <- xgboost::xgb.DMatrix(data = X_train[is_valid, , drop = FALSE],
+                                   label = y_train[is_valid])
+  dtest    <- xgboost::xgb.DMatrix(data = X_test,  label = y_test)
 
   # Identical hyperparameters to the full arm. The ablation must isolate the
   # feature set; re-tuning would confound it with a search-budget difference.
@@ -314,14 +331,15 @@ fit_gbt_ablated <- function(vid) {
     subsample        = 0.8,
     colsample_bytree = 0.8,
     min_child_weight = 5,
-    scale_pos_weight = sum(!y_train) / max(sum(y_train, na.rm = TRUE), 1),
+    scale_pos_weight = sum(!y_train[!is_valid]) /
+                       max(sum(y_train[!is_valid], na.rm = TRUE), 1),
     nthread          = 4
   )
 
   gbt_fit <- tryCatch(
-    xgboost::xgb.train(params = gbt_params, data = dtrain, nrounds = 300,
-                       evals = list(train = dtrain, test = dtest),
-                       early_stopping_rounds = 30, verbose = 0),
+    xgboost::xgb.train(params = gbt_params, data = dfit, nrounds = GBT_NROUNDS_MAX,
+                       evals = list(fit = dfit, valid = dvalid),
+                       early_stopping_rounds = GBT_EARLY_STOP, verbose = 0),
     error = function(e) { v2_log("  XGBoost error: ", e$message, level = "WARN"); NULL }
   )
   if (is.null(gbt_fit)) return(NULL)
@@ -333,7 +351,7 @@ fit_gbt_ablated <- function(vid) {
   out[, variant := vid]
   save_parquet(out, paste0("06_predictions_gbt_ablated_", vid), DATA_DIR)
   cat(sprintf("  Ablated GBT fitted: best iteration %d\n", gbt_fit$best_iteration))
-  rm(X_train, X_test, dtrain, dtest, gbt_fit, train, test, ph); invisible(gc(FALSE))
+  rm(X_train, X_test, dfit, dvalid, dtest, gbt_fit, train, test, ph); invisible(gc(FALSE))
   invisible(TRUE)
 }
 
@@ -430,11 +448,18 @@ if ("random_split" %in% names(ph)) {
   X_train_r <- apply(X_train_r, 2, as.numeric)
   X_test_r  <- apply(X_test_r,  2, as.numeric)
 
-  dtrain_r <- xgboost::xgb.DMatrix(data = X_train_r, label = y_train_r)
-  dtest_r  <- xgboost::xgb.DMatrix(data = X_test_r,  label = y_test_r)
+  # Protocol Amendment 8, as in the temporal arm. H4 contrasts the two split
+  # designs, so an early-stopping set drawn from the test rows would have made
+  # the split contrast partly a contrast in how much leakage each arm carried.
+  is_valid_r <- gbt_valid_split(train_r$stay_id, y_train_r, tag = "random/B")
+  dfit_r     <- xgboost::xgb.DMatrix(data = X_train_r[!is_valid_r, , drop = FALSE],
+                                     label = y_train_r[!is_valid_r])
+  dvalid_r   <- xgboost::xgb.DMatrix(data = X_train_r[is_valid_r, , drop = FALSE],
+                                     label = y_train_r[is_valid_r])
+  dtest_r    <- xgboost::xgb.DMatrix(data = X_test_r,  label = y_test_r)
 
-  n_pos_r     <- sum(y_train_r, na.rm = TRUE)
-  n_neg_r     <- sum(!y_train_r, na.rm = TRUE)
+  n_pos_r     <- sum(y_train_r[!is_valid_r], na.rm = TRUE)
+  n_neg_r     <- sum(!y_train_r[!is_valid_r], na.rm = TRUE)
   scale_pos_r <- n_neg_r / max(n_pos_r, 1)
 
   gbt_params_r <- list(
@@ -450,13 +475,12 @@ if ("random_split" %in% names(ph)) {
   )
 
   gbt_fit_r <- tryCatch({
-    watchlist_r <- list(train = dtrain_r, test = dtest_r)
     xgboost::xgb.train(
       params                = gbt_params_r,
-      data                  = dtrain_r,
-      nrounds               = 300,
-      evals                 = watchlist_r,
-      early_stopping_rounds = 30,
+      data                  = dfit_r,
+      nrounds               = GBT_NROUNDS_MAX,
+      evals                 = list(fit = dfit_r, valid = dvalid_r),
+      early_stopping_rounds = GBT_EARLY_STOP,
       verbose               = 0
     )
   }, error = function(e) { v2_log("  Random GBT error: ", e$message, level = "WARN"); NULL })

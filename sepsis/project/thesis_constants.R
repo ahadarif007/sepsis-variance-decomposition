@@ -13,7 +13,7 @@
 #  every GBT number and the thesis silently kept the old ones. This script
 #  closes that loop. It reads the result tables and writes
 #
-#      ../thesis/pipeline_constants.tex
+#      ../thesis/generated/pipeline_constants.tex
 #
 #  as a set of \pc-prefixed LaTeX macros, then syncs output/figures -> images/.
 #  The thesis \inputs that file, so re-running the pipeline re-aligns the
@@ -568,6 +568,13 @@ for (v in PREREG) {
 ab <- rd("08_external_validation_results_abxonly")
 for (v in PREREG) {
   put(paste0("ExtAbxAurocPrimary", v), cell(ab, "auroc",    variant = v, model = "pred_sepsis"))
+  # The comparators in this arm too. The sensitivity arm carries two orders of
+  # magnitude more events than the Sepsis-3 arm, so it is the better-powered
+  # place to look at how the model ORDERING transports -- and it does not
+  # reproduce the internal ordering. Reporting only the primary model's row
+  # would be quoting the better-powered arm selectively.
+  put(paste0("ExtAbxAurocGbt", v),     cell(ab, "auroc",    variant = v, model = "pred_gbt"))
+  put(paste0("ExtAbxAurocNews", v),    cell(ab, "auroc",    variant = v, model = "pred_news2"))
   put(paste0("ExtAbxNEvents", v),      cell(ab, "n_events", variant = v, model = "pred_sepsis"), big = TRUE)
   # The at-risk panel is truncated at each variant's own onset, so the
   # person-hour denominator is NOT shared across A/B/C: it runs 7,656,521 /
@@ -631,6 +638,14 @@ for (h in names(HTOK)) {
       else as.numeric(ph),
       digits = 3, raw = !is.na(ph) && as.numeric(ph) < 0.001)
   put(paste0(tk, "Verdict"), cell(ct, "verdict", hypothesis = h), raw = TRUE)
+  # Magnitude companion. Several sentences say "matches to within X" or "free
+  # to within X", where X is a size rather than a signed contrast; printing the
+  # signed macro there typesets a minus sign in front of a quantity that is
+  # being described as a distance.
+  if (!h %in% c("H2", "H3")) {
+    e <- cell(ct, "estimate", hypothesis = h)
+    put(paste0(tk, "AbsEst"), if (is.na(e)) e else abs(as.numeric(e)), digits = 4)
+  }
 }
 
 sec("H2 coefficient stability counts")
@@ -829,6 +844,21 @@ for (f in names(FEAT_TOK)) {
 
 sec("Subgroup AUROC by race (top levels by exposure)")
 sc8 <- rd("12_subgroup_auroc_ci")
+
+# Event counts of the racial strata that fall BELOW the interpretability floor,
+# as a min and a max over that set. These were previously quoted in the prose by
+# picking two strata by exposure rank, which silently excluded the largest
+# below-floor stratum and understated the range.
+local({
+  if (is.null(sc8)) return(invisible(NULL))
+  r <- unique(sc8[subgroup_col == "race", .(subgroup_val, n_events)])
+  if (!nrow(r)) return(invisible(NULL))
+  below <- r[n_events < MIN_SUBGROUP_EVENTS_INTERPRET]
+  if (!nrow(below)) return(invisible(NULL))
+  put("EquityRaceBelowFloorN",    nrow(below),          big = TRUE)
+  put("EquityRaceBelowFloorMin",  min(below$n_events),  big = TRUE)
+  put("EquityRaceBelowFloorMax",  max(below$n_events),  big = TRUE)
+})
 local({
   ordw <- c("One","Two","Three","Four","Five","Six","Seven","Eight")
   na   <- structure(NA, row_found = TRUE)
@@ -1196,25 +1226,48 @@ write_table("equityperformance", "lrrcc",
 # Only strata above the interpretability floor reach this table, because only
 # those enter family E1 (see 12_inference.Rmd). The row count is therefore not
 # fixed in advance either.
-write_table("equitycontrasts", "lrlcrr",
-  paste("\\textbf{Racial stratum} & \\textbf{Sepsis} & \\textbf{Model}",
+# The table carries EVERY contrast in family E1, not only the racial ones. BH
+# is applied over the whole family, so showing a subset would let a reader see
+# the correction without seeing what it was corrected over -- and the two
+# contrasts with the smallest adjusted values are on insurance, not on race.
+write_table("equitycontrasts", "llrlcrr",
+  paste("\\textbf{Variable} & \\textbf{Stratum} & \\textbf{Sepsis} & \\textbf{Model}",
         "& \\textbf{$\\Delta$AUROC vs.\\ reference (95\\% CI)}",
         "& \\textbf{$p$} & \\textbf{$q_{\\text{BH}}$}"),
   local({
-    if (is.null(sct)) return(NULL)
-    r <- sct[subgroup_col == "race"]
-    if (!nrow(r)) return(NULL)
-    setorder(r, model, p_raw)
+    if (is.null(sct) || !nrow(sct)) return(NULL)
+    r <- copy(sct)
+    setorder(r, p_bh, p_raw)
     sig  <- r$significant_bh %in% c(TRUE, "TRUE")
     qtxt <- formatC(as.numeric(r$p_bh), format = "f", digits = 3)
     qtxt <- ifelse(sig, paste0("\\textbf{", qtxt, "}"), qtxt)
     mtok <- unname(MODEL_TOK[as.character(r$model)])
     mtok[is.na(mtok)] <- as.character(r$model)[is.na(mtok)]
-    sprintf("%s & %s & %s & %s (%s--%s) & %s & %s",
-            pretty_level(r$subgroup_val), big(r$n_events), mtok,
+    vtok <- c(race = "Race", language = "Language", insurance = "Insurance")
+    vlab <- unname(vtok[as.character(r$subgroup_col)])
+    vlab[is.na(vlab)] <- as.character(r$subgroup_col)[is.na(vlab)]
+    sprintf("%s & %s & %s & %s & %s (%s--%s) & %s & %s",
+            vlab, pretty_level(r$subgroup_val), big(r$n_events), mtok,
             signed(r$delta_auroc, 3), signed(r$ci_lo, 3), signed(r$ci_hi, 3),
             formatC(as.numeric(r$p_raw), format = "f", digits = 3), qtxt)
   }))
+
+# The E1 contrast with the smallest adjusted p-value, named so the prose can
+# state it rather than allude to it. It is on insurance, not on race, and its
+# bootstrap interval excludes zero while its BH-adjusted value does not clear
+# the threshold -- which is exactly the distinction the section is about.
+local({
+  if (is.null(sct) || !nrow(sct)) return(invisible(NULL))
+  r <- sct[order(p_bh, p_raw)][1]
+  mt <- unname(MODEL_TOK[as.character(r$model)])
+  put("EquityTopEOneVar",   pretty_level(r$subgroup_col), raw = TRUE)
+  put("EquityTopEOneLevel", pretty_level(r$subgroup_val), raw = TRUE)
+  put("EquityTopEOneModel", if (is.na(mt)) as.character(r$model) else mt, raw = TRUE)
+  put("EquityTopEOneDelta", r$delta_auroc, digits = 3)
+  put("EquityTopEOneCiLo",  r$ci_lo,       digits = 3)
+  put("EquityTopEOneCiHi",  r$ci_hi,       digits = 3)
+  put("EquityTopEOneQ",     r$p_bh,        digits = 3)
+})
 
 
 # --------------------------------------------------------------------------- #

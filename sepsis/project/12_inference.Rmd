@@ -468,7 +468,13 @@ if (!is.null(boot_h4)) {
   rows[["H4"]] <- mk("H4", "Split optimism",
                      "Random-split AUROC - temporal-split AUROC (primary, Variant B)",
                      obs_h4, ci_h4, "theta <= 0.02", p_h4,
-                     "independent test sets; both bootstrap streams propagated")
+                     paste("the two test sets are resampled separately and both",
+                           "bootstrap streams are propagated into the difference.",
+                           "They are not disjoint: the random-split test set is",
+                           "a 25% sample across all admission years and so shares",
+                           "stays with the 2017-2019 temporal test set. Ignoring",
+                           "that positive dependence over-states the variance of",
+                           "the difference, so the interval is conservative"))
 }
 
 # H5: theta = internal - external AUROC; H0: theta <= 0

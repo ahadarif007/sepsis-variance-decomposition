@@ -51,9 +51,9 @@ designed, and the resolution is sharper than either hypothesis anticipated,
 because both resolve in the same direction, which the pre-registration treated
 as unlikely.
 
-H6 is \emph{not} rejected: the two flexible estimators differ by \pcHSixEst{}
-AUROC, and the interval's upper limit sits inside the 0.02 bound, so the
-boosted trees are not better by more than the margin. H1 is also not
+H6 is \emph{not} rejected: the two flexible estimators differ by
+\pcHSixAbsEst{} AUROC, and the interval's upper limit sits inside the 0.02
+bound, so the boosted trees are not better by more than the margin. H1 is also not
 confirmed, and by a wide margin in the direction opposite to the one
 hypothesised: the model-class spread \pcSpreadModelClass{} exceeds the label
 spread \pcSpreadLabel{} by \pcHOneEst, with an interval
@@ -79,7 +79,8 @@ showed it breaking on the temporal early-warning axis, where a deep model
 detected patients up to twenty hours earlier than a Cox baseline. Here, with
 the label, the split, the feature set and the evaluation held fixed, an
 interpretable discrete-time hazard model is not outperformed by
-gradient-boosted trees, and is marginally ahead on point estimates. That is not
+gradient-boosted trees, and is ahead of them by \pcHSixAbsEst{} AUROC on an
+interval that excludes zero. That is not
 a contradiction of Fagerstr{\"o}m et al.: their comparison was against a static
 Cox specification, which is exactly the comparator this study retains as the
 deliberately weak one, and which loses by a wide margin here too
@@ -127,6 +128,23 @@ the full cohort raises the event count by two orders of magnitude (\pcExtAbxNEve
 \pcExtAbxNRows{} person-hours), and therefore clears the floor with room to
 spare. Under that anchor the primary model scores \pcExtAbxAurocPrimaryA,
 \pcExtAbxAurocPrimaryB{} and \pcExtAbxAurocPrimaryC.
+
+The comparators in the same arm carry a result the Sepsis-3 arm is too small to
+see, and it does not favour the flexible estimator. The boosted model scores
+\pcExtAbxAurocGbtA, \pcExtAbxAurocGbtB{} and \pcExtAbxAurocGbtC, close to
+chance under the two narrower labels, while NEWS2 scores
+\pcExtAbxAurocNewsA, \pcExtAbxAurocNewsB{} and \pcExtAbxAurocNewsC. A bedside
+score therefore ranks ahead of the boosted model under every label in this arm.
+The internal model-class ordering does not transport. That is worth stating
+plainly for two reasons. It qualifies H6 in a way the internal analysis cannot:
+the two flexible estimators are indistinguishable inside the development
+cohort, but only one of them stays ahead of a bedside score outside it, and the
+one that does is the interpretable model. And it cuts against this study's own
+comparators as much as for them, since a rule-based score overtaking a fitted
+model externally is not the result a modelling thesis would choose. The event
+count supports the ordering; it does not license a claim about the size of any
+gap, for the same reason the Sepsis-3 arm does not, and the arm still labels a
+different target.
 
 This arm labels a broader and less specific target: treated suspicion of
 infection, without the organ-dysfunction conjunction's culture limb. An AUROC
@@ -187,13 +205,20 @@ Three things it does establish:
     above: a label built from recorded physiology is easier to alert on than
     one built from a clinician's decision.
 
-    \item \textbf{The model-class ordering is label-invariant.} GBT leads on
-    AUROC under all three labels and, once each model is evaluated at its own
-    best threshold, on the Utility Score as well. A reversal appears only if
-    every model is scored at the same 0.5 cut-off, which rewards a model for
-    being too poorly calibrated to reach it. The
-    metric-choice finding (H5) rests on the gap between discrimination and
-    achievable utility, not on a re-ordering of models.
+    \item \textbf{The two metrics order the models differently, and the
+    ordering is stable across labels.} Evaluated at its own best threshold, GBT
+    leads on the Utility Score under B, D and E alike
+    (\pcUtilityMaxGbtB{} against \pcUtilityMaxPrimaryB, \pcUtilityMaxGbtD{}
+    against \pcUtilityMaxPrimaryD, \pcUtilityMaxGbtE{} against
+    \pcUtilityMaxPrimaryE). On AUROC the interpretable model leads under B and
+    E, and GBT leads only under D, whose label is a threshold function of the
+    physiology both models are given (Section~\ref{sec:h6}). Neither ordering
+    is reversed by changing the label; what changes the ordering is changing
+    the metric. A third and different reversal appears if every model is scored
+    at the same 0.5 cut-off, which rewards a model for being too poorly
+    calibrated to reach it. The metric-choice finding (H5) rests on the gap
+    between discrimination and achievable utility, and these three orderings
+    are what that gap looks like when it is written out.
 \end{enumerate}
 
 
@@ -311,7 +336,7 @@ state the event count the estimate rests on rather than the stay count.
 Section~\ref{sec:false_dichotomy} argued that the statistics-versus-machine-learning
 partition does not carve the field. The decomposition supports a stronger
 version: within the family of flexible estimators the choice is free to within
-\pcHSixEst{} AUROC, so a study comparing one flexible model against another is
+\pcHSixAbsEst{} AUROC, so a study comparing one flexible model against another is
 measuring the axis with the least room left in it, while the label choice that
 sets its cohort goes unreported. The reporting recommendation follows directly: fit any flexible estimator, report which one and stop defending the choice,
 and spend the space on the label and the onset rule instead.
@@ -358,7 +383,19 @@ underpowered for a fairness question can report one as answered.
     uncovered stays would enlarge the denominator without adding a single
     observable onset, so this is not a limitation additional data of the same
     kind would remove, it would require a destination database whose
-    microbiology recording matches MIMIC-IV's. The consequence is specific and
+    microbiology recording matches MIMIC-IV's.
+
+    A second consequence follows, and it concerns composition rather than
+    precision. The sub-cohort is defined by a documentation property, and a
+    culture is ordered when infection is already suspected, so the
+    \pcExtNMicroStays{} covered stays are not a random sample of the
+    \pcExtNCohortStays: they are enriched for the patients a clinician had
+    begun to investigate. The external estimate therefore describes transport
+    into a documentation-selected sub-population rather than into eICU-CRD as a
+    whole. The direction of that selection cannot be signed from these data,
+    because the uncovered stays carry no observable onset to compare against,
+    so it stands as an unquantified limit on generalisability rather than a
+    bias with a known sign. The consequence is specific and
     should not be over-read in either direction: the study establishes that
     discrimination degrades on transport, and cannot establish by how much.
     External Utility Score and AUPRC are not interpreted at all. The
@@ -416,8 +453,15 @@ underpowered for a fairness question can report one as answered.
     contrast is tested one-sidedly, so what is excluded is the boosted trees
     outperforming the hazard model, and two-sided equivalence between the two is
     not established: the interval's lower limit, \pcHSixCiLo, falls outside
-    the 0.02 margin (Section~\ref{sec:h6}). Neither gap affects the structural
-    findings about the label.
+    the 0.02 margin (Section~\ref{sec:h6}). A third qualification is the
+    comparator's fitting procedure. Its boosting-round count is now chosen on a
+    holdout carved out of the training stays (Protocol Amendment 8,
+    Section~\ref{sec:gbt_spec}); under the earlier procedure it was chosen on
+    the test set, which flattered the comparator. Correcting it moved this
+    contrast in the direction that favours the interpretable model, so the
+    result should be read as one the uncorrected fits already supported and the
+    correction sharpened, rather than as one the correction produced. Neither
+    gap nor the correction affects the structural findings about the label.
 
     \item \textbf{Limited feature set.} Clinical notes, procedure codes, and
     ventilator settings were not included. Richer features might improve
@@ -591,21 +635,22 @@ underpowered for a fairness question can report one as answered.
     \emph{combination} of analyses; each component separately has clear
     precedent, which Section~\ref{sec:search_strategy} identifies.
 
-    \item \textbf{Seven protocol amendments are post-hoc.} The inference layer
+    \item \textbf{Eight protocol amendments are post-hoc.} The inference layer
     (intervals and multiplicity control, Section~\ref{sec:inference}), the
     alternative label limbs D and E (Section~\ref{sec:alt_labels}), the model
     identification and data-plausibility changes
     (Section~\ref{sec:primary_model_spec}), the standard onset timing of
     Variant F (Section~\ref{sec:variant_f}), the action-derived feature
     ablation (Section~\ref{sec:ablation}), the subgroup interpretability
-    floor (Section~\ref{sec:equity_strata}) and the H2 uncertainty diagnostic
-    (Section~\ref{sec:h2_uncertainty}) were all specified after the
+    floor (Section~\ref{sec:equity_strata}), the H2 uncertainty diagnostic
+    (Section~\ref{sec:h2_uncertainty}) and the comparator fit isolation
+    (Section~\ref{sec:gbt_spec}) were all specified after the
     pre-registered analyses had been run and inspected. None changes an
     estimand, threshold, direction or hypothesis, and H1--H6 and families E1/E2
     are computed from unchanged inputs; but a reader should treat the verdicts
     as a pre-specified hypothesis set analysed under a retrospectively specified
-    error-control plan, and the amendment results as exploratory. Three of the
-    seven warrant a specific note, and they do not all point the same way.
+    error-control plan, and the amendment results as exploratory. Four of the
+    eight warrant a specific note, and they do not all point the same way.
     Amendment 4 enlarges family E3, which tightens rather than relaxes the
     correction applied within it.
     Amendment 6 \emph{reduces} family E1 from thirty contrasts to six, which is
@@ -627,6 +672,20 @@ underpowered for a fairness question can report one as answered.
     computed from the same three fits as the ablation and shares the same
     flagged set, so it is a second reading of one body of evidence rather than a
     second experiment agreeing with the first.
+    Amendment 8 is the only one of the eight that changes a reported estimate
+    rather than a family, a diagnostic or a label. It corrects an
+    implementation defect: the gradient-boosted comparator's boosting-round
+    count was selected by early stopping against the test set, so a
+    model-selection choice was being made on the rows the model was then scored
+    on. The correction moves the early-stopping set into the training stays,
+    split on the stay rather than the person-hour. Its direction was recorded
+    before the re-run and is not uniformly convenient. Removing an optimistic
+    bias from the comparator widens H6's gap in the interpretable model's
+    favour, which is the direction this thesis argues for, so H6 is to be read
+    as a finding the uncorrected fits already supported and the correction
+    strengthened, not as one the correction produced. It leaves H1 essentially
+    untouched, because the model-class range is bounded by the primary model
+    above and qSOFA below and the boosted comparator sits at neither extreme.
 
     \item \textbf{Two hypotheses admit no test statistic, and a third is tested
     on a substituted estimand.} H2 is a stability criterion rather than a
