@@ -163,10 +163,15 @@ framing expected. The treatment anchor on its own is as predictable as Sepsis-3
 built on top of it (the anchor-attributable fraction is
 \pcPhiAnchorPrimary{} with an interval
 [\pcPhiAnchorCiLoPrimary, \pcPhiAnchorCiHiPrimary] that includes 1), so
-requiring both limbs is not what makes the label hard. Physiological
-deterioration alone is \emph{easier} (\pcAltAurocFullPrimaryD{} against
-\pcAurocPrimaryB), and Sepsis-3 with a better clock is easier again
-(\pcAltAurocFullPrimaryF). What resists prediction is not the conjunction but
+requiring both limbs is not what makes the label hard. Sepsis-3 with a better
+clock is easier again (\pcAltAurocFullPrimaryF{} against \pcAurocPrimaryB), and
+that is a like-for-like comparison because Variant F holds the labelled stays
+fixed and changes only the clock. Variant D's higher figure is not offered in
+support here: its discrimination level is set in part by its own construction
+and is not comparable with Variant B's
+(Section~\ref{sec:variant_d_establishes}); what D contributes is its
+disagreement with Sepsis-3, not its AUROC. What resists prediction is not the
+conjunction but
 the moment at which the conjunction is stamped: the clinician's action rather
 than the patient's deterioration.
 
@@ -184,7 +189,8 @@ than the patient's deterioration.
     moves cohort membership substantially ($\kappa = \pcKappaVsBA$ between the
     narrowest readings) while moving AUROC by only \pcSpreadLabel.
 
-    \item \textbf{C2 (Treatment leakage located in the onset rule):} A proof that
+    \item \textbf{C2 (Treatment leakage separated: membership from onset
+    timing):} A proof that
     the conjunction-based Sepsis-3 onset rule makes the pre-treatment window
     empty by construction, paired with the measurement that the standard
     $\min(t_{\text{susp}}, t_{\text{SOFA}})$ rule recovers

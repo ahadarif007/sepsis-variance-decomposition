@@ -1846,6 +1846,25 @@ makes the four analyst decisions commensurable; each is a contrast in AUROC on
 the same scale, and each carries an interval from the same stay-level cluster
 bootstrap.
 
+\paragraph{What a spread is here, and what the choice costs.} Each spread is a
+\emph{range}: the largest AUROC in a set minus the smallest. The label spread is
+therefore a range over three variants and the model-class spread a range over
+six model classes, and that asymmetry has to be declared, because
+Section~\ref{sec:equity} rejects the subgroup range as an effect size on exactly
+this ground. A range grows with the number of values it is taken over even when
+the underlying quantities are identical, so a range over six is expected to
+exceed a range over three by roughly half again. The bootstrap does not remove
+this: the bias is present in every replicate.
+
+The ordering nonetheless does not rest on the statistic. The model-class range
+spans a structural gap rather than sampling scatter, between the two fitted
+models and the four rule-based and static comparators, and \emph{any} single
+contrast across that gap is larger than the whole label range. The narrowest of
+them, GBT against the Cox model, is \pcAurocGbtB{} against \pcAurocCoxB, which
+exceeds the label range by a factor of eight and involves no order statistic at
+all. An asymmetry worth about half again cannot account for a difference of
+\pcSpreadModelClass{} against \pcSpreadLabel.
+
 Two of the six hypotheses turn out not to admit a test statistic at all, for
 reasons that are properties of their design rather than of the data. Those are
 stated where each is reported, and the consequence for the correction (that both still consume a slot in the family, which makes the adjustment on the
@@ -1955,12 +1974,18 @@ could not have been obtained by fixing three factors and varying one.
     \label{tab:confirmatory}
 \end{table}
 
-\textbf{None of the four testable hypotheses is confirmed}, and for three of
-them multiplicity control is not what does the work. H1, H4 and H6 return
-adjusted p-values of \pcHOnePHolm, \pcHFourPHolm{} and \pcHSixPHolm: each
-would have failed at any correction, and each fails on its uncorrected value
-too. What overturns them is quantifying uncertainty at all, and, for H1 and H4, the estimate landing on the opposite
-side of zero from the one predicted.
+\textbf{None of the four testable hypotheses is confirmed}, and for two of
+them multiplicity control is not what does the work. H1 and H4 return adjusted
+p-values of \pcHOnePHolm{} and \pcHFourPHolm: each would have failed at any
+correction, and each fails on its uncorrected value too. What overturns them is
+quantifying uncertainty at all, and the estimate landing on the opposite side of
+zero from the one predicted.
+
+H6 returns \pcHSixPHolm{} as well, and it is not a failure of the same kind.
+H6 is framed as a null, so a large adjusted value is the outcome that leaves
+that null standing rather than a signal the study looked for and missed. What
+it withholds is the two-sided equivalence the pre-registration stated; what it
+supports is the one-sided non-inferiority of Section~\ref{sec:h6}.
 
 H5 is the exception and is worth separating. Its estimate does fall on the
 predicted side of zero (\pcHFiveEst, in the direction of external degradation),

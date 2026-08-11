@@ -25,9 +25,9 @@ decomposition, moving AUROC by \pcSpreadModelClass{} against the label's
 hypotheses is confirmed and two fail in the direction opposite to the one
 predicted. An interpretable hazard model matches gradient-boosted trees to
 within \pcHSixEst{} AUROC, and random splits do not inflate AUROC relative to
-temporal ones. Discrimination does degrade on transport, but the Sepsis-3
-anchor is recoverable in only \pcExtMicroCoverage\% of eICU-CRD stays, so the
-direction is established and the magnitude is not.
+temporal ones. Discrimination degrades on transport under every label, but
+the Sepsis-3 anchor is recoverable in only \pcExtMicroCoverage\% of eICU-CRD
+stays, so the degradation is reported as a direction and not as a magnitude.
 
 The label's consequence lies elsewhere. Under the primary label no model
 exceeds a Utility Score of \pcUtilityMaxGbtB{} at any threshold, or
