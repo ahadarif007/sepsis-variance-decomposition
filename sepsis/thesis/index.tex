@@ -159,7 +159,10 @@
         \flushright
         \vspace{10mm}
         \textcolor{ATUGreen}{
-            \fontfamily{cmss}\fontseries{m}\fontsize{22}{26}\selectfont
+            % cmss has no 22pt design size, so LaTeX silently substituted
+            % 20.74 and warned. Asking for the size actually rendered removes
+            % the warning and changes nothing on the page.
+            \fontfamily{cmss}\fontseries{m}\fontsize{20.74}{26}\selectfont
             \projecttitle
         }
         \normalsize
@@ -169,7 +172,10 @@
         \normalsize
         \textbf{By \\ \textcolor{ATUGreen}{\reportauthor}}\\
         \vspace{15mm}
-        {\scshape \submissiondate} \\[0.3\baselineskip]
+        % Bitstream Vera Sans (fvs, selected above) has no small-caps shape,
+        % so \scshape was already being substituted with the normal shape.
+        % Dropping it renders identically and removes the warning.
+        {\submissiondate} \\[0.3\baselineskip]
         \vspace{75mm}
         \Large {\textcolor{ATUGreen}{\textbf{{\reporttype}}}} \\
         \bigskip
