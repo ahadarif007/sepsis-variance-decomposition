@@ -64,9 +64,21 @@ N_REF=$(count_in_log 'Reference .* undefined')
 N_CIT=$(count_in_log 'Citation .* undefined')
 N_ERR=${N_ERR:-0}; N_REF=${N_REF:-0}; N_CIT=${N_CIT:-0}
 N_PAGE=$(grep -aoE 'Output written on index\.pdf \([0-9]+ pages' index.log 2>/dev/null | grep -oE '[0-9]+' | head -1)
+# pdfTeX writes its own warnings, and they are not LaTeX errors, so nothing
+# above catches them. A duplicated PDF destination means two objects claim one
+# anchor and a link silently goes to the wrong one; 53 of them went unnoticed
+# because this line did not exist.
+N_DUP=$(grep -ac 'destination with the same identifier' index.log 2>/dev/null || true)
+N_DUP=${N_DUP:-0}
 echo ""
 echo "------------------------------------------------------------"
-echo "  Pages: ${N_PAGE:-?}   Errors: $N_ERR   Undefined refs: $N_REF   Undefined citations: $N_CIT"
+echo "  Pages: ${N_PAGE:-?}   Errors: $N_ERR   Undefined refs: $N_REF   Undefined citations: $N_CIT   Duplicate PDF destinations: $N_DUP"
+if [ "$N_DUP" -gt 0 ]; then
+  echo "  !! $N_DUP duplicate PDF destination(s). Two objects claim one anchor,"
+  echo "     so a link resolves to the wrong one. Usual cause: a package that"
+  echo "     hyperref must patch (float, longtable) loaded AFTER hyperref."
+  grep -ao 'name{[A-Za-z0-9._]*}) has been already used' index.log | sort -u | head -5 | sed 's/^/     /'
+fi
 if [ "$N_ERR" -gt 0 ] || [ "$N_REF" -gt 0 ] || [ "$N_CIT" -gt 0 ]; then
   echo "  !! Not clean. Offending lines:"
   grep -aE '^! |Reference .* undefined|Citation .* undefined' index.log | sort -u | sed 's/^/     /' | head -20

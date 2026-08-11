@@ -30,6 +30,11 @@
 \usepackage{colortbl}
 \usepackage{array}
 \usepackage{geometry}
+% float must be loaded BEFORE hyperref. Loaded after it, every float's PDF
+% destination is written twice and pdfTeX reports 53 "destination with the
+% same identifier ... duplicate ignored" warnings, one per table and figure.
+% hyperref patches the float internals, so it has to see them already defined.
+\usepackage{float}
 \usepackage[pdfpagelabels,plainpages=false,hypertexnames=true]{hyperref}
 \hypersetup{
     colorlinks=true,
@@ -46,7 +51,6 @@
 % register) are taller than a text block. Inside a [H] float they simply ran off
 % the bottom of the page; longtable lets them break across pages instead.
 \usepackage{longtable}
-\usepackage{float}
 \usepackage{rotating}
 % Wide tables. \adjustbox{max width=\textwidth}{...} scales a tabular down only
 % when its natural width exceeds the text block, and leaves it untouched
@@ -129,6 +133,12 @@
 \addtolength{\topmargin}{-15.5pt}
 
 \begin{document}
+% The titlepage environment resets the page counter to 1, so the title page is
+% arabic page 1 -- and so is the first page of the body once \pagenumbering is
+% switched back. Two pages then claim the PDF destination page.1 and one is
+% dropped. Suppressing the page anchor over the front cover is hyperref's own
+% remedy and changes nothing that is printed.
+\hypersetup{pageanchor=false}
     \begin{titlepage}
 
         \newgeometry{left=6cm,bottom=2cm, top=1cm, right=1cm}
@@ -168,6 +178,7 @@
     \end{titlepage}
     \restoregeometry
     \pagenumbering{roman}
+    \hypersetup{pageanchor=true}
 
 % The abstract, declaration and acknowledgments precede the contents. Placed
 % after them, the abstract opened on page xv, behind thirteen pages of

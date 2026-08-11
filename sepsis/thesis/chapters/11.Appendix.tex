@@ -43,12 +43,20 @@ against the tracked file list before release.
 
 \section{Repository Layout}
 
-\begin{table}[H]
-    \centering\small
-    \begin{tabular}{p{4.6cm}p{8.4cm}}
-        \toprule
-        \textbf{Path} & \textbf{Contents} \\
-        \midrule
+{\small
+\begin{longtable}{p{4.6cm}p{8.4cm}}
+    \caption{Repository layout.}\label{tab:repo_layout}\\
+    \toprule
+    \textbf{Path} & \textbf{Contents} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Path} & \textbf{Contents} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+
         \texttt{00\_preregistration.md} &
         The pre-registration, including the G0 analysis gate and Protocol
         Amendments 1--7, each dated and disclosed as post-hoc \\
@@ -97,11 +105,8 @@ against the tracked file list before release.
         \texttt{output/} &
         Created at run time: \texttt{processed\_data/}, \texttt{figures/},
         \texttt{logs/}. Not tracked \\
-        \bottomrule
-    \end{tabular}
-    \caption{Repository layout.}
-    \label{tab:repo_layout}
-\end{table}
+\end{longtable}
+}
 
 \section{Reproducing the Results}
 \label{app:repro}
