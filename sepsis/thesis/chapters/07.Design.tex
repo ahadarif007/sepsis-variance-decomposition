@@ -1,13 +1,20 @@
 \chapter{System Design and Pipeline Architecture}
 \label{ch:design}
 
+% Four monospace paths in four lines leave TeX no room to break, and the
+% longest ran 30 pt past the margin. sloppypar lets it stretch the interword
+% spaces instead of overflowing; \allowbreak supplies the break points a
+% \texttt{} token does not otherwise have.
+\begin{sloppypar}
 The pipeline consists of twelve numbered, single-purpose scripts in
-\texttt{sepsis/project/}, preceded by the locked pre-registration document
-(\texttt{00\_preregistration.md}). Each script reads from upstream outputs and
-writes its own results to \texttt{sepsis/project/output/}. No script modifies the
+\texttt{sepsis/\allowbreak project/}, preceded by the locked pre-registration
+document \texttt{00\_\allowbreak preregistration.md}. Each script reads from
+upstream outputs and writes its own results to
+\texttt{sepsis/\allowbreak project/\allowbreak output/}. No script modifies the
 original source data. All random seeds are fixed for reproducibility.
 Figure~\ref{fig:pipeline_dag} shows the data flow, and
 Appendix~\ref{app:stages} tabulates each stage's inputs and outputs in full.
+\end{sloppypar}
 
 This chapter describes what each stage does. It opens with why the architecture
 takes this shape, because the structure is not incidental: a study whose
@@ -388,7 +395,7 @@ reported: \textbf{race, language, and insurance}. Levels are restricted to the
 eight largest per variable, and are strata of an administrative field rather
 than populations (Section~\ref{sec:equity_strata}). Discrimination is estimated
 for every stratum with enough rows to support an estimate, but only strata
-carrying at least \texttt{MIN\_SUBGROUP\_EVENTS\_INTERPRET} sepsis onsets enter
+carrying at least \texttt{MIN\_\allowbreak SUBGROUP\_\allowbreak EVENTS\_\allowbreak INTERPRET} sepsis onsets enter
 the exploratory contrast family, so the multiplicity correction is applied over
 the analyses the study is willing to interpret rather than over every stratum
 that happens to exist. Label sensitivity, being a stay-level proportion, is
@@ -423,8 +430,8 @@ Section~\ref{sec:inference}.
 
 \section{Reproducibility}
 
-The pipeline is orchestrated by \texttt{run\_pipeline.R} (or the equivalent
-\texttt{run\_pipeline.sh}), which executes all stages sequentially or by phase,
+The pipeline is orchestrated by \texttt{run\_\allowbreak pipeline.R} (or the equivalent
+\texttt{run\_\allowbreak pipeline.sh}), which executes all stages sequentially or by phase,
 renders each stage to PDF in \texttt{output/pdf/}, and writes a per-stage and a
 combined run log to \texttt{output/logs/}. All intermediate outputs are Parquet
 (compressed, columnar). Small result tables ($<$1,000 rows) are additionally

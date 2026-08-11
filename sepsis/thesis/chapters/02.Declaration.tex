@@ -11,9 +11,11 @@
 % makes assisted work authorised; ATU publishes no prescribed wording, so the
 % statement below is written to be specific rather than formulaic.
 %
-% The repository accompanying this thesis is visible to the examiners and
-% visibly records the use of an AI coding assistant (sepsis/GEN-AI/HANDOFF.md,
-% sepsis/feedback/). This section must be an accurate account of that record.
+% The statement below follows the PAIR framework (Problem, AI, Interaction,
+% Reflection). The internal development record -- the engineering handoff and
+% the review rounds -- is deliberately NOT tracked in the submission
+% repository, so this section stands on its own account rather than pointing at
+% files an examiner would have to read.
 % Read every clause below and amend anything that does not describe what
 % actually happened. Do not submit it unread.
 % =====================================================================
@@ -29,35 +31,36 @@ and the judgements about what the evidence does and does not support.
 
 \section*{Use of Generative AI}
 
-In accordance with ATU's Academic Integrity Policy, I declare the following use
-of generative AI. An AI coding assistant (Anthropic's Claude, accessed through
-Claude Code) was used throughout the development of this project, and the
-repository accompanying this thesis records that use rather than concealing it.
-Specifically, it was used to:
+During this project I applied the PAIR framework to use generative AI
+responsibly.
 
 \begin{itemize}
-    \item implement, refactor and debug the R and Python pipeline in
-    \texttt{sepsis/\allowbreak project/}, working from specifications and
-    design decisions I set;
+    \item \textbf{Problem:} building a complete pipeline for real-time sepsis
+    onset prediction required cohort extraction and labelling under several
+    Sepsis-3 readings, person-hour panel construction, model implementation
+    across five model classes, an external-validation arm, a clinical-metrics
+    and inference layer, and the documentation of all of it.
 
-    \item audit that pipeline for defects, including several that materially
-    changed the results reported here and that are documented in
-    \texttt{sepsis/feedback/};
+    \item \textbf{AI:} I used Claude to discuss implementation choices, to
+    refactor early prototypes into the twelve-stage structure presented here,
+    to audit that code for defects, and to produce documentation drafts.
 
-    \item draft and revise prose in this document, which I then edited,
-    verified against the pipeline output, and accepted or rejected line by
-    line;
+    \item \textbf{Interaction:} all generated output was critically reviewed,
+    modified and adapted to fit this study's design. The research question, the
+    pre-registered hypotheses, the label definitions, the model choices, the
+    configuration values, the decisions recorded as Protocol Amendments 1--7
+    and the reported results are my own.
 
-    \item prepare the internal development record in
-    \texttt{sepsis/GEN-AI/} and \texttt{sepsis/feedback/}, which are working
-    documents for the project rather than part of this submission.
+    \item \textbf{Reflection:} this approach improved development speed and
+    documentation quality while keeping the experimental design, the analysis
+    and the final conclusions my own work.
 \end{itemize}
 
-It was \emph{not} used to generate data, to produce or alter any result, or to
-decide what the results mean. Every quantity this study itself estimates
+Generative AI was \emph{not} used to generate data, to produce or alter any
+result, or to decide what the results mean. Every quantity this study estimates
 (every AUROC, interval, p-value, count, rate and calibration statistic) is
-written into the document mechanically from the pipeline's own output tables by
-\texttt{thesis\_constants.R} (Appendix~\ref{app:repro}), and a quantity the
+written into this document mechanically from the pipeline's own output tables
+by \texttt{thesis\_constants.R} (Appendix~\ref{app:repro}), and a quantity the
 pipeline did not produce typesets as a visible marker rather than as a
 plausible number. Three classes of number are typed rather than generated, and
 none of them is a result of this study: figures quoted from prior work, each

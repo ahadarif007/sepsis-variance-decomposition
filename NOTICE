@@ -107,22 +107,22 @@ source code.
 4. THE THESIS ITSELF
 --------------------------------------------------------------------------------
 
-  sepsis/thesis/*.tex           (excluding the ATU template elements in §2)
+  sepsis/thesis/index.tex        (excluding the ATU template elements in §2)
+  sepsis/thesis/chapters/*.tex
   sepsis/thesis/index.pdf
-  sepsis/thesis/images/*.png    (excluding the ATU assets in §2)
-  sepsis/lr-rp/
-  sepsis/GEN-AI/
+  sepsis/thesis/images/*.png     (excluding the ATU assets in §2)
 
-The thesis text, its generated figures, and the companion literature review are
-the author's original scholarly work. A software licence is not the appropriate
+The thesis text and its generated figures are the author's original scholarly
+work. A software licence is not the appropriate
 instrument for prose, so these are made available for reading, citation and
 academic reuse with attribution, and are not placed under Apache-2.0. Please
 cite the thesis rather than reproducing it. Rights in the work may also be
 subject to Atlantic Technological University's student intellectual property
 policy.
 
-The generated LaTeX artefacts (pipeline_constants.tex, table_*.tex) are outputs
-of Apache-2.0 code and follow the code licence.
+The generated LaTeX artefacts under sepsis/thesis/generated/
+(pipeline_constants.tex, table_*.tex) are outputs of Apache-2.0 code and follow
+the code licence.
 
 
 --------------------------------------------------------------------------------

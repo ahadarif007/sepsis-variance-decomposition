@@ -84,9 +84,11 @@ ALLOWED <- list(
 #  stop reading, which is the failure mode that let the earlier defects
 #  through.
 # ---------------------------------------------------------------------------
-skip  <- c("pipeline_constants.tex")
-files <- setdiff(basename(Sys.glob(file.path(THESIS_DIR, "*.tex"))), skip)
-files <- files[!grepl("^table_", files)]
+# Hand-written sources only: chapters/ plus index.tex. Everything under
+# generated/ is written by thesis_constants.R and is by definition provenanced.
+files <- c(sub(paste0("^", THESIS_DIR, "/"), "",
+               Sys.glob(file.path(THESIS_DIR, "chapters", "*.tex"))),
+           "index.tex")
 
 LAYOUT <- paste0("includegraphics|vspace|hspace|rule\\{|tabcolsep|baselineskip|",
                  "\\bp\\{[0-9.]+cm|tabularx|node distance|text width|minimum height|",

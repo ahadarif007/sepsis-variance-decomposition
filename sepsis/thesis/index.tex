@@ -40,8 +40,12 @@
 \usepackage{csquotes}
 
 \usepackage[style=ieee,backend=biber]{biblatex}
-\addbibresource{references.bib}
+\addbibresource{bibliography/references.bib}
 \usepackage{booktabs}
+% longtable: three reference tables (search strategy, design warrants, analysis
+% register) are taller than a text block. Inside a [H] float they simply ran off
+% the bottom of the page; longtable lets them break across pages instead.
+\usepackage{longtable}
 \usepackage{float}
 \usepackage{rotating}
 % Wide tables. \adjustbox{max width=\textwidth}{...} scales a tabular down only
@@ -110,7 +114,7 @@
 % typesets as a red ?? (\pcMissing); one that is undefined by design typesets
 % as an em dash (\pcNotApplicable).
 %------------------------------------------------------------------------------------------------------
-\input{pipeline_constants}
+\input{generated/pipeline_constants.tex}
 
 %------------------------------------------------------------------------------------------------------
 % WARNING: Don't mess with any of the following unless you know what you are doing.
@@ -170,9 +174,9 @@
 % contents, figures and tables, which is not where a reader looks for it and
 % not where a signed declaration belongs. \addcontentsline in each file still
 % registers them, so all three appear in the contents either way.
-\input{abstract}
-\input{declaration}
-\input{acknowledgments}
+\input{chapters/01.Abstract.tex}
+\input{chapters/02.Declaration.tex}
+\input{chapters/03.Acknowledgments.tex}
 
     \tableofcontents
     \listoffigures
@@ -180,24 +184,24 @@
 
 % The arabic reset has to be issued on a page of its own, after the last piece
 % of front matter has been shipped out. Placed immediately after
-% \input{acknowledgments} it took effect while the acknowledgments page was
+% \input{chapters/03.Acknowledgments.tex} it took effect while that page was
 % still open, so that page was numbered 1 and the table of contents listed
 % "Acknowledgments ... 1" against "Introduction ... 2".
 \cleardoublepage
 \pagenumbering{arabic}
 \setcounter{page}{1}
 
-\input{introduction}
-\input{review}
-\input{methodology}
-\input{design}
-\input{evaluation}
-\input{discussion}
-\input{conclusion}
+\input{chapters/04.Introduction.tex}
+\input{chapters/05.Review.tex}
+\input{chapters/06.Methodology.tex}
+\input{chapters/07.Design.tex}
+\input{chapters/08.Evaluation.tex}
+\input{chapters/09.Discussion.tex}
+\input{chapters/10.Conclusion.tex}
 
 \printbibliography[heading=bibintoc, title={References}]
 
 \appendix
-\input{appendix}
+\input{chapters/11.Appendix.tex}
 
 \end{document}

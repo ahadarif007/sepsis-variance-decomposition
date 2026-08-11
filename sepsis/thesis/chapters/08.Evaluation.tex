@@ -939,6 +939,7 @@ inputs, not the patients, differ.
 
 \begin{table}[H]
     \centering
+    \adjustbox{max width=\textwidth}{%
     \begin{tabular}{llrrrr}
         \toprule
         \textbf{Var} & \textbf{Model} & \textbf{N rows} & \textbf{N events}
@@ -956,7 +957,7 @@ inputs, not the patients, differ.
         C & GBT     & \pcExtNRowsC & \pcExtNEventsC & \pcExtAurocGbtC  & \pcAurocGbtC \\
         C & NEWS2   & \pcExtNRowsC & \pcExtNEventsC & \pcExtAurocNewsC & \pcAurocNewsC \\
         \bottomrule
-    \end{tabular}
+    \end{tabular}}
     \caption{External validation on eICU-CRD (frozen models, no retraining),
     Sepsis-3 anchor on the microbiology-covered sub-cohort. Each variant
     carries its own external label set, so the row counts and event counts
@@ -1628,7 +1629,7 @@ one per level. Of the racial strata, \pcNSubgroupsAboveFloor{} clear the floor.
 
 \begin{table}[H]
     \centering\footnotesize
-    \adjustbox{max width=\textwidth}{\input{table_equityperformance}}
+    \adjustbox{max width=\textwidth}{\input{generated/table_equityperformance.tex}}
     \caption{AUROC by racial stratum (Variant B, temporal test) with 95\%
     stay-level cluster-bootstrap intervals, stratified within stratum,
     $B = 2{,}000$. Levels are ordered by exposure; interval width grows by
@@ -1666,7 +1667,7 @@ ranges, each against the reference level on the same bootstrap replicates.
 
 \begin{table}[H]
     \centering\footnotesize
-    \adjustbox{max width=\textwidth}{\input{table_equitycontrasts}}
+    \adjustbox{max width=\textwidth}{\input{generated/table_equitycontrasts.tex}}
     \caption{Subgroup AUROC differences against the reference level, for the
     racial strata clearing the \pcMinSubgroupEvents{}-event floor.
     $q_{\text{BH}}$ is the Benjamini--Hochberg adjusted $p$-value over
@@ -1730,7 +1731,7 @@ drawn from them.
 
 \begin{table}[H]
     \centering\footnotesize
-    \adjustbox{max width=\textwidth}{\input{table_equitylabel}}
+    \adjustbox{max width=\textwidth}{\input{generated/table_equitylabel.tex}}
     \caption{Percentage of stays labelled as septic by racial subgroup and label
     variant, with a 95\% stratified cluster-bootstrap interval on the A--C
     range. The fraction roughly doubles from Variant A to C across all groups.
@@ -1752,7 +1753,7 @@ it in full.
 
 \begin{table}[H]
     \centering\footnotesize
-    \adjustbox{max width=\textwidth}{\input{table_equitylabelcontrasts}}
+    \adjustbox{max width=\textwidth}{\input{generated/table_equitylabelcontrasts.tex}}
     \caption{Difference in label sensitivity (A--C range) against the reference
     group (White). $q_{\text{BH}}$ is adjusted over exploratory family E2, all
     18 label-sensitivity contrasts across race, language and insurance. Two
@@ -2118,7 +2119,7 @@ reports that ratio.
 
 \begin{table}[H]
     \centering\footnotesize\setlength{\tabcolsep}{4pt}
-    \adjustbox{max width=\textwidth}{\input{table_htwouncertainty}}
+    \adjustbox{max width=\textwidth}{\input{generated/table_htwouncertainty.tex}}
     \caption[H2 instability against estimation noise]{Each covariate flagged by
     H2, with its coefficient under each label variant, the difference between
     the two extremes, the pooled cluster-robust standard error of those two
@@ -2586,13 +2587,37 @@ family, so the inference stage never sees them. They are recorded here because
 a register that omitted them would understate how much of this chapter is
 exploratory.
 
-\begin{table}[H]
-    \centering\footnotesize\setlength{\tabcolsep}{4pt}
-    \begin{tabular}{p{5.0cm}lp{1.9cm}p{4.2cm}}
-        \toprule
-        \textbf{Analysis} & \textbf{Status} & \textbf{Pre-reg.}
-        & \textbf{Correction} \\
-        \midrule
+{\footnotesize\setlength{\tabcolsep}{4pt}
+\begin{longtable}{p{5.0cm}lp{1.9cm}p{4.2cm}}
+    \caption{Analysis register. [C] confirmatory, [E] exploratory,
+    [D] descriptive. Section numbers refer to
+    \texttt{00\_preregistration.md}. $^*$\S9 pre-registered the equity analysis
+    in scope only: neither the subgroup levels, the reference level, nor the
+    direction of any comparison was fixed in advance, so these analyses are
+    exploratory. $^\dagger$A2 = Protocol Amendment 2 (\S\S16--17), written after
+    notebooks 02--12 had been run; these analyses are post-hoc and change no
+    pre-registered estimand. $^\ddagger$A4 = Protocol Amendment 4 (\S18), which
+    adds the standard onset timing as Variant F; also post-hoc, and it enlarges
+    family E3, so every BH-adjusted p-value in that family is stricter than it
+    would be without the amendment. $^\S$A6 = Protocol Amendment 6 (\S20), the
+    subgroup interpretability floor; post-hoc, and it \emph{reduces} family E1,
+    which the inference plan's own denominator rule prohibits on its face;
+    Section~\ref{sec:multiplicity} states the tension and \S20.4 of the
+    pre-registration gives the argument. $^\P$These two analyses are scored
+    outside the inference stage and enter no corrected family, so they have no
+    row in \texttt{12\_analysis\_register}; they are listed here so that the
+    exploratory record in this chapter is complete.}\label{tab:register}\\
+    \toprule
+    \textbf{Analysis} & \textbf{Status} & \textbf{Pre-reg.} & \textbf{Correction} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Analysis} & \textbf{Status} & \textbf{Pre-reg.} & \textbf{Correction} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+
         Cohort description by label variant       & [D] & \S2     & none                                   \\
         Sample size adequacy                      & [C] & \S10    & none (single criterion)                \\
         Internal temporal performance             & [C] & \S5--6  & none (estimation)                      \\
@@ -2623,25 +2648,5 @@ exploratory.
         Onset agreement between definitions       & [D] & A2$^\dagger$ & none (descriptive)                \\
         Standard onset timing $\min(t_s, t_{\text{SOFA}})$ & [E] & A4$^\ddagger$ & Benjamini--Hochberg, family E3 \\
         Pre-treatment onsets under standard timing & [D] & A4$^\ddagger$ & none (event count, not a test)   \\
-        \bottomrule
-    \end{tabular}
-    \caption{Analysis register. [C] confirmatory, [E] exploratory,
-    [D] descriptive. Section numbers refer to
-    \texttt{00\_preregistration.md}. $^*$\S9 pre-registered the equity analysis
-    in scope only: neither the subgroup levels, the reference level, nor the
-    direction of any comparison was fixed in advance, so these analyses are
-    exploratory. $^\dagger$A2 = Protocol Amendment 2 (\S\S16--17), written after
-    notebooks 02--12 had been run; these analyses are post-hoc and change no
-    pre-registered estimand. $^\ddagger$A4 = Protocol Amendment 4 (\S18), which
-    adds the standard onset timing as Variant F; also post-hoc, and it enlarges
-    family E3, so every BH-adjusted p-value in that family is stricter than it
-    would be without the amendment. $^\S$A6 = Protocol Amendment 6 (\S20), the
-    subgroup interpretability floor; post-hoc, and it \emph{reduces} family E1,
-    which the inference plan's own denominator rule prohibits on its face;
-    Section~\ref{sec:multiplicity} states the tension and \S20.4 of the
-    pre-registration gives the argument. $^\P$These two analyses are scored
-    outside the inference stage and enter no corrected family, so they have no
-    row in \texttt{12\_analysis\_register}; they are listed here so that the
-    exploratory record in this chapter is complete.}
-    \label{tab:register}
-\end{table}
+\end{longtable}
+}

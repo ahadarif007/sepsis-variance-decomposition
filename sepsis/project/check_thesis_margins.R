@@ -15,8 +15,18 @@
 #  reads early.
 #
 #  The only reliable check is to measure the built PDF. This script reads the
-#  glyph bounding boxes out of `index.pdf`, infers the text block's right edge
-#  from the document itself, and reports any page that passes it.
+#  glyph bounding boxes out of `index.pdf`, infers the text block from the
+#  document itself, and reports any page that passes it.
+#
+#  Two things this has to get right, both learned by getting them wrong:
+#
+#    * `book` is TWO-SIDED by default, so odd and even pages have different
+#      right edges (the binding offset). A single edge inferred over all pages
+#      is whichever parity happened to be more numerous, and the check then
+#      passes or fails by luck. Each parity gets its own edge.
+#    * The bottom margin needs checking too, and it is the more damaging of the
+#      two: a long table inside a [H] float cannot break across pages, so it
+#      does not overflow by millimetres, it runs off the sheet. Three did.
 #
 #      Rscript check_thesis_margins.R [path/to/index.pdf]
 #
@@ -67,55 +77,88 @@ if (length(parts) < 2L) {
 }
 parts <- parts[-1]
 
-page_max <- vapply(parts, function(p) {
-  v <- regmatches(p, gregexpr('xMax="([0-9.]+)"', p))[[1]]
-  if (!length(v)) return(NA_real_)
-  max(as.numeric(sub('xMax="([0-9.]+)"', "\\1", v)))
-}, numeric(1), USE.NAMES = FALSE)
+measure <- function(attr) {
+  vapply(parts, function(p) {
+    v <- regmatches(p, gregexpr(sprintf('%s="([0-9.]+)"', attr), p))[[1]]
+    if (!length(v)) return(NA_real_)
+    max(as.numeric(sub(sprintf('%s="([0-9.]+)"', attr), "\\1", v)))
+  }, numeric(1), USE.NAMES = FALSE)
+}
+page_right  <- measure("xMax")
+page_bottom <- measure("yMax")
+np <- length(parts)
+idx <- seq_len(np)
 
-body <- page_max[-EXEMPT_PAGES]
-body <- body[!is.na(body)]
-if (!length(body)) {
-  cat("  SKIP  no measurable pages -- margins unchecked\n\n")
-  quit(status = 0L)
+# The edge of the text block is the value justified text lands on, so it is the
+# MODE of the per-page maxima, not their mean or median: pages ending
+# mid-paragraph pull an average well left of the true edge.
+mode_of <- function(v) {
+  v <- v[!is.na(v)]
+  if (!length(v)) return(NA_real_)
+  t <- table(round(v, 1))
+  as.numeric(names(t)[which.max(t)])
 }
 
-# The right edge of the text block is the value justified body text lands on,
-# so it is the *mode* of the per-page maxima, not their mean or median: pages
-# ending mid-paragraph pull an average well left of the true edge.
-tally <- table(round(body, 1))
-edge  <- as.numeric(names(tally)[which.max(tally)])
+odd  <- setdiff(idx[idx %% 2 == 1], EXEMPT_PAGES)
+even <- setdiff(idx[idx %% 2 == 0], EXEMPT_PAGES)
+edge_odd  <- mode_of(page_right[odd])
+edge_even <- mode_of(page_right[even])
+edge_bot  <- mode_of(page_bottom[setdiff(idx, EXEMPT_PAGES)])
 
-over <- which(!is.na(page_max) & page_max > edge + TOLERANCE_PT &
-              !(seq_along(page_max) %in% EXEMPT_PAGES))
+cat(sprintf("  right edge: %.1f pt (odd pages), %.1f pt (even pages)\n",
+            edge_odd, edge_even))
+cat(sprintf("  bottom edge: %.1f pt\n", edge_bot))
+cat(sprintf("  pages exempt by design: %s\n", paste(EXEMPT_PAGES, collapse = ", ")))
 
-cat(sprintf("  text block right edge: %.1f pt (on %d of %d pages)\n",
-            edge, max(tally), length(body)))
-cat(sprintf("  pages exempt by design: %s\n",
-            paste(EXEMPT_PAGES, collapse = ", ")))
+edge_for <- ifelse(idx %% 2 == 1, edge_odd, edge_even)
+over_r <- setdiff(which(!is.na(page_right) &
+                        page_right > edge_for + TOLERANCE_PT), EXEMPT_PAGES)
+over_b <- setdiff(which(!is.na(page_bottom) &
+                        page_bottom > edge_bot + TOLERANCE_PT), EXEMPT_PAGES)
 
-if (!length(over)) {
+if (!length(over_r) && !length(over_b)) {
   cat(sprintf("  ok    no page passes the text block by more than %g pt\n\n",
               TOLERANCE_PT))
   quit(status = 0L)
 }
 
-cat(sprintf("\n  FAIL  %d page(s) run past the text block:\n", length(over)))
-for (p in over) {
-  words <- regmatches(parts[p],
-                      gregexpr('xMax="([0-9.]+)"[^>]*>([^<]*)</word>', parts[p]))[[1]]
-  wide <- character(0)
-  if (length(words)) {
-    xm <- as.numeric(sub('xMax="([0-9.]+)".*', "\\1", words))
-    wd <- sub('.*>([^<]*)</word>', "\\1", words)
-    wide <- unique(wd[xm > edge + TOLERANCE_PT])
-  }
-  cat(sprintf("        p%-4d %7.1f pt (+%.1f)  %s\n", p, page_max[p],
-              page_max[p] - edge,
-              paste(utils::head(wide, 5), collapse = " ")))
+words_beyond <- function(p, attr, limit) {
+  m <- regmatches(parts[p],
+                  gregexpr(sprintf('%s="([0-9.]+)"[^>]*>([^<]*)</word>', attr),
+                           parts[p]))[[1]]
+  if (!length(m)) return(character(0))
+  v <- as.numeric(sub(sprintf('.*%s="([0-9.]+)".*', attr), "\\1", m))
+  w <- sub(".*>([^<]*)</word>", "\\1", m)
+  unique(w[v > limit])
 }
-cat("\n  A table is the usual cause, and LaTeX does not warn about it: a\n")
-cat("  tabular is set at its natural width, so it has no target width to be\n")
-cat("  overfull against. Wrap it as \\adjustbox{max width=\\textwidth}{...},\n")
-cat("  which is inert unless the natural width exceeds the text block.\n\n")
+
+if (length(over_r)) {
+  cat(sprintf("\n  FAIL  %d page(s) run past the RIGHT edge:\n", length(over_r)))
+  for (p in over_r)
+    cat(sprintf("        p%-4d %7.1f pt (+%.1f)  %s\n", p, page_right[p],
+                page_right[p] - edge_for[p],
+                paste(utils::head(words_beyond(p, "xMax", edge_for[p] + TOLERANCE_PT), 5),
+                      collapse = " ")))
+}
+if (length(over_b)) {
+  cat(sprintf("\n  FAIL  %d page(s) run past the BOTTOM edge:\n", length(over_b)))
+  for (p in over_b)
+    cat(sprintf("        p%-4d %7.1f pt (+%.1f)  %s\n", p, page_bottom[p],
+                page_bottom[p] - edge_bot,
+                paste(utils::head(words_beyond(p, "yMax", edge_bot + TOLERANCE_PT), 6),
+                      collapse = " ")))
+  cat("\n  A long table inside a [H] float is the usual cause of a bottom\n")
+  cat("  overrun: [H] forbids the float from moving and a tabular cannot break\n")
+  cat("  across pages, so a table taller than the text block runs off the\n")
+  cat("  sheet. Use longtable, which breaks.\n")
+}
+if (length(over_r)) {
+  cat("\n  For a RIGHT overrun a table is the usual cause, and LaTeX does not\n")
+  cat("  warn: a tabular is set at its natural width, so it has no target width\n")
+  cat("  to be overfull against. Wrap it as \\adjustbox{max width=\\textwidth}{...},\n")
+  cat("  which is inert unless the natural width exceeds the text block. A long\n")
+  cat("  \\texttt{} path is the other cause: it cannot hyphenate, so give it\n")
+  cat("  \\allowbreak break points.\n")
+}
+cat("\n")
 quit(status = 1L)

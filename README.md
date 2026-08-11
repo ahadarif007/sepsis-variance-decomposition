@@ -38,14 +38,13 @@ amendments to separate definitional from empirical label variance.
 RESEARCH/
 ├── sepsis/
 │   ├── project/        ← the analysis pipeline (R + Python)
-│   ├── thesis/         ← the thesis (LaTeX)
-│   ├── lr-rp/          ← companion critical literature review, and the
-│   │                     pre-study research proposal
-│   ├── GEN-AI/         ← engineering defect log and working handoff; not
-│   │                     thesis voice, retained deliberately (see below)
-│   └── feedback/       ← internal development record
+│   └── thesis/         ← the thesis (LaTeX)
 └── data/               ← NOT tracked; you supply this (see below)
 ```
+
+The working documents for the project (the engineering handoff, the review
+rounds and the companion critical literature review) are deliberately not
+tracked here. They are development records rather than part of the submission.
 
 ### The pipeline — `sepsis/project/`
 

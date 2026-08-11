@@ -81,6 +81,19 @@ against the tracked file list before release.
         Reference implementation of the Utility Score, maintained as a mirror
         of the R scoring rule and cross-checked against it \\
         \addlinespace
+        \texttt{check\_consistency.R} &
+        Cross-file assertions over the result tables: arithmetic identities
+        that must hold between quantities written by different stages, and
+        predicates for the comparative claims this document states in words \\
+        \addlinespace
+        \texttt{check\_thesis\_numbers.R} &
+        Checks that every result-shaped number in the thesis sources is either
+        generated, cited to prior work, or recorded as a design constant \\
+        \addlinespace
+        \texttt{check\_thesis\_margins.R} &
+        Measures the built PDF for content passing the text block, which
+        \LaTeX{} does not report for a table \\
+        \addlinespace
         \texttt{output/} &
         Created at run time: \texttt{processed\_data/}, \texttt{figures/},
         \texttt{logs/}. Not tracked \\

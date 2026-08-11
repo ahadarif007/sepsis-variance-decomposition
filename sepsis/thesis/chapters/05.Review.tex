@@ -59,12 +59,23 @@ rather than exhaustive coverage of the MIMIC-IV sepsis corpus. An exhaustive
 systematic review could surface a prior study combining the two analyses in
 contribution C5; this search did not.
 
-\begin{table}[H]
-    \centering\small
-    \begin{tabular}{p{3.2cm}p{9.5cm}}
-        \toprule
-        \textbf{Element} & \textbf{Detail} \\
-        \midrule
+{\small
+\begin{longtable}{p{3.2cm}p{9.5cm}}
+    \caption{Literature search strategy. This search supports the novelty claims
+    for contributions C1 and C5 stated in Section~\ref{sec:contrib}. Because the
+    review is narrative rather than systematic, those claims are stated as
+    ``to the best of our knowledge'' and are bounded by the coverage above.}\label{tab:search_strategy}\\
+    \toprule
+    \textbf{Element} & \textbf{Detail} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Element} & \textbf{Detail} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+
         Databases searched &
         PubMed/MEDLINE, Embase, Scopus, Web of Science, IEEE Xplore,
         ACM Digital Library, Google Scholar, Cochrane Library,
@@ -122,14 +133,8 @@ contribution C5; this search did not.
         to the standard above and were excluded; 1 further item is retained in
         the companion review with an explicit note of incomplete metadata and
         is not cited in this thesis \\
-        \bottomrule
-    \end{tabular}
-    \caption{Literature search strategy. This search supports the novelty claims
-    for contributions C1 and C5 stated in Section~\ref{sec:contrib}. Because the
-    review is narrative rather than systematic, those claims are stated as
-    ``to the best of our knowledge'' and are bounded by the coverage above.}
-    \label{tab:search_strategy}
-\end{table}
+\end{longtable}
+}
 
 Figure~\ref{fig:prisma} summarises the identification, verification and
 inclusion process. It follows the reporting logic of PRISMA 2020
@@ -950,12 +955,20 @@ thesis does.
 Table~\ref{tab:design_warrant} maps each major design decision onto the
 evidence that warrants it and the section in which that evidence is evaluated.
 
-\begin{table}[H]
-    \centering\small
-    \begin{tabular}{p{3.1cm}p{5.6cm}p{4cm}}
-        \toprule
-        \textbf{Decision} & \textbf{Reason} & \textbf{Source} \\
-        \midrule
+{\small
+\begin{longtable}{p{3.1cm}p{5.6cm}p{4cm}}
+    \caption{Design decisions and their evidence warrants.}\label{tab:design_warrant}\\
+    \toprule
+    \textbf{Decision} & \textbf{Reason} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Decision} & \textbf{Reason} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+
         Three label variants & Label variance is of the same order as model
         variance, on the only comparison available &
         Cohen et al.\ \cite{cohen2024subtle} \\
@@ -1018,8 +1031,5 @@ evidence that warrants it and the section in which that evidence is evaluated.
         machine learning under one checklist &
         Collins \cite{collins2024tripodai};
         Moons \cite{moons2025probastai} \\
-        \bottomrule
-    \end{tabular}
-    \caption{Design decisions and their evidence warrants.}
-    \label{tab:design_warrant}
-\end{table}
+\end{longtable}
+}

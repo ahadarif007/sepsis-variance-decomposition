@@ -17,10 +17,10 @@ cd "$(dirname "$0")"
 # which is how the placeholders got into a committed PDF in the first place.
 # So: referenced-and-unresolved blocks, unreferenced-and-unresolved warns.
 if [ -z "${V2_ALLOW_MISSING:-}" ]; then
-  CHAPTERS=$(ls ./*.tex 2>/dev/null | grep -v '/pipeline_constants\.tex$')
+  CHAPTERS=$(ls ./chapters/*.tex ./index.tex 2>/dev/null)
   BLOCKING=""
   UNUSED=""
-  for m in $(grep -o 'newcommand{\\pc[A-Za-z]*}{\\pcMissing}' pipeline_constants.tex 2>/dev/null |
+  for m in $(grep -o 'newcommand{\\pc[A-Za-z]*}{\\pcMissing}' generated/pipeline_constants.tex 2>/dev/null |
              sed 's/newcommand{\\\(pc[A-Za-z]*\)}{.*/\1/'); do
     # Trailing guard so \pcHTwoZMin does not match \pcHTwoZMinRobust.
     if grep -qE "\\\\${m}([^A-Za-z]|$)" $CHAPTERS 2>/dev/null; then
@@ -30,7 +30,7 @@ if [ -z "${V2_ALLOW_MISSING:-}" ]; then
     fi
   done
 
-  PLACEHOLDER_TABLES=$(grep -l '\\pcMissing' ./table_*.tex 2>/dev/null)
+  PLACEHOLDER_TABLES=$(grep -l '\\pcMissing' ./generated/table_*.tex 2>/dev/null)
 
   if [ -n "$UNUSED" ]; then
     echo "NOTE: unresolved macros that no chapter references (harmless in the PDF):"
@@ -85,10 +85,8 @@ MARGIN_STATUS=$?
 
 # clean build artifacts
 rm -f index.aux index.bbl index.bcf index.blg index.lof index.log index.lot \
-      index.out index.run.xml index.toc \
-      abstract.aux acknowledgments.aux appendix.aux conclusion.aux design.aux \
-      declaration.aux \
-      discussion.aux evaluation.aux introduction.aux methodology.aux review.aux
+      index.out index.run.xml index.toc
+rm -f chapters/*.aux generated/*.aux
 
 echo "Done → index.pdf"
 exit $MARGIN_STATUS
