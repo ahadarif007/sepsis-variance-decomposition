@@ -1,4 +1,4 @@
-# Model, Label, or Analyst? A Variance Decomposition of Real-Time Sepsis Onset Prediction on MIMIC-IV
+# Quantifying Model, Label, and Methodological Contributions to Variance in Real-Time Sepsis Onset Prediction
 
 **Abdul Ahad** · M.Sc. in Computing · Atlantic Technological University (ATU), Galway
 Student ID G00486649
