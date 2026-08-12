@@ -117,4 +117,4 @@ sepsis/lr-rp/
 # AUROC 0.607, the withdrawn "Variant B collapse" claim). They must be rebuilt
 # against thesis/pipeline_constants.tex before they are shown or re-tracked.
 sepsis/presentation/
-sepsis/presentation-v2/
+sepsis/presentation/

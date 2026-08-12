@@ -6,7 +6,7 @@ Internal planning document. Not part of the thesis.
 typed. Every window is opened before recording starts and is already showing
 what it needs to show.**
 
-## Two rules before you build anything
+## Two rules before building anything
 
 **Rule 1: ignore both presentation decks.** `presentation/` and
 `presentation-v2/` label H1, H2, H3 and H4 as CONFIRMED and H6 as REJECTED. The
@@ -20,7 +20,7 @@ Figures from prior work are safe to write into a slide and leave there. They are
 fixed, they are cited, and the thesis types them by hand for the same reason.
 Those are the ones in the Say lines below.
 
-Your own results are macros. They are written into the thesis by
+My own results are macros. They are written into the thesis by
 `thesis_constants.R` and they move if the pipeline is re-run. Every one of those
 appears below as a slot like `‹label spread›`. Fill each slot from the built PDF
 on the day you make the slide, and never from memory or from an old deck. The
