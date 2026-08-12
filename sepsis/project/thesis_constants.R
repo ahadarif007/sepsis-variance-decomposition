@@ -534,7 +534,7 @@ put("ExtMinEvents",      cell(cv, "min_external_events"),   digits = 0)
 # The two limbs narrow the cohort in stages, and the stages are reported
 # separately so that no single percentage stands in for the whole constraint:
 # stays whose suspicion pair fires inside the variant's window, and stays that
-# additionally meet the organ-dysfunction criterion.
+# also meet the organ-dysfunction criterion.
 ls_ <- rd("08_eicu_label_summary")
 for (v in PREREG) {
   put(paste0("ExtNSuspicion", v),

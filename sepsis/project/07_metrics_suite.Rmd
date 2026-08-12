@@ -34,7 +34,7 @@ knitr::opts_chunk$set(
 
 ## Introduction
 
-This notebook applies a comprehensive metric suite following Wang et al. (2025) and Van Calster et al. (2019).
+This notebook applies a full metric suite following Wang et al. (2025) and Van Calster et al. (2019).
 
 **Primary:** PhysioNet Utility Score (Reyna et al., 2020), calibration (intercept + slope).
 

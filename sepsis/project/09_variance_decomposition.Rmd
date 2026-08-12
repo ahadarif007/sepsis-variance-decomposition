@@ -73,7 +73,7 @@ step("=== Phase 6a: Variance Decomposition ===")
 
 ## Load Metric Results
 
-Metric results from 10, external validation from 11, and coefficient table from 08 are loaded.
+Metric results from 07, external validation from 08, and the coefficient table from 05 are loaded.
 
 ```{r load-metrics}
 metric_path <- file.path(DATA_DIR, "07_metric_results.parquet")
