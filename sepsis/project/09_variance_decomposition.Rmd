@@ -155,7 +155,20 @@ if (nrow(model_class_rows) > 0) {
 
 ## The Variance Decomposition Table
 
-Primary deliverable. Each row quantifies how much a single analytical decision shifts reported performance.
+The study's primary deliverable. Each row holds four of the five analytical
+factors at a reference level and varies the fifth, so the number in
+`spread_auroc` is what that one decision is worth on its own. The reference
+levels are named in the factor column rather than left implicit, because a
+spread only means something once the reader knows what was held still.
+
+Read the rows against each other, not in isolation. The point of the table is
+the ordering: whether the choice of model moves reported performance further
+than the choice of label, the split or the metric. The `hypothesis` and
+`h_threshold` columns record which pre-registered claim each row bears on.
+
+Spreads here are point estimates with nothing attached. The intervals, and the
+multiplicity-corrected verdicts that supersede the descriptive ones below,
+come from stage 12.
 
 ```{r decomp-table}
 decomp_table <- data.frame(

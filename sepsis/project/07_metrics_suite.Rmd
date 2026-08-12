@@ -60,7 +60,11 @@ step("=== Full Evaluation Metric Suite ===")
 
 ## Metric Functions
 
-Standalone metric functions, reused across internal, external, and subgroup evaluations.
+Standalone metric functions, reused across internal, external, and subgroup
+evaluations. Keeping one implementation matters more than it looks: internal
+and external AUROC are differenced in H5, and per-hour and per-patient
+operating points are compared in stage 11. Two scoring paths that disagreed
+even slightly would put that disagreement into the contrast.
 
 ```{r metric-fns}
 # --------------------------------------------------------------------------- #
@@ -424,7 +428,22 @@ for (vid in run_variants) {
 
 ## Results and Interpretation
 
-Central performance comparison. Key checks: (i) primary vs. GBT Utility Score (H6), (ii) treatment-anchored vs. unrestricted (H3, leakage), (iii) calibration slope near 1.0.
+The central performance comparison. Three readings are worth making from the
+table, and each answers a different question.
+
+Primary against GBT on the Utility Score speaks to H6, though the two models
+can order differently on utility than on AUROC; where they do, the disagreement
+is itself informative and the thesis reports both orderings rather than
+choosing one.
+
+Treatment-anchored against unrestricted speaks to H3. A gap here would be
+leakage from clinician suspicion. No gap is harder to interpret than it looks,
+because under a conjunction onset rule the pre-treatment window may hold no
+events at all, in which case the comparison has nothing to measure.
+
+Calibration slope is read against 1.0. A slope well below 1 means predicted
+risks are too extreme at both ends, which a discrimination metric cannot see
+and which matters for any threshold a clinician would actually deploy.
 
 ```{r show-results}
 display_cols <- c("variant", "model", "eval_window", "auroc", "auprc",
@@ -506,7 +525,7 @@ if (!is.null(sweep_df) && nrow(sweep_df) > 0) {
 }
 ```
 
-```{r utility-sweep-figure, fig.width=7, fig.height=4.2, out.width="90%"}
+```{r utility-sweep-figure, fig.width=7, fig.height=4.2, out.width="90%", fig.cap="Normalised Utility Score against alert rate for every model and pre-registered label variant on the temporal test set. The dashed line at zero is the no-alert strategy: a curve below it describes a configuration that would be better switched off. Points mark each model's best operating point. The vertical axis is clipped, and every curve continues monotonically downwards to the right."}
 if (!is.null(sweep_df) && nrow(sweep_df) > 0) {
   plot_dt <- sweep_df[eval_window == "unrestricted" &
                         variant %in% names(LABEL_VARIANTS) &

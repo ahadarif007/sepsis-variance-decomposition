@@ -102,6 +102,10 @@ MODEL_LABELS <- c(primary = "Primary (pooled logistic)", gbt = "GBT",
 
 ## Metric Functions
 
+The helpers the rest of the notebook runs on. `counts_at_thresholds()` carries
+the cost that matters: it sorts the predictions once, then reads every
+threshold off cumulative sums instead of rescanning the vector per threshold.
+
 ```{r metric-fns}
 # --------------------------------------------------------------------------- #
 # Small helpers
@@ -408,7 +412,7 @@ are twenty equal-sized bins of predicted risk with binomial confidence
 intervals. Axes are restricted to the observed prediction range, because at a
 0.2 per cent event rate no model ever predicts a risk near 1.
 
-```{r calibration, fig.height=4.6}
+```{r calibration, fig.height=4.6, fig.cap="Flexible calibration curves on the temporal test set. The dashed line is perfect calibration, points are twenty equal-sized bins of predicted risk, and the shaded band is the 95 per cent confidence interval. Each panel carries its own scale because the predicted-risk ranges differ by orders of magnitude."}
 calib_summ  <- list()
 calib_curve <- list()
 calib_bins  <- list()
@@ -515,7 +519,7 @@ encodes a willingness to tolerate only 99 false alarms per detection, which
 is why the 0.01--0.20 grid used in notebook 07 produced nothing but
 negative curves.
 
-```{r dca, fig.height=4.6}
+```{r dca, fig.height=4.6, fig.cap="Decision curves on the temporal test set. Net benefit against threshold probability, with both default strategies shown. Curves are clipped below 1.75 times prevalence so the near-zero region stays legible; a line leaving the bottom of a panel is worse than treating nobody from that threshold onward."}
 nb_list <- list()
 
 for (vid in names(ph_list)) {
@@ -676,7 +680,7 @@ if (nrow(op_dt) > 0) {
 }
 ```
 
-```{r sens-tradeoff, fig.height=3.6}
+```{r sens-tradeoff, fig.height=3.6, fig.cap="False alerts per patient-day against per-hour sensitivity, at sensitivity targets of 50, 80 and 90 per cent."}
 if (nrow(op_dt) > 0) {
   tr <- op_dt[model %in% PLOT_MODELS]
   tr[, model_lab := factor(MODEL_LABELS[model], levels = MODEL_LABELS[PLOT_MODELS])]
@@ -763,6 +767,11 @@ if (nrow(pat_dt) > 0) {
 
 ### Per-Hour versus Per-Patient, Side by Side
 
+The same operating point read two ways. An hourly false-alarm rate and a
+per-patient one answer different questions, and a model can look tolerable on
+the first while being unusable on the second. Both are carried at the headline
+sensitivity so the gap between them stays visible.
+
 ```{r hour-vs-patient}
 if (nrow(op_dt) > 0 && nrow(pat_dt) > 0) {
   side <- merge(
@@ -803,7 +812,7 @@ Lead time is the interval between the first alert issued at or before onset
 and the onset hour itself, computed at the fixed-sensitivity threshold and
 over the septic stays that were alerted at all.
 
-```{r lead-time, fig.height=3.6}
+```{r lead-time, fig.height=3.6, fig.cap="Distribution of lead time before onset at the 80 per cent sensitivity operating point, truncated at 48 hours."}
 lead_dt <- rbindlist(lead_list, fill = TRUE)
 
 lead_summary <- pat_dt[target_sens == HEADLINE_SENS,
@@ -964,7 +973,29 @@ if (length(chk_rows) > 0) {
 }
 ```
 
+## What These Metrics Add to Discrimination
+
+Everything in this notebook exists because AUROC cannot see it.
+
+Calibration answers whether a predicted risk means what it says. A model can
+rank patients correctly and still put every probability in the wrong place,
+which matters the moment anyone picks a threshold to act on.
+
+Net benefit and the operating-point tables answer whether acting on the model
+beats the two strategies that need no model at all. A curve sitting on top of
+treat-all is discriminating and contributing nothing.
+
+Lead time answers whether a correct alert arrives early enough to change what
+happens next. It is also the metric most sensitive to how onset was timed, so
+it should be read against the label's own construction rather than against
+published lead times computed under a different onset rule.
+
+Taken together these can disagree with the discrimination ranking, and where
+they do the disagreement is the finding rather than a problem to reconcile.
+
 ## Summary
+
+What this stage leaves behind for stage 12 and for the thesis generator.
 
 ```{r summary-out}
 cat("Artefacts written to", DATA_DIR, ":\n")

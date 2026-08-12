@@ -213,6 +213,11 @@ p-value is reported as exactly zero.
 
 ### Contrast Estimation
 
+H1 and H6 are drawn from the same replicates. Both compare quantities measured
+on one set of test stays, so a single resampling of stays serves both, and the
+resulting intervals keep the correlation between the spreads being differenced
+rather than treating them as independent.
+
 ```{r confirmatory-boot}
 # --- H1 / H6: label spread, model spread, and the primary-vs-GBT gap --------
 pre_label <- lapply(names(test_tab), function(v) {
@@ -400,6 +405,11 @@ if (!is.null(h3_f) && nrow(h3_f) == 1)
 ```
 
 ### Corrected Confirmatory Verdicts
+
+Each hypothesis becomes one row: the contrast, its interval, the null it is
+referred to, and the raw p-value Holm will correct. The two spreads are
+persisted as data here rather than left inside H1's free-text note, so the
+thesis table reads them instead of transcribing them by hand.
 
 ```{r confirmatory-table}
 mk <- function(id, label, contrast, theta, ci, null_txt, p, note = "") {
@@ -1146,7 +1156,34 @@ save_csv(register,     "12_analysis_register", DATA_DIR)
 knitr::kable(register, caption = "Analysis register: confirmatory vs.\\ exploratory status and the multiplicity correction applied to each")
 ```
 
+## Reading the Corrected Family
+
+Four things govern how the tables above should be read.
+
+1. **The family is deliberately larger than the number of testable
+   hypotheses.** Holm runs at $m = 6$, the count pre-registered, not the count
+   that survived contact with the data. H2 and H3 hold slots without supplying
+   a p-value. A hypothesis that becomes untestable after unblinding must not
+   loosen the correction on the ones that remain, so the cost of that choice is
+   carried here rather than passed to the surviving hypotheses.
+2. **A non-confirmation is not a null result.** Failing to meet a
+   pre-registered threshold and finding no effect are different outcomes, and
+   the direction of a miss carries information the p-value does not. Where an
+   estimate lands on the opposite side of its null from the one predicted, the
+   interval is what shows it; the verdict column alone will not.
+3. **Non-inferiority is read off the interval, not the test.** For H6 the
+   question is whether the confidence limit falls inside the pre-registered
+   margin. A large p-value on its own establishes nothing, because failing to
+   reject is not evidence of equivalence.
+4. **Exploratory families generate hypotheses and do not test them.** E1, E2
+   and E3 are corrected by Benjamini--Hochberg within themselves and never
+   pooled with the confirmatory family. A contrast surviving BH is a candidate
+   worth a future study, not a finding this design can claim.
+
 ## Summary
+
+The confirmatory family as it stands after correction, printed for the run log.
+The thesis reads these values from the saved tables, not from this output.
 
 ```{r summary}
 cat("Confirmatory family (Holm, m = 6, FWER = 0.05):\n")

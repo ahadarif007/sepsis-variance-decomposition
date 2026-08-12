@@ -197,6 +197,10 @@ tryCatch({
 
 ## Summary
 
+Everything the later stages depend on, collected into one table: where the
+project root resolved to, which of the two databases were found, and the R
+version this run will be recorded against.
+
 ```{r summary}
 step("=== Setup Summary ===")
 

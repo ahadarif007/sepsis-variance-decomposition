@@ -63,7 +63,11 @@ step("=== Phase 3b: Comparator models ===")
 
 ## Feature Set
 
-Same feature set as the primary model.
+Same feature set as the primary model, and the identity is load-bearing. H6
+asks whether the model class matters once everything else is fixed, so the
+comparators have to see exactly the columns the primary model saw. Give
+XGBoost a richer input and any gap it opens up is a difference in features
+wearing the costume of a difference in learners.
 
 ```{r feature-set}
 # The comparators are fitted on the same covariate vector as the primary model,

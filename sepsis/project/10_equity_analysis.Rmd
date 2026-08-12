@@ -57,6 +57,17 @@ step("=== Phase 6b: Equity Analysis ===")
 
 ## Subgroup Performance
 
+Whether the models discriminate equally well across demographic strata. Every
+metric below is computed on the same test rows and the same predictions as the
+aggregate results, sliced by subgroup rather than recomputed, so a difference
+between strata is a difference in performance and not an artefact of scoring
+them separately.
+
+Two things limit what this section can conclude, and both are structural rather
+than incidental. Small strata carry intervals wide enough to reach the chance
+line, and the demographic fields themselves are administrative categories with
+a missingness level of their own.
+
 ### Metric Helper
 
 Computes AUROC, AUPRC, and alert burden for any subgroup slice with minimum-sample guards.
@@ -98,7 +109,13 @@ compute_subgroup_metrics <- function(dt, pred_col, subgroup_col, subgroup_val) {
 
 ### Performance by Subgroup (Variant B, Primary Model)
 
-Top subgroup levels (by sample size) are evaluated across primary, GBT, and NEWS2.
+Subgroup levels are taken in order of sample size and scored across the primary
+model, GBT and NEWS2. Selecting by size keeps the choice outcome-blind, and it
+is also the only selection rule that leaves enough events in a stratum for the
+metrics to return anything at all.
+
+Levels that clear the counting floor still need not clear the floor for being
+read. Stage 12 applies the second one.
 
 ```{r subgroup-performance}
 step("Subgroup performance analysis...")
@@ -163,6 +180,11 @@ if (!file.exists(prim_path)) {
 ```
 
 ### AUROC by Race
+
+Discrimination by racial and ethnic stratum, set beside Wang et al.'s (2022)
+report of degraded performance for Asian, Hispanic and Spanish-speaking
+patients. Bar heights on their own support no claim. The contrasts, their
+intervals and the false-discovery correction are computed in stage 12.
 
 ```{r auroc-by-race, fig.cap="AUROC stratified by race/ethnicity for the primary model (Variant B). Dashed line indicates the overall mean.", fig.width=8, fig.height=5}
 if (!is.null(perf_df) && "race" %in% perf_df$subgroup_col) {
@@ -296,3 +318,28 @@ if (length(label_sens_results) > 0 && !is.null(perf_df)) {
 
 cat("\nEquity analysis and all V2 analyses complete.\n")
 ```
+
+## Reading the Equity Results
+
+Two readings are available here and only one of them is supported by this
+design.
+
+The subgroup performance results are a precision problem before they are a
+fairness problem. Sepsis onsets are rare per stay, and splitting them across
+demographic strata leaves most strata with event counts that cannot carry a
+discrimination estimate. Where a contrast comes back with no significant
+difference, the honest statement is that the study could not detect one, which
+is not the same as showing the model treats strata alike. Stage 12 applies the
+interpretation floor that decides which strata can be read at all.
+
+Label-sensitivity is on firmer ground, because it is a proportion computed over
+stays rather than a discrimination metric estimated from events. If the spread
+across variants A, B and C is uneven across subgroups, then who counts as
+septic depends on the definition differently for different groups, and every
+downstream rate inherits that. A model is not required for the effect to exist.
+
+There is a further limit worth stating plainly: the demographic fields are
+administrative categories carrying their own missingness, and a stratum
+recording an absence of information is not a demographic answer. A comparison
+that clears the event floor on such a stratum still supports no claim about the
+group it appears to name.

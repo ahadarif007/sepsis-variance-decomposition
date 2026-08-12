@@ -767,6 +767,12 @@ for (vid in names(LABEL_VARIANTS)) {
 
 ## Results
 
+Two arms are reported and they answer different questions. The primary arm
+applies the Sepsis-3 anchor to the sub-cohort where microbiology is documented.
+The sensitivity arm drops the culture requirement and runs on the full eICU
+cohort, which buys events at the price of no longer targeting Sepsis-3. Its
+rows bound what coverage costs; they are not an external Sepsis-3 result.
+
 ```{r results-tables}
 ext_df <- if (length(eval_primary) > 0) do.call(rbind, eval_primary) else NULL
 sen_df <- if (length(eval_sensitivity) > 0) do.call(rbind, eval_sensitivity) else NULL
@@ -882,6 +888,13 @@ save_csv(cov_dt,     "08_eicu_coverage", DATA_DIR)
 ```
 
 ### H5: internal versus external AUROC
+
+The internal-to-external AUROC drop per variant, set against the degradation
+Moor et al. give reason to expect. This is the AUROC limb standing in for H5
+under Protocol Amendment 1, so what appears here is the descriptive contrast;
+the corrected verdict comes from stage 12. Where a variant's external event
+count falls under the interpretability floor the row is printed with a warning
+rather than suppressed, because the count is itself the finding.
 
 ```{r results-h5}
 if (!is.null(ext_df) && file.exists(internal_path)) {
