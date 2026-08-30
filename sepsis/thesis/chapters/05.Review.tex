@@ -145,64 +145,7 @@ performed in this form.
 \begin{figure}[H]
 \centering
 \adjustbox{max width=\textwidth}{%
-\begin{tikzpicture}[
-  node distance=0.55cm,
-  box/.style={rectangle, draw=ATUGreen, thick, rounded corners=2pt,
-              fill=ATULightGreen!20, text width=7.5cm, align=center,
-              font=\small, inner sep=6pt, minimum height=0.8cm},
-  excl/.style={rectangle, draw=ATUOrange, thick, rounded corners=2pt,
-               fill=ATUSand!40, text width=5.5cm, align=center,
-               font=\small, inner sep=5pt, minimum height=0.7cm},
-  phase/.style={font=\small\bfseries, text=ATUNavy, rotate=90, anchor=south},
-  arr/.style={-{Latex[length=2mm]}, thick, ATUGreen},
-  exarr/.style={-{Latex[length=2mm]}, thick, ATUOrange},
-]
-
-% --- Identification ---
-\node[box] (db) {35 structured searches across\\15 bibliographic sources\\
-  (10 methodological domains)};
-
-\node[box, below=of db] (base) {Sources in the base review\\
-  ($n = 19$: 18 studies + 1 review)};
-\draw[arr] (db) -- (base);
-
-% --- Extension ---
-\node[box, below=of base] (cand) {Candidates carried into the\\
-  extended critical review};
-\draw[arr] (base) -- (cand);
-
-\node[excl, right=1cm of cand] (e2) {Excluded at verification\\
-  ($n = 4$): could not be traced\\to a primary record};
-\draw[exarr] (cand.east) -- (e2.west);
-
-% --- Verification ---
-\node[box, below=of cand] (verif) {Verified against publisher /\\
-  PubMed / PMC / repository record\\
-  ($n = 46$ newly verified)};
-\draw[arr] (cand) -- (verif);
-
-\node[excl, right=1cm of verif] (e3) {
-  Retained with caveat ($n = 1$):\\[2pt]
-  \begin{minipage}{4.8cm}\raggedright\scriptsize
-    incomplete metadata; not cited\\in this thesis
-  \end{minipage}
-};
-\draw[exarr] (verif.east) -- (e3.west);
-
-% --- Included ---
-\node[box, below=of verif, fill=ATUGreen!15, draw=ATUGreen!80!black]
-  (incl) {Sources in the companion review\\
-  ($n = 50$; 4 carried forward)\\
-  of which cited in this thesis: 45};
-\draw[arr] (verif) -- (incl);
-
-% --- Phase labels ---
-\node[phase, left=1.2cm of db]    {Identification};
-\node[phase, left=1.2cm of cand]  {Selection};
-\node[phase, left=1.2cm of verif] {Verification};
-\node[phase, left=1.2cm of incl]  {Included};
-
-\end{tikzpicture}}
+\includegraphics[width=0.82\textwidth]{figures-img/fig2.1_prisma.pdf}}
 \caption{Search, verification and inclusion flow. Counts are auditable at every
   stage, following the reporting logic of PRISMA 2020 \cite{page2021prisma},
   but this is not a PRISMA flow diagram: no title-and-abstract screening pass
@@ -462,44 +405,17 @@ interpretations, produces overlapping but distinct cohorts.
 
 \begin{figure}[H]
     \centering
-    \begin{tikzpicture}[
-        every node/.style={font=\small},
-        cohort/.style={draw, circle, minimum size=2.8cm, thick, fill opacity=0.15},
-    ]
-    \node[cohort, fill=ATUGreen, draw=ATUGreen] (a) at (0, 0) {};
-    \node[cohort, fill=ATUOrange, draw=ATUOrange] (b) at (1.6, 0) {};
-    \node[cohort, fill=ATUNavy, draw=ATUNavy] (c) at (0.8, 1.3) {};
-
-    \node[below=0.2cm, font=\footnotesize\bfseries, text=ATUGreen] at (a.south) {Reading 1};
-    \node[below=0.2cm, font=\footnotesize\bfseries, text=ATUOrange] at (b.south) {Reading 2};
-    \node[above=0.2cm, font=\footnotesize\bfseries, text=ATUNavy] at (c.north) {Reading 3};
-
-    \node[font=\scriptsize] at (0.8, 0.4) {\textbf{Shared}};
-
-    \draw[decorate, decoration={brace, amplitude=5pt, raise=3pt}]
-    (-1.6, -2.0) -- (3.2, -2.0)
-    node[midway, below=10pt, font=\footnotesize, align=center]
-        {Same ICU population, same EHR data\\different ``sepsis cohorts''};
-
-    \node[draw, rounded corners, fill=white, inner sep=6pt,
-        font=\footnotesize, align=left] at (6.9, 0.5) {
-        \textbf{Reported by Cohen et al.}\\
-        \textbf{(MIMIC-III, three readings):}\\[3pt]
-        Cohort size: 867--2{,}178\\
-        \quad admissions\\[3pt]
-        Best method vs.\ rivals:\\
-        \quad $+1$--$5\%$ AUROC\\[2pt]
-        Onset definition varied:\\
-        \quad $0$--$6\%$ AUROC
-    };
-    \end{tikzpicture}
+    \includegraphics[width=0.92\textwidth]{figures-img/fig2.2_label_variance_concept.pdf}
     \caption{Schematic of label variance. Three valid Sepsis-3 interpretations
     applied to the same ICU population produce overlapping but distinct
-    cohorts. The boxed quantities are those \emph{reported by Cohen et al.}\
-    \cite{cohen2024subtle} on MIMIC-III; they are shown to convey the scale of
-    the effect that motivates this study and are not predictions, targets, or
-    results of the present work. The corresponding measurements on MIMIC-IV are
-    reported in Chapter~\ref{ch:evaluation}.}
+    cohorts, and the regions are the point: only the central region is septic
+    under all three readings, while each crescent holds patients whom one
+    reading counts and the other two do not. The disagreement is larger than
+    the three prevalences separately suggest, which is the effect Cohen et al.\
+    \cite{cohen2024subtle} report on MIMIC-III and which the ranges quoted
+    above summarise. The corresponding measurement on MIMIC-IV is reported in
+    Chapter~\ref{ch:evaluation}, where the two narrowest readings agree at
+    only $\kappa = \pcKappaVsBA$.}
     \label{fig:label_variance_concept}
 \end{figure}
 

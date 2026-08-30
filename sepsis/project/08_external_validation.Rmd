@@ -53,6 +53,12 @@ by construction. The two arms separate those questions:
 | **Sepsis-3 (primary)** | stays with $\geq 1$ culture record | culture $\wedge$ antibiotic, per-variant windows | label matches MIMIC-IV exactly; denominator contains only person-hours in which an onset *could* be observed |
 | **Antibiotic-only (sensitivity)** | full cohort | first systemic antibiotic, no culture requirement | quantifies how much of the event count the culture requirement removes; the target is **not** Sepsis-3 and is never pooled with the primary arm |
 
+A third arm is reported in the final section of this notebook, separately from
+both of these. It applies the treatment-independent label (Variant D) to the
+full cohort. It is neither a Sepsis-3 estimate nor a sensitivity check on one:
+it is a different target, it is post-hoc under Protocol Amendment 9, and it is
+excluded from H5.
+
 Steps:
 
 1. Build the eICU person-hour panel harmonised to MIMIC-IV naming
@@ -933,4 +939,262 @@ if (!is.null(ext_df) && file.exists(internal_path)) {
 }
 
 cat("\nExternal validation complete.\n")
+```
+
+## Treatment-Independent Label on the Full eICU Cohort (Variant D)
+
+Everything above this point is confined to the microbiology-covered sub-cohort
+or, in the sensitivity arm, targets something other than Sepsis-3. Both limits
+have the same cause: the Sepsis-3 conjunction needs a culture record, and
+`microLab.csv.gz` reaches `r round(100 * length(micro_stays) / max(length(cohort_ids), 1), 2)`%
+of the analysis cohort.
+
+Variant D (Protocol Amendment 2) does not have that dependency. Its onset is
+the first hour at which a **physiology-only** SOFA score stands
+`r SOFA_INCREASE_THRESHOLD` or more points above the stay's admission baseline,
+with no infection criterion and with the vasopressor and catecholamine columns
+withheld from `score_sofa()`. It contains no antibiotic order, no culture draw
+and no drug administration, so it can be constructed on **every** stay in the
+cohort rather than on the `r format(length(micro_stays), big.mark = ",")` where
+microbiology happens to be documented. That is the only reason this arm exists:
+it is the sole external estimate in the study whose denominator is the whole of
+eICU-CRD.
+
+Three constraints on how the result may be read, enforced below rather than
+left to the reader:
+
+* **Variant D is post-hoc.** It is outside the pre-registered A/B/C family, it
+  is excluded from H1 and from the variance decomposition, and this arm is
+  excluded from **H5** on exactly the same terms. It is written to its own
+  output file, and the guards below assert that neither file has leaked into
+  the other. It is descriptive: no p-value is attached and it joins no
+  corrected family (Protocol Amendment 9).
+* **The target is not Sepsis-3.** D measures acute organ dysfunction, not
+  suspected-infection-with-organ-dysfunction. Its AUROC is never comparable
+  with the primary arm's and the two are never pooled.
+* **The two cohorts do not score SOFA from the same components.** eICU's
+  `vitalPeriodic` carries no GCS, so the neurological component is scored from
+  the assumed-normal substitution in both the hourly score and the baseline,
+  where it cancels from the difference. eICU's deterioration delta therefore
+  rests on five SOFA components and MIMIC-IV's on six. This is a genuine
+  asymmetry between the development and validation cohorts, and it belongs
+  beside the number.
+
+The derivation mirrors `derive_deterioration_onsets()` in
+`03_person_hours.Rmd` — same physiology-only component set, same admission
+baseline window, same minimum observation floor — so that the external label is
+the same construct as the internal one rather than a second definition that
+happens to share a letter.
+
+```{r eicu-deterioration-onsets}
+EICU_SOFA_PHYS_COMPONENTS <- c("pf_ratio", "platelets", "bilirubin", "map",
+                               "gcs", "creatinine")
+
+#' Variant D onsets on the eICU panel: the first hour at which physiology-only
+#' SOFA exceeds the stay's admission baseline by SOFA_INCREASE_THRESHOLD.
+#'
+#' Mirrors derive_deterioration_onsets() in 03_person_hours.Rmd. The
+#' vasopressor columns are deliberately NOT passed to score_sofa(): their
+#' absence is what makes the cardiovascular component MAP-only and the label
+#' free of any treatment record.
+derive_eicu_deterioration_onsets <- function(pan) {
+  keep <- intersect(c("stay_id", "hour", "pf_ratio", "platelets",
+                      "bilirubin_total", "map", "gcs", "creatinine"),
+                    names(pan))
+  d <- pan[, ..keep]
+  if ("bilirubin_total" %in% names(d) && !"bilirubin" %in% names(d))
+    setnames(d, "bilirubin_total", "bilirubin")
+  comps <- intersect(EICU_SOFA_PHYS_COMPONENTS, names(d))
+
+  d[, sofa_phys := score_sofa(as.data.frame(d))$sofa_total]
+
+  base_dt <- d[hour <= DETERIORATION_BASELINE_H,
+               lapply(.SD, mean, na.rm = TRUE), by = stay_id, .SDcols = comps]
+  base_dt[, sofa_phys_base := score_sofa(as.data.frame(base_dt))$sofa_total]
+
+  d <- merge(d, base_dt[, .(stay_id, sofa_phys_base)], by = "stay_id", all.x = TRUE)
+  d[is.na(sofa_phys_base), sofa_phys_base := 0L]
+
+  onsets <- d[hour > MIN_OBS_HOURS &
+                (sofa_phys - sofa_phys_base) >= SOFA_INCREASE_THRESHOLD,
+              .(onset_hour = min(hour)), by = stay_id]
+
+  # Every stay in the panel is returned, so the at-risk denominator is the
+  # whole cohort and a stay that never deteriorates is a censored negative
+  # rather than a missing row.
+  out <- merge(data.table(stay_id = unique(pan$stay_id)), onsets,
+               by = "stay_id", all.x = TRUE)
+  cat(sprintf("  eICU Variant D: %s / %s stays deteriorate (%.2f%%), median onset hour %.1f\n",
+              format(nrow(onsets), big.mark = ","),
+              format(uniqueN(pan$stay_id), big.mark = ","),
+              100 * nrow(onsets) / max(uniqueN(pan$stay_id), 1),
+              if (nrow(onsets) > 0) median(onsets$onset_hour) else NA_real_))
+  out[]
+}
+```
+
+```{r altlabel-external-eval}
+step("Evaluating the treatment-independent label (D) on the full eICU cohort...")
+
+alt_eval        <- list()
+alt_label_rows  <- list()
+alt_df          <- NULL
+
+# Only variants whose onset needs no anchor can run on the full cohort. This is
+# a property of the variant definition, not a hard-coded list, so a future
+# treatment-independent variant is picked up without editing this loop.
+alt_external_ids <- Filter(function(v) identical(variant_type(v), "deterioration"),
+                           names(ALT_LABEL_VARIANTS))
+
+for (vid in alt_external_ids) {
+  ons <- derive_eicu_deterioration_onsets(panel)
+  n_onset <- ons[!is.na(onset_hour), .N]
+
+  alt_label_rows[[vid]] <- data.table(
+    variant        = vid,
+    variant_name   = variant_name(vid),
+    anchor         = "deterioration",
+    n_stays        = uniqueN(panel$stay_id),
+    # D has no suspicion limb at all; recorded as NA rather than as 0, which
+    # would read as "the pair never fired".
+    n_suspicion    = NA_integer_,
+    n_onsets       = n_onset,
+    pct_onsets     = round(100 * n_onset / max(uniqueN(panel$stay_id), 1), 2),
+    median_onset_h = if (n_onset > 0)
+      as.numeric(median(ons[!is.na(onset_hour), onset_hour])) else NA_real_
+  )
+
+  g   <- attach_labels(panel, ons, eicu_stays)
+  res <- evaluate_panel(g, vid, "deterioration")
+  rm(g); gc()
+  # Metrics only. The per-hour predictions are not persisted: the panel spans
+  # the full cohort, stage 11's external loop reads names(LABEL_VARIANTS) and
+  # would ignore the file, and the antibiotic-only arm sets the same precedent.
+  if (!is.null(res)) alt_eval <- c(alt_eval, res$rows)
+  rm(res); gc()
+}
+
+if (length(alt_eval) > 0) {
+  alt_df <- as.data.table(do.call(rbind, alt_eval))
+  knitr::kable(alt_df,
+               caption = "Treatment-independent label (Variant D) on the full eICU cohort")
+  save_parquet(alt_df, "08_external_validation_results_altlabel", DATA_DIR)
+  save_csv(alt_df,     "08_external_validation_results_altlabel", DATA_DIR)
+}
+
+if (length(alt_label_rows) > 0) {
+  label_summary_dt <- rbindlist(c(list(label_summary_dt), alt_label_rows),
+                                fill = TRUE)
+  save_parquet(label_summary_dt, "08_eicu_label_summary", DATA_DIR)
+  save_csv(label_summary_dt,     "08_eicu_label_summary", DATA_DIR)
+}
+```
+
+### Event rate under a treatment-independent label
+
+The Sepsis-3 arm's external event rate is roughly a tenth of the development
+cohort's, and Section~\ref{sec:external_coverage} attributes that to the
+culture limb rather than to the population. Variant D tests the attribution
+directly: it is the same physiology in the same two databases with the
+treatment anchor removed. The rate is written to its own file so that the
+pre-registered reconciliation table is untouched.
+
+```{r altlabel-rate-reconciliation}
+alt_recon <- NULL
+if (!is.null(alt_df) && file.exists(internal_path)) {
+  internal_alt_path <- file.path(DATA_DIR, "07_metric_results_altlabel.parquet")
+  if (file.exists(internal_alt_path)) {
+    int_alt <- as.data.table(arrow::read_parquet(internal_alt_path))
+    rows <- list()
+    for (vid in unique(alt_df$variant)) {
+      # The unrestricted temporal window: the same window every other
+      # internal-versus-external comparison in this stage uses.
+      ir <- int_alt[variant == vid & model == "primary" &
+                      eval_window == "unrestricted" & split_type == "temporal"]
+      er <- alt_df[variant == vid & model == "pred_sepsis"]
+      if (nrow(ir) > 0)
+        rows[[paste0(vid, "-mimic")]] <- data.table(
+          variant = vid, source = "MIMIC-IV temporal test",
+          n_stays = NA_integer_, person_hours = ir$n_rows[1],
+          n_events = ir$n_sepsis_events[1],
+          events_per_1k_person_h = round(1000 * ir$n_sepsis_events[1] /
+                                           max(ir$n_rows[1], 1), 4))
+      if (nrow(er) > 0)
+        rows[[paste0(vid, "-eicu")]] <- data.table(
+          variant = vid, source = "eICU deterioration (full)",
+          n_stays = er$n_stays[1], person_hours = er$n_rows[1],
+          n_events = er$n_events[1],
+          events_per_1k_person_h = round(1000 * er$n_events[1] /
+                                           max(er$n_rows[1], 1), 4))
+    }
+    if (length(rows) > 0) {
+      alt_recon <- rbindlist(rows)
+      mim <- alt_recon[source == "MIMIC-IV temporal test",
+                       .(variant, mimic_rate = events_per_1k_person_h)]
+      alt_recon <- merge(alt_recon, mim, by = "variant", all.x = TRUE, sort = FALSE)
+      alt_recon[, rate_ratio_vs_mimic := round(events_per_1k_person_h / mimic_rate, 4)]
+      alt_recon[, mimic_rate := NULL]
+      knitr::kable(alt_recon,
+                   caption = "Event rate under the treatment-independent label")
+      save_parquet(alt_recon, "08_event_rate_altlabel", DATA_DIR)
+      save_csv(alt_recon,     "08_event_rate_altlabel", DATA_DIR)
+    }
+  }
+}
+```
+
+### Containment guards
+
+Variant D is kept out of H5 and the variance decomposition the same way it is
+kept out of H1. The separation is structural — the confirmatory consumers read
+`08_external_validation_results`, and this arm writes somewhere else — but a
+structural argument is only as good as the next edit, so it is asserted at run
+time as well.
+
+```{r altlabel-containment-guards}
+if (!is.null(alt_df)) {
+  leaked_in <- intersect(unique(alt_df$variant), names(LABEL_VARIANTS))
+  if (length(leaked_in) > 0)
+    stop(sprintf(paste0("Containment guard failed: the alt-label external file ",
+                        "carries pre-registered variant(s) %s. The post-hoc arm ",
+                        "must never restate a confirmatory result."),
+                 paste(leaked_in, collapse = "/")))
+
+  if (!is.null(ext_df)) {
+    leaked_out <- intersect(unique(as.data.table(ext_df)$variant), alt_external_ids)
+    if (length(leaked_out) > 0)
+      stop(sprintf(paste0("Containment guard failed: the primary external file ",
+                          "carries post-hoc variant(s) %s, which would put a ",
+                          "post-hoc label inside H5."),
+                   paste(leaked_out, collapse = "/")))
+  }
+
+  # The entire purpose of this arm is that its denominator is the whole cohort.
+  # If it silently ran on the microbiology-covered sub-cohort the AUROC would
+  # still be well-formed and the finding would be wrong.
+  n_alt_stays <- max(alt_df$n_stays, na.rm = TRUE)
+  if (n_alt_stays <= length(micro_stays))
+    stop(sprintf(paste0("Containment guard failed: the alt-label arm scored %s ",
+                        "stays, no more than the %s in the microbiology-covered ",
+                        "sub-cohort. It is not the full-cohort estimate it claims ",
+                        "to be."),
+                 format(n_alt_stays, big.mark = ","),
+                 format(length(micro_stays), big.mark = ",")))
+
+  v2_log(sprintf(paste0("Containment guards passed: alt-label arm carries %s ",
+                        "only, scored on %s stays (%.1fx the micro sub-cohort)."),
+                 paste(alt_external_ids, collapse = "/"),
+                 format(n_alt_stays, big.mark = ","),
+                 n_alt_stays / max(length(micro_stays), 1)))
+
+  n_alt_events <- max(alt_df$n_events, na.rm = TRUE)
+  cat(sprintf("\nVariant D external: %s events on %s stays (interpretability floor %d): %s\n",
+              format(n_alt_events, big.mark = ","),
+              format(n_alt_stays, big.mark = ","),
+              MIN_EXTERNAL_EVENTS,
+              if (n_alt_events >= MIN_EXTERNAL_EVENTS) "above the floor" else
+                "BELOW the floor; not interpretable"))
+}
+
+cat("\nTreatment-independent external arm complete.\n")
 ```

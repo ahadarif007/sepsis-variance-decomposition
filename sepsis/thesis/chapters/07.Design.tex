@@ -112,68 +112,7 @@ that any single stage can be re-run and checked against the rest.
 
 \begin{figure}[H]
     \centering
-    \begin{tikzpicture}[
-        node distance=0.4cm and 0.7cm,
-        box/.style={rectangle, draw=ATUGreen, thick, rounded corners=2pt,
-        fill=ATULightGreen!40, text width=2.6cm, align=center,
-        font=\scriptsize, inner sep=3pt, minimum height=0.55cm},
-        data/.style={rectangle, draw=ATUNavy, thick, rounded corners=2pt,
-        fill=ATUTeal!20, text width=2.4cm, align=center,
-        font=\tiny\itshape, inner sep=2pt, minimum height=0.45cm},
-        arr/.style={-{Latex[length=1.5mm]}, thick, ATUGreen},
-    ]
-
-%--- Left column: scripts 01--05
-        \node[data] (raw) {Raw data\\MIMIC-IV + eICU};
-        \node[box, below=of raw]   (s01) {\texttt{01} Setup};
-        \node[box, below=of s01]   (s02) {\texttt{02} Cohort Labels};
-        \node[box, below=of s02]   (s03) {\texttt{03} Person-Hours};
-        \node[box, below=of s03]   (s04) {\texttt{04} Sample Size};
-        \node[box, below=of s04]   (s05) {\texttt{05} Primary Model};
-
-%--- Right column: scripts 06--10
-        \node[box, right=3.8cm of s01]  (s06) {\texttt{06} Comparators};
-        \node[box, below=of s06]        (s07) {\texttt{07} Metrics Suite};
-        \node[box, below=of s07]        (s08) {\texttt{08} External Valid.};
-        \node[box, below=of s08]        (s09) {\texttt{09} Variance Decomp.};
-        \node[box, below=of s09]        (s10) {\texttt{10} Equity Analysis};
-        \node[box, below=of s10]        (s11) {\texttt{11} Clinical Utility};
-        \node[box, below=of s11]        (s12) {\texttt{12} Inference};
-
-%--- Output nodes (between columns)
-        \node[data, right=of s02] (cohort)  {cohort\_\{A,B,C\}.pq};
-        \node[data, right=of s03] (ph)      {person\_hours.pq};
-        \node[data, right=of s05] (models)  {model\_primary.rds};
-        \node[data, right=of s07] (metrics) {metric\_results.pq};
-
-%--- Left-column flow
-        \draw[arr] (raw)  -- (s01);
-        \draw[arr] (s01)  -- (s02);
-        \draw[arr] (s02)  -- (s03);
-        \draw[arr] (s03)  -- (s04);
-        \draw[arr] (s04)  -- (s05);
-
-%--- Cross to right column
-        \draw[arr] (s05)  -- (s06);
-
-%--- Right-column flow
-        \draw[arr] (s06)  -- (s07);
-        \draw[arr] (s07)  -- (s08);
-        \draw[arr] (s08)  -- (s09);
-        \draw[arr] (s09)  -- (s10);
-        \draw[arr] (s10)  -- (s11);
-        \draw[arr] (s11)  -- (s12);
-
-%--- Output arrows
-        \draw[arr] (s02)  -- (cohort);
-        \draw[arr] (s03)  -- (ph);
-        \draw[arr] (s05)  -- (models);
-        \draw[arr] (s07)  -- (metrics);
-
-%--- Feed-forward: person-hours feed models and comparators
-        \draw[arr, ATUNavy, densely dashed] (ph.east) to[out=0,in=180] (s06.west);
-
-    \end{tikzpicture}
+    \includegraphics[width=0.95\textwidth]{figures-img/fig4.1_pipeline_dag.pdf}
     \caption{Pipeline data flow. Each box is a single script; italic nodes are
     output files. Raw MIMIC-IV and eICU data are read-only.}
     \label{fig:pipeline_dag}

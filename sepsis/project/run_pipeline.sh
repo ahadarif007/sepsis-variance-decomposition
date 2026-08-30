@@ -189,6 +189,7 @@ find "$SCRIPT_DIR" -maxdepth 1 -name '*.knit.md' -delete 2>/dev/null
 CONSTANTS_INCOMPLETE=0
 INCONSISTENT=0
 UNPROVENANCED=0
+FIGURES_STALE=0
 if [ $FAILED -eq 0 ]; then
   echo "" | tee -a "$LOG_FILE"
   echo "Regenerating thesis constants..." | tee -a "$LOG_FILE"
@@ -225,6 +226,41 @@ if [ $FAILED -eq 0 ]; then
   else
     UNPROVENANCED=1
   fi
+
+  # Frozen figure assets.
+  #
+  # Figure 3.1 (CONSORT) is a .drawio file, and a .drawio cannot hold a macro,
+  # so its eleven cohort counts are FROZEN literals generated from
+  # pipeline_constants.tex. Every other number in the thesis re-derives itself
+  # on a run; that one cannot. Leaving it to be remembered is exactly how a
+  # figure goes stale, so the pipeline refreshes it here rather than advising
+  # anyone to.
+  echo "" | tee -a "$LOG_FILE"
+  echo "Checking frozen figure assets..." | tee -a "$LOG_FILE"
+  CONSORT_GEN="${SCRIPT_DIR}/../thesis/figures-src/make_consort_drawio.py"
+  EXPORT_FIG="${SCRIPT_DIR}/../thesis/figures-src/export_drawio.py"
+  if [ ! -f "$CONSORT_GEN" ]; then
+    echo "  (no frozen figure generator; nothing to check)" | tee -a "$LOG_FILE"
+  elif python3 "$CONSORT_GEN" --check >> "$LOG_FILE" 2>&1; then
+    echo "  OK  Figure 3.1 still matches the pipeline constants." | tee -a "$LOG_FILE"
+  else
+    echo "  Figure 3.1 is STALE against this run; regenerating..." | tee -a "$LOG_FILE"
+    if python3 "$CONSORT_GEN" >> "$LOG_FILE" 2>&1; then
+      if python3 "$EXPORT_FIG" --into-figures >> "$LOG_FILE" 2>&1; then
+        echo "  OK  Figure 3.1 regenerated and re-exported." | tee -a "$LOG_FILE"
+        echo "      Rebuild the thesis (thesis/build.sh) to pick it up." | tee -a "$LOG_FILE"
+      else
+        # The .drawio is correct but the PDF the thesis includes is not, and
+        # only draw.io can render it. Failing loudly is the whole point.
+        FIGURES_STALE=1
+        echo "  !!  Regenerated the source but could NOT re-export it." | tee -a "$LOG_FILE"
+      fi
+    else
+      FIGURES_STALE=1
+      echo "  !!  Could not regenerate Figure 3.1." | tee -a "$LOG_FILE"
+    fi
+  fi
+
 else
   echo "" | tee -a "$LOG_FILE"
   echo "Skipping thesis-constants regeneration (a stage failed)." | tee -a "$LOG_FILE"
@@ -256,6 +292,15 @@ if [ $INCONSISTENT -ne 0 ]; then
   echo "  !! Cross-file consistency checks FAILED. Two reported quantities" | tee -a "$LOG_FILE"
   echo "     disagree; see the check output above. Fix the source, not the check." | tee -a "$LOG_FILE"
 fi
+if [ $FIGURES_STALE -ne 0 ]; then
+  echo "" | tee -a "$LOG_FILE"
+  echo "  !! Figure 3.1 (CONSORT) carries cohort counts frozen from a PREVIOUS" | tee -a "$LOG_FILE"
+  echo "     run and could not be refreshed automatically. The thesis would" | tee -a "$LOG_FILE"
+  echo "     print stale numbers inside an image, where no checker can see" | tee -a "$LOG_FILE"
+  echo "     them. Install draw.io (brew install --cask drawio), then:" | tee -a "$LOG_FILE"
+  echo "       python3 ../thesis/figures-src/make_consort_drawio.py" | tee -a "$LOG_FILE"
+  echo "       python3 ../thesis/figures-src/export_drawio.py --into-figures" | tee -a "$LOG_FILE"
+fi
 if [ $UNPROVENANCED -ne 0 ]; then
   echo "" | tee -a "$LOG_FILE"
   echo "  !! The thesis types a result-shaped number with no recorded" | tee -a "$LOG_FILE"
@@ -269,3 +314,4 @@ echo "======================================================" | tee -a "$LOG_FIL
 [ $CONSTANTS_INCOMPLETE -eq 0 ] || exit 2
 [ $INCONSISTENT -eq 0 ] || exit 3
 [ $UNPROVENANCED -eq 0 ] || exit 4
+[ $FIGURES_STALE -eq 0 ] || exit 5

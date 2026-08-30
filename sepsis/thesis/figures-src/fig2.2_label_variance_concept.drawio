@@ -1,0 +1,77 @@
+<mxfile host="app.diagrams.net" type="device">
+  <diagram id="label-variance-concept" name="Figure 2.2 Label variance">
+    <mxGraphModel dx="1100" dy="760" grid="1" gridSize="10" guides="1" tooltips="1"
+                  connect="1" arrows="1" fold="1" page="1" pageScale="1"
+                  pageWidth="850" pageHeight="600" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="circleNavy" value=""
+          style="ellipse;whiteSpace=wrap;html=1;fillColor=#001A79;fillOpacity=15;strokeColor=#001A79;strokeWidth=2;fontFamily=Times New Roman;"
+          vertex="1" parent="1">
+          <mxGeometry x="285" y="80" width="200" height="200" as="geometry" />
+        </mxCell>
+
+        <mxCell id="circleGreen" value=""
+          style="ellipse;whiteSpace=wrap;html=1;fillColor=#005B5E;fillOpacity=15;strokeColor=#005B5E;strokeWidth=2;fontFamily=Times New Roman;"
+          vertex="1" parent="1">
+          <mxGeometry x="205" y="202" width="200" height="200" as="geometry" />
+        </mxCell>
+
+        <mxCell id="circleOrange" value=""
+          style="ellipse;whiteSpace=wrap;html=1;fillColor=#FF791E;fillOpacity=15;strokeColor=#FF791E;strokeWidth=2;fontFamily=Times New Roman;"
+          vertex="1" parent="1">
+          <mxGeometry x="365" y="202" width="200" height="200" as="geometry" />
+        </mxCell>
+
+        <mxCell id="labelNavy" value="&lt;b&gt;Wide windows&lt;br&gt;rolling baseline&lt;/b&gt;"
+          style="text;html=1;align=center;verticalAlign=bottom;fontSize=20;fontColor=#001A79;fontFamily=Times New Roman;"
+          vertex="1" parent="1">
+          <mxGeometry x="305" y="30" width="160" height="44" as="geometry" />
+        </mxCell>
+
+        <mxCell id="labelGreen" value="&lt;b&gt;Narrow windows&lt;br&gt;admission baseline&lt;/b&gt;"
+          style="text;html=1;align=center;verticalAlign=top;fontSize=20;fontColor=#005B5E;fontFamily=Times New Roman;"
+          vertex="1" parent="1">
+          <mxGeometry x="185" y="412" width="180" height="44" as="geometry" />
+        </mxCell>
+
+        <mxCell id="labelOrange" value="&lt;b&gt;Standard windows&lt;br&gt;(Seymour et al.)&lt;/b&gt;"
+          style="text;html=1;align=center;verticalAlign=top;fontSize=20;fontColor=#FF791E;fontFamily=Times New Roman;"
+          vertex="1" parent="1">
+          <mxGeometry x="405" y="412" width="180" height="44" as="geometry" />
+        </mxCell>
+
+        <mxCell id="calloutAll3" value="septic under&lt;br&gt;all three readings"
+          style="text;html=1;align=left;verticalAlign=middle;fontSize=19;fontFamily=Times New Roman;"
+          vertex="1" parent="1">
+          <mxGeometry x="640" y="150" width="150" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="calloutOnly1" value="septic under&lt;br&gt;one reading only"
+          style="text;html=1;align=right;verticalAlign=middle;fontSize=19;fontFamily=Times New Roman;"
+          vertex="1" parent="1">
+          <mxGeometry x="40" y="150" width="150" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="leaderAll3" style="endArrow=open;endSize=8;html=1;strokeColor=#808080;curved=1;fontFamily=Times New Roman;"
+          edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="635" y="170" as="sourcePoint" />
+            <mxPoint x="385" y="262" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="leaderOnly1" style="endArrow=open;endSize=8;html=1;strokeColor=#808080;curved=1;fontFamily=Times New Roman;"
+          edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="195" y="170" as="sourcePoint" />
+            <mxPoint x="250" y="300" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

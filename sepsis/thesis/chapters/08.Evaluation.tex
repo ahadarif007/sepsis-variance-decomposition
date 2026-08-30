@@ -1036,6 +1036,66 @@ in this study. Section~\ref{sec:external_interpretability} states what that
 permits the external estimates to support, and reports the antibiotic-only
 sensitivity arm that bounds them.
 
+\subsection{The Treatment-Independent Label on the Full External Cohort
+\texorpdfstring{[C]}{[C]}}
+\label{sec:external_altlabel}
+
+Every estimate reported above is computed on the \pcExtNMicroStays{} stays
+(\pcExtMicroCoverage\%) where microbiology is documented, because the Sepsis-3
+anchor cannot fire without a culture record. Variant D carries no treatment
+timestamp of any kind, so it does not inherit that restriction and can be
+constructed on the whole cohort. This subsection reports the frozen Variant D
+models applied to all \pcExtAltNStays{} eICU-CRD stays under Protocol
+Amendment~9. It is the only external estimate in this study whose denominator
+is the entire external database.
+
+\begin{table}[H]
+    \centering\small
+    \begin{tabular}{lrrr}
+        \toprule
+        \textbf{Model} & \textbf{Internal AUROC} & \textbf{External AUROC}
+        & \textbf{Events} \\
+        \midrule
+        Primary & \pcAltAurocFullPrimaryD & \pcExtAltAurocPrimary & \pcExtAltNEvents \\
+        GBT     & \pcAltAurocFullGbtD     & \pcExtAltAurocGbt     & \pcExtAltNEvents \\
+        NEWS2   & \pcNotApplicable        & \pcExtAltAurocNews    & \pcExtAltNEvents \\
+        \bottomrule
+    \end{tabular}
+    \caption[Variant D on the full eICU-CRD cohort]{Variant D applied to all
+    \pcExtAltNStays{} eICU-CRD stays (\pcExtAltNRows{} person-hours). The target
+    is acute organ dysfunction, not Sepsis-3, so these values are not comparable
+    with the Sepsis-3 arm above and the two are never pooled. Post-hoc under
+    Protocol Amendment~9; excluded from H5.}
+    \label{tab:external_altlabel}
+\end{table}
+
+The arm scores \pcExtAltNEvents{} events over \pcExtAltNRows{} person-hours,
+against the \pcExtNEventsB{} events available under Variant B. It is the only
+external estimate in this study that clears the \pcExtMinEvents-event
+interpretability floor of
+Section~\ref{sec:external_interpretability}.
+
+Two quantities are reported from it. The first is the AUROC drop. The primary
+model falls from \pcAltAurocFullPrimaryD{} internally to
+\pcExtAltAurocPrimary{} externally, and the gradient-boosted comparator from
+\pcAltAurocFullGbtD{} to \pcExtAltAurocGbt. Both are of the order of the 0.085
+degradation Moor et al.\ \cite{moor2023review} give as typical, and both are
+of the same order as the H5 estimate obtained on \pcExtNEventsB{} events.
+
+The second is the event rate, and it is the more informative of the two. Under
+the Sepsis-3 anchor the external event rate is \pcExtRateRatioB{} of the
+development cohort's, a gap of roughly an order of magnitude that
+Section~\ref{sec:external_coverage} attributes to the culture limb rather than
+to any difference in the patients. Under the treatment-independent label the
+same two databases give \pcExtAltRateMimic{} and \pcExtAltRateEicu{} events per
+1{,}000 person-hours, a ratio of \pcExtAltRateRatio. The rate gap is largely
+absent once the label stops depending on a documented treatment decision.
+
+What these two numbers may and may not be taken to support is set out in
+Section~\ref{sec:variant_d_establishes}; in particular, Variant D's label is a
+threshold on physiology that is itself model input, so the level of its AUROC
+is not evidence about sepsis prediction.
+
 \subsection{External Clinical Utility on eICU-CRD \texorpdfstring{[C]}{[C]}}
 
 External AUROC point estimates remained above 0.5 but were below their internal

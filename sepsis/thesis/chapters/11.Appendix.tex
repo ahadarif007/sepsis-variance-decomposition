@@ -41,6 +41,54 @@ Data Use Agreement (Section~\ref{sec:ethics}) prohibits redistribution of the
 underlying data. Exclusion is enforced by \texttt{.gitignore} and was verified
 against the tracked file list before release.
 
+\section{The Frozen Run}
+\label{app:frozen_run}
+
+Every quantity in this thesis is written mechanically from the pipeline's result
+tables by \texttt{thesis\_constants.R}, so the document is always internally
+consistent. It is not, however, consistent across \emph{runs}: the
+gradient-boosted comparator is not bit-stable, so re-executing the pipeline
+moves every GBT-derived quantity slightly. Between two drafts of this work the
+utility ceiling moved from 0.039 to 0.031 and the model-class gap from 0.0129 to
+0.0165 for exactly this reason, with no defect involved.
+
+The consequence is that a number is only meaningful when paired with the run
+that produced it. This document is therefore bound to one run, and that run is
+identified here so the pairing can be checked rather than assumed:
+
+\begin{center}
+\fbox{\parbox{0.88\textwidth}{\centering\vspace{2pt}
+\textbf{Frozen run}\\[4pt]
+tag \texttt{\pcFrozenTag} \quad$\cdot$\quad commit \texttt{\pcFrozenCommit}\\[2pt]
+\small constants generated \pcFrozenDate
+\vspace{2pt}}}
+\end{center}
+
+The commit named above is the state of the pipeline source that produced these
+numbers; the tag is placed on the commit that carries the rebuilt document, so
+that checking out the tag yields both the code and this PDF together. A
+\texttt{-dirty} suffix on the commit would indicate that the constants were
+generated from an uncommitted working tree, and must not appear in a submitted
+document.
+
+\begin{verbatim}
+git checkout <tag>
+diff <(git show <tag>:sepsis/thesis/generated/pipeline_constants.tex) \
+     sepsis/thesis/generated/pipeline_constants.tex
+\end{verbatim}
+
+\noindent Every number printed in this thesis is expanded from that one
+generated file, so an empty diff establishes that the document and the tagged
+repository state agree. Re-deriving the file from the databases additionally
+requires credentialed PhysioNet access, since no derived table is redistributed
+here (Section~\ref{app:repo}); the reported quantities themselves are aggregate
+results and are disclosed in this document rather than as data.
+
+Everything produced after the freeze --- the presentation, the screencast and
+the viva preparation --- reads from the frozen constants rather than from a
+fresh run, so that no figure quoted aloud can disagree with the figure on the
+page.
+
 \section{Repository Layout}
 
 {\small

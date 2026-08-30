@@ -179,43 +179,7 @@ Figure~\ref{fig:consort} shows the patient flow through each exclusion step.
 \begin{figure}[H]
     \centering
 \adjustbox{max width=\textwidth}{%
-    \begin{tikzpicture}[
-        node distance=0.6cm,
-        box/.style={rectangle, draw=ATUGreen, thick, rounded corners=2pt,
-        fill=ATULightGreen!20, text width=7cm, align=center,
-        font=\small, inner sep=6pt, minimum height=0.8cm},
-        excl/.style={rectangle, draw=ATUOrange, thick, rounded corners=2pt,
-        fill=ATUSand!40, text width=5cm, align=center,
-        font=\small, inner sep=5pt, minimum height=0.7cm},
-        arr/.style={-{Latex[length=2mm]}, thick, ATUGreen},
-        exarr/.style={-{Latex[length=2mm]}, thick, ATUOrange},
-    ]
-
-\node[box] (total) {MIMIC-IV v3.1 ICU stays\\$n = \pcConsortNTotal$};
-\node[excl, right=1.2cm of total] (e1) {Non-first ICU stay\\$n = \pcConsortNExclNotFirst$ excluded};
-\draw[exarr] (total.east) -- (e1.west);
-
-\node[box, below=of total] (first) {First ICU stay per patient\\(all ages $\geq 18$ in MIMIC-IV)\\$n = \pcConsortNFirstStay$};
-\draw[arr] (total) -- (first);
-
-\node[excl, right=1.2cm of first] (e2) {LOS $< 4$ hours\\$n = \pcConsortNExclLos$ excluded};
-\draw[exarr] (first.east) -- (e2.west);
-
-\node[box, below=of first] (final) {\textbf{Analysis cohort}\\$n = \pcConsortNFinal$};
-\draw[arr] (first) -- (final);
-
-\node[box, below left=0.8cm and -0.5cm of final, text width=3.2cm]
-(va) {Variant A\\Sepsis: \pcNOnsetsA\\(\pcPctOnsetsA\%)};
-\node[box, below=0.8cm of final, text width=3.2cm]
-(vb) {Variant B\\Sepsis: \pcNOnsetsB\\(\pcPctOnsetsB\%)};
-\node[box, below right=0.8cm and -0.5cm of final, text width=3.2cm]
-(vc) {Variant C\\Sepsis: \pcNOnsetsC\\(\pcPctOnsetsC\%)};
-
-\draw[arr] (final.south) -- ++(0,-0.3) -| (va.north);
-\draw[arr] (final.south) -- (vb.north);
-\draw[arr] (final.south) -- ++(0,-0.3) -| (vc.north);
-
-    \end{tikzpicture}}
+    \includegraphics[width=\textwidth]{figures-img/fig3.1_consort.pdf}}
     \caption{CONSORT-style patient flow diagram. All \pcConsortNFinal{} stays enter
     all three label variants; only the sepsis outcome differs. Every count is
     generated from \texttt{02\_cohort\_flow}, written by script

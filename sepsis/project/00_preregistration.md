@@ -28,6 +28,7 @@ corrected verdict is the one the thesis reports.
 | 6 | Subgroup Interpretability Floor | 2026-08-06 | §20 | Separates the floor for computing a subgroup AUROC from the floor for reading one |
 | 7 | Uncertainty Diagnostic for H2 | 2026-08-10 | §21 | Adds a noise-scale diagnostic beside H2's pre-registered count |
 | 8 | Comparator Fit Isolation | 2026-08-11 | §22 | Defect correction: early stopping was selected on the test set |
+| 9 | External Validation of the Treatment-Independent Label | 2026-08-18 | §23 | Adds a full-cohort eICU arm for variant D, outside every corrected family |
 
 Section numbers are cited from the pipeline notebooks and from the thesis, so
 they are stable identifiers rather than presentation choices.
@@ -854,3 +855,77 @@ at all.
 **Deliverables:** no new output files. Every `06_*` fit, and every downstream
 quantity that reads a GBT prediction, is re-estimated: `07_*`, `08_*`
 (GBT external rows), `09_*`, `11_*`, `12_*`.
+
+---
+
+# Amendment 9: External Validation of the Treatment-Independent Label
+
+**Date:** 2026-08-18
+**Status:** **POST-HOC.** Like Amendments 1–8, not pre-specified. It was decided
+after the eight-round results were in hand and after the external coverage
+constraint had been measured, so it is exploratory by construction and is
+recorded here before the arm was run.
+
+**23.1 What it adds and why.** Every external estimate in the study so far is
+confined to the microbiology-covered sub-cohort — 2,824 of 181,589 eICU stays,
+1.555 % — because the Sepsis-3 anchor requires a culture record. Variant D
+(Amendment 2) carries no treatment timestamp of any kind: its onset is the
+first hour at which a physiology-only SOFA score stands ≥ 2 points above the
+stay's admission baseline. It therefore needs no microbiology and can be
+constructed on the entire cohort. This amendment adds one external arm applying
+the frozen Variant D models to the **full** eICU cohort. It is the only
+external estimate in the study whose denominator is the whole of eICU-CRD.
+
+**23.2 Estimand and status.** The arm reports external AUROC and AUPRC for the
+primary model, the gradient-boosted comparator and NEWS2 under Variant D, with
+the stay, person-hour and event counts beside them. It is **descriptive**: no
+p-value is computed, it joins **no** corrected family, and it is neither a
+confirmatory nor an exploratory test in the sense of §14.
+
+**23.3 Exclusions, and why they are asserted rather than assumed.** Variant D is
+excluded from H1 and from the variance decomposition by Amendment 2. This arm is
+excluded from **H5** on identical terms, and for the same reason: a post-hoc
+label must not enter a pre-registered family through the external door after
+being kept out of the internal one. The arm writes to
+`08_external_validation_results_altlabel`; H5 and stage 09 read
+`08_external_validation_results`. Stage 08 asserts at run time that neither file
+contains the other's variants, and stops if either does.
+
+**23.4 The two cohorts do not score SOFA from the same components.** eICU's
+`vitalPeriodic` carries no Glasgow Coma Scale. The neurological component is
+therefore scored from `score_sofa()`'s assumed-normal substitution in both the
+hourly score and the baseline, where it cancels from the difference. eICU's
+deterioration delta rests on five SOFA components and MIMIC-IV's on six. The
+external label is consequently a slightly coarser construct than the internal
+one, and the comparison is between two labels that are the same in definition
+but not identical in the data available to compute them.
+
+**23.5 The ceiling on what this arm can establish, recorded before the run.**
+Variant D's onset is a deterministic function of physiological variables that
+are themselves model inputs. A model with access to the panel is therefore
+predicting a transformation of its own covariates, which is why Variant D's
+internal AUROC (primary 0.8498, GBT 0.9360 on the unrestricted temporal window)
+sits so far above every Sepsis-3 variant's. **A high external AUROC in this arm
+is therefore not evidence that sepsis prediction transports well.** It would be
+evidence that a physiological deterioration rule computed from a given set of
+vital signs and laboratory values reproduces itself in a second dataset, which
+is a weaker and different claim. The arm's value lies in the event count and
+the denominator, not in the height of the number, and the thesis must say so
+wherever it quotes it. Two outcomes are anticipated and neither is a finding
+about sepsis: discrimination substantially above the Sepsis-3 arm's (consistent
+with the partial circularity just described), or a fall toward it (which would
+locate the degradation in cross-cohort measurement rather than in the label).
+
+**23.6 Timebox.** One implementation pass and one stage-08 run. If the run does
+not produce a scoreable arm on the first clean attempt, or if the canary on
+`08_external_validation_results` and `08_h5_internal_external` fails, the change
+is reverted and the experiment is reported in Future Work as an untested
+question rather than debugged into existence. This is recorded so that a
+negative outcome cannot be re-described afterwards as a decision not to pursue.
+
+**Deliverables:** `08_external_validation_results_altlabel` (Parquet and CSV),
+additional `anchor = "deterioration"` rows in `08_eicu_label_summary`. No
+existing output file changes: the primary and sensitivity arms are recomputed
+byte-identically and this is checked rather than asserted. Per-hour external
+predictions are not persisted for this arm, matching the antibiotic-only
+sensitivity arm.

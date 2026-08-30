@@ -1,0 +1,32 @@
+<mxfile host="app.diagrams.net" type="device">
+  <diagram id="prisma-flow" name="Figure 2.1 Search and verification flow">
+    <mxGraphModel dx="1100" dy="900" grid="1" gridSize="10" guides="1" tooltips="1"
+                  connect="1" arrows="1" fold="1" page="1" pageScale="1"
+                  pageWidth="900" pageHeight="720" math="0" shadow="0">
+      <root>
+        <mxCell id="0" /><mxCell id="1" parent="0" />
+
+        <mxCell id="ph1" value="Identification" style="text;html=1;align=center;verticalAlign=middle;fontSize=20;fontStyle=1;fontColor=#001A79;horizontal=0;fontFamily=Times New Roman;" vertex="1" parent="1"><mxGeometry x="60" y="40" width="30" height="110" as="geometry" /></mxCell>
+        <mxCell id="ph2" value="Selection" style="text;html=1;align=center;verticalAlign=middle;fontSize=20;fontStyle=1;fontColor=#001A79;horizontal=0;fontFamily=Times New Roman;" vertex="1" parent="1"><mxGeometry x="60" y="280" width="30" height="90" as="geometry" /></mxCell>
+        <mxCell id="ph3" value="Verification" style="text;html=1;align=center;verticalAlign=middle;fontSize=20;fontStyle=1;fontColor=#001A79;horizontal=0;fontFamily=Times New Roman;" vertex="1" parent="1"><mxGeometry x="60" y="410" width="30" height="100" as="geometry" /></mxCell>
+        <mxCell id="ph4" value="Included" style="text;html=1;align=center;verticalAlign=middle;fontSize=20;fontStyle=1;fontColor=#001A79;horizontal=0;fontFamily=Times New Roman;" vertex="1" parent="1"><mxGeometry x="60" y="550" width="30" height="100" as="geometry" /></mxCell>
+
+        <mxCell id="db" value="35 structured searches across&lt;br&gt;15 bibliographic sources&lt;br&gt;(10 methodological domains)" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#ACF5BD;fillOpacity=20;strokeColor=#005B5E;strokeWidth=2;fontSize=20;fontFamily=Times New Roman;" vertex="1" parent="1"><mxGeometry x="140" y="40" width="330" height="70" as="geometry" /></mxCell>
+        <mxCell id="base" value="Sources in the base review&lt;br&gt;(n = 19: 18 studies + 1 review)" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#ACF5BD;fillOpacity=20;strokeColor=#005B5E;strokeWidth=2;fontSize=20;fontFamily=Times New Roman;" vertex="1" parent="1"><mxGeometry x="140" y="170" width="330" height="60" as="geometry" /></mxCell>
+        <mxCell id="cand" value="Candidates carried into the&lt;br&gt;extended critical review" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#ACF5BD;fillOpacity=20;strokeColor=#005B5E;strokeWidth=2;fontSize=20;fontFamily=Times New Roman;" vertex="1" parent="1"><mxGeometry x="140" y="290" width="330" height="60" as="geometry" /></mxCell>
+        <mxCell id="verif" value="Verified against publisher /&lt;br&gt;PubMed / PMC / repository record&lt;br&gt;(n = 46 newly verified)" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#ACF5BD;fillOpacity=20;strokeColor=#005B5E;strokeWidth=2;fontSize=20;fontFamily=Times New Roman;" vertex="1" parent="1"><mxGeometry x="140" y="410" width="330" height="70" as="geometry" /></mxCell>
+        <mxCell id="incl" value="Sources in the companion review&lt;br&gt;(n = 50; 4 carried forward)&lt;br&gt;of which cited in this thesis: 45" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#005B5E;fillOpacity=15;strokeColor=#004244;strokeWidth=2;fontSize=20;fontFamily=Times New Roman;" vertex="1" parent="1"><mxGeometry x="140" y="550" width="330" height="70" as="geometry" /></mxCell>
+
+        <mxCell id="e2" value="Excluded at verification&lt;br&gt;(n = 4): could not be traced&lt;br&gt;to a primary record" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFE8D4;fillOpacity=40;strokeColor=#FF791E;strokeWidth=2;fontSize=20;fontFamily=Times New Roman;" vertex="1" parent="1"><mxGeometry x="530" y="285" width="250" height="70" as="geometry" /></mxCell>
+        <mxCell id="e3" value="Retained with caveat (n = 1):&lt;br&gt;incomplete metadata; not cited&lt;br&gt;in this thesis" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFE8D4;fillOpacity=40;strokeColor=#FF791E;strokeWidth=2;fontSize=20;fontFamily=Times New Roman;" vertex="1" parent="1"><mxGeometry x="530" y="410" width="250" height="70" as="geometry" /></mxCell>
+
+        <mxCell id="a1" style="endArrow=block;html=1;strokeColor=#005B5E;strokeWidth=2;fontFamily=Times New Roman;" edge="1" parent="1" source="db" target="base"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="a2" style="endArrow=block;html=1;strokeColor=#005B5E;strokeWidth=2;fontFamily=Times New Roman;" edge="1" parent="1" source="base" target="cand"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="a3" style="endArrow=block;html=1;strokeColor=#005B5E;strokeWidth=2;fontFamily=Times New Roman;" edge="1" parent="1" source="cand" target="verif"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="a4" style="endArrow=block;html=1;strokeColor=#005B5E;strokeWidth=2;fontFamily=Times New Roman;" edge="1" parent="1" source="verif" target="incl"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="x1" style="endArrow=block;html=1;strokeColor=#FF791E;strokeWidth=2;fontFamily=Times New Roman;" edge="1" parent="1" source="cand" target="e2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="x2" style="endArrow=block;html=1;strokeColor=#FF791E;strokeWidth=2;fontFamily=Times New Roman;" edge="1" parent="1" source="verif" target="e3"><mxGeometry relative="1" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

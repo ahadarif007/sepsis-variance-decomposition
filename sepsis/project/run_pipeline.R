@@ -153,6 +153,37 @@ if (file.exists(tc)) {
   v2_log(paste(st, collapse = "\n"))
 }
 
+# Figure 3.1 (CONSORT) is a .drawio file, and a .drawio cannot hold a macro, so
+# its eleven cohort counts are frozen literals generated from the constants.
+# Every other number in the thesis re-derives itself on a run; that one cannot,
+# so it is refreshed here rather than left to be remembered. Mirrors the block
+# in run_pipeline.sh.
+consort_gen <- file.path(script_dir, "..", "thesis", "figures-src",
+                         "make_consort_drawio.py")
+export_fig  <- file.path(script_dir, "..", "thesis", "figures-src",
+                         "export_drawio.py")
+if (file.exists(consort_gen)) {
+  v2_log("Checking frozen figure assets...")
+  fresh <- system2("python3", c(shQuote(consort_gen), "--check"),
+                   stdout = TRUE, stderr = TRUE)
+  if (!is.null(attr(fresh, "status")) && attr(fresh, "status") != 0) {
+    v2_log("  Figure 3.1 is STALE against this run; regenerating...")
+    system2("python3", shQuote(consort_gen), stdout = TRUE, stderr = TRUE)
+    ex <- system2("python3", c(shQuote(export_fig), "--into-figures"),
+                  stdout = TRUE, stderr = TRUE)
+    if (!is.null(attr(ex, "status")) && attr(ex, "status") != 0) {
+      v2_log(paste0("  [WARN] Figure 3.1's source was regenerated but could not ",
+                    "be re-exported; the thesis would print stale counts inside ",
+                    "an image. Install draw.io and re-run export_drawio.py ",
+                    "--into-figures."), level = "WARN")
+    } else {
+      v2_log("  Figure 3.1 regenerated and re-exported; rebuild the thesis.")
+    }
+  } else {
+    v2_log("  OK  Figure 3.1 still matches the pipeline constants.")
+  }
+}
+
 v2_log("\n======================================================")
 v2_log("  Pipeline complete.")
 v2_log(sprintf("  Results and PDF reports in: %s", OUTPUT_DIR))

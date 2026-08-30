@@ -501,6 +501,36 @@ for (v in PREREG) for (m in names(MODEL_TOK)) {
   put(paste0("AlertRange", tok), cell(nb, "alert_rate_range", variant = v, model = m), digits = 3)
 }
 
+# --------------------------------------------------------------------------- #
+# Provenance of the run that produced this document.
+#
+# Between drafts, GBT-derived numbers move: the pipeline is not bit-stable
+# across runs (README, HANDOFF section 4). thesis_constants.R keeps the DOCUMENT
+# internally consistent on every run, but anything built outside the pipeline --
+# slides, a screencast, a number quoted from memory in a viva -- can silently
+# disagree with the submitted PDF. Stamping the commit into the thesis makes the
+# pairing checkable instead of assumed.
+#
+# The hash is HEAD at generation time: the code state that produced these
+# numbers. The freeze commit that carries the rebuilt PDF is its child, and the
+# tag is placed on that child. `--dirty` is deliberate: constants generated from
+# an uncommitted tree must not claim a clean provenance.
+# --------------------------------------------------------------------------- #
+sec("Run provenance")
+.git_out <- function(args, fallback = NA_character_) {
+  out <- tryCatch(
+    suppressWarnings(system2("git", args, stdout = TRUE, stderr = FALSE)),
+    error = function(e) character(0))
+  if (length(out) == 0 || !nzchar(out[1])) fallback else out[1]
+}
+put("FrozenCommit",
+    .git_out(c("-C", SCRIPT_DIR, "describe", "--always", "--dirty", "--abbrev=12")),
+    raw = TRUE)
+put("FrozenDate", format(Sys.Date(), "%d %B %Y"), raw = TRUE)
+# Set FREEZE_TAG when running the freeze so the thesis names its own tag.
+put("FrozenTag", { t <- Sys.getenv("FREEZE_TAG", ""); if (nzchar(t)) t else "unreleased" },
+    raw = TRUE)
+
 sec("External validation (eICU-CRD)")
 # Primary arm: Sepsis-3 conjunction on the microbiology-covered sub-cohort.
 # Every quantity here is per-variant, because the external label sets are
@@ -589,6 +619,39 @@ for (v in PREREG) {
 # Variant B's denominator and is correct for Variant B alone. Delete this line
 # once no chapter references \pcExtAbxNRows.
 put("ExtAbxNRows", cell(ab, "n_rows", variant = "B", model = "pred_sepsis"), big = TRUE)
+
+# Treatment-independent arm: Variant D on the FULL eICU cohort (Amendment 9).
+# This is the only external estimate in the study whose denominator is the
+# whole of eICU-CRD rather than the microbiology-covered 1.55% sub-cohort, so
+# the stay and event counts are emitted beside the AUROCs -- the counts are
+# what the arm is for, and an AUROC quoted without them invites exactly the
+# comparison with the Sepsis-3 arm that must not be made.
+al <- rd("08_external_validation_results_altlabel")
+put("ExtAltAurocPrimary", cell(al, "auroc",    variant = "D", model = "pred_sepsis"))
+put("ExtAltAurocGbt",     cell(al, "auroc",    variant = "D", model = "pred_gbt"))
+put("ExtAltAurocNews",    cell(al, "auroc",    variant = "D", model = "pred_news2"))
+put("ExtAltNStays",       cell(al, "n_stays",  variant = "D", model = "pred_sepsis"), big = TRUE)
+put("ExtAltNRows",        cell(al, "n_rows",   variant = "D", model = "pred_sepsis"), big = TRUE)
+put("ExtAltNEvents",      cell(al, "n_events", variant = "D", model = "pred_sepsis"), big = TRUE)
+
+# The internal counterpart of these AUROCs is ALREADY emitted, as
+# \pcAltAurocFullPrimaryD and \pcAltAurocFullGbtD from 07_metric_results_altlabel.
+# A second macro for the same quantity is the drift hazard this file exists to
+# remove, so the transport gap is written against those and none is added here.
+put("ExtAltNOnsetStays",  cell(rd("08_eicu_label_summary"), "n_onsets",
+                               variant = "D", anchor = "deterioration"), big = TRUE)
+
+# Event rate under the treatment-independent label, against the same variant's
+# development-cohort rate. This is the quantity that separates "eICU has fewer
+# septic patients" from "eICU documents the anchor less often", so it is taken
+# from a result table rather than divided out by hand in the prose.
+ar <- rd("08_event_rate_altlabel")
+put("ExtAltRateMimic", cell(ar, "events_per_1k_person_h", variant = "D",
+                            source = "MIMIC-IV temporal test"), digits = 3)
+put("ExtAltRateEicu",  cell(ar, "events_per_1k_person_h", variant = "D",
+                            source = "eICU deterioration (full)"), digits = 3)
+put("ExtAltRateRatio", cell(ar, "rate_ratio_vs_mimic", variant = "D",
+                            source = "eICU deterioration (full)"), digits = 3)
 
 # --------------------------------------------------------------------------- #
 # Variance decomposition

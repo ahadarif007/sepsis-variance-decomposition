@@ -127,6 +127,16 @@ AUROC is wider than the degradation the study is trying to detect.
 stated as directions, not as magnitudes, and the H5 interval is the formal
 expression of that limit.
 
+One external estimate in this study does clear the floor, and it is important
+not to mistake it for a Sepsis-3 result. The treatment-independent arm of
+Section~\ref{sec:external_altlabel} scores \pcExtAltNEvents{} events, because
+its label needs no culture record and therefore reaches the whole cohort. It is
+post-hoc, it targets acute organ dysfunction rather than Sepsis-3, and it is
+excluded from H5. What its event count buys is precision about the
+\emph{direction and rough size} of external degradation, which the three
+pre-registered variants cannot supply; it buys nothing about the Sepsis-3
+target, for which the floor still binds.
+
 Two further quantities are unavailable at this event count in any case. AUPRC is
 dominated by sampling noise at a few dozen positives, and the Utility Score
 requires enough septic stays for the timeliness reward to be estimated at all.
@@ -232,6 +242,41 @@ Three things it does establish:
     illustrate; they are not a test of H5's internal-to-external contrast,
     which is reported in Section~\ref{sec:h5}.
 \end{enumerate}
+
+A fourth item was added after the first three, under Protocol Amendment~9, and
+it is the only one that speaks to the external database as a whole.
+
+\textbf{The external event-rate gap is a property of the anchor, not of the
+population.} The Sepsis-3 arm reaches only \pcExtNMicroStays{} of
+\pcExtAltNStays{} eICU-CRD stays and yields an event rate
+\pcExtRateRatioB{} times the development cohort's. Two readings of that gap
+have very different consequences. Either eICU's patients differ from
+MIMIC-IV's to a degree that would undermine any external comparison, or the
+Sepsis-3 label is simply constructible less often there because it requires a
+documented culture. Nothing in the Sepsis-3 arm can separate them, since both
+readings predict exactly the same shortfall.
+
+Variant D separates them, because it holds the physiology and the two databases
+fixed and removes only the treatment anchor. Applied to all \pcExtAltNStays{}
+stays it gives \pcExtAltRateEicu{} events per 1{,}000 person-hours against
+\pcExtAltRateMimic{} internally, a ratio of \pcExtAltRateRatio{} where the
+anchored label gave \pcExtRateRatioB. The shortfall largely disappears when the
+label stops requiring a record of what a clinician did. This is the direct
+evidence for Limitation~\ref{lim:label_transport}'s claim that the binding
+external constraint is label transport rather than cohort comparability, and
+the pre-registered variants could not have produced it: all three share the
+anchor whose contribution is in question.
+
+Its discrimination must be read under the same restriction as the rest of this
+section. Variant D's external AUROC of \pcExtAltAurocPrimary{}
+(\pcExtAltAurocGbt{} for GBT) is measured on \pcExtAltNEvents{} events rather
+than \pcExtNEventsB, so it is the one external estimate here that is not
+limited by its event count. That buys precision about a deterioration rule, not
+about sepsis. The label remains a threshold on physiology the models are given,
+so the \emph{level} is no more interpretable as sepsis performance than it was
+internally, and it is not comparable with \pcExtAurocPrimaryB. What the event
+count does support is the \emph{drop}: internal to external degradation of this
+order is no longer an inference from \pcExtNEventsB{} events.
 
 
 \section{What the Ablation Establishes}
@@ -387,7 +432,7 @@ underpowered for a fairness question can report one as answered.
     below bounds how much it can carry.
 
     \item \textbf{External validation is bounded by label transport, not by
-    cohort size.} eICU-CRD contains \pcExtNCohortStays{} unit stays, but the
+    cohort size.}\label{lim:label_transport} eICU-CRD contains \pcExtNCohortStays{} unit stays, but the
     Sepsis-3 suspicion anchor requires a microbiology culture and
     \texttt{microLab} documents one for only \pcExtMicroCoverage\% of the
     analysis cohort, and both limbs of the anchor together for
@@ -400,7 +445,12 @@ underpowered for a fairness question can report one as answered.
     uncovered stays would enlarge the denominator without adding a single
     observable onset, so this is not a limitation additional data of the same
     kind would remove, it would require a destination database whose
-    microbiology recording matches MIMIC-IV's.
+    microbiology recording matches MIMIC-IV's. That the constraint is the
+    anchor rather than the population is shown directly in
+    Section~\ref{sec:variant_d_establishes}: a label carrying no treatment
+    timestamp recovers an external event rate of \pcExtAltRateRatio{} times the
+    development cohort's, against \pcExtRateRatioB{} under the anchored label,
+    on the same two databases.
 
     A second consequence follows, and it concerns composition rather than
     precision. The sub-cohort is defined by a documentation property, and a
