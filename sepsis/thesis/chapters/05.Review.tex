@@ -430,8 +430,9 @@ through two clinician actions: the drawing of a culture and the administration
 of an antibiotic. The consequence is a labelling rule that reads two clocks,
 one of which is a record of what the treating team did.
 
-Kamran et al.\ \cite{kamran2024evaluation} pursued this to its conclusion and
-produced the deepest threat to the enterprise. Clinicians frequently recognise
+Kamran et al.\ \cite{kamran2024evaluation} pursued this furthest, and their
+result bears on the validity of the prediction task itself rather than on any
+one model's performance within it. Clinicians frequently recognise
 and begin treating sepsis before the formal criteria are met. A model trained
 to predict the moment the criteria are met is therefore partly trained to
 predict \emph{when the clinician will act}, and the physiological record
@@ -461,8 +462,8 @@ SpO$_2$, whose apparent relationship to sepsis risk reverses direction with the
 framing. A model with strong discrimination \emph{and} strong calibration may
 still be clinically unusable.
 
-Taken together these two results close a trap around the argument for
-interpretable models. If framing can flip the sign of a coefficient, then the
+Taken together these two results constrain the argument for interpretable
+models from both sides. If framing can flip the sign of a coefficient, then the
 coefficient reports a property of the study design as much as a property of the
 patient. An uninterpretable model that is wrong is a nuisance; an
 \emph{interpretable} model that is confidently wrong about the direction of a
@@ -548,10 +549,16 @@ Chapter~\ref{ch:methodology}.
 This is Moor et al.'s 0.846 $\rightarrow$ 0.761 across four databases spanning
 the United States, the Netherlands and Switzerland, and it is consistent in
 direction, if not in significance, with Wang et al.'s meta-level 0.811
-$\rightarrow$ 0.783. The number is specific enough to pre-specify, which is
-what H5 does; and a study observing a substantially \emph{smaller} drop should
-first suspect that its external cohort is insufficiently distant rather than
-conclude that its model is unusually stable.
+$\rightarrow$ 0.783. It is a reference estimate drawn from one multi-database
+study and used here for planning, not an established typical value, and the
+distinction matters because the whole external design is sized against it. The
+number is specific enough to fix an expectation in advance, which is what this
+study's external arm is calibrated to; H5 itself asks a different question,
+whether the Utility Score declines proportionally further than AUROC does, and
+0.085 bounds only the AUROC limb of that comparison. A study observing a
+substantially \emph{smaller} drop should first suspect that its external cohort
+is insufficiently distant rather than conclude that its model is unusually
+stable.
 
 \paragraph{Rank order does not transfer.} Reyna et al.\ report that team
 Utility Scores were strongly rank-correlated between the two hospital systems

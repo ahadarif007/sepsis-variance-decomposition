@@ -49,8 +49,12 @@ tables by \texttt{thesis\_constants.R}, so the document is always internally
 consistent. It is not, however, consistent across \emph{runs}: the
 gradient-boosted comparator is not bit-stable, so re-executing the pipeline
 moves every GBT-derived quantity slightly. Between two drafts of this work the
-utility ceiling moved from 0.039 to 0.031 and the model-class gap from 0.0129 to
-0.0165 for exactly this reason, with no defect involved.
+utility ceiling moved from 0.039 to its present \pcUtilityMaxGbtB{} and the
+model-class gap from 0.0129 to \pcHSixAbsEst, for exactly this reason and with
+no defect involved. The two superseded figures are typed here rather than
+generated, because they are the only quantities in this document that must
+\emph{not} track the current run: replacing them with macros would print the
+present values twice and destroy the comparison the sentence exists to make.
 
 The consequence is that a number is only meaningful when paired with the run
 that produced it. This document is therefore bound to one run, and that run is
@@ -73,8 +77,8 @@ document.
 
 \begin{verbatim}
 git checkout <tag>
-diff <(git show <tag>:sepsis/thesis/generated/pipeline_constants.tex) \
-     sepsis/thesis/generated/pipeline_constants.tex
+F=sepsis/thesis/generated/pipeline_constants.tex
+diff <(git show <tag>:$F) $F
 \end{verbatim}
 
 \noindent Every number printed in this thesis is expanded from that one
@@ -84,8 +88,8 @@ requires credentialed PhysioNet access, since no derived table is redistributed
 here (Section~\ref{app:repo}); the reported quantities themselves are aggregate
 results and are disclosed in this document rather than as data.
 
-Everything produced after the freeze --- the presentation, the screencast and
-the viva preparation --- reads from the frozen constants rather than from a
+Everything produced after the freeze (the presentation, the screencast and
+the viva preparation) reads from the frozen constants rather than from a
 fresh run, so that no figure quoted aloud can disagree with the figure on the
 page.
 
@@ -107,7 +111,7 @@ page.
 
         \texttt{00\_preregistration.md} &
         The pre-registration, including the G0 analysis gate and Protocol
-        Amendments 1--8, each dated and disclosed as post-hoc \\
+        Amendments 1--10, each dated and disclosed as post-hoc \\
         \addlinespace
         \texttt{config.R} &
         All constants: label-variant parameters, feature lists, plausibility
@@ -256,10 +260,13 @@ directly.
         \texttt{07\_utility\_sweep}, \texttt{07\_utility\_max},
         \texttt{07\_ablation\_metrics} \\
         \addlinespace
-        08 & eICU-CRD source tables; frozen \texttt{05\_}/\texttt{06\_} models &
+        08 & eICU-CRD source tables; frozen \texttt{05\_}/\texttt{06\_} models
+        (including the Variant D fits, for the Amendment 9 arm) &
         \texttt{08\_external\_validation\_results}, \texttt{\_abxonly},
-        \texttt{08\_eicu\_predictions\_*}, \texttt{08\_eicu\_coverage},
-        \texttt{08\_event\_rate\_reconciliation},
+        \texttt{\_altlabel}, \texttt{08\_eicu\_predictions\_*} (A--C on the
+        microbiology-covered sub-cohort, D on the full cohort),
+        \texttt{08\_eicu\_coverage},
+        \texttt{08\_event\_rate\_reconciliation}, \texttt{\_altlabel},
         \texttt{08\_h5\_internal\_external} \\
         \addlinespace
         09 & \texttt{07\_metric\_results*} &
@@ -281,7 +288,10 @@ directly.
         12 & Stored predictions only (refits nothing) &
         \texttt{12\_confirmatory\_tests}, \texttt{12\_internal\_ci},
         \texttt{12\_subgroup\_auroc\_ci}, \texttt{\_contrasts},
-        \texttt{12\_subgroup\_labelsens\_*}, \texttt{12\_altlabel\_*},
+        \texttt{12\_subgroup\_labelsens\_*}, \texttt{12\_altlabel\_*}
+        (including \texttt{\_transport\_ci}),
+        \texttt{12\_ablation\_ci}, \texttt{12\_calibration\_ci},
+        \texttt{\_contrasts},
         \texttt{12\_h2\_*}, \texttt{12\_analysis\_register} \\
         \bottomrule
     \end{tabularx}

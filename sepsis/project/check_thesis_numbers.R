@@ -71,7 +71,13 @@ ALLOWED <- list(
   list(v = 0.999,   why = "the conventional calibration clamp being argued against"),
   list(v = 0.085,   why = "external AUROC penalty anticipated from Moor et al., fixed in the pre-registration"),
   list(v = 46.104,  why = "45 CFR 46.104(d)(4), a regulation number"),
-  list(v = 74000,   why = "MIMIC-IV's approximate stay count as published by PhysioNet")
+  list(v = 74000,   why = "MIMIC-IV's approximate stay count as published by PhysioNet"),
+  # Appendix A.2 quotes four values from an EARLIER run, on purpose: the section
+  # exists to show that the gradient-boosted comparator is not bit-stable, and
+  # it can only show that by naming what moved. They cannot be macros, because a
+  # macro would print the current run's value and destroy the comparison.
+  list(v = 0.039,   why = "GBT utility ceiling on a PREVIOUS run, quoted in Appendix A.2 to show what re-running moves; its current counterpart in the same sentence is a macro"),
+  list(v = 0.0129,  why = "H6 model-class gap on a PREVIOUS run, quoted in Appendix A.2 for the same reason; its current counterpart is a macro")
 )
 
 # ---------------------------------------------------------------------------

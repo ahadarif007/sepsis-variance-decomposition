@@ -146,8 +146,27 @@ cell <- function(dt, col, ...) {
   v
 }
 
+#' Typeset a bracketed interval string with real minus signs
+#'
+#' `fmt_ci()` writes "[-0.0123, -0.0034]" with ASCII hyphens. Emitted raw, that
+#' sets a hyphen where the numeric macros beside it set a proper minus, and the
+#' two appear in adjacent columns of the same table. Only the sign is touched:
+#' the digits stay exactly as the pipeline wrote them.
+ci_tex <- function(x) {
+  if (length(x) != 1 || is.na(x)) return(x)
+  structure(gsub("-(?=[0-9.])", "\\\\ensuremath{-}", as.character(x), perl = TRUE),
+            row_found = isTRUE(attr(x, "row_found")))
+}
+
 MODEL_TOK <- c(primary = "Primary", gbt = "Gbt", news2 = "News",
                cox = "Cox", qsofa = "Qsofa", sirs = "Sirs")
+# MODEL_TOK builds macro NAMES, which put() requires to be letters only, so
+# "Gbt" and "Qsofa" are spelling constraints rather than how the models are
+# written. A generated table that printed the token in a Model column showed
+# "Gbt" against "GBT" everywhere else in the thesis; display text comes from
+# here instead.
+MODEL_DISPLAY <- c(primary = "Primary", gbt = "GBT", news2 = "NEWS2",
+                   cox = "Cox", qsofa = "qSOFA", sirs = "SIRS")
 PREREG    <- c("A", "B", "C")
 ALT       <- c("D", "E", "F")   # F added by Protocol Amendment 4
 HTOK      <- c(H1 = "HOne", H2 = "HTwo", H3 = "HThree",
@@ -515,6 +534,15 @@ for (v in PREREG) for (m in names(MODEL_TOK)) {
 # numbers. The freeze commit that carries the rebuilt PDF is its child, and the
 # tag is placed on that child. `--dirty` is deliberate: constants generated from
 # an uncommitted tree must not claim a clean provenance.
+#
+# FREEZE_COMMIT overrides the live lookup, and freeze.sh is the only caller that
+# sets it. It has to exist, because the live lookup cannot work during a freeze:
+# this file is tracked, the run rewrites it, and setting FREEZE_TAG alone
+# changes its contents -- so by the time the stamp is written the tree is dirty
+# BY THIS SCRIPT'S OWN ACTION, and `git describe --dirty` would report a defect
+# that is really just the run doing its job. freeze.sh captures the hash while
+# the tree is still verified clean and passes it in. The live lookup stays the
+# default for every ordinary run, where `-dirty` means what it says.
 # --------------------------------------------------------------------------- #
 sec("Run provenance")
 .git_out <- function(args, fallback = NA_character_) {
@@ -524,7 +552,9 @@ sec("Run provenance")
   if (length(out) == 0 || !nzchar(out[1])) fallback else out[1]
 }
 put("FrozenCommit",
-    .git_out(c("-C", SCRIPT_DIR, "describe", "--always", "--dirty", "--abbrev=12")),
+    { fc <- Sys.getenv("FREEZE_COMMIT", "")
+      if (nzchar(fc)) fc else
+        .git_out(c("-C", SCRIPT_DIR, "describe", "--always", "--dirty", "--abbrev=12")) },
     raw = TRUE)
 put("FrozenDate", format(Sys.Date(), "%d %B %Y"), raw = TRUE)
 # Set FREEZE_TAG when running the freeze so the thesis names its own tag.
@@ -800,13 +830,93 @@ local({
         round(100 * sum(tf(h2$sign_flip) | tf(h2$mag_flip)) / nrow(h2), 1), digits = 1)
 })
 
+# --------------------------------------------------------------------------- #
+# Protocol Amendment 10 - intervals on three previously point-estimated claims
+# --------------------------------------------------------------------------- #
+sec("Ablation contrast intervals (Protocol Amendment 10)")
+abci <- rd("12_ablation_ci")
+for (v in PREREG) for (m in c("primary", "gbt")) {
+  tok <- paste0(MODEL_TOK[[m]], v)
+  put(paste0("AblDeltaCi", tok), ci_tex(cell(abci, "delta_ci", variant = v, model = m)),
+      raw = TRUE)
+}
+# How many of the six paired contrasts exclude zero. The thesis states this as a
+# count rather than listing them, so it must come from the table and not from a
+# reading of it.
+local({
+  tf <- function(x) x %in% c(TRUE, "TRUE")
+  put("AblNExcludeZero",
+      if (is.null(abci) || !nrow(abci)) NA else sum(tf(abci$excludes_zero)),
+      digits = 0)
+  put("AblNContrasts",
+      if (is.null(abci)) NA else nrow(abci), digits = 0)
+})
+
+sec("Cross-label calibration intervals (Protocol Amendment 10)")
+calci <- rd("12_calibration_ci")
+calct <- rd("12_calibration_contrasts")
+for (v in PREREG) {
+  put(paste0("CalibSlopeCi", v), ci_tex(cell(calci, "slope_ci", variant = v)), raw = TRUE)
+  put(paste0("CalibIntCi",   v), ci_tex(cell(calci, "int_ci",   variant = v)), raw = TRUE)
+}
+# Spread of the three calibration slopes, so the prose can say how close they
+# sit without a hand-computed difference.
+local({
+  if (is.null(calci) || !nrow(calci)) { put("CalibSlopeSpread", NA); return(invisible(NULL)) }
+  sl <- as.numeric(calci$calib_slope)
+  put("CalibSlopeSpread", diff(range(sl, na.rm = TRUE)), digits = 3)
+})
+for (v in c("A", "C")) {
+  tok <- paste0(v, "B")
+  put(paste0("CalibDeltaSlope",     tok), cell(calct, "delta_slope", variant = v), digits = 3)
+  put(paste0("CalibDeltaSlopeCiLo", tok), cell(calct, "slope_lo",    variant = v), digits = 3)
+  put(paste0("CalibDeltaSlopeCiHi", tok), cell(calct, "slope_hi",    variant = v), digits = 3)
+  put(paste0("CalibDeltaInt",       tok), cell(calct, "delta_int",   variant = v), digits = 3)
+  put(paste0("CalibDeltaIntCiLo",   tok), cell(calct, "int_lo",      variant = v), digits = 3)
+  put(paste0("CalibDeltaIntCiHi",   tok), cell(calct, "int_hi",      variant = v), digits = 3)
+}
+
+sec("Variant D external transport intervals (Protocol Amendment 10)")
+altr <- rd("12_altlabel_transport_ci")
+for (m in c("primary", "gbt")) {
+  tok <- MODEL_TOK[[m]]
+  put(paste0("ExtAltDrop",     tok), cell(altr, "delta_auroc", model = m))
+  put(paste0("ExtAltDropCiLo", tok), cell(altr, "ci_lo",       model = m))
+  put(paste0("ExtAltDropCiHi", tok), cell(altr, "ci_hi",       model = m))
+  put(paste0("ExtAltDropCi",   tok), ci_tex(cell(altr, "delta_ci",    model = m)), raw = TRUE)
+}
+
+sec("H6 interval-null limbs (Protocol Amendment 10)")
+local({
+  ct6 <- rd("12_confirmatory_tests")
+  put("HSixPLimbUpper", cell(ct6, "p_limb_upper", hypothesis = "H6"), digits = 3)
+  put("HSixPLimbLower", cell(ct6, "p_limb_lower", hypothesis = "H6"), digits = 3)
+})
+
+# The scaled Brier score is 1 - Brier/Brier_null, so the ratio the prose quotes
+# is one minus the score. Derived here rather than in the sentence, because a
+# re-run moves every GBT quantity and a hand-computed ratio would not move with
+# it.
+sec("Brier ratio against the null model (derived)")
+local({
+  cs <- rd("11_calibration_summary")
+  for (v in PREREG) for (m in c("primary", "gbt")) {
+    tok <- paste0(MODEL_TOK[[m]], v)
+    bs  <- cell(cs, "brier_scaled", variant = v,
+                model = if (m == "primary") "primary" else "gbt")
+    put(paste0("BrierRatio", tok),
+        if (length(bs) == 1 && is.na(bs)) bs else round(1 - as.numeric(bs), 1),
+        digits = 1)
+  }
+})
+
 sec("Per-model AUROC intervals, Variant B")
 ic <- rd("12_internal_ci")
 for (m in names(MODEL_TOK)) {
   tok <- paste0(MODEL_TOK[[m]], "B")
   put(paste0("AurocCiLo", tok), cell(ic, "auroc_lo", model = m))
   put(paste0("AurocCiHi", tok), cell(ic, "auroc_hi", model = m))
-  put(paste0("AuprcCi",   tok), cell(ic, "auprc_ci", model = m), raw = TRUE)
+  put(paste0("AuprcCi",   tok), ci_tex(cell(ic, "auprc_ci", model = m)), raw = TRUE)
 }
 
 # --------------------------------------------------------------------------- #
@@ -819,7 +929,7 @@ ac <- rd("12_altlabel_contrasts")
 for (v in ALT) for (m in c("primary", "gbt")) {
   tok <- paste0(MODEL_TOK[[m]], v)
   put(paste0("AltAuroc",      tok), cell(al, "auroc",       variant = v, model = m))
-  put(paste0("AltAurocCi",    tok), cell(al, "auroc_ci",    variant = v, model = m), raw = TRUE)
+  put(paste0("AltAurocCi",    tok), ci_tex(cell(al, "auroc_ci",    variant = v, model = m)), raw = TRUE)
   put(paste0("AltEventRatio", tok), cell(aa2, "event_rate_ratio", variant = v, model = m), digits = 1)
   put(paste0("AltDelta",      tok), cell(ac, "delta_auroc", variant = v, model = m))
   put(paste0("AltDeltaCiLo",  tok), cell(ac, "ci_lo",       variant = v, model = m))
@@ -1309,7 +1419,7 @@ write_table("equitycontrasts", "llrlcrr",
     sig  <- r$significant_bh %in% c(TRUE, "TRUE")
     qtxt <- formatC(as.numeric(r$p_bh), format = "f", digits = 3)
     qtxt <- ifelse(sig, paste0("\\textbf{", qtxt, "}"), qtxt)
-    mtok <- unname(MODEL_TOK[as.character(r$model)])
+    mtok <- unname(MODEL_DISPLAY[as.character(r$model)])
     mtok[is.na(mtok)] <- as.character(r$model)[is.na(mtok)]
     vtok <- c(race = "Race", language = "Language", insurance = "Insurance")
     vlab <- unname(vtok[as.character(r$subgroup_col)])
@@ -1327,7 +1437,7 @@ write_table("equitycontrasts", "llrlcrr",
 local({
   if (is.null(sct) || !nrow(sct)) return(invisible(NULL))
   r <- sct[order(p_bh, p_raw)][1]
-  mt <- unname(MODEL_TOK[as.character(r$model)])
+  mt <- unname(MODEL_DISPLAY[as.character(r$model)])
   put("EquityTopEOneVar",   pretty_level(r$subgroup_col), raw = TRUE)
   put("EquityTopEOneLevel", pretty_level(r$subgroup_val), raw = TRUE)
   put("EquityTopEOneModel", if (is.na(mt)) as.character(r$model) else mt, raw = TRUE)

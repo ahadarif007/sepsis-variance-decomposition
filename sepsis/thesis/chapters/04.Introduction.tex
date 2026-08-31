@@ -96,6 +96,21 @@ MIMIC-IV, how much of the reported performance variation comes from (a) the
 choice of model, and (b) the researcher's decisions: how sepsis is defined,
     how data is split, when prediction is made, and how performance is measured?}
 
+One scoping statement belongs with the question rather than after it, because
+it governs how every number in this thesis should be read. The models estimate
+the hazard of sepsis onset in the \emph{current} hour, and every AUROC reported
+here scores that hazard against an indicator of the onset hour among the hours
+in which a patient is still at risk. That is detection at the recorded onset,
+not anticipation of it over a future horizon, and the timing is exact only to
+the hour: predictors and the onset are binned the same way, so within that one
+hour a measurement charted after the onset timestamp still enters the
+prediction assigned to it. ``Real-time'' here therefore describes the
+estimand's form, a hazard evaluated at every hour of the stay with no
+retrospective information, and not a demonstrated lead over the clinician.
+Where this thesis reports that events exist before treatment and are separable
+from their surroundings, it is reporting exactly that and nothing about advance
+warning; Limitation~\ref{lim:current_hour} states the consequence in full.
+
 Six hypotheses were pre-registered before any of the modelling reported here:
 
 \begin{description}
@@ -116,8 +131,9 @@ Six hypotheses were pre-registered before any of the modelling reported here:
     H5's slot in the multiplicity correction.
     \item[H6 (Model-class null)] The primary statistical model is not
     outperformed by gradient-boosted trees by more than 0.02 AUROC. The
-    pre-registered statement is two-sided; only the upper side is testable
-    against these data, as Section~\ref{sec:h6} sets out.
+    pre-registered statement is two-sided, so its null is an interval with two
+    boundaries; both are tested and neither is cleared, as
+    Section~\ref{sec:h6} sets out.
 \end{description}
 
 H1 and H6 pull against each other by design. If H1 is confirmed, the label is

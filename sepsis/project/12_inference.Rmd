@@ -504,14 +504,42 @@ if (!is.null(boot_h5)) {
                                 utility_max][1]))
 }
 
-# H6: equivalence bound 0.02; rejecting H6 requires evidence that |delta| > 0.02
+# H6: equivalence bound 0.02; rejecting H6 requires evidence that |delta| > 0.02.
+#
+# Protocol Amendment 10. The null is an INTERVAL, -0.02 <= theta <= 0.02, so it
+# has two boundaries and rejecting it means clearing one of them. Earlier runs
+# tested the upper boundary only. That limb asks whether the boosted trees beat
+# the hazard model by more than the margin, which is the pre-registered concern
+# and the right thing to report -- but with theta-hat on the NEGATIVE side of
+# zero it is also the limb the data cannot speak to, and it returns p ~ 1 for
+# arithmetic reasons rather than evidential ones. Both limbs are now computed.
+#
+# The reported p_raw is min(p_upper, p_lower), which is a valid (conservative)
+# p-value for an interval null: under any theta inside [-0.02, 0.02] at most one
+# limb can be small, because a theta near one boundary is two margins away from
+# the other. The verdict rule is unchanged, and so is the direction of the
+# conclusion: rejection would mean non-equivalence, and neither limb rejects.
 ci_h6 <- perc_ci(boot_h1[, "h6_delta"], CI_LEVEL)
-p_h6  <- boot_pvalue(boot_h1[, "h6_delta"], obs_h1h6["h6_delta"], 0.02, "greater")
+p_h6_upper <- boot_pvalue(boot_h1[, "h6_delta"], obs_h1h6["h6_delta"],  0.02, "greater")
+p_h6_lower <- boot_pvalue(boot_h1[, "h6_delta"], obs_h1h6["h6_delta"], -0.02, "less")
+p_h6 <- min(p_h6_upper, p_h6_lower, na.rm = TRUE)
 rows[["H6"]] <- mk("H6", "Model-class null",
                    "GBT AUROC - primary AUROC (Variant B, temporal)",
                    unname(obs_h1h6["h6_delta"]), ci_h6,
-                   "|theta| <= 0.02 (equivalence)", p_h6,
-                   "paired: both models scored on the same person-hours")
+                   "-0.02 <= theta <= 0.02 (equivalence; interval null, two limbs)",
+                   p_h6,
+                   sprintf(paste0("paired: both models scored on the same ",
+                                  "person-hours. Interval null tested at both ",
+                                  "boundaries (Amendment 10): upper limb ",
+                                  "(theta > +0.02, GBT better by more than the ",
+                                  "margin) p = %.3f; lower limb (theta < -0.02, ",
+                                  "primary better by more than the margin) ",
+                                  "p = %.3f. The reported value is the smaller ",
+                                  "of the two. With theta-hat = %.4f the lower ",
+                                  "limb is the informative one; the upper limb ",
+                                  "is large by construction and establishes ",
+                                  "nothing on its own"),
+                           p_h6_upper, p_h6_lower, unname(obs_h1h6["h6_delta"])))
 
 conf <- rbindlist(rows)
 setorder(conf, hypothesis)
@@ -547,6 +575,12 @@ conf[hypothesis == "H5",
      verdict := "Not evaluable as pre-registered; substituted AUROC contrast inconclusive"]
 conf[, family := "confirmatory (pre-registered)"]
 conf[, correction := sprintf("Holm-Bonferroni, m=%d, FWER=%.2f", m_fam, FWER_ALPHA)]
+
+# H6's two limbs are persisted beside its reported p-value so the thesis can
+# print both rather than describing one of them (Amendment 10). Every other
+# hypothesis has a one-sided null with a single boundary, so the columns are NA.
+conf[, `:=`(p_limb_upper = NA_real_, p_limb_lower = NA_real_)]
+conf[hypothesis == "H6", `:=`(p_limb_upper = p_h6_upper, p_limb_lower = p_h6_lower)]
 
 save_parquet(conf, "12_confirmatory_tests", DATA_DIR)
 save_csv(conf, "12_confirmatory_tests", DATA_DIR)
@@ -1004,6 +1038,242 @@ if (nrow(alt_delta) > 0)
     caption = "AUROC difference vs.\\ Sepsis-3 (Variant B), Benjamini-Hochberg corrected across exploratory family E3")
 ```
 
+## Intervals Added Under Protocol Amendment 10
+
+Three quantities were reported as point estimates in earlier rounds, and each
+carried a claim in the thesis prose that a point estimate cannot support: that
+dropping the action-derived features leaves discrimination "essentially
+unaffected", that the three label definitions make no practical difference to
+calibration, and that the frozen models degrade on transport to the full
+external cohort under Variant D. Amendment 10 attaches an interval to each.
+None of them enters a corrected family: the ablation arm and the Variant D arm
+are excluded from every family by Amendments 5 and 9 respectively, and the
+calibration contrasts are estimation, not testing.
+
+### Action-Derived Feature Ablation (Amendment 5 arm)
+
+Both arms are fitted on the same training stays and scored on the same test
+stays, so the difference is paired within replicate and the interval is on the
+difference rather than on two marginal estimates that happen to overlap.
+
+```{r ablation-ci}
+abl_ci <- data.table()
+abl_pre <- list(); abl_obs <- c()
+
+for (vid in names(test_tab)) {
+  full <- test_tab[[vid]]
+  ap <- file.path(DATA_DIR, sprintf("05_predictions_primary_ablated_%s.parquet", vid))
+  ag <- file.path(DATA_DIR, sprintf("06_predictions_gbt_ablated_%s.parquet", vid))
+  for (m in c("primary", "gbt")) {
+    path <- if (m == "primary") ap else ag
+    col  <- if (m == "primary") "pred_sepsis" else "pred_gbt"
+    if (!file.exists(path) || !col %in% names(full)) next
+    ad <- as.data.table(read_parquet(path))
+    if (!col %in% names(ad)) next
+    ad[, y := as.integer(event == 1)]
+    ad[, sidx := match(stay_id, stay_frame)]
+    ad <- ad[!is.na(sidx)]
+    abl_pre[[paste(vid, m, "full", sep = "_")]] <-
+      auc_precompute(full[[col]], full$y, full$sidx, N_STAYS)
+    abl_pre[[paste(vid, m, "abl", sep = "_")]] <-
+      auc_precompute(ad[[col]], ad$y, ad$sidx, N_STAYS)
+    rm(ad); gc()
+  }
+}
+abl_pre <- Filter(Negate(is.null), abl_pre)
+
+if (length(abl_pre) > 0) {
+  stat_abl <- function(w) vapply(abl_pre, boot_auroc_w, numeric(1), w_stay = w)
+  t_start  <- proc.time()
+  boot_abl <- boot_run(N_STAYS, BOOT_B_MAIN, stat_abl, seed = BOOT_SEED + 40L,
+                       progress_every = 500L)
+  v2_log(sprintf("Ablation bootstrap: %.1f s", (proc.time() - t_start)["elapsed"]))
+  abl_obs <- stat_abl(ones)
+
+  keys <- grep("_full$", names(abl_pre), value = TRUE)
+  abl_ci <- rbindlist(lapply(keys, function(kf) {
+    ka <- sub("_full$", "_abl", kf)
+    if (!ka %in% colnames(boot_abl)) return(NULL)
+    parts <- strsplit(kf, "_", fixed = TRUE)[[1]]
+    dvec <- boot_abl[, ka] - boot_abl[, kf]
+    dobs <- unname(abl_obs[ka] - abl_obs[kf])
+    dci  <- perc_ci(dvec, CI_LEVEL)
+    data.table(variant = parts[1], model = parts[2],
+               auroc_full = unname(abl_obs[kf]), auroc_ablated = unname(abl_obs[ka]),
+               delta_auroc = dobs, ci_lo = dci["lo"], ci_hi = dci["hi"],
+               excludes_zero = dci["lo"] > 0 | dci["hi"] < 0)
+  }))
+  if (nrow(abl_ci) > 0) {
+    abl_ci[, delta_ci := fmt_ci(ci_lo, ci_hi, 4)]
+    abl_ci[, family := "none (Amendment 5 arm; enters no corrected family)"]
+    setorder(abl_ci, model, variant)
+    save_parquet(abl_ci, "12_ablation_ci", DATA_DIR)
+    save_csv(abl_ci,     "12_ablation_ci", DATA_DIR)
+    knitr::kable(abl_ci[, .(variant, model,
+                            full = round(auroc_full, 4),
+                            ablated = round(auroc_ablated, 4),
+                            delta = round(delta_auroc, 4), delta_ci, excludes_zero)],
+                 caption = "Paired ablation contrast (ablated minus full) with 95\\% stay-level cluster-bootstrap intervals")
+  }
+}
+```
+
+### Calibration Across Label Definitions
+
+The calibration intercept and slope are refit inside each replicate on the same
+stays as every other quantity here, so the cross-label differences are paired.
+The claim under test is the thesis's, that the label definition does not change
+how faithfully the fitted hazard tracks the observed rate; the contrast is
+therefore each variant against the primary label B.
+
+```{r calibration-ci}
+calib_ci <- data.table(); calib_delta <- data.table()
+
+cal_pre <- list()
+for (vid in names(test_tab)) {
+  d <- test_tab[[vid]]
+  cal_pre[[vid]] <- calib_precompute(d$pred_sepsis, d$y, d$sidx, N_STAYS)
+}
+cal_pre <- Filter(Negate(is.null), cal_pre)
+
+if (length(cal_pre) > 0) {
+  # Warm-start values: the full-data fit. Every replicate starts from here, so
+  # the IRLS converges in two or three steps instead of eight.
+  cal_start <- lapply(cal_pre, function(pr)
+    list(slope = boot_calib_slope_w(pr, ones),
+         int   = boot_calib_int_w(pr, ones)))
+
+  stat_cal <- function(w) {
+    out <- numeric(0)
+    for (v in names(cal_pre)) {
+      sl <- boot_calib_slope_w(cal_pre[[v]], w, start = cal_start[[v]]$slope)
+      it <- boot_calib_int_w(cal_pre[[v]], w, start = cal_start[[v]]$int)
+      out <- c(out, setNames(c(sl[2], it), paste0(c("slope_", "int_"), v)))
+    }
+    out
+  }
+
+  t_start  <- proc.time()
+  boot_cal <- boot_run(N_STAYS, BOOT_B_MAIN, stat_cal, seed = BOOT_SEED + 50L,
+                       progress_every = 250L)
+  v2_log(sprintf("Calibration bootstrap: %.1f s", (proc.time() - t_start)["elapsed"]))
+  obs_cal <- stat_cal(ones)
+
+  calib_ci <- rbindlist(lapply(names(cal_pre), function(v) {
+    cs <- perc_ci(boot_cal[, paste0("slope_", v)], CI_LEVEL)
+    ci <- perc_ci(boot_cal[, paste0("int_",   v)], CI_LEVEL)
+    data.table(variant = v, model = "primary", n_rows = cal_pre[[v]]$n,
+               calib_slope = unname(obs_cal[paste0("slope_", v)]),
+               slope_lo = cs["lo"], slope_hi = cs["hi"],
+               calib_int = unname(obs_cal[paste0("int_", v)]),
+               int_lo = ci["lo"], int_hi = ci["hi"])
+  }))
+  calib_ci[, `:=`(slope_ci = fmt_ci(slope_lo, slope_hi),
+                  int_ci   = fmt_ci(int_lo, int_hi))]
+
+  # Contrasts against the primary label, paired within replicate.
+  if ("B" %in% names(cal_pre)) {
+    calib_delta <- rbindlist(lapply(setdiff(names(cal_pre), "B"), function(v) {
+      ds <- boot_cal[, paste0("slope_", v)] - boot_cal[, "slope_B"]
+      di <- boot_cal[, paste0("int_",   v)] - boot_cal[, "int_B"]
+      dso <- unname(obs_cal[paste0("slope_", v)] - obs_cal["slope_B"])
+      dio <- unname(obs_cal[paste0("int_",   v)] - obs_cal["int_B"])
+      cs <- perc_ci(ds, CI_LEVEL); ci <- perc_ci(di, CI_LEVEL)
+      data.table(variant = v, reference = "B", model = "primary",
+                 delta_slope = dso, slope_lo = cs["lo"], slope_hi = cs["hi"],
+                 slope_excludes_zero = cs["lo"] > 0 | cs["hi"] < 0,
+                 delta_int = dio, int_lo = ci["lo"], int_hi = ci["hi"],
+                 int_excludes_zero = ci["lo"] > 0 | ci["hi"] < 0)
+    }))
+    calib_delta[, `:=`(slope_ci = fmt_ci(slope_lo, slope_hi),
+                       int_ci   = fmt_ci(int_lo, int_hi))]
+  }
+
+  save_parquet(calib_ci, "12_calibration_ci", DATA_DIR)
+  save_csv(calib_ci,     "12_calibration_ci", DATA_DIR)
+  if (nrow(calib_delta) > 0) {
+    save_parquet(calib_delta, "12_calibration_contrasts", DATA_DIR)
+    save_csv(calib_delta,     "12_calibration_contrasts", DATA_DIR)
+  }
+
+  knitr::kable(calib_ci[, .(variant, slope = round(calib_slope, 4), slope_ci,
+                            intercept = round(calib_int, 4), int_ci)],
+               caption = "Primary-model calibration slope and intercept by label variant, with 95\\% stay-level cluster-bootstrap intervals")
+  if (nrow(calib_delta) > 0)
+    knitr::kable(calib_delta[, .(variant, reference,
+                                 delta_slope = round(delta_slope, 4), slope_ci,
+                                 slope_excludes_zero,
+                                 delta_int = round(delta_int, 4), int_ci,
+                                 int_excludes_zero)],
+                 caption = "Paired cross-label calibration contrasts against Variant B")
+}
+```
+
+### Variant D Transport to the Full External Cohort (Amendment 9 arm)
+
+The internal and external cohorts are disjoint databases, so the two bootstrap
+streams are drawn separately and differenced, exactly as for H5. This arm is
+the only external estimate in the study that clears the interpretability floor,
+and it was the only one carrying no interval.
+
+```{r altlabel-transport-ci}
+alt_transport <- data.table()
+alt_ext_path  <- file.path(DATA_DIR, "08_eicu_predictions_D.parquet")
+
+if (file.exists(alt_ext_path) && "D" %in% names(alt_tab)) {
+  ed <- as.data.table(read_parquet(alt_ext_path))
+  ed[, y := as.integer(event == 1)]
+  setorder(ed, stay_id, hour)
+  estays_d <- sort(unique(ed$stay_id)); ed[, sidx := match(stay_id, estays_d)]
+  di <- alt_tab[["D"]]
+
+  ALT_T_MODELS <- c(primary = "pred_sepsis", gbt = "pred_gbt")
+  rows_t <- list()
+  for (m in names(ALT_T_MODELS)) {
+    col <- ALT_T_MODELS[[m]]
+    if (!col %in% names(ed) || !col %in% names(di)) next
+    pre_e <- auc_precompute(ed[[col]], ed$y, ed$sidx, length(estays_d))
+    pre_i <- auc_precompute(di[[col]], di$y, di$sidx, N_STAYS)
+    if (is.null(pre_e) || is.null(pre_i)) next
+
+    b_e <- boot_run(length(estays_d), BOOT_B_EXTERNAL,
+                    function(w) c(auroc = boot_auroc_w(pre_e, w)),
+                    seed = BOOT_SEED + 60L, progress_every = 250L)[, "auroc"]
+    b_i <- boot_run(N_STAYS, BOOT_B_EXTERNAL,
+                    function(w) c(auroc = boot_auroc_w(pre_i, w)),
+                    seed = BOOT_SEED + 61L, progress_every = 250L)[, "auroc"]
+
+    a_e <- boot_auroc_w(pre_e, rep(1L, length(estays_d)))
+    a_i <- boot_auroc_w(pre_i, ones)
+    dvec <- b_i - b_e
+    dci  <- perc_ci(dvec, CI_LEVEL)
+    rows_t[[m]] <- data.table(
+      variant = "D", model = m,
+      n_ext_stays = length(estays_d), n_ext_rows = pre_e$n, n_ext_events = sum(ed$y),
+      auroc_internal = a_i, auroc_external = a_e,
+      delta_auroc = a_i - a_e, ci_lo = dci["lo"], ci_hi = dci["hi"],
+      excludes_zero = dci["lo"] > 0 | dci["hi"] < 0)
+    rm(pre_e, pre_i); gc()
+  }
+  alt_transport <- rbindlist(rows_t)
+  if (nrow(alt_transport) > 0) {
+    alt_transport[, delta_ci := fmt_ci(ci_lo, ci_hi)]
+    alt_transport[, family := "none (Amendment 9 arm; excluded from H5)"]
+    save_parquet(alt_transport, "12_altlabel_transport_ci", DATA_DIR)
+    save_csv(alt_transport,     "12_altlabel_transport_ci", DATA_DIR)
+    knitr::kable(alt_transport[, .(model, n_ext_events,
+                                   internal = round(auroc_internal, 4),
+                                   external = round(auroc_external, 4),
+                                   delta = round(delta_auroc, 4), delta_ci,
+                                   excludes_zero)],
+                 caption = "Variant D internal-to-external AUROC transport on the full eICU-CRD cohort, with 95\\% cluster-bootstrap intervals")
+  }
+  rm(ed); gc()
+} else {
+  cat("Variant D external predictions not found; run stage 08 to write 08_eicu_predictions_D.\n")
+}
+```
+
 ## Subgroup Interval Widths
 
 The point of attaching intervals to the equity tables is that a subgroup with
@@ -1143,7 +1413,29 @@ register <- rbindlist(list(
   data.table(analysis = "Action-derived feature ablation (Amendment 5)", status = "exploratory",
              prereg = "Protocol Amendment 5 (post hoc; §19)",
              correction = "none (estimation); enters no corrected family",
-             reported_in = "Table: ablation")
+             reported_in = "Table: ablation"),
+  # Amendment 9's external arm had no register row at all, which is how it came
+  # to be printed under a confirmatory tag in the thesis while its own table
+  # said post-hoc. Registered here as descriptive, matching §23.2.
+  data.table(analysis = "Variant D external validation on the full eICU-CRD cohort (Amendment 9)",
+             status = "descriptive",
+             prereg = "Protocol Amendment 9 (post hoc; §23)",
+             correction = "none; joins no corrected family and is excluded from H5",
+             reported_in = "Table: external_altlabel"),
+  data.table(analysis = "Variant D internal-to-external transport interval (Amendment 10)",
+             status = "descriptive",
+             prereg = "Protocol Amendment 10 (post hoc; §24)",
+             correction = "none (estimation); excluded from H5 on Amendment 9's terms",
+             reported_in = "Table: altlabel_transport_ci"),
+  data.table(analysis = "Ablation contrast intervals (Amendment 10)", status = "exploratory",
+             prereg = "Protocol Amendment 10 (post hoc; §24)",
+             correction = "none (estimation); enters no corrected family",
+             reported_in = "Table: ablation_ci"),
+  data.table(analysis = "Cross-label calibration contrast intervals (Amendment 10)",
+             status = "exploratory",
+             prereg = "Protocol Amendment 10 (post hoc; §24)",
+             correction = "none (estimation); enters no corrected family",
+             reported_in = "Table: calibration_contrasts")
   # Amendment 7 is NOT added here: the diagnostic block above already registers
   # it as "H2 instability uncertainty diagnostic". A second row was briefly
   # added in this round and removed -- a duplicated register entry is exactly
@@ -1174,7 +1466,10 @@ Four things govern how the tables above should be read.
 3. **Non-inferiority is read off the interval, not the test.** For H6 the
    question is whether the confidence limit falls inside the pre-registered
    margin. A large p-value on its own establishes nothing, because failing to
-   reject is not evidence of equivalence.
+   reject is not evidence of equivalence. H6's null is an interval with two
+   boundaries, and Amendment 10 tests both: the upper limb is large whenever
+   the estimate is negative, so it is the lower limb that carries whatever
+   information the test has.
 4. **Exploratory families generate hypotheses and do not test them.** E1, E2
    and E3 are corrected by Benjamini--Hochberg within themselves and never
    pooled with the confirmatory family. A contrast surviving BH is a candidate

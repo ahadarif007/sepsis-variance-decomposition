@@ -927,5 +927,118 @@ negative outcome cannot be re-described afterwards as a decision not to pursue.
 additional `anchor = "deterioration"` rows in `08_eicu_label_summary`. No
 existing output file changes: the primary and sensitivity arms are recomputed
 byte-identically and this is checked rather than asserted. Per-hour external
-predictions are not persisted for this arm, matching the antibiotic-only
-sensitivity arm.
+predictions were not persisted for this arm in the original pass, matching the
+antibiotic-only sensitivity arm. **Amendment 10 reverses that decision**: they
+are now written to `08_eicu_predictions_D`, because an arm important enough to
+carry a conclusion is important enough to carry an interval.
+
+---
+
+# Amendment 10: Intervals on Three Point-Estimate Claims, and H6's Second Limb
+
+**Date:** 2026-08-31
+**Status:** **POST-HOC.** Like Amendments 1–9, not pre-specified. It changes no
+estimand, no threshold, no direction and no hypothesis. It attaches uncertainty
+to three quantities that were reported without it, and it completes a test that
+was implemented against one boundary of a two-boundary null.
+
+**24.1 Why.** An examiner-style audit of the compiled thesis found four places
+where a claim outran its evidence, all of the same kind: an inferential
+statement resting on a point estimate. The pipeline's inference plan
+(Amendment 1) attaches intervals to every *contrast entering a corrected
+family*, which by construction excludes the post-hoc arms — and the post-hoc
+arms are where three of this study's conclusions now live. The gap is
+structural rather than accidental, which is why it is fixed once, here, rather
+than case by case.
+
+**24.2 What is added.**
+
+1. **Ablation contrast intervals** (`12_ablation_ci`). The paired
+   ablated-minus-full AUROC difference for the primary model and the
+   gradient-boosted comparator under each of Variants A, B and C, with a
+   stay-level cluster-bootstrap interval. Both arms are fitted on the same
+   training stays and scored on the same test stays, so the difference is paired
+   within replicate. This is what licenses or withdraws the thesis's statement
+   that discrimination is "essentially unaffected" by removing the
+   action-derived features.
+
+2. **Cross-label calibration intervals** (`12_calibration_ci`,
+   `12_calibration_contrasts`). The primary model's calibration slope and
+   calibration intercept under each variant, and the paired contrast of each
+   against Variant B. This is what licenses or withdraws the statement that the
+   label definition makes no practical difference to calibration. The
+   calibration fits are refit inside each replicate; `utils.R` carries a
+   warm-started IRLS for the two one- and two-parameter models, verified against
+   `glm()` to within its own convergence tolerance, because `glm()` itself is
+   two orders of magnitude too slow at this replicate count.
+
+3. **Variant D transport interval** (`12_altlabel_transport_ci`). The
+   internal-minus-external AUROC difference for the Amendment 9 arm, drawn as
+   two independent bootstrap streams and differenced, exactly as H5 is. This is
+   the only external estimate in the study that clears the 100-event
+   interpretability floor and it was the only one carrying no interval. It
+   remains **excluded from H5** and from every corrected family, on Amendment
+   9's terms and for Amendment 9's reason.
+
+4. **H6's second limb.** H6's null is the interval −0.02 ≤ θ ≤ 0.02. An
+   interval null has two boundaries, and rejecting it means clearing one of
+   them. The implementation tested the upper boundary only, which asks whether
+   the boosted trees beat the hazard model by more than the margin. That is the
+   pre-registered concern and remains the limb the thesis's conclusion is about
+   — but with θ̂ on the negative side of zero it is also the limb the data
+   cannot speak to, and it returns p ≈ 1 for arithmetic reasons rather than
+   evidential ones. Both limbs are now computed and both are persisted in
+   `12_confirmatory_tests` as `p_limb_upper` and `p_limb_lower`. The reported
+   `p_raw` is their minimum, which is a valid and conservative p-value for an
+   interval null: under any θ inside the interval at most one limb can be
+   small, because a θ near one boundary is two margins away from the other.
+
+**24.2a A consequence not anticipated when this amendment was written.** The
+per-variant calibration intervals were added to support the *cross-label*
+comparison, but they are also the first intervals this study has placed around
+the absolute calibration targets, intercept = 0 and slope = 1. At 548,827
+person-hours they resolve departures the point estimates hide: the slope covers
+one under Variants A and B but not under C, and the intercept covers zero under
+C but not under A or B. Under each variant, therefore, exactly one of the two
+targets is missed at 95 % confidence. This does not change any hypothesis or
+verdict, and the magnitudes remain negligible against the threshold grid (an
+intercept of −0.106 on the logit scale shifts a 0.00189 hourly risk by about a
+tenth of itself). It does mean the thesis can no longer say the primary model
+is calibrated under every variant without qualification, and §5.3.1 has been
+rewritten to state the measured position instead. Recorded here because it is a
+claim the amendment weakened, not one it was designed to test.
+
+**24.3 What does not change, and why that is checkable.** The verdict for every
+hypothesis is unchanged, and so is every Holm-adjusted p-value. H6's reported
+`p_raw` moves off 1.000 onto the lower limb's value, but Holm's step-down is
+driven by the *ordering* of the raw p-values, and H6 remains the largest or
+second-largest in the family either way; H5's adjusted value of 0.551 is
+determined by its own raw value of 0.092 and the family size of six, neither of
+which this amendment touches. The claim is stated here in advance so that the
+re-run either confirms it or contradicts it in the open. Nothing in H1–H5 is
+recomputed at all: the ablation, calibration and transport blocks read stored
+predictions and write new files.
+
+**24.4 The direction of the risk.** Three of the four changes can only weaken
+the thesis's own claims, because an interval on a quantity previously reported
+as a point estimate can widen a conclusion but cannot narrow one. The fourth
+replaces an uninformative p-value with an informative one. This is recorded
+because the amendment log's value depends on it being possible to see which
+amendments ran in the study's favour: Amendment 7's did, and is flagged as such
+in the limitations; this one cannot.
+
+**24.5 Timebox.** One stage-08 run to persist the Variant D external
+predictions and one stage-12 run. Stage 08's existing outputs must be
+*value*-identical afterwards, checked field by field rather than by file hash:
+Parquet embeds writer metadata, so a re-run moves every file's bytes while its
+contents are unchanged, and a hash comparison would report a change that is not
+one. Verified on the run of 2026-08-31: all nine of stage 08's result tables
+match the frozen run exactly, including the external AUROCs (A 0.6913 /
+B 0.6960 / C 0.7370), the coverage ladder (2,824 of 181,589 = 1.555 %; 232 both
+limbs), the event-rate ratios (0.094 anchored, 0.7458 under Variant D) and the
+Variant D arm's 52,535 events over 5,866,697 person-hours.
+
+**Deliverables:** `08_eicu_predictions_D`, `12_ablation_ci`,
+`12_calibration_ci`, `12_calibration_contrasts`, `12_altlabel_transport_ci`,
+two new columns in `12_confirmatory_tests`, and four new rows in
+`12_analysis_register`.

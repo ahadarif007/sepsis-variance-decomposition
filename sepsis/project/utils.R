@@ -140,6 +140,77 @@ boot_auprc_w <- function(pre, w_stay) {
   sum(diff(rec) * (head(prec, -1) + tail(prec, -1)) / 2)
 }
 
+#' Clamp probabilities away from 0 and 1 so the logit is finite
+#'
+#' Defined here rather than in a notebook because stages 11 and 12 both take
+#' the logit of the same predictions and must clamp them identically; two
+#' definitions with different epsilons would put the calibration point estimate
+#' and its interval on slightly different scales.
+clamp_p <- function(p, eps = 1e-6) pmin(pmax(p, eps), 1 - eps)
+
+#' Precompute the inputs a weighted calibration fit needs
+#'
+#' Calibration intercept and slope are logistic regressions on the linear
+#' predictor, so a cluster bootstrap of them means refitting two tiny GLMs per
+#' replicate on the full person-hour panel. `glm()` costs ~1.1 s per pair at
+#' 550,000 rows, which is 1.9 hours at B = 2,000 over three variants. The two
+#' fits below are hand-rolled IRLS on the same likelihood, warm-started from the
+#' full-data estimate, and cost ~0.05 s per replicate. They agree with `glm()`
+#' to within its own convergence tolerance (verified at 3e-8 on the slope and
+#' 2e-11 on the intercept, far below the fourth decimal place anything is
+#' reported to).
+calib_precompute <- function(pred, y, stay_idx, n_stays) {
+  keep <- !is.na(pred) & !is.na(y)
+  if (!any(keep)) return(NULL)
+  p <- clamp_p(as.numeric(pred[keep]))
+  list(lp       = qlogis(p),
+       y        = as.numeric(y[keep]),
+       stay_idx = as.integer(stay_idx[keep]),
+       n        = sum(keep),
+       n_stays  = as.integer(n_stays))
+}
+
+#' Weighted calibration slope: logistic regression of the outcome on the linear
+#' predictor. Returns c(intercept, slope); the slope is the calibration slope
+#' and the intercept is *not* the calibration intercept (see below).
+boot_calib_slope_w <- function(pre, w_stay, start = c(0, 1), tol = 1e-10, maxit = 50L) {
+  if (is.null(pre)) return(c(NA_real_, NA_real_))
+  w <- w_stay[pre$stay_idx]; lp <- pre$lp; y <- pre$y
+  b <- start
+  for (it in seq_len(maxit)) {
+    mu <- 1 / (1 + exp(-(b[1] + b[2] * lp)))
+    v  <- w * mu * (1 - mu)
+    r  <- w * (y - mu)
+    s1 <- sum(r);   s2  <- sum(r * lp)
+    h11 <- sum(v);  h12 <- sum(v * lp); h22 <- sum(v * lp * lp)
+    det <- h11 * h22 - h12 * h12
+    if (!is.finite(det) || abs(det) < 1e-300) return(c(NA_real_, NA_real_))
+    d <- c(( h22 * s1 - h12 * s2) / det,
+           (-h12 * s1 + h11 * s2) / det)
+    b <- b + d
+    if (max(abs(d)) < tol) break
+  }
+  b
+}
+
+#' Weighted calibration intercept: logistic regression of the outcome on an
+#' offset of the linear predictor, the slope held at one. This is the
+#' calibration-in-the-large quantity, not the intercept of the slope fit.
+boot_calib_int_w <- function(pre, w_stay, start = 0, tol = 1e-10, maxit = 50L) {
+  if (is.null(pre)) return(NA_real_)
+  w <- w_stay[pre$stay_idx]; lp <- pre$lp; y <- pre$y
+  a <- start
+  for (it in seq_len(maxit)) {
+    mu  <- 1 / (1 + exp(-(lp + a)))
+    den <- sum(w * mu * (1 - mu))
+    if (!is.finite(den) || den <= 0) return(NA_real_)
+    d <- sum(w * (y - mu)) / den
+    a <- a + d
+    if (abs(d) < tol) break
+  }
+  a
+}
+
 #' Unweighted convenience wrappers (weights all one)
 auroc_point <- function(pred, y) {
   pre <- auc_precompute(pred, y, rep(1L, length(pred)), 1L)

@@ -97,14 +97,15 @@ deliberately weak one, and which loses by a wide margin here too
 model and the boosted trees; nothing of the kind holds between either of them
 and the field's default survival specification.
 
-This is also the clearest illustration in the thesis of why the inference layer
-was necessary. On point estimates alone, H1 would have been read as confirmed
-and the study would have told a tidy story in which the label dominates
-discrimination. With intervals attached that story is not supportable: the
-label spread is \pcSpreadLabel{} [\pcSpreadLabelCiLo, \pcSpreadLabelCiHi]
-against a model-class spread of \pcSpreadModelClass{}
-[\pcSpreadModelClassCiLo, \pcSpreadModelClassCiHi], and the two intervals do
-not overlap. The two sources are not of comparable size, and the defensible
+This is also the clearest illustration in the thesis of what the inference
+layer adds and what it does not. On point estimates alone H1 was already
+descriptively refuted, and refuted in the direction opposite to the one the
+study set out expecting: the label spread is \pcSpreadLabel{} against a
+model-class spread of \pcSpreadModelClass. What the interval establishes is
+that the reversal is not an artefact of sampling: the label spread's interval
+is [\pcSpreadLabelCiLo, \pcSpreadLabelCiHi], the model-class spread's is
+[\pcSpreadModelClassCiLo, \pcSpreadModelClassCiHi], and the two do not
+overlap. The two sources are not of comparable size, and the defensible
 finding is the less convenient one: the label moves discrimination by roughly
 an order of magnitude less than the model class, while moving the cohort, the
 event count and the denominator of every clinical quantity computed on it. The
@@ -128,7 +129,7 @@ stated as directions, not as magnitudes, and the H5 interval is the formal
 expression of that limit.
 
 One external estimate in this study does clear the floor, and it is important
-not to mistake it for a Sepsis-3 result. The treatment-independent arm of
+not to mistake it for a Sepsis-3 result. The anchor-independent arm of
 Section~\ref{sec:external_altlabel} scores \pcExtAltNEvents{} events, because
 its label needs no culture record and therefore reaches the whole cohort. It is
 post-hoc, it targets acute organ dysfunction rather than Sepsis-3, and it is
@@ -246,8 +247,8 @@ Three things it does establish:
 A fourth item was added after the first three, under Protocol Amendment~9, and
 it is the only one that speaks to the external database as a whole.
 
-\textbf{The external event-rate gap is a property of the anchor, not of the
-population.} The Sepsis-3 arm reaches only \pcExtNMicroStays{} of
+\textbf{The external event-rate gap is largely attributable to the anchor
+rather than to the population.} The Sepsis-3 arm reaches only \pcExtNMicroStays{} of
 \pcExtAltNStays{} eICU-CRD stays and yields an event rate
 \pcExtRateRatioB{} times the development cohort's. Two readings of that gap
 have very different consequences. Either eICU's patients differ from
@@ -260,12 +261,23 @@ Variant D separates them, because it holds the physiology and the two databases
 fixed and removes only the treatment anchor. Applied to all \pcExtAltNStays{}
 stays it gives \pcExtAltRateEicu{} events per 1{,}000 person-hours against
 \pcExtAltRateMimic{} internally, a ratio of \pcExtAltRateRatio{} where the
-anchored label gave \pcExtRateRatioB. The shortfall largely disappears when the
+anchored label gave \pcExtRateRatioB. Most of the shortfall disappears when the
 label stops requiring a record of what a clinician did. This is the direct
 evidence for Limitation~\ref{lim:label_transport}'s claim that the binding
 external constraint is label transport rather than cohort comparability, and
 the pre-registered variants could not have produced it: all three share the
 anchor whose contribution is in question.
+
+The design does not isolate the anchor from everything else, and the residual
+is where the remaining explanations live. Removing the anchor closes the gap
+from a ratio of \pcExtRateRatioB{} to \pcExtAltRateRatio, which leaves roughly
+a quarter of the development cohort's rate unaccounted for. Case mix,
+measurement and charting frequency, the coarser five-component SOFA delta eICU
+supports, and genuine differences in illness severity all sit inside that
+residual and none of them is separated here. The defensible statement is
+therefore comparative and not exclusive: the anchor accounts for most of the
+gap, and no plausible amount of population difference could account for the
+part it accounts for.
 
 Its discrimination must be read under the same restriction as the rest of this
 section. Variant D's external AUROC of \pcExtAltAurocPrimary{}
@@ -274,9 +286,23 @@ than \pcExtNEventsB, so it is the one external estimate here that is not
 limited by its event count. That buys precision about a deterioration rule, not
 about sepsis. The label remains a threshold on physiology the models are given,
 so the \emph{level} is no more interpretable as sepsis performance than it was
-internally, and it is not comparable with \pcExtAurocPrimaryB. What the event
-count does support is the \emph{drop}: internal to external degradation of this
-order is no longer an inference from \pcExtNEventsB{} events.
+internally, and it is not comparable with \pcExtAurocPrimaryB.
+
+What the event count does support is the \emph{drop}, and under Protocol
+Amendment 10 it supports it with an interval. The primary model loses
+\pcExtAltDropPrimary{} of AUROC on transport, 95\% CI
+\pcExtAltDropCiPrimary, and the boosted comparator \pcExtAltDropGbt{}
+(\pcExtAltDropCiGbt); both intervals exclude zero and both are narrower than a
+hundredth of a point. This is the study's one demonstrated transport loss, and
+its scope is narrow in a way worth stating twice: it is demonstrated for a
+deterioration rule, it says nothing about Sepsis-3, and it cannot be pooled
+with or compared against the anchored arm. Its use is negative. It removes one
+reading of the Sepsis-3 arm's inconclusiveness, namely that these two databases
+are similar enough for a frozen model to move between them at no cost, and
+leaves the reading the event count already implied, that
+\pcExtNEventsB{} events cannot resolve a degradation of the size the
+literature anticipates. On the target that has the events, the degradation is
+there.
 
 
 \section{What the Ablation Establishes}
@@ -304,19 +330,23 @@ but a concern about what reported performance is measuring, belonging as much in
 the limitations as in the results. Had stability been unchanged, the
 concentration of instability in the action-derived features would have been
 small-sample noise and the reading would have had to be withdrawn. Neither
-happened. Discrimination is essentially unaffected
-(\pcAblDeltaAurocPrimaryB{} for the primary model under the primary label) while
-the unstable count falls from \pcHTwoEst{} to \pcAblHTwoNUnstable, which is the
-one outcome that separates the two hypotheses cleanly: features contributing
-almost nothing to discrimination cannot be carrying the model's predictive
-weight, and features whose removal takes five of six unstable terms with them
-are where the label sensitivity lives.
+happened. Discrimination falls by \pcAblDeltaAurocPrimaryB{} for the primary
+model under the primary label, and by less than 0.01 in all six comparisons,
+while the unstable count falls from \pcHTwoEst{} to \pcAblHTwoNUnstable. The
+asymmetry between those two movements is what separates the two hypotheses:
+features carrying the model's predictive weight could not be removed at a cost
+this small, and features whose removal takes five of six unstable terms with
+them are where the label sensitivity lives.
 
-The reading this licenses is bounded and worth stating exactly. It is
-\emph{not} that the action-derived features are unimportant: a feature that
+The reading this licenses is bounded and worth stating exactly. The
+discrimination cost is small but it is not zero, and five of the six paired
+intervals exclude zero
+(Section~\ref{sec:ablation}), so this is a statement about magnitude and not
+about absence. It is \emph{not}
+that the action-derived features are unimportant: a feature that
 moves AUROC by less than 0.01 may still be the reason a particular alert fires.
-It is that on this cohort the discrimination such a model reports does not
-depend on them, while its cross-label stability does. A published effect
+It is that on this cohort the discrimination such a model reports depends on
+them far less than its cross-label stability does. A published effect
 estimate for a treatment indicator from a model of this kind is therefore
 reporting something about the labelling regime as much as about the patient, and
 the cheapest available remedy, dropping the explicit action features, costs
@@ -547,8 +577,8 @@ underpowered for a fairness question can report one as answered.
     separation is post-hoc (Protocol Amendment 2) and rests on two variants,
     not on a systematic survey of alternative definitions.
 
-    \item \textbf{Discrimination is measured on the current-hour hazard, not on
-    a six-hour horizon.} The models estimate the cause-specific hazard of onset
+    \item \label{lim:current_hour}\textbf{Discrimination is measured on the
+    current-hour hazard, not on a six-hour horizon.} The models estimate the cause-specific hazard of onset
     in the current hour, and every AUROC, AUPRC and calibration figure in this
     thesis scores that hazard against an indicator marking the onset hour among
     the at-risk hours (Section~\ref{sec:framing}). Three consequences follow.
@@ -712,7 +742,7 @@ underpowered for a fairness question can report one as answered.
     \emph{combination} of analyses; each component separately has clear
     precedent, which Section~\ref{sec:search_strategy} identifies.
 
-    \item \textbf{Eight protocol amendments are post-hoc.} The inference layer
+    \item \textbf{Ten protocol amendments are post-hoc.} The inference layer
     (intervals and multiplicity control, Section~\ref{sec:inference}), the
     alternative label limbs D and E (Section~\ref{sec:alt_labels}), the model
     identification and data-plausibility changes
@@ -720,14 +750,18 @@ underpowered for a fairness question can report one as answered.
     Variant F (Section~\ref{sec:variant_f}), the action-derived feature
     ablation (Section~\ref{sec:ablation}), the subgroup interpretability
     floor (Section~\ref{sec:equity_strata}), the H2 uncertainty diagnostic
-    (Section~\ref{sec:h2_uncertainty}) and the comparator fit isolation
-    (Section~\ref{sec:gbt_spec}) were all specified after the
+    (Section~\ref{sec:h2_uncertainty}), the comparator fit isolation
+    (Section~\ref{sec:gbt_spec}), the full-cohort external arm under Variant D
+    (Section~\ref{sec:external_altlabel}) and the intervals attached to three
+    quantities previously reported as point estimates
+    (Sections~\ref{sec:calibration_results}, \ref{sec:ablation} and
+    \ref{sec:external_altlabel}) were all specified after the
     pre-registered analyses had been run and inspected. None changes an
     estimand, threshold, direction or hypothesis, and H1--H6 and families E1/E2
     are computed from unchanged inputs; but a reader should treat the verdicts
     as a pre-specified hypothesis set analysed under a retrospectively specified
-    error-control plan, and the amendment results as exploratory. Four of the
-    eight warrant a specific note, and they do not all point the same way.
+    error-control plan, and the amendment results as exploratory. Six of the
+    ten warrant a specific note, and they do not all point the same way.
     Amendment 4 enlarges family E3, which tightens rather than relaxes the
     correction applied within it.
     Amendment 6 \emph{reduces} family E1 from thirty contrasts to six, which is
@@ -749,7 +783,7 @@ underpowered for a fairness question can report one as answered.
     computed from the same three fits as the ablation and shares the same
     flagged set, so it is a second reading of one body of evidence rather than a
     second experiment agreeing with the first.
-    Amendment 8 is the only one of the eight that changes a reported estimate
+    Amendment 8 is the only one of the ten that changes a reported estimate
     rather than a family, a diagnostic or a label. It corrects an
     implementation defect: the gradient-boosted comparator's boosting-round
     count was selected by early stopping against the test set, so a
@@ -763,6 +797,24 @@ underpowered for a fairness question can report one as answered.
     strengthened, not as one the correction produced. It leaves H1 essentially
     untouched, because the model-class range is bounded by the primary model
     above and qSOFA below and the boosted comparator sits at neither extreme.
+    Amendment 9 adds an external arm rather than altering one. It applies the
+    frozen Variant D models to the whole of eICU-CRD, which is the only way to
+    ask whether the external event-rate shortfall follows the anchor or the
+    population, and it is registered as descriptive: it joins no corrected
+    family, is excluded from H5 on the same terms that exclude Variant D from
+    H1, and its AUROC level is not interpretable as sepsis performance for the
+    reason given in Section~\ref{sec:variant_d_establishes}.
+    Amendment 10 is the one whose direction was fixed before it ran and could
+    only run against this thesis. It attaches intervals to three quantities
+    previously reported as point estimates and completes a test that had been
+    implemented against one boundary of a two-boundary null. An interval placed
+    on a point estimate can widen a conclusion and cannot narrow one, and in
+    two of the three cases it did: the ablation contrast and one cross-label
+    calibration contrast turn out to exclude zero, so the wording that called
+    them unaffected has been withdrawn in favour of the magnitudes themselves.
+    The amendment log is worth reading with that asymmetry in view, because
+    Amendment 7's result flattered this thesis's argument and this one could
+    not.
 
     \item \textbf{Two hypotheses admit no test statistic, and a third is tested
     on a substituted estimand.} H2 is a stability criterion rather than a

@@ -42,7 +42,17 @@ command -v Rscript >/dev/null || fail "Rscript not found"
 command -v pdflatex >/dev/null || fail "pdflatex not found"
 [[ -f 00_preregistration.md ]] || fail "00_preregistration.md missing (G0 gate)"
 
-echo "  ok    tree clean at $(git -C "$ROOT" rev-parse --short=12 HEAD)"
+# Captured HERE, while the tree is still verified clean, and exported so that
+# every thesis_constants.R invocation below stamps this hash rather than looking
+# it up live. The live lookup cannot be used during a freeze: pipeline_constants
+# .tex is tracked, the run rewrites it, and setting FREEZE_TAG alone changes its
+# contents, so by the time the stamp is verified the tree is dirty by this
+# script's own action. Capturing it up front is what makes the stamp mean "the
+# source state that produced these numbers", which is what Appendix A.2 claims.
+FREEZE_COMMIT="$(git -C "$ROOT" describe --always --abbrev=12)"
+export FREEZE_COMMIT FREEZE_TAG
+
+echo "  ok    tree clean at $FREEZE_COMMIT"
 echo "  ok    tag to be stamped: $FREEZE_TAG"
 echo "  ok    toolchain present"
 
@@ -56,8 +66,9 @@ step "Full pipeline (12 stages, ~2h30m)"
 ./run_pipeline.sh || fail "pipeline did not complete"
 
 step "Regenerating thesis constants"
-# thesis_constants.R exits non-zero on any unresolved macro.
-FREEZE_TAG="$FREEZE_TAG" Rscript thesis_constants.R || fail "unresolved macros; the thesis would carry red ?? markers"
+# thesis_constants.R exits non-zero on any unresolved macro. FREEZE_TAG and
+# FREEZE_COMMIT are already exported, so this stamps the captured hash.
+Rscript thesis_constants.R || fail "unresolved macros; the thesis would carry red ?? markers"
 
 step "Consistency checkers"
 Rscript check_consistency.R   || fail "check_consistency.R reported a failure"
@@ -72,6 +83,12 @@ case "$STAMP" in
   *-dirty) fail "constants recorded '$STAMP' — generated from a dirty tree" ;;
   "")      fail "no \\pcFrozenCommit was emitted" ;;
 esac
+[[ "$STAMP" == "$FREEZE_COMMIT" ]] || fail "stamp '$STAMP' is not the commit verified clean at the
+        start of this run ('$FREEZE_COMMIT'). The export did not reach
+        thesis_constants.R, so the document does not name the source that
+        produced its numbers."
+STAMPED_TAG=$(grep -o '\\newcommand{\\pcFrozenTag}{[^}]*}' "$THESIS/generated/pipeline_constants.tex" | sed 's/.*{\(.*\)}/\1/')
+[[ "$STAMPED_TAG" == "$FREEZE_TAG" ]] || fail "the thesis names tag '$STAMPED_TAG', not '$FREEZE_TAG'"
 echo "  ok    thesis stamped with commit $STAMP, tag $FREEZE_TAG"
 
 cat <<DONE

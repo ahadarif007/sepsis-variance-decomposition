@@ -347,6 +347,118 @@ local({
       all(d < 0.01), sprintf("max |delta| = %.4f", max(d)))
 })
 
+# --- Protocol Amendment 10: the three claims the new intervals now carry -----
+local({
+  ac <- rd("12_ablation_ci")
+  if (is.null(ac) || !nrow(ac)) { chk("ablation interval claims", NA); return() }
+  tf <- function(x) x %in% c(TRUE, "TRUE")
+  n_excl <- sum(tf(ac$excludes_zero))
+  # evaluation.tex, sec:ablation: the prose now says the ablation cost is small
+  # but REAL, and quotes the count of contrasts excluding zero as a macro. If
+  # every interval came to cover zero the sentence would be arguing against
+  # itself, and the macro alone would not say so.
+  chk("at least one ablation contrast excludes zero",
+      n_excl > 0, sprintf("%d of %d exclude zero", n_excl, nrow(ac)))
+  chk("no ablation |delta AUROC| interval reaches 0.01 in magnitude",
+      all(abs(as.numeric(ac$delta_auroc)) < 0.01),
+      sprintf("max |delta| = %.4f", max(abs(as.numeric(ac$delta_auroc)))))
+})
+
+local({
+  cal <- rd("12_calibration_ci")
+  if (is.null(cal) || !nrow(cal)) { chk("absolute calibration claims", NA); return() }
+  # evaluation.tex, sec:calibration_results now names WHICH variants cover the
+  # absolute targets: slope covers 1 under A and B but not C, intercept covers
+  # 0 under C but not A and B. Both are relations a re-run can move, and the
+  # paragraph's whole point is that exactly one target is missed per variant.
+  g <- function(v, col) suppressWarnings(as.numeric(cal[variant == v][[col]][1]))
+  slope_ok <- function(v) g(v, "slope_lo") <= 1 && g(v, "slope_hi") >= 1
+  int_ok   <- function(v) g(v, "int_lo")   <= 0 && g(v, "int_hi")   >= 0
+  chk("calibration slope covers 1 under A and B but not C",
+      slope_ok("A") && slope_ok("B") && !slope_ok("C"),
+      paste(sprintf("%s slope [%.3f, %.3f]", cal$variant,
+                    as.numeric(cal$slope_lo), as.numeric(cal$slope_hi)), collapse = "; "))
+  chk("calibration intercept covers 0 under C but not A and B",
+      int_ok("C") && !int_ok("A") && !int_ok("B"),
+      paste(sprintf("%s int [%.3f, %.3f]", cal$variant,
+                    as.numeric(cal$int_lo), as.numeric(cal$int_hi)), collapse = "; "))
+  chk("exactly one absolute calibration target is missed under each variant",
+      all(vapply(c("A", "B", "C"),
+                 function(v) xor(!slope_ok(v), !int_ok(v)), logical(1))),
+      "slope-covers-1 and intercept-covers-0 must differ within each variant")
+})
+
+local({
+  cc <- rd("12_calibration_contrasts")
+  if (is.null(cc) || !nrow(cc)) { chk("calibration contrast claims", NA); return() }
+  tf <- function(x) x %in% c(TRUE, "TRUE")
+  # evaluation.tex, sec:calibration_results: the paragraph now says the SLOPE
+  # contrasts cover zero and that the Liberal INTERCEPT contrast does not. Both
+  # halves are relations, not values, so no macro protects either of them.
+  chk("no cross-label calibration SLOPE contrast excludes zero",
+      !any(tf(cc$slope_excludes_zero)),
+      paste(sprintf("%s vs %s: %s", cc$variant, cc$reference, cc$slope_ci), collapse = "; "))
+  ci_c <- cc[as.character(variant) == "C"]
+  chk("the Liberal calibration INTERCEPT contrast excludes zero",
+      nrow(ci_c) == 1 && tf(ci_c$int_excludes_zero),
+      if (nrow(ci_c) == 1) sprintf("C vs B intercept %s", ci_c$int_ci) else "no C row")
+})
+
+local({
+  tr <- rd("12_altlabel_transport_ci")
+  if (is.null(tr) || !nrow(tr)) { chk("Variant D transport claims", NA); return() }
+  # evaluation.tex, sec:external_altlabel: both drops are said to be "of the
+  # order of" Moor et al.'s 0.085. Read here as within a factor of two of it.
+  d <- as.numeric(tr$delta_auroc)
+  chk("both Variant D transport drops are within a factor of two of 0.085",
+      all(d > 0.0425 & d < 0.17),
+      paste(sprintf("%s %.4f", tr$model, d), collapse = "; "))
+
+  # evaluation.tex, sec:external_altlabel names the internal AUROC, the external
+  # AUROC and the difference as three separate macros drawn from three separate
+  # tables. A reader will subtract them. They must agree.
+  am <- rd("07_metric_results_altlabel")
+  # Two eval_window rows exist per model; the thesis quotes the unrestricted
+  # one, which is also what thesis_constants.R filters to for AltAurocFull*.
+  if (!is.null(am) && "eval_window" %in% names(am))
+    am <- am[eval_window == "unrestricted"]
+  ex <- rd("08_external_validation_results_altlabel")
+  if (!is.null(am) && !is.null(ex)) {
+    ok <- TRUE; detail <- character(0)
+    for (i in seq_len(nrow(tr))) {
+      mm <- as.character(tr$model[i])
+      pc <- if (mm == "primary") "pred_sepsis" else "pred_gbt"
+      ai <- suppressWarnings(as.numeric(am[variant == "D" & model == mm, auroc][1]))
+      ae <- suppressWarnings(as.numeric(ex[variant == "D" & model == pc, auroc][1]))
+      if (is.na(ai) || is.na(ae)) next
+      good <- abs((ai - ae) - as.numeric(tr$delta_auroc[i])) < 5e-4
+      ok <- ok && good
+      detail <- c(detail, sprintf("%s: %.4f - %.4f = %.4f vs delta %.4f",
+                                  mm, ai, ae, ai - ae, as.numeric(tr$delta_auroc[i])))
+    }
+    chk("Variant D transport delta equals internal minus external AUROC",
+        ok, paste(detail, collapse = "; "))
+  }
+})
+
+local({
+  ct <- rd("12_confirmatory_tests")
+  if (is.null(ct) || !nrow(ct)) { chk("H6 limb claims", NA); return() }
+  h6 <- ct[as.character(hypothesis) == "H6"]
+  if (!nrow(h6) || !"p_limb_lower" %in% names(h6)) { chk("H6 limb claims", NA); return() }
+  # evaluation.tex, sec:h6: the section now says the LOWER limb is the
+  # informative one and that neither limb clears its boundary. Both follow from
+  # the sign of the estimate, which a re-run can move.
+  chk("H6's lower limb is the smaller of the two",
+      as.numeric(h6$p_limb_lower) <= as.numeric(h6$p_limb_upper),
+      sprintf("upper %.3f, lower %.3f",
+              as.numeric(h6$p_limb_upper), as.numeric(h6$p_limb_lower)))
+  chk("neither H6 limb clears its boundary at 0.05",
+      as.numeric(h6$p_limb_lower) >= 0.05 && as.numeric(h6$p_limb_upper) >= 0.05,
+      sprintf("upper %.3f, lower %.3f",
+              as.numeric(h6$p_limb_upper), as.numeric(h6$p_limb_lower)))
+})
+
 local({
   ab <- rd("08_external_validation_results_abxonly")
   if (is.null(ab) || !nrow(ab)) { chk("abx-only model ordering", NA); return() }
