@@ -76,8 +76,8 @@ ALLOWED <- list(
   # exists to show that the gradient-boosted comparator is not bit-stable, and
   # it can only show that by naming what moved. They cannot be macros, because a
   # macro would print the current run's value and destroy the comparison.
-  list(v = 0.039,   why = "GBT utility ceiling on a PREVIOUS run, quoted in Appendix A.2 to show what re-running moves; its current counterpart in the same sentence is a macro"),
-  list(v = 0.0129,  why = "H6 model-class gap on a PREVIOUS run, quoted in Appendix A.2 for the same reason; its current counterpart is a macro")
+  list(v = 0.039,   why = "GBT utility ceiling BEFORE Amendment 8 corrected the comparator's test-set early stopping; quoted in Appendix A.2 to show what that correction moved. Its current counterpart in the same sentence is a macro"),
+  list(v = 0.0129,  why = "H6 model-class gap BEFORE Amendment 8, quoted in Appendix A.2 for the same reason; its current counterpart is a macro")
 )
 
 # ---------------------------------------------------------------------------

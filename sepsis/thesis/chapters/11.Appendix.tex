@@ -46,18 +46,50 @@ against the tracked file list before release.
 
 Every quantity in this thesis is written mechanically from the pipeline's result
 tables by \texttt{thesis\_constants.R}, so the document is always internally
-consistent. It is not, however, consistent across \emph{runs}: the
-gradient-boosted comparator is not bit-stable, so re-executing the pipeline
-moves every GBT-derived quantity slightly. Between two drafts of this work the
-utility ceiling moved from 0.039 to its present \pcUtilityMaxGbtB{} and the
-model-class gap from 0.0129 to \pcHSixAbsEst, for exactly this reason and with
-no defect involved. The two superseded figures are typed here rather than
-generated, because they are the only quantities in this document that must
-\emph{not} track the current run: replacing them with macros would print the
-present values twice and destroy the comparison the sentence exists to make.
+consistent. Whether it is consistent across \emph{runs} is a separate question,
+and it is worth answering with a measurement rather than an assumption.
 
-The consequence is that a number is only meaningful when paired with the run
-that produced it. This document is therefore bound to one run, and that run is
+The run this document is bound to was executed end to end for that purpose, and
+it reproduced \emph{every} reported quantity exactly: of the macros
+\texttt{thesis\_constants.R} emits, the only ones that changed were the
+provenance stamp and the generation timestamp. On a fixed machine, R version and
+library build, with the seeds in \texttt{config.R} and a partition defined by
+admission year rather than by sampling, this pipeline is reproducible to the
+last digit it prints.
+
+Two qualifications keep that from being a stronger claim than it is. The
+gradient-boosted comparator is the one component with no guarantee of
+reproducibility across \emph{differing} library builds or architectures, so the
+statement above is about re-running this environment and not about rebuilding it
+elsewhere. And one intermediate artefact is known to vary between runs of
+identical source: the per-hour external prediction files differ below the fourth
+decimal place, which is why the result tables rather than those files are used as
+the reproducibility check. No reported quantity has been observed to move because
+of it.
+
+One thing this section previously attributed to that instability should be
+corrected, because the true explanation is less comfortable and is disclosed
+elsewhere in this thesis. Between two drafts the utility ceiling moved from
+0.039 to its present \pcUtilityMaxGbtB{} and the model-class gap from 0.0129 to
+\pcHSixAbsEst. That was not run-to-run noise. It was Protocol Amendment 8
+correcting a defect: the boosted comparator's early stopping had been selecting
+its number of boosting rounds against the temporal test set, so a
+model-selection choice was being made on the rows the model was then scored on.
+Removing that optimistic bias lowered GBT's discrimination, which moved every
+GBT-derived quantity at once and widened H6's gap in the interpretable model's
+favour. Section~\ref{sec:limitations} states the amendment and the direction of
+its effect; naming a leakage correction as though it were benign
+non-determinism would understate it. The two superseded figures are typed here
+rather than generated, because they are the only quantities in this document
+that must \emph{not} track the current run: replacing them with macros would
+print the present values twice and destroy the comparison the sentence exists to
+make.
+
+The freeze therefore exists for a narrower reason than run-to-run drift, and it
+is still a good one: a number is only meaningful when paired with the run that
+produced it, and anything built outside the pipeline (a slide, a screencast, a
+figure recalled in a viva) can drift from the document without anything in the
+document detecting it. This document is therefore bound to one run, and that run is
 identified here so the pairing can be checked rather than assumed:
 
 \begin{center}
