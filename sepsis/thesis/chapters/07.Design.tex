@@ -294,16 +294,39 @@ antibiotic--culture windows and SOFA-delta criterion
 (Section~\ref{sec:label_transport}). Antibiotic and vasopressor exposure is
 taken from \texttt{medication} and \texttt{infusionDrug} together.
 
-Two arms are reported. The primary arm applies the Sepsis-3 conjunction to the
-microbiology-covered sub-cohort; the secondary arm applies an antibiotic-only
+Three arms are reported. The primary arm applies the Sepsis-3 conjunction to
+the microbiology-covered sub-cohort; the second applies an antibiotic-only
 anchor to the full cohort and is labelled as a different target. AUROC and
 AUPRC are reported for each variant and model in both, alongside a
 labelling-input coverage table and an explicit reconciliation of the eICU-CRD
 and MIMIC-IV event rates.
 
+The third arm is Protocol Amendment 9 and is described here because nothing
+about it is inferable from the first two. It applies the frozen Variant D
+models (the same \texttt{05\_}/\texttt{06\_} objects the other arms use,
+loaded without retraining) to the whole eICU-CRD cohort rather than to the
+microbiology-covered sub-cohort, which is possible because Variant D's onset
+rule reads physiology alone and needs no culture record. The external panel is
+the one already built for the other arms, so the feature construction, the
+plausibility ranges and the last-observation-carried-forward rule are shared;
+harmonisation is the same \texttt{check\_model\_features()} path, which
+reconstructs the design matrix from the declared feature vector and errors
+rather than silently reordering it. The one substantive difference is in the
+label, not the features: eICU's \texttt{vitalPeriodic} carries no Glasgow Coma
+Scale, so the external SOFA delta rests on five components against MIMIC-IV's
+six (Section~\ref{sec:external_altlabel}). Results go to
+\texttt{08\_external\_validation\_results\_altlabel} and
+\texttt{08\_event\_rate\_altlabel}, and the per-hour predictions to
+\texttt{08\_eicu\_predictions\_D}, which is what stage 12 bootstraps the
+transport interval from under Amendment 10. The arm writes to no file the
+pre-registered arms read.
+
 The stage asserts at run time that the three variants produce distinct external
 onset sets and halts otherwise, so that a label-invariant result can never be
-produced by a label that was never varied.
+produced by a label that was never varied. Two further guards keep the arms
+apart: the Amendment 9 file may not contain a pre-registered variant, and the
+pre-registered file may not contain a post-hoc one, so a post-hoc label cannot
+enter H5 through the external door after being excluded from H1.
 
 
 \section{Stage 09: Variance Decomposition}

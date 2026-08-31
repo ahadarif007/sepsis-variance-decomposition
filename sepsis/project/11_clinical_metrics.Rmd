@@ -110,7 +110,8 @@ threshold off cumulative sums instead of rescanning the vector per threshold.
 # --------------------------------------------------------------------------- #
 # Small helpers
 # --------------------------------------------------------------------------- #
-clamp_p <- function(p, eps = 1e-6) pmin(pmax(p, eps), 1 - eps)
+# clamp_p() lives in utils.R: stage 12 clamps the same predictions before
+# taking their logit, and the two must use the same epsilon.
 
 #' Count, for each threshold, how many predictions are >= that threshold,
 #' and how many of those are events. O(n log n) once, then O(k log n).

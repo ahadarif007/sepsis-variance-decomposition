@@ -183,7 +183,11 @@ Figure~\ref{fig:consort} shows the patient flow through each exclusion step.
     \caption{CONSORT-style patient flow diagram. All \pcConsortNFinal{} stays enter
     all three label variants; only the sepsis outcome differs. Every count is
     generated from \texttt{02\_cohort\_flow}, written by script
-    \texttt{02\_cohort\_labels.Rmd}. Sepsis counts are \textbf{cohort-wide},
+    \texttt{02\_cohort\_labels.Rmd}. The age criterion is applied first and
+    excludes \pcConsortNExclAge{} stays, which is why it appears as an
+    annotation rather than as an exclusion box: MIMIC-IV's ICU module records
+    adult admissions only, so no minor is present to remove. The filter is run
+    rather than assumed, and its count is generated like every other. Sepsis counts are \textbf{cohort-wide},
     at any hour of the stay; the subset falling inside the 72-hour modelling
     horizon, which is what the models are trained and evaluated on, is reported
     in the results chapter.}

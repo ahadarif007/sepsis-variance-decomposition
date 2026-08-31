@@ -204,12 +204,12 @@ Table~\ref{tab:internal_results} reports performance on the temporal test set
         \toprule
         \textbf{Model} & \textbf{AUROC} & \textbf{95\% CI} & \textbf{AUPRC (95\% CI)} \\
         \midrule
-        Primary & \pcAurocPrimaryB & \pcAurocCiLoPrimaryB--\pcAurocCiHiPrimaryB & \pcAuprcCiPrimaryB \\
-        GBT     & \pcAurocGbtB     & \pcAurocCiLoGbtB--\pcAurocCiHiGbtB         & \pcAuprcCiGbtB     \\
-        NEWS2   & \pcAurocNewsB    & \pcAurocCiLoNewsB--\pcAurocCiHiNewsB       & \pcAuprcCiNewsB    \\
-        Cox     & \pcAurocCoxB     & \pcAurocCiLoCoxB--\pcAurocCiHiCoxB         & \pcAuprcCiCoxB     \\
-        qSOFA   & \pcAurocQsofaB   & \pcAurocCiLoQsofaB--\pcAurocCiHiQsofaB     & \pcAuprcCiQsofaB   \\
-        SIRS    & \pcAurocSirsB    & \pcAurocCiLoSirsB--\pcAurocCiHiSirsB       & \pcAuprcCiSirsB    \\
+        Primary & \pcAurocPrimaryB & \pcAurocCiLoPrimaryB--\pcAurocCiHiPrimaryB & \pcAuprcPrimaryB{} \pcAuprcCiPrimaryB \\
+        GBT     & \pcAurocGbtB     & \pcAurocCiLoGbtB--\pcAurocCiHiGbtB         & \pcAuprcGbtB{} \pcAuprcCiGbtB     \\
+        NEWS2   & \pcAurocNewsB    & \pcAurocCiLoNewsB--\pcAurocCiHiNewsB       & \pcAuprcNewsB{} \pcAuprcCiNewsB    \\
+        Cox     & \pcAurocCoxB     & \pcAurocCiLoCoxB--\pcAurocCiHiCoxB         & \pcAuprcCoxB{} \pcAuprcCiCoxB     \\
+        qSOFA   & \pcAurocQsofaB   & \pcAurocCiLoQsofaB--\pcAurocCiHiQsofaB     & \pcAuprcQsofaB{} \pcAuprcCiQsofaB   \\
+        SIRS    & \pcAurocSirsB    & \pcAurocCiLoSirsB--\pcAurocCiHiSirsB       & \pcAuprcSirsB{} \pcAuprcCiSirsB    \\
         \bottomrule
     \end{tabular}
     \caption{Variant B temporal test performance with 95\% stay-level
@@ -363,6 +363,7 @@ conclusion that survives both metrics is the alarm-volume one: no
 configuration tested reaches an alert burden a ward could absorb.
 
 \subsection{Calibration \texorpdfstring{[C]}{[C]}}
+\label{sec:calibration_results}
 
 Calibration intercept and slope are two summary numbers describing a whole
 curve, so both the curve itself and a scalar summary of its distance from the
@@ -403,26 +404,48 @@ the prevalence for every person-hour.
     \label{tab:calibration}
 \end{table}
 
-Two results stand out. First, only the primary model is calibrated at all, and
-it is calibrated under \emph{every} label variant: its intercept sits within
-\pcCalibIntMaxAbsPrimary{} of zero, its slope within
+Two results stand out. First, the primary model is the only one whose outputs
+are usable as probabilities at all, and that holds under every label variant:
+its intercept sits within \pcCalibIntMaxAbsPrimary{} of zero, its slope within
 \pcCalibSlopeMaxDevPrimary{} of one
 (\pcCalibSlopePrimaryA, \pcCalibSlopePrimaryB, \pcCalibSlopePrimaryC), and its
 largest ICI across the three variants is \pcIciPrimaryC{}, under a fifth of
 the 0.2 per cent event rate.
 Its scaled Brier score is positive under all three, though barely
 (\pcBrierScaledPrimaryA{} to \pcBrierScaledPrimaryC), meaning it improves on
-the null model by less than one per cent. Calibration this close to the diagonal
-at this event rate is the result that makes the model's outputs usable as
-probabilities at all, and it is what distinguishes it from every comparator
+the null model by less than one per cent.
+
+\paragraph{Calibrated is not the same as perfectly calibrated, and the
+intervals say which.} Protocol Amendment 10 attaches intervals to these two
+quantities, and at \pcNTestRowsB{} person-hours they are narrow enough to
+resolve departures the point estimates hide. The slope covers one under the
+Narrow and Standard variants (\pcCalibSlopeCiA{} and \pcCalibSlopeCiB) but not
+under the Liberal one (\pcCalibSlopeCiC); the intercept covers zero under the
+Liberal variant (\pcCalibIntCiC) but not under the other two
+(\pcCalibIntCiA{} and \pcCalibIntCiB). Under each variant, therefore, one of
+the two absolute targets is missed at this confidence, and the honest statement
+is not that the model is perfectly calibrated but that its miscalibration is
+small enough to be irrelevant to use and large enough to be measured. The
+magnitudes carry that reading. An intercept of \pcCalibIntPrimaryB{} on the
+logit scale at an event rate of \pcPrevalenceB{} moves the predicted hourly
+risk by about a tenth of itself, which is invisible against the two orders of
+magnitude that separate this model from its comparators, and against the
+threshold grid of Section~\ref{sec:clinical_utility} it moves no operating
+point. What a large sample buys is the ability to see a deviation, not a reason
+to call it consequential.
+
+Calibration this close to the diagonal
+at this event rate is what makes the model's outputs usable as
+probabilities, and it is what distinguishes it from every comparator
 here.
 
 Second, GBT and Cox are not merely imperfectly calibrated; they are
 miscalibrated by roughly three orders of magnitude. Both carry intercepts near
 $-6$, and their scaled Brier scores run into the tens and hundreds below zero.
 A scaled Brier of \pcBrierScaledGbtB{} means the GBT model's squared error is
-some ninety-eight times worse than simply predicting the prevalence for every
-person-hour. Figure~\ref{fig:calibration}
+\pcBrierRatioGbtB{} times that of simply predicting the prevalence for every
+person-hour, since the score is $1 - \text{Brier}/\text{Brier}_{\text{null}}$
+and the ratio is therefore one minus it. Figure~\ref{fig:calibration}
 shows why: GBT emits predicted risks between 0.2 and 0.9 for person-hours
 whose observed event rate never exceeds 0.04. This matters directly for
 Section~\ref{sec:clinical_utility}: a model whose probabilities are inflated by
@@ -434,13 +457,24 @@ Its useful operating points exist, GBT's best lies near
 by sweeping, and they carry no interpretation as a risk a clinician has agreed
 to act on.
 
-The consistency across variants is itself worth noting. Calibration is the one
-respect in which the three label definitions make no difference at all: slopes
-of \pcCalibSlopePrimaryA, \pcCalibSlopePrimaryB{} and \pcCalibSlopePrimaryC{}
-and $E_{\max}$ values of \pcEmaxPrimaryA, \pcEmaxPrimaryB{} and
-\pcEmaxPrimaryC{} are indistinguishable for practical purposes. Whatever the
-label changes about which patients are septic, it does not change how faithfully
-the fitted hazard tracks the observed rate.
+The consistency across variants is itself worth noting, and Protocol
+Amendment 10 puts an interval on it rather than leaving it as a comparison of
+point estimates. Slopes of \pcCalibSlopePrimaryA, \pcCalibSlopePrimaryB{} and
+\pcCalibSlopePrimaryC{} sit within \pcCalibSlopeSpread{} of one another, and
+the paired cross-label contrasts against the primary label are
+\pcCalibDeltaSlopeAB{} [\pcCalibDeltaSlopeCiLoAB, \pcCalibDeltaSlopeCiHiAB]
+for the Narrow variant and \pcCalibDeltaSlopeCB{}
+[\pcCalibDeltaSlopeCiLoCB, \pcCalibDeltaSlopeCiHiCB] for the Liberal one:
+both intervals cover zero, so the label is not shown to change the calibration
+slope. The calibration \emph{intercept} does not behave the same way. Its
+Liberal-against-Standard contrast is \pcCalibDeltaIntCB{}
+[\pcCalibDeltaIntCiLoCB, \pcCalibDeltaIntCiHiCB], which excludes zero. The
+displacement is small on the probability scale at a \pcPrevalenceB{} event
+rate, but it is a displacement, and the earlier reading of this table, that
+the label definition makes no difference to calibration at all, was stronger
+than the evidence. What survives is the narrower statement the slope supports:
+whatever the label changes about which patients are septic, it does not change
+how steeply the fitted hazard tracks the observed rate.
 
 \begin{figure}[H]
     \centering
@@ -602,8 +636,14 @@ Table~\ref{tab:calibration}: with predicted probabilities inflated to the
 0.2--0.9 range, no threshold below 4 per cent excludes anything. NEWS2, qSOFA
 and SIRS are non-tunable for the opposite reason (their integer scores map
 to a handful of fixed probabilities, all above the grid), and alert on a
-constant 58--86 per cent of person-hours. The primary model is the only one of
-the six that can be operated as a threshold-based alert at all.
+constant 58--86 per cent of person-hours. Within the clinically plausible
+threshold range, the primary model is therefore the only one of the six whose
+alert rate responds to the threshold at all. This is a statement about that
+range and not about thresholding in general: GBT's own best operating point,
+located empirically by sweeping the full grid, is reported in
+Table~\ref{tab:utility_optimum} and sits far above it. The distinction matters
+because a threshold a clinician can reason about is one expressed as a risk,
+and GBT's cut-offs are not.
 
 \subsection{Operating Points at Fixed Sensitivity \texorpdfstring{[E]}{[E]}}
 \label{sec:operating_points}
@@ -853,7 +893,9 @@ once the false-alarm rate is controlled, and it is not controlled here.
 External validation asks whether a frozen model ranks person-hours as well in a
 different health system as it does in the one it was fitted on. Answering it
 requires transporting the label as well as the model, and in this pair of
-databases the label is by far the harder of the two. This section therefore
+databases the label is the harder of the two in a specific and measurable
+sense: the model can be applied to every stay, whereas the Sepsis-3 anchor can
+be constructed in only \pcExtMicroCoverage\% of them. This section therefore
 reports the labelling inputs first, then discrimination, then the operating
 characteristics a ward would experience, because each is only readable in the
 light of the one before it.
@@ -943,8 +985,13 @@ of each other: \pcExtRateEicuB{} events per thousand person-hours against
 MIMIC-IV's \pcExtRateMimicB{} under the primary label, a ratio of
 \pcExtRateRatioB. Relaxing the culture requirement closes most of the remaining
 gap (\pcExtRateEicuAbxB{} per thousand, ratio \pcExtRateRatioAbxB),
-which locates the residual difference precisely: it is the culture limb, not
-the antibiotic limb and not the patients. eICU-CRD documents antibiotic
+which localises most of it to the culture limb rather than to the antibiotic
+limb. A residual remains after the culture requirement is relaxed, since
+\pcExtRateRatioAbxB{} is still short of parity, and case mix, charting
+frequency and genuine differences in illness severity all sit inside it; the
+claim here is about which limb carries the larger share, not about excluding
+the patients. Section~\ref{sec:external_altlabel} narrows that residual
+further by removing the anchor altogether. eICU-CRD documents antibiotic
 exposure for \pcExtAbxCoverage\% of stays and cultures for
 \pcExtMicroCoverage\%, so the conjunction is throttled by one of its two
 inputs.
@@ -1036,8 +1083,8 @@ in this study. Section~\ref{sec:external_interpretability} states what that
 permits the external estimates to support, and reports the antibiotic-only
 sensitivity arm that bounds them.
 
-\subsection{The Treatment-Independent Label on the Full External Cohort
-\texorpdfstring{[C]}{[C]}}
+\subsection{The Anchor-Independent Label on the Full External Cohort
+\texorpdfstring{[D]}{[D]}}
 \label{sec:external_altlabel}
 
 Every estimate reported above is computed on the \pcExtNMicroStays{} stays
@@ -1051,20 +1098,23 @@ is the entire external database.
 
 \begin{table}[H]
     \centering\small
-    \begin{tabular}{lrrr}
+    \begin{tabular}{lrrlr}
         \toprule
         \textbf{Model} & \textbf{Internal AUROC} & \textbf{External AUROC}
-        & \textbf{Events} \\
+        & \textbf{Drop (95\% CI)} & \textbf{Events} \\
         \midrule
-        Primary & \pcAltAurocFullPrimaryD & \pcExtAltAurocPrimary & \pcExtAltNEvents \\
-        GBT     & \pcAltAurocFullGbtD     & \pcExtAltAurocGbt     & \pcExtAltNEvents \\
-        NEWS2   & \pcNotApplicable        & \pcExtAltAurocNews    & \pcExtAltNEvents \\
+        Primary & \pcAltAurocFullPrimaryD & \pcExtAltAurocPrimary & \pcExtAltDropPrimary{} \pcExtAltDropCiPrimary & \pcExtAltNEvents \\
+        GBT     & \pcAltAurocFullGbtD     & \pcExtAltAurocGbt     & \pcExtAltDropGbt{} \pcExtAltDropCiGbt & \pcExtAltNEvents \\
+        NEWS2   & \pcNotApplicable        & \pcExtAltAurocNews    & \pcNotApplicable & \pcExtAltNEvents \\
         \bottomrule
     \end{tabular}
     \caption[Variant D on the full eICU-CRD cohort]{Variant D applied to all
     \pcExtAltNStays{} eICU-CRD stays (\pcExtAltNRows{} person-hours). The target
     is acute organ dysfunction, not Sepsis-3, so these values are not comparable
-    with the Sepsis-3 arm above and the two are never pooled. Post-hoc under
+    with the Sepsis-3 arm above and the two are never pooled. The internal and
+    external cohorts are separate databases, so the drop's interval is formed by
+    resampling each independently and differencing the two streams, as H5's is;
+    it is added under Protocol Amendment~10. Post-hoc under
     Protocol Amendment~9; excluded from H5.}
     \label{tab:external_altlabel}
 \end{table}
@@ -1077,16 +1127,41 @@ Section~\ref{sec:external_interpretability}.
 
 Two quantities are reported from it. The first is the AUROC drop. The primary
 model falls from \pcAltAurocFullPrimaryD{} internally to
-\pcExtAltAurocPrimary{} externally, and the gradient-boosted comparator from
-\pcAltAurocFullGbtD{} to \pcExtAltAurocGbt. Both are of the order of the 0.085
-degradation Moor et al.\ \cite{moor2023review} give as typical, and both are
-of the same order as the H5 estimate obtained on \pcExtNEventsB{} events.
+\pcExtAltAurocPrimary{} externally, a difference of
+\pcExtAltDropPrimary{} (95\% CI \pcExtAltDropCiPrimary), and the
+gradient-boosted comparator from
+\pcAltAurocFullGbtD{} to \pcExtAltAurocGbt, a difference of
+\pcExtAltDropGbt{} (\pcExtAltDropCiGbt). The intervals are added under
+Protocol Amendment 10 and are the reason this arm can carry a statement about
+the drop at all: they are drawn as two independent bootstrap streams and
+differenced, exactly as H5's are, but on \pcExtAltNEvents{} external events
+rather than \pcExtNEventsB. Both drops are of the order of the 0.085
+degradation Moor et al.\ \cite{moor2023review} report across four databases,
+which is the reference this study's external arm was planned against, and both
+are of the same order as the H5 estimate obtained on \pcExtNEventsB{} events.
+
+The difference the event count makes is visible in the width rather than in the
+location. Both intervals here exclude zero and are narrower than a hundredth of
+a point. H5's substituted contrast has a central estimate of the same order,
+\pcHFiveEst, but an interval of [\pcHFiveCiLo, \pcHFiveCiHi], wide enough to
+contain both no degradation and a degradation twice the size. This arm
+therefore \emph{does} establish that transport costs discrimination, which the
+Sepsis-3 arm does not, and the scope of that statement has to be read exactly:
+it is established for the deterioration target, on a label that is a threshold
+on physiology the models are given, and it is not evidence about Sepsis-3.
+What it does is make one alternative explanation for the Sepsis-3 arm's
+inconclusiveness less persuasive. It does not establish degradation for the
+Sepsis-3 target: transport loss is a property of a target and not of a pair of
+databases, and these are different estimands. What it shows is that similarity
+between these two databases cannot be assumed to make transport free, which is
+the assumption under which the Sepsis-3 arm's wide interval would be read as
+evidence of no loss rather than as evidence of too few events.
 
 The second is the event rate, and it is the more informative of the two. Under
 the Sepsis-3 anchor the external event rate is \pcExtRateRatioB{} of the
 development cohort's, a gap of roughly an order of magnitude that
 Section~\ref{sec:external_coverage} attributes to the culture limb rather than
-to any difference in the patients. Under the treatment-independent label the
+to any difference in the patients. Under the anchor-independent label the
 same two databases give \pcExtAltRateMimic{} and \pcExtAltRateEicu{} events per
 1{,}000 person-hours, a ratio of \pcExtAltRateRatio. The rate gap is largely
 absent once the label stops depending on a documented treatment decision.
@@ -1576,7 +1651,8 @@ exploratory and enters no hypothesis or decomposition.
     \end{tabular}}
     \caption{Discrimination and best-threshold Utility Score with and without
     the \pcAblNDropped{} action-derived features. Both arms are fitted on the
-    same training rows and scored on the same test rows.
+    same training rows and scored on the same test rows, so the $\Delta$ column
+    is a paired difference; Table~\ref{tab:ablation_ci} carries its interval.
     \textbf{[E] exploratory.}}
     \label{tab:ablation}
 \end{table}
@@ -1608,10 +1684,47 @@ be markedly more stable.
 \end{table}
 
 The second alternative is what the data show, and on both readings at once.
-Discrimination barely moves: removing \pcAblNDropped{} of the \pcHTwoNTerms{}
-covariates costs \pcAblDeltaAurocPrimaryB{} AUROC for the primary model and
-\pcAblDeltaAurocGbtB{} for GBT under the primary label, and no more than
-\pcAblDeltaAurocPrimaryC{} for either model under any variant. Stability moves a
+Discrimination moves very little, and Protocol Amendment 10 attaches an
+interval to how little. Removing \pcAblNDropped{} of the \pcHTwoNTerms{}
+covariates costs \pcAblDeltaAurocPrimaryB{} AUROC for the primary model
+(95\% CI \pcAblDeltaCiPrimaryB) and \pcAblDeltaAurocGbtB{} for GBT
+(\pcAblDeltaCiGbtB) under the primary label, and no more than
+\pcAblDeltaAurocPrimaryC{} for either model under any variant. The intervals
+matter to how this is read. \pcAblNExcludeZero{} of the six paired contrasts
+exclude zero, so the cost is a real cost and not an artefact: what the ablation
+establishes is that the cost is \emph{small}, bounded above by 0.01 AUROC
+everywhere, and not that it is absent. A difference this size is below the
+resolution at which the field's own reported AUROCs can be compared across
+studies, and it is smaller than the model-class gap H6 measures between the two
+flexible estimators.
+
+\begin{table}[H]
+    \centering\small
+    \begin{tabular}{llrrl}
+        \toprule
+        \textbf{Var} & \textbf{Model} & \textbf{AUROC full}
+        & \textbf{$\Delta$ (ablated $-$ full)} & \textbf{95\% CI} \\
+        \midrule
+        A & Primary & \pcAurocPrimaryA & \pcAblDeltaAurocPrimaryA & \pcAblDeltaCiPrimaryA \\
+        A & GBT     & \pcAurocGbtA     & \pcAblDeltaAurocGbtA     & \pcAblDeltaCiGbtA \\
+        \midrule
+        B & Primary & \pcAurocPrimaryB & \pcAblDeltaAurocPrimaryB & \pcAblDeltaCiPrimaryB \\
+        B & GBT     & \pcAurocGbtB     & \pcAblDeltaAurocGbtB     & \pcAblDeltaCiGbtB \\
+        \midrule
+        C & Primary & \pcAurocPrimaryC & \pcAblDeltaAurocPrimaryC & \pcAblDeltaCiPrimaryC \\
+        C & GBT     & \pcAurocGbtC     & \pcAblDeltaAurocGbtC     & \pcAblDeltaCiGbtC \\
+        \bottomrule
+    \end{tabular}
+    \caption[Paired ablation contrasts with intervals]{Paired
+    ablated-minus-full AUROC contrasts with 95\% stay-level cluster-bootstrap
+    intervals, added under Protocol Amendment 10. Both arms are scored on the
+    same person-hours, so each replicate differences two AUROCs computed on one
+    resampled set of stays. \pcAblNExcludeZero{} of the six intervals exclude
+    zero. \textbf{[E] exploratory; enters no corrected family.}}
+    \label{tab:ablation_ci}
+\end{table}
+
+Stability moves a
 great deal: the unstable count falls from \pcHTwoEst{} of \pcHTwoNTerms{} to
 \pcAblHTwoNUnstable{} of \pcAblHTwoNTerms, or
 \pcAblHTwoPctUnstable\% of the remaining specification. The reduction is not a
@@ -1626,10 +1739,15 @@ The two readings agree with the by-kind split of
 Section~\ref{sec:h2_action}, where the action-derived features are
 \pcHTwoPctUnstableAction\% unstable against \pcHTwoPctUnstablePhysio\% for the
 physiological ones.
-The features that record clinician behaviour contribute almost nothing to
-discrimination and carry most of the cross-label instability: on this cohort
-they are close to free to drop, and dropping them buys a markedly more stable
-model. Section~\ref{sec:ablation_establishes} states what that does and does not
+The features that record clinician behaviour make a small contribution to
+discrimination and carry most of the cross-label instability. Their removal
+costs under 0.01 AUROC in all six comparisons, and buys a fall in the unstable
+count from \pcHTwoEst{} of \pcHTwoNTerms{} to \pcAblHTwoNUnstable{} of
+\pcAblHTwoNTerms. Whether a loss of that size is worth paying is a judgement
+about a particular deployment and not something this study fixes: no
+practical-equivalence margin was pre-registered for discrimination, so
+``small'' here means the measured magnitude and not a demonstrated
+irrelevance. Section~\ref{sec:ablation_establishes} states what that does and does not
 license.
 
 %===========================================================================
@@ -1915,18 +2033,25 @@ That composition dictates the reading, and it is narrower than a
 racial-disparity reading would be. What varies with the label definition is
 concentrated in the stays whose demographic record is incomplete, together with
 two strata, non-English language and insurance type, that index access to
-the care pathway rather than the patient's physiology. The coherent
-interpretation is about \textbf{documentation}, not about race: a stay whose
-registration record is incomplete is a stay whose clinical record is also more
-likely to be incomplete, and because the Sepsis-3 label is constituted by two
+the care pathway rather than the patient's physiology. The interpretation these
+strata support is about \textbf{documentation} rather than about race, and it
+is a hypothesis the composition suggests rather than a mechanism this study
+tests. The proposed chain is that a stay whose registration record is
+incomplete is a stay whose clinical record is also more likely to be
+incomplete, and that because the Sepsis-3 label is constituted by two
 documented clinician actions (Section~\ref{sec:decomposition}), incomplete
-documentation propagates directly into unstable labelling. Loosening the
-definition recovers proportionally more of those stays than of well-documented
-ones.
+documentation propagates into unstable labelling; loosening the definition
+would then recover proportionally more of those stays than of well-documented
+ones. The link between incomplete \emph{registration} and incomplete
+\emph{clinical} recording is the step that is assumed, not measured: this study
+does not compare charting density or laboratory coverage between the strata,
+and doing so would be the direct test.
 
 This is a finding about the label's dependence on recording practice, and it is
-worth stating in that form because it is actionable in a way a racial-disparity
-finding computed on these strata would not be: it identifies the mechanism, documentation completeness, rather than the demographic correlate. Whether
+worth stating in that form because it points somewhere actionable in a way a
+racial-disparity finding computed on these strata would not: it points at
+documentation completeness rather than at the demographic correlate, and
+documentation completeness is measurable and improvable. Whether
 that mechanism is itself differentially distributed across patient populations
 is a question these strata cannot answer, for the reasons given in
 Section~\ref{sec:equity_strata}, and this thesis does not answer it.
@@ -2033,7 +2158,13 @@ Section~\ref{sec:confirmatory_verdicts}.
         \bottomrule
     \end{tabular}
     \caption{Variance decomposition with 95\% stay-level cluster-bootstrap
-    intervals. Model class produces the largest effect. The split and
+    intervals. The name is the pre-registration's (\S1) and the quantities are
+    ranges, not variance components: they neither estimate nor partition a
+    variance, and they are not on a common denominator, so they cannot be
+    summed or expressed as shares of a total. Each row is the spread produced by
+    varying one factor with the others held fixed, over the specific set of
+    alternatives named in it. Model class produces the largest effect over the
+    six specifications compared here. The split and
     external-transport intervals both cover zero: transport has the larger
     point estimate but is much the less precise of the two, being the only row
     not measured on the full test cohort
@@ -2048,7 +2179,10 @@ Section~\ref{sec:confirmatory_verdicts}.
 
 The decomposition does not distribute variance evenly across the four analyst
 decisions, and the imbalance is the result, though not the imbalance the
-study anticipated. \textbf{Model class dominates} (\pcSpreadModelClass).
+study anticipated. \textbf{Model class dominates, across the six
+specifications compared} (\pcSpreadModelClass). That set runs from a 29-term
+dynamic hazard model to qSOFA, so its range is wide partly by construction; the
+claim is about this comparison, not about model architecture in general.
 \textbf{External transport has the second-largest point estimate}
 (\pcSpreadMetric), five times the label definition's, but its interval is the
 widest in the table and covers zero, so its rank relative to the other factors
@@ -2083,9 +2217,13 @@ being read too broadly:
           define different cohorts, different prevalences and different
           denominators for every clinical claim downstream. Discrimination is
           simply insensitive to that.
-    \item The split result is a null with power behind it: both arms are
-          measured on the full MIMIC-IV test cohort, and it contradicts a
-          widely held expectation (Section~\ref{sec:h4_discussion}). The
+    \item The split result excludes the pre-registered $+0.02$ optimism
+          threshold while covering zero, on an interval measured from the full
+          MIMIC-IV test cohort in both arms. What it contradicts is the
+          expected \emph{magnitude} of random-split optimism, not the
+          existence of any effect: the interval
+          [\pcHFourCiLo, \pcHFourCiHi] is compatible with a small effect in
+          either direction (Section~\ref{sec:h4_discussion}). The
           transport row is the opposite case: a substantial point estimate
           with weak support. It rests on \pcExtNEventsB{} events, because the
           Sepsis-3 anchor is recoverable in only \pcExtMicroCoverage\% of
@@ -2155,17 +2293,20 @@ correction, and each fails on its uncorrected value too. What overturns them is
 quantifying uncertainty at all, and the estimate landing on the opposite side of
 zero from the one predicted.
 
-H6 returns \pcHSixPHolm{} as well, and it is a different quantity again. The
-test is run against the upper side of the pre-registered equivalence bound,
-$H_0\!: \theta \leq 0.02$ against $\theta > 0.02$, so its $p$-value asks
-whether the boosted trees beat the hazard model by more than the margin. The
-estimate lies far below the margin rather than above it, which is why the
-adjusted value is \pcHSixPHolm: the test has nothing to reject, and a large
-value here is therefore uninformative rather than a negative result. It is also
-not what supports the non-inferiority conclusion. That conclusion comes from
-the interval, whose upper limit \pcHSixCiHi{} lies below the margin
-(Section~\ref{sec:h6}); the $p$-value neither establishes it nor contradicts
-it.
+H6 returns \pcHSixPHolm{} as well, and it is a different quantity again,
+because its null is an \emph{interval} rather than a half-line. Rejecting
+$-0.02 \leq \theta \leq 0.02$ requires clearing one of two boundaries, and
+Protocol Amendment 10 tests both. The upper limb asks whether the boosted trees
+beat the hazard model by more than the margin and returns
+$p = \pcHSixPLimbUpper$; that limb is large by construction whenever the
+estimate is negative, so on its own it establishes nothing. The lower limb asks
+whether the primary model beats the boosted trees by more than the margin and
+returns $p = \pcHSixPLimbLower$, and it is the informative one here. Neither
+clears the boundary, so the equivalence null is not rejected in either
+direction. None of this is what supports the non-inferiority conclusion. That
+conclusion comes from the interval, whose upper limit \pcHSixCiHi{} lies below
+the margin (Section~\ref{sec:h6}); the $p$-values neither establish it nor
+contradict it.
 
 H5's row is a different object and is worth separating. The pre-registered
 hypothesis is not evaluable, so nothing about it is being tested here; what the
@@ -2186,16 +2327,25 @@ fail \emph{directionally}: the label does not out-vary the model, and the random
 split is not shown to flatter the model, its interval covering zero while
 excluding the pre-registered 0.02 threshold. H6 supports one-sided non-inferiority through
 interval inversion: the upper confidence limit lies below the $+0.02$ margin,
-although the implemented $p$-value does not establish that conclusion.
+although neither limb of its interval null establishes that conclusion, and
+neither could.
 Two-sided equivalence is not established because the lower confidence limit
 extends beyond $-0.02$. H2 is descriptive, and H3 and
 H5 were not evaluable as pre-registered. The substituted contrast standing in
 for H5 is inconclusive: its interval is wide and covers zero, so it is
 compatible with no effect, though its point estimate is in the predicted
 direction. A pre-registered design that returns this set of outcomes is doing
-what pre-registration is for: the point estimates
-under the original protocol, without intervals, would have supported three
-confident claims that the data do not carry.
+what pre-registration is for, and it is worth being exact about which part of
+the machinery did the work. The point estimates alone already refute H1 and H4,
+and refute them in the direction opposite to the one predicted; no interval was
+needed for that. What the intervals add is the separation between an estimate
+that is small and one that is absent. Without them the split contrast
+(\pcHFourEst) and the substituted external contrast (\pcHFiveEst) would each
+have been reported as an effect of the stated size, when neither can be
+distinguished from zero, and H1's reversal would have been open to the reply
+that a spread of \pcSpreadLabel{} against \pcSpreadModelClass{} is what
+resampling noise looks like at this event count. It is not, and that is an
+interval result rather than a point-estimate one.
 
 \subsection{H1: Label Dominance (Not Confirmed)}
 
@@ -2234,9 +2384,12 @@ That distinction is what makes the negative result informative rather than
 merely deflationary. Label choice moves the cohort substantially: variants A
 and B agree on only \pcPctAgreeBA\% of stays ($\kappa = \pcKappaVsBA$) despite
 near-identical prevalence (\pcPctOnsetsA\% against \pcPctOnsetsB\%). Yet all
-three labels turn out to be about equally learnable. \textbf{The label
-determines who is counted; it barely determines how well anyone can be
-predicted.} A literature that fixes the label and compares only models is
+three labels yield similar onset-hour AUROC under the primary model, the spread
+across them being \pcSpreadLabel{} [\pcSpreadLabelCiLo, \pcSpreadLabelCiHi].
+That interval excludes zero, so the label is not shown to be irrelevant to
+discrimination; it is shown to move discrimination by roughly an order of
+magnitude less than the model class does. \textbf{The label determines who is
+counted; it barely determines how well anyone can be predicted.} A literature that fixes the label and compares only models is
 therefore not mismeasuring discrimination, but it is silently fixing the
 denominator of every clinical claim built on top of it.
 
@@ -2736,7 +2889,9 @@ check is performed and reported rather than assumed.
 \end{mdframed}
 
 This is the strongest positive result in the study, and it is worth stating
-exactly what it is and is not.
+exactly what it is and is not. The verdict is unchanged by Protocol
+Amendment 10, which corrected how the accompanying $p$-value is computed
+without moving the estimate, the interval or the conclusion.
 
 An interpretable multinomial hazard model with 29 terms per outcome
 (22 covariates, a six-column natural-spline baseline in elapsed hours, and an
@@ -2746,26 +2901,46 @@ trees on discrimination under the primary label: \pcAurocPrimaryB{} against
 is paired and the interval is correspondingly tight. The ordering is the same
 under the other two labels (Table~\ref{tab:confirmatory}).
 
-\paragraph{What the interval supports, and what it does not.} The pre-registered
-statement is two-sided, $|\theta| \leq 0.02$, but the test performed against it
-is one-sided: the bootstrap $p$-value is computed against
-$H_0\!: \theta \leq 0.02$, which asks whether the boosted trees beat the
-hazard model by more than the margin. It does not, so that test has nothing to
-reject and its $p$-value is \pcHSixPHolm.
+\paragraph{What the test is, and what it is not.} One clarification has to come
+before the result, because H6's procedure is not the one a reader will expect.
+The pre-registered form (\S7) puts equivalence in the \emph{null}: $H_0$ is
+$|\theta| \leq 0.02$, the closed interval $[-0.02,\, +0.02]$, and rejecting it
+means producing evidence that $\theta$ lies outside it. \textbf{This is not
+the two one-sided tests procedure}, which is the more familiar instrument and
+runs the other way round: TOST places non-equivalence in the null and concludes
+equivalence by rejecting it at both margins. The two frameworks answer
+different questions and their verdicts are not interchangeable, so the TOST
+vocabulary is avoided throughout. What is reported here is a test of the
+pre-registered interval null, and a failure to reject it is not evidence of
+equivalence, exactly as a failure to reject any null is not evidence for it.
 
-The non-inferiority conclusion rests on the interval rather than on that
-$p$-value, and the distinction matters because failing to reject
-$\theta \leq 0.02$ could never establish $\theta \leq 0.02$. What does
-establish it is inversion: the interval's upper limit is \pcHSixCiHi, which
-lies below the margin, so every value of $\theta$ the data are compatible with
-at this confidence is smaller than $0.02$. That is the standard interval form
-of a non-inferiority conclusion, and it is the form this thesis claims. Establishing two-sided equivalence would require the second of the
-two one-sided tests as well, and the data do not deliver it: the lower limit
-\pcHSixCiLo{} falls outside $-0.02$, so a difference larger than the margin in
-the \emph{interpretable} model's favour remains consistent with these data. The
-defensible reading is therefore asymmetric: the boosted trees buy nothing here,
-but the two estimators have not been shown to be interchangeable, and a claim of
-strict equivalence would overstate the evidence.
+The interval null has two boundaries, and until Protocol Amendment 10 only one
+was implemented. At $\theta = +0.02$ the question is whether the boosted trees
+beat the hazard model by more than the margin; that boundary returns
+$p = \pcHSixPLimbUpper$, and it would return a value near one for \emph{any}
+negative estimate, which is an arithmetic property rather than a result. At
+$\theta = -0.02$ the question is whether the interpretable model beats the
+boosted trees by more than the margin; that boundary returns
+$p = \pcHSixPLimbLower$. The reported $p$-value is the smaller of the two,
+which is a valid and conservative test of an interval null because a $\theta$
+close enough to one boundary to make it small is two margins away from the
+other. Neither boundary is cleared, so H6 is not rejected, and that is the
+whole of what the $p$-values establish.
+
+\paragraph{What the interval supports, and what it does not.} The conclusion
+this thesis draws is read off the confidence interval, not off either
+$p$-value, and it would stand unchanged if neither had been computed. The
+interval's upper limit is \pcHSixCiHi, which lies below $+0.02$, so every
+value of $\theta$ the data are compatible with at this confidence is smaller
+than the margin: the boosted trees are not supported as outperforming the
+hazard model by the pre-registered amount. That is the interval form of a
+one-sided non-inferiority conclusion and it is the only form this thesis
+claims. It does not extend to equivalence in both directions, because the lower
+limit \pcHSixCiLo{} falls outside $-0.02$: a difference larger than the margin
+in the \emph{interpretable} model's favour remains consistent with these data.
+The defensible reading is therefore asymmetric. The boosted trees buy nothing
+here, the two estimators have not been shown to be interchangeable, and a claim
+of strict equivalence would overstate the evidence.
 
 One further property of the interval is worth reading off, because it is
 stronger than non-inferiority and weaker than it might appear. The interval
@@ -2861,7 +3036,14 @@ exploratory.
     subgroup interpretability floor; post-hoc, and it \emph{reduces} family E1,
     which the inference plan's own denominator rule prohibits on its face;
     Section~\ref{sec:multiplicity} states the tension and \S20.4 of the
-    pre-registration gives the argument. $^\P$These two analyses are scored
+    pre-registration gives the argument. $^\|$A9 = Protocol Amendment 9 (\S23), the
+    full-cohort external arm under Variant D; post-hoc and registered as
+    descriptive, so it carries no p-value and is excluded from H5 on the terms
+    that exclude Variant D from H1. $^{\#}$A10 = Protocol Amendment 10
+    (\S24), which attaches intervals to three quantities this chapter had
+    reported as point estimates and completes H6's interval null at its second
+    boundary; also post-hoc, and it changes no verdict.
+    $^\P$These two analyses are scored
     outside the inference stage and enter no corrected family, so they have no
     row in \texttt{12\_analysis\_register}; they are listed here so that the
     exploratory record in this chapter is complete.}\label{tab:register}\\
@@ -2893,8 +3075,12 @@ exploratory.
         H6 model-class null                       & [C] & \S7     & Holm ($m=6$)                           \\
         External validation on eICU-CRD           & [C] & \S4     & none (estimation); feeds H5            \\
         \quad antibiotic-only anchor (sensitivity)$^\P$ & [E] & n/a     & none; different target, not pooled \\
+        \quad Variant D on the full external cohort & [D] & A9$^\|$ & none; joins no family, excluded from H5 \\
+        \quad\quad its transport interval          & [D] & A10$^{\#}$ & none (estimation); excluded from H5 \\
         Action-derived feature ablation           & [E] & A5      & none (estimation); enters no family    \\
+        \quad its contrast intervals               & [E] & A10$^{\#}$ & none (estimation); enters no family \\
         \quad instability by feature kind$^\P$     & [E] & n/a     & none (descriptive split of H2)         \\
+        Cross-label calibration contrasts         & [E] & A10$^{\#}$ & none (estimation); enters no family \\
         Variance decomposition table              & [C] & \S1     & none (assembly of H1--H6)              \\
         Proportional-hazards testing              & [C] & \S8     & none (single check)                    \\
         GBT feature importance                    & [E] & n/a     & none (ranking, no inference)           \\

@@ -15,8 +15,8 @@ I declare that this thesis is my own work, that it has not been submitted for
 any other academic award, and that all sources consulted are acknowledged in
 the text and listed in the references. The research question, the
 pre-registered hypotheses, the study design and the interpretation of the
-findings are my own, as are the decisions recorded as Protocol Amendments 1--8
-and the judgements about what the evidence does and does not support.
+findings are my own, as are the decisions recorded as Protocol Amendments
+1--10 and the judgements about what the evidence does and does not support.
 
 \section*{Use of Generative AI}
 
@@ -30,14 +30,26 @@ responsibly.
     across six model specifications, an external-validation arm, a clinical-metrics
     and inference layer, and the documentation of all of it.
 
-    \item \textbf{AI:} I used Claude to discuss implementation choices, to
-    refactor early prototypes into the twelve-stage structure presented here,
-    to audit that code for defects, and to produce documentation drafts.
+    \item \textbf{AI:} I used Claude. Because ``AI assistance'' covers
+    activities with very different implications for authorship, the uses are
+    separated rather than summarised. \textbf{Coding:} discussing
+    implementation choices, and refactoring early prototypes into the
+    twelve-stage structure presented here. \textbf{Debugging and code
+    auditing:} adversarial review of the pipeline against its own
+    specification, which is how several of the defects recorded in the
+    amendment log were found. \textbf{Thesis prose:} drafting and editing
+    wording in this document. \textbf{Literature discovery:} locating and
+    summarising candidate sources, each of which I then read and verified
+    against the claim it is cited for. \textbf{Statistical reasoning:}
+    discussing inference choices, among them the multiplicity plan and the
+    interval-inversion reading of H6. In the last three the assistance was to
+    the drafting and the discussion; the claims, the citations and the
+    decisions are mine, and are the subject of the next item.
 
     \item \textbf{Interaction:} all generated output was critically reviewed,
     modified and adapted to fit this study's design. The research question, the
     pre-registered hypotheses, the label definitions, the model choices, the
-    configuration values, the decisions recorded as Protocol Amendments 1--8
+    configuration values, the decisions recorded as Protocol Amendments 1--10
     and the reported results are my own.
 
     \item \textbf{Reflection:} this approach improved development speed and
@@ -51,7 +63,11 @@ result, or to decide what the results mean. Every quantity this study estimates
 written into this document mechanically from the pipeline's own output tables
 by \texttt{thesis\_constants.R} (Appendix~\ref{app:repro}), and a quantity the
 pipeline did not produce typesets as a visible marker rather than as a
-plausible number. Three classes of number are typed rather than generated, and
+plausible number. That mechanism guarantees the \emph{values}, and only the
+values. It cannot check that a sentence still describes what the value now
+shows, that a section's status tag matches the register, or that a claim has
+not outlived the analysis it was written for; those are human obligations, and
+the checkers described in Appendix~\ref{app:repro} close only part of the gap. Three classes of number are typed rather than generated, and
 none of them is a result of this study: figures quoted from prior work, each
 carrying its citation; thresholds and design constants fixed by the
 pre-registration before any modelling, such as the equivalence margin and the

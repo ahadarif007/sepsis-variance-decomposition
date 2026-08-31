@@ -51,7 +51,7 @@ tracked here. They are development records rather than part of the submission.
 
 | File | Role |
 |---|---|
-| `00_preregistration.md` | The pre-registration, including the G0 analysis gate and Protocol Amendments 1–8, each dated and disclosed as post-hoc |
+| `00_preregistration.md` | The pre-registration, including the G0 analysis gate and Protocol Amendments 1–10, each dated and disclosed as post-hoc |
 | `config.R` | **Sole source of truth** for every constant: label-variant parameters, the covariate vector, plausibility ranges, seeds, bootstrap sizes, multiplicity families, event floors. `check_model_features()` turns a stored model whose columns disagree with it into an error rather than a wrong number |
 | `utils.R` | Shared helpers, including `require_features()` (errors rather than silently dropping a declared predictor) and `check_multinom_fit()` |
 | `clinical_scores.R` | SOFA, NEWS2, qSOFA, SIRS |
@@ -113,13 +113,13 @@ cd sepsis/project
 
 Runs stages 01–12 in order and, on success, regenerates the thesis constants
 and figures. **About 2 h 30 m end to end** on a 2023 MacBook Pro; stage 05
-(~73 min, nine model fits) and stage 12 (~19 min, the bootstrap) dominate, and
+(~73 min, nine model fits) and stage 12 (~26 min, the bootstrap) dominate, and
 stage 03 streams about 6 GB. Per-stage wall-clock, measured from the run that
 produced the reported results:
 
 | Stage | 01 | 02 | 03 | 04 | 05 | 06 | 07 | 08 | 09 | 10 | 11 | 12 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| min | <1 | 3 | 16 | <1 | 73 | 9 | 2 | 16 | <1 | <1 | 15 | 19 |
+| min | <1 | 3 | 16 | <1 | 73 | 9 | 2 | 16 | <1 | <1 | 15 | 26 |
 
 ### Partial runs
 

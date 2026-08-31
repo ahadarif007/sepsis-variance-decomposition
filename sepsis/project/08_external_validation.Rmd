@@ -1067,10 +1067,18 @@ for (vid in alt_external_ids) {
   g   <- attach_labels(panel, ons, eicu_stays)
   res <- evaluate_panel(g, vid, "deterioration")
   rm(g); gc()
-  # Metrics only. The per-hour predictions are not persisted: the panel spans
-  # the full cohort, stage 11's external loop reads names(LABEL_VARIANTS) and
-  # would ignore the file, and the antibiotic-only arm sets the same precedent.
-  if (!is.null(res)) alt_eval <- c(alt_eval, res$rows)
+  if (!is.null(res)) {
+    alt_eval <- c(alt_eval, res$rows)
+    # Persisted from Protocol Amendment 10 onwards. The earlier version of this
+    # stage wrote metrics only, which left the one external arm that clears the
+    # event floor as the one external arm with no interval on it. Stage 12
+    # bootstraps the internal-to-external transport contrast from this file.
+    # Stage 11's external loop reads names(LABEL_VARIANTS) and still ignores it.
+    save_cols <- c("stay_id", "hour", "event", "pred_sepsis", "onset_hour",
+                   intersect(c("pred_gbt", "pred_news2"), names(res$pred)))
+    save_parquet(res$pred[, ..save_cols],
+                 paste0("08_eicu_predictions_", vid), DATA_DIR)
+  }
   rm(res); gc()
 }
 

@@ -8,8 +8,8 @@ This thesis asked one question: in real-time sepsis prediction on MIMIC-IV, how
 much of the reported performance comes from the model versus the researcher's
 choices about the label, the data split, and the evaluation metric?
 
-The answer is not the one the study anticipated. Model class dominates
-discrimination. External transport has the second-largest point estimate,
+The answer is not the one the study anticipated. Across the six model
+specifications compared here, model class dominates discrimination. External transport has the second-largest point estimate,
 several times the label definition's, but its interval is too wide to establish
 that rank or that it moves AUROC more than the label does. The label and the
 split design move it least, and both are measured on the full test cohort. What the label determines is
@@ -81,7 +81,9 @@ proportional to. What occupies H5's slot in the confirmatory family is a
 substituted estimand, the AUROC limb alone, disclosed as such in the
 pre-registration rather than reconstructed afterwards
 (Section~\ref{sec:h5}). That substituted contrast is itself inconclusive, and
-inconclusive in an informative way. External discrimination is \pcExtAurocPrimaryB{} on eICU-CRD
+inconclusive in an informative way. External discrimination is
+\pcExtAurocPrimaryB{} on the microbiology-covered sub-cohort of eICU-CRD,
+the only stays in which the Sepsis-3 anchor can fire at all,
 against \pcAurocPrimaryB{} internally, a degradation of \pcHFiveEst{}: the
 predicted direction, and roughly three-quarters of the 0.085 anticipated from
 Moor et al.\ \cite{moor2023review}. The interval (\pcHFiveCiLo--\pcHFiveCiHi)
@@ -91,9 +93,11 @@ still covers zero, because the Sepsis-3 anchor is recoverable in only
 this substituted contrast, though not the pre-registered hypothesis, which
 remains unevaluable because its proportional utility contrast is undefined. The antibiotic-only arm (\pcExtAbxNEventsB{}
 events, a different target) shows the same degradation with the same ordering
-across labels, and the treatment-independent label added under Protocol
-Amendment~9 shows a degradation of the same order on \pcExtAltNEvents{} events
-across the whole of eICU-CRD. Every external point estimate is below its
+across labels, and the anchor-independent label added under Protocol
+Amendment~9 shows a degradation of the same order
+(\pcExtAltDropPrimary, 95\% CI \pcExtAltDropCiPrimary) on
+\pcExtAltNEvents{} events across the whole of eICU-CRD, which is the one
+external interval in this study that is not limited by its event count. Every external point estimate is below its
 internal counterpart and all three arms agree on direction, but the primary contrast's interval covers
 zero, so the study establishes neither the magnitude of the degradation nor,
 on the Sepsis-3 arm alone, that there is one.
@@ -365,8 +369,9 @@ was evaluated descriptively, H3 and H5 were not evaluable as pre-registered,
 and the contrast substituted for H5 is inconclusive. That outcome is reported here in the
 same detail it would have received had it gone the other way, which is the
 reason the pre-registration and the inference layer were worth their cost: they
-fix what the answer means before the answer is known, and on point estimates
-alone this thesis would have claimed the opposite of what it can defend.
+fix what the answer means before the answer is known, and they separate an
+effect that is small from one that is not there at all, which is the
+distinction on which two of these four verdicts turn.
 
 The premise inverted; the motivating problem did not. What the decomposition
 establishes is that the label's consequence does not run through

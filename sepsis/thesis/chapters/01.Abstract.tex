@@ -1,62 +1,41 @@
 \chapter*{Abstract}
 \addcontentsline{toc}{chapter}{Abstract}
-% The abstract is required to sit on a single page; the book class's default
-% gap under a chapter heading is what pushes the keywords onto a second one.
-\vspace*{-3\baselineskip}
 
-Over ninety AI models have been built to predict sepsis in real time. In
-practice they fail. Wang et al.\ (2025) report a clinical Utility Score falling
-from $+0.381$ internally to $-0.164$ externally while AUROC barely moves. This
-thesis asks whether that failure belongs to the model, to the sepsis label, or
-to the analyst's discretionary choices.
-
-Using MIMIC-IV v3.1 (\pcNStays{} adult ICU stays) with external validation on
-eICU-CRD v2.0, three pre-registered Sepsis-3 label variants are crossed with
-six model specifications (a discrete-time hazard model, gradient-boosted trees,
-a static Cox baseline and three bedside scores), two split designs and two
-evaluation metrics, under
-stay-level cluster-bootstrap intervals with Holm and Benjamini--Hochberg
-correction. The models estimate the cause-specific hazard of onset in the
-current hour, so every AUROC reported here scores discrimination of the onset
-hour among at-risk hours rather than anticipation of onset over a future
-horizon. Because all three variants share one culture-plus-antibiotic
-anchor, the conjunction is also split into its limbs (including a
-label built from physiology alone, with no treatment timestamp) and re-timed
-under the standard $\min(t_{\text{susp}}, t_{\text{SOFA}})$ onset rule.
-
-The results invert the study's premise. Model class dominates the
-decomposition, moving AUROC by \pcSpreadModelClass{} against the label's
-\pcSpreadLabel{} on an interval excluding zero. Of the three pre-registered
-hypotheses admitting formal statistical evaluation, H1 and H4 are not confirmed
-and both fail in the direction opposite to the one predicted, while H6 supports
-one-sided non-inferiority but not two-sided equivalence. H2 is evaluated
-descriptively, H3 and H5 are not evaluable as pre-registered, and the amended
-contrast standing in for H5 is inconclusive. An interpretable hazard model is not outperformed by gradient-boosted trees,
-leading them by \pcHSixAbsEst{} AUROC, and the results do not support the
-pre-registered claim that random splitting inflates AUROC by at least 0.02
-relative to temporal splitting. Every external point estimate is lower than its internal
-counterpart, but the Sepsis-3 anchor is recoverable in only
-\pcExtMicroCoverage\% of eICU-CRD stays and the tested contrast's interval
-covers zero, so neither degradation nor its magnitude is established for the
-Sepsis-3 target.
-
-The label's consequence lies elsewhere. Under the primary label no model
-exceeds a Utility Score of \pcUtilityMaxGbtB{} at any threshold, or
-\pcUtilityMaxGbtC{} under any pre-registered variant, on a scale bounded by 1;
-the two
-narrowest readings agree at only $\kappa = \pcKappaVsBA{}$ on which patients are
-septic,
-so the label fixes the cohort and the denominator of every clinical quantity
-computed on it. And the pre-treatment window contains zero Sepsis-3 events,
-proved here to follow from the conjunction-based onset rule rather than
-discovered in the data. Re-timing the \emph{same} labelled stays by the
-standard rule places \pcPreTreatOnsetsVarF{} onsets before treatment begins;
-the anchor-independent label places \pcPreTreatOnsetsVarD{} there.
-
-Improving discrimination alone does not resolve the membership and timing
-limitations of a treatment-anchored label. Clinical actions constitute its
-\emph{membership}, and its onset \emph{timing} decides whether a prediction
-task defined before those actions can be posed at all.
+Sepsis kills about eleven million people a year, nearly one death in five
+worldwide, and in intensive care every hour of delayed treatment raises the
+risk of dying. More than ninety machine-learning systems have been built to
+raise the alarm earlier. The recent systematic evidence across them finds that
+their apparent accuracy survives the move to a new hospital while their
+clinical usefulness does not. This thesis asks how much of that reported
+performance belongs to the model at all, and how much belongs to four choices
+the analyst makes before any model is fitted: how sepsis is defined in the
+record (the \emph{label}, which decides which patients count as septic and from
+which hour), how the data are split, when the prediction is timed, and which
+metric is reported. On \pcNStays{} adult ICU stays from MIMIC-IV, with the
+models applied without retraining to a second database, three pre-registered
+readings of the Sepsis-3 definition were crossed with six model
+specifications, two split designs and two metrics, the key estimates carrying
+stay-level bootstrap intervals and each declared family of comparisons
+carrying a correction for its size. The premise did
+not survive. Across the six specifications compared, the model choice moved
+discrimination by \pcSpreadModelClass{} while the label moved it by
+\pcSpreadLabel, roughly a tenth as much. But the two narrowest readings of
+the same definition agreed on which patients were septic only at
+$\kappa = \pcKappaVsBA$, so the label was deciding not how well a cohort could
+be ranked but which cohort existed to be ranked at all. Its second consequence
+is timing: because the standard onset rule fires at a documented clinical
+action, the window before treatment contains no sepsis events by construction
+rather than by observation, and re-timing the identical stays by the field's
+alternative rule places \pcPreTreatOnsetsVarF{} events in it, while a label
+built from physiology alone places \pcPreTreatOnsetsVarD. Every model's
+discrimination is of the onset hour itself rather than of a future horizon, and
+no evaluated operating point comes near the alert-burden benchmark this field
+sets: the best costs \pcUtilityOptBurdenGbtB{} false alerts for every true one
+against a benchmark of 1.4. Improving discrimination alone therefore does not
+resolve the membership, timing and alert-burden limitations of a
+treatment-anchored sepsis label. Clinical actions constitute its membership,
+and its onset timing decides whether a prediction task defined before those
+actions can be posed at all.
 
 \vspace{0.4em}
 \noindent\textbf{Keywords:} sepsis; MIMIC-IV; discrete-time survival analysis;

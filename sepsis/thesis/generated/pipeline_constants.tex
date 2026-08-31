@@ -16,7 +16,7 @@
 
 
 % --- Provenance ---
-\newcommand{\pcGeneratedAt}{2026-08-28 05:28}
+\newcommand{\pcGeneratedAt}{2026-08-31 02:27}
 \newcommand{\pcPipelineRunDate}{2026-08-11 14:10}
 
 % --- Cohort and label variants ---
@@ -954,8 +954,8 @@
 \newcommand{\pcAlertRangeSirsC}{\ensuremath{0.000}}
 
 % --- Run provenance ---
-\newcommand{\pcFrozenCommit}{d3243f86289c-dirty}
-\newcommand{\pcFrozenDate}{28 August 2026}
+\newcommand{\pcFrozenCommit}{583af9033fb1-dirty}
+\newcommand{\pcFrozenDate}{31 August 2026}
 \newcommand{\pcFrozenTag}{unreleased}
 
 % --- External validation (eICU-CRD) ---
@@ -1149,6 +1149,59 @@
 \newcommand{\pcAblHTwoNUnstable}{\ensuremath{1}}
 \newcommand{\pcAblHTwoPctUnstable}{\ensuremath{7.1}}
 \newcommand{\pcHTwoPctUnstable}{\ensuremath{27.3}}
+
+% --- Ablation contrast intervals (Protocol Amendment 10) ---
+\newcommand{\pcAblDeltaCiPrimaryA}{[\ensuremath{-}0.0123, \ensuremath{-}0.0034]}
+\newcommand{\pcAblDeltaCiGbtA}{[\ensuremath{-}0.0086, 0.0012]}
+\newcommand{\pcAblDeltaCiPrimaryB}{[\ensuremath{-}0.0131, \ensuremath{-}0.0022]}
+\newcommand{\pcAblDeltaCiGbtB}{[\ensuremath{-}0.0130, \ensuremath{-}0.0001]}
+\newcommand{\pcAblDeltaCiPrimaryC}{[\ensuremath{-}0.0129, \ensuremath{-}0.0059]}
+\newcommand{\pcAblDeltaCiGbtC}{[\ensuremath{-}0.0061, \ensuremath{-}0.0007]}
+\newcommand{\pcAblNExcludeZero}{\ensuremath{5}}
+\newcommand{\pcAblNContrasts}{\ensuremath{6}}
+
+% --- Cross-label calibration intervals (Protocol Amendment 10) ---
+\newcommand{\pcCalibSlopeCiA}{[0.953, 1.073]}
+\newcommand{\pcCalibIntCiA}{[\ensuremath{-}0.140, \ensuremath{-}0.018]}
+\newcommand{\pcCalibSlopeCiB}{[0.993, 1.119]}
+\newcommand{\pcCalibIntCiB}{[\ensuremath{-}0.166, \ensuremath{-}0.042]}
+\newcommand{\pcCalibSlopeCiC}{[1.040, 1.127]}
+\newcommand{\pcCalibIntCiC}{[\ensuremath{-}0.077, 0.008]}
+\newcommand{\pcCalibSlopeSpread}{\ensuremath{0.071}}
+\newcommand{\pcCalibDeltaSlopeAB}{\ensuremath{-0.042}}
+\newcommand{\pcCalibDeltaSlopeCiLoAB}{\ensuremath{-0.114}}
+\newcommand{\pcCalibDeltaSlopeCiHiAB}{\ensuremath{0.027}}
+\newcommand{\pcCalibDeltaIntAB}{\ensuremath{0.029}}
+\newcommand{\pcCalibDeltaIntCiLoAB}{\ensuremath{-0.052}}
+\newcommand{\pcCalibDeltaIntCiHiAB}{\ensuremath{0.103}}
+\newcommand{\pcCalibDeltaSlopeCB}{\ensuremath{0.029}}
+\newcommand{\pcCalibDeltaSlopeCiLoCB}{\ensuremath{-0.031}}
+\newcommand{\pcCalibDeltaSlopeCiHiCB}{\ensuremath{0.085}}
+\newcommand{\pcCalibDeltaIntCB}{\ensuremath{0.071}}
+\newcommand{\pcCalibDeltaIntCiLoCB}{\ensuremath{0.009}}
+\newcommand{\pcCalibDeltaIntCiHiCB}{\ensuremath{0.133}}
+
+% --- Variant D external transport intervals (Protocol Amendment 10) ---
+\newcommand{\pcExtAltDropPrimary}{\ensuremath{0.0792}}
+\newcommand{\pcExtAltDropCiLoPrimary}{\ensuremath{0.0736}}
+\newcommand{\pcExtAltDropCiHiPrimary}{\ensuremath{0.0853}}
+\newcommand{\pcExtAltDropCiPrimary}{[0.074, 0.085]}
+\newcommand{\pcExtAltDropGbt}{\ensuremath{0.0747}}
+\newcommand{\pcExtAltDropCiLoGbt}{\ensuremath{0.0705}}
+\newcommand{\pcExtAltDropCiHiGbt}{\ensuremath{0.0784}}
+\newcommand{\pcExtAltDropCiGbt}{[0.070, 0.078]}
+
+% --- H6 interval-null limbs (Protocol Amendment 10) ---
+\newcommand{\pcHSixPLimbUpper}{\ensuremath{1.000}}
+\newcommand{\pcHSixPLimbLower}{\ensuremath{0.668}}
+
+% --- Brier ratio against the null model (derived) ---
+\newcommand{\pcBrierRatioPrimaryA}{\ensuremath{1.0}}
+\newcommand{\pcBrierRatioGbtA}{\ensuremath{90.2}}
+\newcommand{\pcBrierRatioPrimaryB}{\ensuremath{1.0}}
+\newcommand{\pcBrierRatioGbtB}{\ensuremath{94.5}}
+\newcommand{\pcBrierRatioPrimaryC}{\ensuremath{1.0}}
+\newcommand{\pcBrierRatioGbtC}{\ensuremath{43.4}}
 
 % --- Per-model AUROC intervals, Variant B ---
 \newcommand{\pcAurocCiLoPrimaryB}{\ensuremath{0.7434}}
@@ -1512,7 +1565,7 @@
 \newcommand{\pcLabelSensRangeHi}{\ensuremath{12.8}}
 \newcommand{\pcEquityTopEOneVar}{Insurance}
 \newcommand{\pcEquityTopEOneLevel}{Private}
-\newcommand{\pcEquityTopEOneModel}{Gbt}
+\newcommand{\pcEquityTopEOneModel}{GBT}
 \newcommand{\pcEquityTopEOneDelta}{\ensuremath{0.050}}
 \newcommand{\pcEquityTopEOneCiLo}{\ensuremath{0.012}}
 \newcommand{\pcEquityTopEOneCiHi}{\ensuremath{0.088}}
