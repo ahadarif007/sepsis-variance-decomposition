@@ -13,23 +13,28 @@ record (the \emph{label}, which decides which patients count as septic and from
 which hour), how the data are split, when the prediction is timed, and which
 metric is reported. On \pcNStays{} adult ICU stays from MIMIC-IV, with the
 models applied without retraining to a second database, three pre-registered
-readings of the Sepsis-3 definition were crossed with six model
-specifications, two split designs and two metrics, the key estimates carrying
-stay-level bootstrap intervals and each declared family of comparisons
-carrying a correction for its size. The premise did
+readings of the Sepsis-3 definition were evaluated across six model
+specifications on the temporal test set, with selected models re-evaluated
+under random splitting and externally, and two metrics reported throughout; the
+key estimates carry stay-level bootstrap intervals and each declared family of
+comparisons carries a correction for its size. The premise did
 not survive. Across the six specifications compared, the model choice moved
 discrimination by \pcSpreadModelClass{} while the label moved it by
-\pcSpreadLabel, roughly a tenth as much. But the two narrowest readings of
+\pcSpreadLabel, under a tenth as much. But the two narrowest readings of
 the same definition agreed on which patients were septic only at
 $\kappa = \pcKappaVsBA$, so the label was deciding not how well a cohort could
 be ranked but which cohort existed to be ranked at all. Its second consequence
-is timing: because the standard onset rule fires at a documented clinical
+is timing: because the onset rule adopted here fires at a documented clinical
 action, the window before treatment contains no sepsis events by construction
-rather than by observation, and re-timing the identical stays by the field's
-alternative rule places \pcPreTreatOnsetsVarF{} events in it, while a label
-built from physiology alone places \pcPreTreatOnsetsVarD. Every model's
-discrimination is of the onset hour itself rather than of a future horizon, and
-no evaluated operating point comes near the alert-burden benchmark this field
+rather than by observation. Two post-hoc exploratory labels show what that
+costs: re-timing the same stays by the field's standard onset rule places
+\pcPreTreatOnsetsVarF{} events in that window, and an unvalidated label built
+from physiology alone, which overlaps the models' own inputs and so cannot be
+read as a sepsis outcome, places \pcPreTreatOnsetsVarD. Every model's
+discrimination is of the onset hour itself rather than of a future horizon, with
+predictors binned to that same hour, so these are figures for detection at the
+recorded onset and not for advance warning.
+No evaluated operating point comes near the alert-burden benchmark this field
 sets: the best costs \pcUtilityOptBurdenGbtB{} false alerts for every true one
 against a benchmark of 1.4. Improving discrimination alone therefore does not
 resolve the membership, timing and alert-burden limitations of a

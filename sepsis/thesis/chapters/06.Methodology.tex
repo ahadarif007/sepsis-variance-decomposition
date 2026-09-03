@@ -162,6 +162,7 @@ Common Rule (45 CFR 46.104(d)(4)) and PhysioNet's data access policies.
 
 
 \section{Cohort Construction}
+\label{sec:cohort}
 
 The base cohort is built by applying three inclusion criteria uniformly across
 all label variants:
@@ -448,9 +449,11 @@ rather than a modelling one. The cost is that a single number cannot be quoted
 as ``six-hour discrimination'', and the corresponding limitation is recorded in
 Section~\ref{sec:limitations}.
 
-The alerting window and the utility scoring rule match the PhysioNet/CinC 2019
-Challenge \cite{reyna2020utility}; the estimand does not, the Challenge having
-scored a binary label defined over the window itself.
+The alerting window and the utility scoring rule are adapted from the
+PhysioNet/CinC 2019 Challenge \cite{reyna2020utility} rather than reproduced
+from it, and Section~\ref{sec:metrics} states the adaptation in full. The
+estimand differs too, the Challenge having scored a binary label defined over
+the window itself.
 
 
 \section{Person-Hour Table and Competing Events}
@@ -637,12 +640,53 @@ correlated rows per stay and a row-level split would leave the same patient on
 both sides of it. The test set is never used to select the number of rounds
 (Protocol Amendment 8).
 
-\subsection{Comparator: Static Cox Model}
+\subsection{Comparator: Cox Proportional-Hazards Model}
+\label{sec:cox_spec}
 
-A standard Cox proportional-hazards model using only the first observation per
-stay, included as a deliberately weak baseline to show the cost of ignoring
-time-varying data. Schoenfeld residual testing is applied to verify the expected
-violation of proportional hazards.
+A Cox proportional-hazards model, included as the field's default
+survival specification and as a deliberately weak baseline. The
+pre-registration names it the \emph{static} comparator, and the sense in which
+it is static is worth stating exactly, because it is not the inputs. The model
+is fitted on the same training person-hours as every other comparator, in
+counting-process form: each hour contributes the interval
+$(t,\, t+1]$ with the event indicator of that hour, so the covariates entering
+it are the same hourly, forward-filled values the primary model sees. What is
+static is the \emph{coefficient} structure. Each covariate is given one
+time-constant log hazard ratio, the baseline hazard is left unspecified rather
+than modelled, and no interaction with elapsed time is estimated. That is the
+assumption Section~\ref{sec:schoenfeld} tests and rejects.
+
+The specification is otherwise restricted relative to the primary model, which
+is what makes it the weaker baseline:
+
+\begin{itemize}
+    \item \textbf{Covariates.} Twelve of the primary model's twenty-two: heart
+    rate, respiratory rate, oxygen saturation, mean arterial pressure,
+    temperature, Glasgow Coma Scale, lactate, creatinine, total bilirubin,
+    platelets, white cell count, and any vasopressor exposure. The three
+    six-hour slope features, the second vasopressor indicator and the six
+    order (\emph{measured}) indicators are \emph{not} included, so the
+    comparator sees levels but neither trends nor the record of clinical
+    attention.
+    \item \textbf{Time origin and risk set.} Elapsed hours since ICU admission,
+    the same clock the primary model splines; a stay is at risk from hour one
+    until onset, discharge, death or hour 72.
+    \item \textbf{Event and competing events.} The event is sepsis onset in the
+    hour. Unlike the multinomial primary model, the Cox specification treats
+    discharge and death as censoring rather than as competing causes; that
+    difference is part of what the comparison is for.
+    \item \textbf{Ties.} Efron's approximation, which is the relevant choice
+    here because hourly binning makes ties the rule rather than the exception.
+    \item \textbf{Uncertainty.} Standard errors are clustered on the stay, so
+    the repeated hours a patient contributes are not treated as independent.
+    \item \textbf{Scoring.} The linear predictor is mapped to the unit interval
+    and scored on the same test person-hours as every other model, so the
+    discrimination figures are comparable even though the underlying quantity
+    is a relative hazard rather than an absolute one.
+\end{itemize}
+
+Schoenfeld residual testing is applied to verify the expected violation of
+proportional hazards.
 
 \subsection{Rule-Based Comparators}
 
@@ -681,10 +725,30 @@ NEWS2 is the headline comparator following Evans et al.\
 
 \subsection{Primary Metrics}
 
-\textbf{PhysioNet Utility Score} \cite{reyna2020utility} is the primary
-metric. It rewards early true alerts and penalises late and false ones. AUROC
-is reported only for comparison, because it hides the clinical failure mode
-\cite{wang2025srpm}.
+An \textbf{adapted PhysioNet-style Utility Score} is the primary metric. It
+rewards early true alerts and penalises late and false ones, following the
+design of the PhysioNet/CinC 2019 Challenge score \cite{reyna2020utility}.
+AUROC is reported only for comparison, because it hides the clinical failure
+mode \cite{wang2025srpm}.
+
+\paragraph{Where it departs from the Challenge score, and why.} The
+scoring rule used here is not the Challenge's own implementation and is not
+interchangeable with it, so scores reported in this thesis are not comparable
+with a published Challenge score. Three departures matter. The Challenge
+accumulates utility at \emph{every} time step of every record; the rule here
+accumulates it \emph{per stay}, crediting the earliest qualifying alert once
+rather than each alerting hour, so that a model is not rewarded for holding an
+alarm on. The reward window is the six hours this study pre-registered as its
+alerting window, rather than the Challenge's wider ramp beginning further ahead
+of onset, which keeps the metric aligned with the horizon used everywhere else
+in this design. And the penalty for never alerting on a septic stay is fixed at
+$-1$ per stay rather than accumulated over the post-onset hours. The
+normalisation against the inaction and optimal strategies is the Challenge's
+and is the part that carries the metric's meaning, which is why the score
+retains its reading of ``0 is exactly the no-alert strategy''. The parameters
+are pre-registered constants, not tuned quantities, and they are fixed in
+\texttt{config.R} for every model and variant alike, so the comparisons made
+\emph{within} this thesis are unaffected by the adaptation.
 
 Each stay contributes a raw utility. A septic stay first alerted at hour $t$
 within the reward window $[t_{\mathrm{onset}} - 6,\ t_{\mathrm{onset}}]$ earns
@@ -913,12 +977,17 @@ its face the manoeuvre that rule prohibits.
 Three facts bear on whether it is admissible, and \S20.4 of the
 pre-registration sets out the full argument for a reader who wishes to reject
 it. The criterion is outcome-blind, depending only on a stratum's event count.
-The direction is exculpatory: the reduction removed the family's only surviving
-discovery, a language contrast resting on twelve events, rather than creating
-one; a family narrowed to manufacture significance narrows \emph{around} its
-significant results. And the verdict is invariant to the choice: no contrast in
-E1 survives Benjamini--Hochberg under either denominator, the smallest adjusted
-value being $q = \pcSubgroupMinQ$ at $m = \pcNSubgroupContrasts$.
+The direction is exculpatory: under the thirty-contrast denominator exactly one
+contrast fell below the Benjamini--Hochberg threshold, a language contrast
+resting on twelve events, and the floor removed it. A family narrowed to
+manufacture significance narrows \emph{around} its significant results; this
+one discarded the only one it had. And the verdict is invariant for every
+contrast the reduced family retains: none of the
+\pcNSubgroupContrasts{} clears Benjamini--Hochberg under either denominator, the
+smallest adjusted value being $q = \pcSubgroupMinQ$ at
+$m = \pcNSubgroupContrasts$ and larger still at $m = 30$. The amendment
+therefore changes which contrasts are read and, in the one case where it
+changes a verdict, changes it against this study.
 Section~\ref{sec:equity_strata} reports the consequence.
 
 The floor applies to E1 and \emph{not} to E2, and the asymmetry is deliberate

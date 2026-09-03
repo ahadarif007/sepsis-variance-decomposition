@@ -26,7 +26,8 @@ being scholarly prose rather than software, are made available for citation and
 academic reuse with attribution rather than under a software licence.
 
 Where a routine implements a published method (the SOFA score, the Sepsis-3
-operational criteria, NEWS2, qSOFA, SIRS, the PhysioNet Utility Score, the
+operational criteria, NEWS2, qSOFA, SIRS, the adapted PhysioNet-style Utility
+Score, the
 sample-size criteria, pooled logistic regression, decision-curve analysis) the
 implementation is original to this work and written from the published
 definition, and the method is attributed to its authors both in \texttt{NOTICE}
@@ -45,9 +46,17 @@ against the tracked file list before release.
 \label{app:frozen_run}
 
 Every quantity in this thesis is written mechanically from the pipeline's result
-tables by \texttt{thesis\_constants.R}, so the document is always internally
-consistent. Whether it is consistent across \emph{runs} is a separate question,
-and it is worth answering with a measurement rather than an assumption.
+tables by \texttt{thesis\_constants.R}, so no current estimate is transcribed by
+hand and every such value in the text agrees with the table it is drawn from.
+The one deliberate exception is named below: the two \emph{superseded} figures
+this section prints in order to compare them against the current ones. That is
+a guarantee about transcription and about nothing else: it cannot establish that
+the right output cell was selected for a sentence, that the sentence still
+describes what the value shows, or that a claim has not outlived the analysis it
+was written for. Those remain human obligations, and
+Section~\ref{app:repro} describes the checks that close part of the gap.
+Whether the document is consistent across \emph{runs} is a separate question
+again, and it is worth answering with a measurement rather than an assumption.
 
 The run this document is bound to was executed end to end for that purpose, and
 it reproduced \emph{every} reported quantity exactly: of the macros
@@ -67,9 +76,8 @@ decimal place, which is why the result tables rather than those files are used a
 the reproducibility check. No reported quantity has been observed to move because
 of it.
 
-One thing this section previously attributed to that instability should be
-corrected, because the true explanation is less comfortable and is disclosed
-elsewhere in this thesis. Between two drafts the utility ceiling moved from
+Two quantities in this thesis did move during its development, and neither
+movement is attributable to that instability. The utility ceiling moved from
 0.039 to its present \pcUtilityMaxGbtB{} and the model-class gap from 0.0129 to
 \pcHSixAbsEst. That was not run-to-run noise. It was Protocol Amendment 8
 correcting a defect: the boosted comparator's early stopping had been selecting
@@ -100,22 +108,35 @@ tag \texttt{\pcFrozenTag} \quad$\cdot$\quad commit \texttt{\pcFrozenCommit}\\[2p
 \vspace{2pt}}}
 \end{center}
 
-The commit named above is the state of the pipeline source that produced these
-numbers; the tag is placed on the commit that carries the rebuilt document, so
-that checking out the tag yields both the code and this PDF together. A
+Two repository states are involved and they answer different questions, so the
+distinction is drawn here rather than left to be discovered. The commit named
+above is the \textbf{analysis provenance}: it is the state of the pipeline
+source that produced every quantity this document reports, and it is what to
+re-run to reproduce them. The \textbf{document provenance} is a later commit on
+the same branch. Prose was corrected after the analysis commit without
+re-running the pipeline, so the submitted sources and this PDF are carried by
+that later commit, and the release tag is placed on it. What makes the pairing
+safe is that nothing regenerated a number in between: every edit after the
+analysis commit was to prose, captions or document configuration, and none
+touched a pipeline stage, a configuration value or a result table. That is a
+checkable claim rather than an assurance, and two commands check it. A
 \texttt{-dirty} suffix on the commit would indicate that the constants were
 generated from an uncommitted working tree, and must not appear in a submitted
 document.
 
 \begin{verbatim}
-git checkout <tag>
-F=sepsis/thesis/generated/pipeline_constants.tex
-diff <(git show <tag>:$F) $F
+git show <tag>:sepsis/thesis/generated/pipeline_constants.tex \
+    | grep pcFrozenCommit
+git diff --stat <analysis-commit> <tag> -- sepsis/project/
 \end{verbatim}
 
-\noindent Every number printed in this thesis is expanded from that one
-generated file, so an empty diff establishes that the document and the tagged
-repository state agree. Re-deriving the file from the databases additionally
+\noindent where \texttt{<analysis-commit>} is the commit printed above and
+\texttt{<tag>} the release tag. The first must print that same commit: every
+number in this thesis is expanded from that one generated file, and the file
+records which run wrote it. The second must print nothing, which is what
+establishes that no pipeline source changed between the run and the submitted
+document. Checking out the tag then yields the submitted sources and this PDF
+alongside the code that produced its numbers. Re-deriving the file from the databases additionally
 requires credentialed PhysioNet access, since no derived table is redistributed
 here (Section~\ref{app:repo}); the reported quantities themselves are aggregate
 results and are disclosed in this document rather than as data.

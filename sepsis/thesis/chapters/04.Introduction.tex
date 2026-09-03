@@ -177,7 +177,8 @@ plainly that it was written after the analyses had been run.
     a conjunction-based Sepsis-3 onset rule, the rule used here and widely in
     the MIMIC-IV literature, makes pre-treatment prediction structurally
     impossible, together with the measurement that the standard
-    $\min(t_{\text{susp}}, t_{\text{SOFA}})$ rule applied to the identical stays
+    $\min(t_{\text{susp}}, t_{\text{SOFA}})$ rule applied to the same stays,
+    whose septic membership it leaves cohort-wide unchanged,
     recovers \pcPreTreatOnsetsVarF{} pre-treatment onsets, separable from
     their surrounding at-risk hours at \pcPreTreatAurocPrimaryF{} AUROC on the
     onset-hour estimand. Kamran et al.'s
