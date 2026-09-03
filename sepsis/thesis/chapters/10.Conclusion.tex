@@ -50,7 +50,8 @@ The pre-treatment window contains \pcPreTreatOnsetsVarB{} sepsis onset events
 across \pcPreTreatPersonHoursVarB{} person-hours, but that zero is entailed by
 the onset rule the pre-registered variants use, not measured
 (Proposition~\ref{prop:h3}), so the pre-registered contrast was never testable.
-The empirical question was answered instead by relabelling the identical stays
+The empirical question was answered instead by relabelling the same stays,
+whose septic membership is cohort-wide identical,
 under the standard $\min(t_{\text{susp}}, t_{\text{SOFA}})$ onset of Seymour et
 al.\ and the PhysioNet/CinC 2019 Challenge (Variant F, Protocol Amendment 4):
 \pcFNMovedEarlier{} onsets move earlier and \pcPreTreatOnsetsVarF{} fall before
@@ -117,7 +118,7 @@ discrimination sitting in the high 0.7s while no threshold yields a usable
 combination of net utility and alert burden. No correlation between the two
 metrics is estimated here, and none is claimed.
 
-\paragraph{H6 (Model-class null): Not rejected; non-inferiority established.}
+\paragraph{H6 (Model-class null): Not rejected; one-sided non-inferiority, not equivalence.}
 The interpretable hazard model is not outperformed by gradient-boosted trees:
 \pcAurocPrimaryB{} against \pcAurocGbtB, a difference of \pcHSixEst{} with an
 interval of [\pcHSixCiLo, \pcHSixCiHi]. The upper limit sits inside the
@@ -237,7 +238,8 @@ action rather than the patient's deterioration.
     the conjunction-based Sepsis-3 onset rule makes the pre-treatment window
     empty by construction, paired with the measurement that the standard
     $\min(t_{\text{susp}}, t_{\text{SOFA}})$ rule recovers
-    \pcPreTreatOnsetsVarF{} pre-treatment onsets on the identical stays,
+    \pcPreTreatOnsetsVarF{} pre-treatment onsets on the same stays, whose septic
+    membership it leaves cohort-wide unchanged,
     separable from their surrounding at-risk hours at
     \pcPreTreatAurocPrimaryF{} AUROC on the onset-hour estimand. This confirms Kamran et al.'s
     \cite{kamran2024evaluation} concern for label membership and corrects its

@@ -42,6 +42,18 @@
     citecolor=ATUGreen,
     urlcolor=ATUGreen
 }
+% Document properties. Without these the PDF ships with an empty Title, Author,
+% Subject and Keywords, which is what a repository, a library catalogue or a
+% reader's PDF viewer reads first. They are set from the same commands the
+% title page uses, so the two cannot disagree.
+\AtBeginDocument{\hypersetup{
+    pdftitle={\projecttitle},
+    pdfauthor={\reportauthor},
+    pdfsubject={\reporttype, Atlantic Technological University (ATU), Galway},
+    pdfkeywords={sepsis; MIMIC-IV; eICU-CRD; discrete-time survival analysis;
+      competing risks; label definition; variance decomposition; clinical
+      utility; external validation; TRIPOD+AI}
+}}
 \usepackage{csquotes}
 
 \usepackage[style=ieee,backend=biber]{biblatex}

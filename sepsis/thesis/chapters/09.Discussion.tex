@@ -21,7 +21,8 @@ The most important finding is definitional rather than numerical. Under a
 conjunction-based onset rule the Sepsis-3 label on MIMIC-IV \emph{cannot}
 contain an event before clinical action begins (Proposition~\ref{prop:h3}), and
 under the standard $\min(t_{\text{susp}}, t_{\text{SOFA}})$ rule applied to the
-identical stays it contains \pcPreTreatOnsetsVarF{} of them, separable from
+same stays, whose septic membership is cohort-wide identical, it contains
+\pcPreTreatOnsetsVarF{} of them, separable from
 their surrounding at-risk hours at \pcPreTreatAurocPrimaryF{} AUROC on the
 onset-hour estimand. A published MIMIC-IV sepsis result is
 therefore only as informative about physiological deterioration as its onset
@@ -276,8 +277,14 @@ measurement and charting frequency, the coarser five-component SOFA delta eICU
 supports, and genuine differences in illness severity all sit inside that
 residual and none of them is separated here. The defensible statement is
 therefore comparative and not exclusive: the anchor accounts for most of the
-gap, and no plausible amount of population difference could account for the
-part it accounts for.
+gap. The warrant for reading it that way is that the two labels are applied to
+the \emph{same} two cohorts, so a population difference large enough to produce
+the anchored ratio of \pcExtRateRatioB{} would have had to produce a comparable
+shortfall under the anchor-independent label as well, and it does not. That
+bounds the anchor's contribution rather than isolating it, and it inherits the
+deterioration label's own cross-database difference: the two constructions are
+not strictly identical, so the comparison is between two labels that each
+travel differently, not between one label and a fixed yardstick.
 
 Its discrimination must be read under the same restriction as the rest of this
 section. Variant D's external AUROC of \pcExtAltAurocPrimary{}
@@ -349,8 +356,15 @@ It is that on this cohort the discrimination such a model reports depends on
 them far less than its cross-label stability does. A published effect
 estimate for a treatment indicator from a model of this kind is therefore
 reporting something about the labelling regime as much as about the patient, and
-the cheapest available remedy, dropping the explicit action features, costs
-almost nothing in the metric the field reports.
+the cheapest available remedy, dropping the explicit action features, moves
+AUROC by \pcAblDeltaAurocPrimaryC{} in the worst of the six paired comparisons
+and by less in the other five, while removing most of the cross-label
+coefficient instability
+(\pcHTwoPctUnstable\% of terms flagged in the full fit against
+\pcAblHTwoPctUnstable\% in the ablated one). That is a small cost, not an
+absent one: \pcAblNExcludeZero{} of the \pcAblNContrasts{} contrasts exclude
+zero, and no margin of practical equivalence was pre-registered against which
+to call the loss negligible.
 
 The corresponding limitation is stated in Section~\ref{sec:limitations}: the
 retained laboratory values are themselves forward-filled from tests somebody
@@ -460,6 +474,23 @@ underpowered for a fairness question can report one as answered.
     patient populations or antibiotic prescribing cultures. The eICU-CRD
     analysis is the only external evidence available here, and the limitation
     below bounds how much it can carry.
+
+    \item \textbf{The base cohort is selected, and in two ways that are not
+    neutral.}\label{lim:cohort_selection} Only the first ICU stay of each
+    patient is retained, and only stays of at least four hours
+    (Section~\ref{sec:cohort}). The first restriction removes repeat
+    admissions, which are neither a random subset of ICU care nor independent
+    of it: a patient returning to intensive care differs systematically from
+    one admitted for the first time, and the models are never asked about them.
+    The second removes stays too short to build an hourly panel on, and those
+    are not a homogeneous group either. Some are rapid deaths, some are rapid
+    transfers, and some are low-acuity observation admissions that were never
+    going to deteriorate. The two kinds pull the cohort's acuity in opposite
+    directions, so the net effect on the reported estimates is not signed here
+    and is not recoverable from the analyses reported. What can be said is that
+    the population is not all adult ICU admissions but the subset for which an
+    hourly real-time task is well posed, and transportability claims should be
+    read against that population rather than against ICU care in general.
 
     \item \textbf{External validation is bounded by label transport, not by
     cohort size.}\label{lim:label_transport} eICU-CRD contains \pcExtNCohortStays{} unit stays, but the
@@ -767,11 +798,14 @@ underpowered for a fairness question can report one as answered.
     Amendment 6 \emph{reduces} family E1 from thirty contrasts to six, which is
     on its face the manoeuvre the inference plan's own rule against shrinking a
     family prohibits; it is admitted because the criterion is the stratum event
-    count alone and is blind to outcome, because the reduction removed the
-    family's only surviving discovery rather than creating one, and because
-    nothing in E1 survives correction under either denominator. A reader who
-    rejects that reasoning may read the thirty-contrast correction instead and
-    will reach the same conclusion.
+    count alone and is blind to outcome, and because the reduction removed the
+    family's only surviving discovery rather than creating one. That is the
+    single place where the amendment changes a verdict, and it changes it
+    against this study: the discarded contrast rested on twelve events. Nothing
+    the reduced family retains survives correction under either denominator, so
+    a reader who rejects the reasoning may read the thirty-contrast correction
+    instead and will reach the same conclusion about every contrast this
+    chapter reports.
     Amendment 7 is the one whose result is \emph{favourable} to the thesis's own
     argument, which is the case for treating it most sceptically. It reports
     that the covariates whose cross-label movement survives comparison with

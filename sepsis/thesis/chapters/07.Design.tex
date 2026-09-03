@@ -267,7 +267,8 @@ proportional-hazards check rather than discrimination, so neither is ablated.
 
 \texttt{07\_metrics\_suite.Rmd} evaluates all models on all splits (temporal,
 random, treatment-anchored) using the full metric set: AUROC, AUPRC, calibration
-intercept and slope, PhysioNet Utility Score, alert burden, lead time, and
+intercept and slope, the adapted PhysioNet-style Utility Score of
+Section~\ref{sec:metrics}, alert burden, lead time, and
 decision-curve net benefit. The ablated arm is scored by the same code on the
 same test rows, and the paired difference is written to
 \texttt{07\_ablation\_metrics.csv}.

@@ -187,7 +187,8 @@ Table~\ref{tab:internal_results} reports performance on the temporal test set
     \end{tabular}
     \caption{Internal temporal test performance (2017--2019, all variants use
     temporal split). N test rows: \pcNTestRowsB{} (B). \textbf{Utility (0.5)} is
-    the normalised PhysioNet Utility Score at the default cut-off;
+    the normalised adapted PhysioNet-style Utility Score
+    (Section~\ref{sec:metrics}) at the default cut-off;
     \textbf{Utility (best)} is its maximum over the threshold grid of
     Section~\ref{sec:metrics}. Zero is the no-alert strategy under both. Alert
     burden is at the 0.5 cut-off ($\infty$ = no true alerts there); the
@@ -404,8 +405,9 @@ the prevalence for every person-hour.
     \label{tab:calibration}
 \end{table}
 
-Two results stand out. First, the primary model is the only one whose outputs
-are usable as probabilities at all, and that holds under every label variant:
+Two results stand out. First, the primary model is the only evaluated model
+whose predicted probabilities stay close to observed risks, and that holds under
+every label variant:
 its intercept sits within \pcCalibIntMaxAbsPrimary{} of zero, its slope within
 \pcCalibSlopeMaxDevPrimary{} of one
 (\pcCalibSlopePrimaryA, \pcCalibSlopePrimaryB, \pcCalibSlopePrimaryC), and its
@@ -425,7 +427,8 @@ Liberal variant (\pcCalibIntCiC) but not under the other two
 (\pcCalibIntCiA{} and \pcCalibIntCiB). Under each variant, therefore, one of
 the two absolute targets is missed at this confidence, and the honest statement
 is not that the model is perfectly calibrated but that its miscalibration is
-small enough to be irrelevant to use and large enough to be measured. The
+statistically detectable and small enough to have no practical effect within the
+threshold grid evaluated here. The
 magnitudes carry that reading. An intercept of \pcCalibIntPrimaryB{} on the
 logit scale at an event rate of \pcPrevalenceB{} moves the predicted hourly
 risk by about a tenth of itself, which is invisible against the two orders of
@@ -656,9 +659,10 @@ resulting operating characteristics.
 
 \begin{table}[H]
     \centering\small
+    \adjustbox{max width=\textwidth}{%
     \begin{tabular}{llrrrrrr}
         \toprule
-        \textbf{Var} & \textbf{Model} & \textbf{Spec} & \textbf{PPV}
+        \textbf{Var} & \textbf{Model} & \textbf{Specificity} & \textbf{PPV}
         & \textbf{NNE} & \textbf{Alerts/pt-day} & \textbf{FA/pt-day}
         & \textbf{FP:TP} \\
         \midrule
@@ -677,7 +681,7 @@ resulting operating characteristics.
         C & NEWS2   & \pcSpecNewsC & \pcPpvNewsC & \pcNneNewsC & \pcAlertsPerPtDayNewsC & \pcFaPerPtDayNewsC & \pcFpTpRatioNewsC \\
         C & Cox     & \pcSpecCoxC & \pcPpvCoxC & \pcNneCoxC & \pcAlertsPerPtDayCoxC & \pcFaPerPtDayCoxC & \pcFpTpRatioCoxC \\
         \bottomrule
-    \end{tabular}
+    \end{tabular}}
     \caption{Operating characteristics at a fixed per-hour sensitivity of
     80\%. NNE = number needed to evaluate ($1/\text{PPV}$), the alerted
     person-hours required per true event hour. FA/pt-day = false-alert hours
@@ -864,7 +868,10 @@ and the onset hour, over septic stays that were alerted at all.
     \includegraphics[width=\textwidth]{images/11_lead_time_distribution.png}
     \caption{Distribution of lead time before onset at the 80\% sensitivity
     operating point, truncated at 48 h. The mode sits in the first four hours
-    with a long right tail.}
+    with a long right tail. At this operating point almost every stay is
+    alerted, so the distribution is not evidence of actionable advance warning:
+    an alarm that fires on every patient fires early on the septic ones as a
+    matter of arithmetic. The long tail past 24 hours is the signature of that.}
     \label{fig:lead_time}
 \end{figure}
 
@@ -998,10 +1005,11 @@ inputs.
 
 A gap of this size is a substantive finding about how differently the two
 systems document infection, and it is the reason the restricted cohort is the
-right denominator. A gap of two or more orders of magnitude would not be a
-finding at all: no plausible difference in case mix separates two large adult
-ICU populations by that much, and such a gap would indicate that the labelling
-inputs, not the patients, differ.
+right denominator. A gap of two or more orders of magnitude would not be
+readable as one: a difference of that size between two large adult ICU
+populations is far more consistent with the availability of the labelling
+inputs than with a difference in incidence, and should send an analyst to audit
+those inputs before interpreting the rate at all.
 
 \subsection{Discrimination Under Transport}
 
@@ -1043,8 +1051,8 @@ contrast of H5, and that interval covers zero
 \pcExtNEventsA{} and \pcExtNEventsC{} events with no interval attached, so
 ``under every label'' describes the direction of three estimates and not three
 established degradations. The Seymour-Standard
-drop of \pcHFiveEst{} is about three-quarters of the 0.085 that Moor et al.\
-\cite{moor2023review} report as typical, so the pre-registered expectation is
+drop of \pcHFiveEst{} is about three-quarters of the 0.085 reference estimate
+reported by Moor et al.\ \cite{moor2023review}, so the pre-registered expectation is
 approximately met on the point estimate. Section~\ref{sec:external_interpretability}
 sets out why it is not established at conventional confidence.
 
@@ -1111,7 +1119,11 @@ is the entire external database.
     \caption[Variant D on the full eICU-CRD cohort]{Variant D applied to all
     \pcExtAltNStays{} eICU-CRD stays (\pcExtAltNRows{} person-hours). The target
     is acute organ dysfunction, not Sepsis-3, so these values are not comparable
-    with the Sepsis-3 arm above and the two are never pooled. The internal and
+    with the Sepsis-3 arm above and the two are never pooled. The outcome is
+    also not measured identically in the two databases: eICU-CRD's periodic
+    vitals carry no Glasgow Coma Scale, so the external SOFA delta rests on
+    five components against MIMIC-IV's six, and the transported label is
+    therefore slightly coarser than the one the models were fitted against. The internal and
     external cohorts are separate databases, so the drop's interval is formed by
     resampling each independently and differencing the two streams, as H5's is;
     it is added under Protocol Amendment~10. Post-hoc under
@@ -1184,7 +1196,7 @@ person-hours in which an onset is observable at all.
     \centering\small
     \begin{tabular}{llrrrrr}
         \toprule
-        \textbf{Var} & \textbf{Model} & \textbf{Spec} & \textbf{PPV}
+        \textbf{Var} & \textbf{Model} & \textbf{Specificity} & \textbf{PPV}
         & \textbf{NNE} & \textbf{FA/pt-day} & \textbf{Patient PPV} \\
         \midrule
         A & Primary & \pcExtSpecPrimaryA & \pcExtPpvPrimaryA & \pcExtNnePrimaryA & \pcExtFaPerPtDayPrimaryA & \pcExtPatientPpvPrimaryA \\
@@ -1358,8 +1370,12 @@ everything at once.
     \centering
     \includegraphics[width=0.9\textwidth]{images/09_label_anchor_attribution.png}
     \caption{Splitting the Sepsis-3 conjunction. The two limbs and the intact
-    conjunction sit close together; only the anchor-independent
-    deterioration label separates. The dashed line is chance.}
+    conjunction sit close together; the anchor-independent deterioration label
+    is the only one that separates from them. Its \emph{level} is not
+    comparable with the others: the label is a threshold on physiology that is
+    itself model input, and its prevalence is far higher, so the height of that
+    bar is not a sepsis-prediction result
+    (Section~\ref{sec:variant_d_establishes}). The dashed line is chance.}
     \label{fig:label_anchor}
 \end{figure}
 
@@ -1768,9 +1784,13 @@ instability in Section~\ref{sec:h2}.
 \subsection{Proportional-Hazards Testing \texorpdfstring{[C]}{[C]}}
 \label{sec:schoenfeld}
 
-The Schoenfeld residual test on the static Cox model (Variant B) decisively
+The Schoenfeld residual test on the Cox comparator (Variant B) decisively
 rejects proportional hazards ($\chi^2 = \pcSchoenfeldChisq$,
-df = \pcSchoenfeldDf, $p = \pcSchoenfeldP$).
+df = \pcSchoenfeldDf, $p = \pcSchoenfeldP$). The comparator is fitted on the
+same hourly person-hours as every other model and is static in its
+\emph{coefficients} rather than in its inputs, so what the test rejects is the
+time-constant hazard-ratio structure and not the currency of the covariates
+(Section~\ref{sec:cox_spec}).
 \pcSchoenfeldNViolate{} of the \pcSchoenfeldNCovariates{} covariates violate
 the assumption individually at $\alpha = 0.05$, led by GCS, bilirubin,
 respiratory rate and creatinine. These are per-covariate tests reported without
@@ -2210,7 +2230,8 @@ being read too broadly:
           heterogeneous factor by construction. Between the two \emph{flexible}
           estimators the gap is \pcHSixAbsEst{}, an order of magnitude below
           the six-class range and of the same order as the label's
-          (H6, non-inferiority established in the direction that matters).
+          (H6, one-sided non-inferiority in the direction that matters;
+          Section~\ref{sec:h6}).
     \item The label factor is small \emph{in discrimination}, which is not the
           same as small in consequence. The three variants disagree about which
           patients are septic at $\kappa = \pcKappaVsBA$ (A vs B), so they
@@ -2275,7 +2296,12 @@ obtained by fixing three factors and varying one.
     utility-versus-AUROC contrast cannot be formed, so the row reports a
     post-hoc substituted contrast occupying the pre-registered correction slot
     (Section~\ref{sec:h5}). It should not be read as the same kind of object as
-    H1, H4 and H6. The
+    H1, H4 and H6. \textbf{The Verdict column reports the pre-registered
+    hypothesis test and nothing further}: H6's entry records that its interval
+    null was not rejected, which is not itself evidence of equivalence. The
+    separate conclusion this thesis draws for H6, one-sided non-inferiority,
+    is read off the confidence interval rather than off either p-value and is
+    stated in Section~\ref{sec:h6}. The
     smallest reportable p-value is $1/(B+1)$.
     \textbf{[C] confirmatory, except the row marked $\dagger$}: H5's
     pre-registered estimand is \textbf{[C] not evaluable}, and the contrast
