@@ -7,8 +7,10 @@
 \textbf{The Sepsis-3 label on MIMIC-IV:}
 \begin{enumerate}\itemsep2pt\scriptsize
   \item \textbf{Depends on clinical action for membership.} The empty
-        pre-treatment window belongs to the onset rule: timed as the standard
-        specifies, it holds \pcPreTreatOnsetsVarF{} onsets.
+        pre-treatment window belongs to the onset rule: standard timing moves
+        \pcFNMovedEarlier{} onsets earlier, \pcFNBeforeAnchorTest{} of them
+        into the test set's pre-treatment window (onset-hour separability, not
+        advance warning).
   \item \textbf{Is sensitive to how it is defined.} Cases nearly double across
         readings ($\kappa = \pcKappaVsBA$), yet AUROC moves by only
         \pcSpreadLabel.
@@ -54,15 +56,16 @@ C1 & Label and model-class spreads on the same test rows, each with an
      interval: the label moves membership ($\kappa = \pcKappaVsBA$), not
      discrimination (\pcSpreadLabel). \\
 C2 & Proof that the conjunction onset rule empties the pre-treatment window;
-     standard timing recovers \pcPreTreatOnsetsVarF{} onsets. \\
+     standard timing places \pcPreTreatOnsetsVarF{} test-set onsets there. \\
 C3 & Threshold-swept utility ceiling (\pcUtilityMaxGbtB{} under B) at
      \pcUtilityOptBurdenGbtB{} false alerts per true one. \\
 C4 & \pcHTwoEst{} of \pcHTwoNTerms{} covariates unstable across labels;
      \pcHTwoNRobust{} survive their own noise, all order indicators. \\
 C5 & Equity-by-label on the same strata: the finding concerns
      documentation completeness, not race. \\
-C6 & Pre-registered, seed-fixed, TRIPOD+AI pipeline; the thesis numbers are
-     generated constants. \\
+C6 & Pre-registered hypothesis set; seed-fixed, reproducible pipeline with
+     disclosed post-hoc amendments; TRIPOD+AI reporting; numbers are generated
+     constants. \\
 C7 & Definitional vs.\ empirical label variance separated
      ($\kappa_{D,B} = \pcKappaVsBD$;
      $\phi_{\text{anchor}} = \pcPhiAnchorPrimary$). \\

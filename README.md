@@ -36,7 +36,7 @@ amendments to separate definitional from empirical label variance.
 ## Repository layout
 
 ```
-RESEARCH/
+sepsis-variance-decomposition/
 ├── sepsis/
 │   ├── project/        ← the analysis pipeline (R + Python)
 │   └── thesis/         ← the thesis (LaTeX)

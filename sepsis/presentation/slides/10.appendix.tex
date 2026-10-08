@@ -3,19 +3,19 @@
 % =============================================================================
 \begin{frame}{Appendix: The Twelve-Stage Pipeline}
 \begin{atucols}[c]
-\begin{column}{0.50\textwidth}
+\begin{column}{0.42\textwidth}
   \centering
   \includegraphics[width=\columnwidth,height=0.76\textheight,
                    keepaspectratio]{images/fig4.1_pipeline_dag.pdf}
 \end{column}
-\begin{column}{0.48\textwidth}
+\begin{column}{0.56\textwidth}
 \begin{itemize}\itemsep3pt\small
   \item One orchestration script runs stages 01--12; one configuration
         module holds every path, identifier and threshold.
   \item Every reported number is emitted as a generated constant, so the text
         and the code cannot diverge.
   \item Frozen run: \texttt{\pcFrozenTag}.
-  \item Code: \url{\repourl}
+  \item Code and reproducibility:\\ {\scriptsize\repolink}
 \end{itemize}
 \end{column}
 \end{atucols}

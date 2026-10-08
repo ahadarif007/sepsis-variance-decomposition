@@ -24,8 +24,9 @@ $\infty$ = the best strategy is to raise no alert. Benchmark burden:
 
 \vspace{4pt}
 \begin{itemize}\itemsep2pt\small
-  \item The primary model and GBT overlap almost completely and both are
-        separated from the four remaining models.
+  \item The marginal intervals of the primary model and GBT overlap, but the
+        paired contrast favours the primary model by \pcHSixAbsEst{} AUROC
+        (H6); both are separated from the four remaining models.
   \item Calibration is the primary model's strongest result: slope
         \pcCalibSlopePrimaryB{} under Variant B (ideal = 1).
 \end{itemize}
@@ -36,7 +37,7 @@ $\infty$ = the best strategy is to raise no alert. Benchmark burden:
 %  VI. RESULTS: VARIANCE DECOMPOSITION        
 % =============================================================================
 \begin{frame}{VI. Results: The Variance Decomposition}
-\begin{center}\tablestyle
+\begin{center}\renewcommand{\arraystretch}{1.1}\small
 \begin{tabular}{p{5.3cm}cll}
 \toprule
 \textbf{Factor varied (others fixed)} & \textbf{$\Delta$AUROC} & \textbf{95\% CI} & \textbf{H} \\
@@ -51,14 +52,16 @@ GBT $-$ primary (label B, temporal)   & \pcHSixEst          & [\pcHSixCiLo, \pcH
 \end{tabular}
 \end{center}
 {\scriptsize Ranges, not variance components: they cannot be summed or
-expressed as shares of a total. Stay-level cluster-bootstrap intervals.\par}
+expressed as shares of a total. The model-class range spans six heterogeneous
+specifications, the label range three Sepsis-3 readings; even so, the narrowest
+contrast across the gap (GBT vs Cox, \pcAurocGbtB{} vs \pcAurocCoxB) exceeds
+the whole label range.\par}
 
 \vspace{4pt}
 \begin{itemize}\itemsep2pt\small
   \item \textbf{Model class dominates} across the six specifications compared.
-  \item External transport has the second-largest point estimate, but its
-        interval is the widest and covers zero: its rank is \emph{not}
-        established.
+  \item Transport ranks second on the point estimate, but its interval is the
+        widest and covers zero: its rank is \emph{not} established.
   \item The two decisions this literature scrutinises most, \textbf{label
         reading and split design, move discrimination least}.
 \end{itemize}
@@ -168,17 +171,17 @@ D & Deterioration & \pcPreTreatPersonHoursVarD & \textbf{\pcPreTreatOnsetsVarD}
   \item \textbf{D (Deterioration)}, no treatment timestamp: $\kappa =
         \pcKappaVsBD$ with B. Its AUROC level is partly self-fulfilling, not a
         sepsis result.
-  \item \textbf{F} (better clock): \pcAltAurocFullPrimaryF{} vs
-        \pcAurocPrimaryB, $\Delta = \pcAltDeltaPrimaryF$
-        [\pcAltDeltaCiLoPrimaryF, \pcAltDeltaCiHiPrimaryF].
+  \item \textbf{F} (standard onset timing): primary \pcAltAurocFullPrimaryF{}
+        vs \pcAurocPrimaryB; \textbf{not reproduced by GBT}
+        ($\Delta = \pcAltDeltaGbtF$, $q = \pcAltDeltaPBhGbtF$).
 \end{itemize}
 \end{column}
 \end{atucols}
 
 \vspace{2pt}
 \begin{alertblock}{}
-  \footnotesize The difficulty lies not in the conjunction but in \emph{when}
-  the label is stamped: at the clinician's action, not the deterioration.
+  \footnotesize For the primary model, onset \emph{timing} matters more than
+  the conjunction itself; for GBT the timing effect is not detected.
 \end{alertblock}
 \end{frame}
 
@@ -225,18 +228,16 @@ models, no retraining.\par}
 
 \vspace{2pt}
 \begin{itemize}\itemsep1pt\footnotesize
-  \item \textbf{The label, not the model, limits transport:} a culture is
-        documented for only \pcExtMicroCoverage\% of eICU stays, so every
-        variant falls below the \pcExtMinEvents-event interpretability floor.
+  \item \textbf{Label observability is the binding limitation:} culture
+        documentation restricts the Sepsis-3 arm to \pcExtMicroCoverage\% of
+        eICU stays, leaving \pcExtNEventsB{} Variant B events, below the
+        \pcExtMinEvents-event floor.
   \item H5 substitute: degradation \pcHFiveEst{}
-        [\pcHFiveCiLo, \pcHFiveCiHi], the predicted direction, but the
-        interval covers zero.
-  \item Antibiotic-only arm (\pcExtAbxNEventsB{} events, a different target):
-        same direction and same ordering across labels.
-  \item Anchor-independent Variant D on all of eICU: drop
-        \pcExtAltDropPrimary{} \pcExtAltDropCiPrimary{} on \pcExtAltNEvents{}
-        events; event-rate ratio \pcExtAltRateRatio{} vs \pcExtRateRatioB{}
-        under the anchored label.
+        [\pcHFiveCiLo, \pcHFiveCiHi], directionally consistent but
+        inconclusive. Its causes are not decomposed.
+  \item Sensitivity arms (different targets, never pooled): antibiotic-only
+        (\pcExtAbxNEventsB{} events) and Variant D (\pcExtAltNEvents{} events)
+        both degrade in the same direction.
 \end{itemize}
 \end{frame}
 
@@ -251,10 +252,9 @@ models, no retraining.\par}
 \begin{itemize}\itemsep1pt\scriptsize
   \item \pcHTwoEst{} of \pcHTwoNTerms{} covariates unstable across labels:
         \pcHTwoNSign{} by sign, \pcHTwoNMag{} by magnitude.
-  \item Against their own cluster-robust SEs, \pcHTwoNNoise{} of
-        \pcHTwoNFlagged{} move by less than estimation noise;
-        \textbf{\pcHTwoNRobust{} survive, all test-ordered
-        indicators}~\cite{lauritsen2021framing}.
+  \item \textbf{Only \pcHTwoNRobust{} exceed their own estimation noise,
+        all test-ordered indicators}~\cite{lauritsen2021framing}; the raw count
+        is a loose upper bound.
   \item \textbf{Ablation} (post-hoc): dropping the \pcAblNDropped{}
         action-derived covariates costs \pcAblDeltaAurocPrimaryB{} AUROC
         (primary, B), while instability falls to \pcAblHTwoNUnstable{} of
