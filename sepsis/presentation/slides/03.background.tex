@@ -1,0 +1,31 @@
+% =============================================================================
+%  II. BACKGROUND: LIMITATIONS OF THE CONVENTIONAL APPROACH
+% =============================================================================
+\begin{frame}{II. Background: Limitations of the Conventional Approach}
+\vspace*{0pt}%
+{\centering Choose one Sepsis-3 definition $\rightarrow$ use one train/test
+split $\rightarrow$ report AUROC $\rightarrow$ compare models.\par}
+
+\vspace{2pt}
+\begin{enumerate}\itemsep1pt\small
+  \item \textbf{The sepsis label is not fixed.} Different ways of applying
+        Sepsis-3 to the same database gave 867--2,178
+        cases~\cite{cohen2024subtle}.
+  \item \textbf{The data split can inflate results.} Sepsis prediction suffers
+        the largest drop of any clinical task under a temporal
+        shift~\cite{guo2022temporal}.
+  \item \textbf{AUROC hides the real failure.} A model can keep a high AUROC
+        while its clinical usefulness becomes harmful~\cite{wang2025srpm}.
+  \item \textbf{The label captures doctor behaviour.} Models may learn when
+        doctors suspect sepsis and treat, not when the patient
+        worsens~\cite{kamran2024evaluation}.
+\end{enumerate}
+
+\vspace{2pt}
+\begin{block}{This thesis}
+  \small Instead of fixing the label, the split and the metric and asking which model
+  wins, it treats all of them as \textbf{sources of variance} and estimates
+  each contribution \textbf{with an interval attached}, so that the ordering
+  between them is established rather than assumed.
+\end{block}
+\end{frame}

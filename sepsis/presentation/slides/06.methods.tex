@@ -1,0 +1,70 @@
+% =============================================================================
+%  V. METHODS: MODELS AND VALIDATION ARCHITECTURE   
+% =============================================================================
+\begin{frame}{V. Methods: Models and Validation Architecture}
+\begin{block}{Primary model: dynamic discrete-time competing-risks hazard}
+  \footnotesize Multinomial pooled logistic regression over person-hours
+  (sepsis / discharge / death), natural-spline baseline in elapsed
+  hours~\cite{dagostino1990pooled,heyard2019dynamic}. The unpenalised fit is
+  completely separated, so a small ridge penalty is required for
+  identification.
+\end{block}
+
+\vspace{2pt}
+{\footnotesize\textbf{Comparators:} gradient-boosted trees (XGBoost,
+untuned conventional settings, early stopping on a 15\% stay-level holdout of
+the \emph{training} rows), Cox proportional hazards, NEWS2, qSOFA and
+SIRS~\cite{evans2021ssc}.\par}
+
+\vspace{4pt}
+\begin{center}\renewcommand{\arraystretch}{1.12}\scriptsize
+\begin{tabular}{p{2.7cm}p{6.6cm}p{3.6cm}}
+\toprule
+\textbf{Split} & \textbf{How} & \textbf{Why} \\
+\midrule
+Internal (primary)   & Time-based: train 2008--2016, test 2017--2019~\cite{guo2022temporal} & Honest internal estimate \\
+Internal (secondary) & Random 75/25 patient-level split (seed 42)                    & Split optimism (H4) \\
+Treatment-anchored   & Hours before first culture or antibiotic~\cite{kamran2024evaluation} & Treatment leakage (H3) \\
+External             & eICU-CRD v2.0, no retraining~\cite{pollard2018eicu}           & Generalisability (H5) \\
+\bottomrule
+\end{tabular}
+\end{center}
+{\scriptsize All splits are patient-level: no patient appears in both
+training and test sets.\par}
+\end{frame}
+
+
+% =============================================================================
+%  V. METHODS: METRICS AND INFERENCE        
+% =============================================================================
+\begin{frame}{V. Methods: Metrics and Statistical Inference}
+\textbf{Primary metric: adapted PhysioNet-style Utility
+Score}~\cite{reyna2020utility}
+\[
+  \widetilde{U} = \frac{U - U_{\text{inact}}}{U_{\text{opt}} - U_{\text{inact}}}
+  \qquad
+  \widetilde{U}=1 \text{ perfect},\quad
+  \widetilde{U}=0 \text{ no-alert strategy},\quad
+  \widetilde{U}<0 \text{ worse than no alerts}
+\]
+\vspace{-6pt}
+\begin{itemize}\itemsep2pt\small
+  \item Rewards early true alerts in $[t_{\text{onset}}-6,\,t_{\text{onset}}]$,
+        penalises late and false ones.
+  \item Reported at the 0.5 cut-off \textbf{and} at its maximum over a
+        60-point alert-rate grid, with the alert burden against the benchmark
+        of 1.4 false alerts per true one~\cite{moor2023review}.
+  \item AUROC, AUPRC and calibration are reported alongside.
+\end{itemize}
+
+\vspace{2pt}
+\begin{exampleblock}{Inference and reporting}
+\begin{itemize}\itemsep1pt\footnotesize
+  \item Stay-level cluster bootstrap, $B = 2{,}000$; H1--H6 Holm-corrected
+        ($m = 6$, FWER 0.05); exploratory families Benjamini--Hochberg.
+  \item Pre-registered protocol; post-hoc protocol amendments are declared as
+        such; TRIPOD+AI and PROBAST+AI
+        reporting~\cite{collins2024tripodai,moons2025probastai}.
+\end{itemize}
+\end{exampleblock}
+\end{frame}

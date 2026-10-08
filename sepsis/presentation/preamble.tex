@@ -1,0 +1,38 @@
+% =============================================================================
+%  PREAMBLE: packages and document metadata only.
+%  All visual styling lives in theme.tex.
+% =============================================================================
+
+% --- Packages ----------------------------------------------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{multicol}
+\usepackage{tikz}
+\usepackage[most]{tcolorbox}
+\usepackage{csquotes}
+\usepackage[style=ieee,backend=biber,defernumbers=true,doi=false,url=false,isbn=false,eprint=false,maxbibnames=2,minbibnames=1]{biblatex}
+\addbibresource{references.bib}
+
+% --- Result numbers ------------------------------------------------------------
+% Every study quantity on the slides is a \pc macro from the thesis's generated
+% constants (copied by build.sh), never a typed number.
+\input{generated/pipeline_constants.tex}
+\newcommand{\repourl}{https://github.com/ahadarif007/RESEARCH}
+
+% --- Visual theme ------------------------------------------------------------
+\input{theme}
+
+% --- Metadata ----------------------------------------------------------------
+\title{Quantifying Model, Label, and Methodological Contributions to
+       Variance in Real-Time Sepsis Onset Prediction}
+\author{Abdul Ahad}
+\institute{M.Sc.\ in Computing\\
+  Department of Computer Science \& Applied Physics\\
+  Atlantic Technological University (ATU), Galway}
+\date{}

@@ -1,0 +1,33 @@
+% =============================================================================
+%  III. RESEARCH QUESTION AND PRE-REGISTERED HYPOTHESES  
+% =============================================================================
+\begin{frame}{III. Research Question and Pre-Registered Hypotheses}
+\begin{block}{Research Question}
+  \small In real-time sepsis prediction on MIMIC-IV~\cite{johnson2023mimiciv},
+  how much of the reported performance variation comes from (a)~the choice of
+  model, and (b)~the researcher's decisions: how sepsis is defined, how data
+  is split, when prediction is made, and how performance is measured?
+\end{block}
+
+\vspace{2pt}
+\begin{itemize}\itemsep0pt\footnotesize
+  \item \textbf{H1 (Label dominance):} changing the sepsis definition affects
+        AUROC at least as much as changing the model.
+  \item \textbf{H2 (Coefficient instability):} at least one feature changes
+        direction, or magnitude $\geq 2\times$, across label variants.
+  \item \textbf{H3 (Treatment leakage):} restricting evaluation to before
+        treatment reduces AUROC by $\geq 0.03$.
+  \item \textbf{H4 (Split optimism):} temporal testing gives $\geq 0.02$ lower
+        AUROC than random testing.
+  \item \textbf{H5 (Metric divergence):} Utility declines more than AUROC from
+        internal to external validation.
+  \item \textbf{H6 (Model-class null):} the primary statistical model is not
+        outperformed by gradient-boosted trees by more than 0.02 AUROC.
+\end{itemize}
+
+\vspace{2pt}
+{\footnotesize One confirmatory family, Holm--Bonferroni ($m = 6$).
+\textbf{Scope:} the models estimate the hazard of onset in the
+\emph{current} hour, i.e.\ detection at the recorded onset, not advance
+warning.\par}
+\end{frame}

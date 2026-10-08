@@ -1,0 +1,84 @@
+% =============================================================================
+%  VII. DISCUSSION: THE CENTRAL LESSON AND LIMITATIONS
+% =============================================================================
+\begin{frame}{VII. Discussion: The Central Lesson and Limitations}
+\begin{atucols}[t]
+\begin{column}{0.50\textwidth}
+\textbf{The Sepsis-3 label on MIMIC-IV:}
+\begin{enumerate}\itemsep2pt\scriptsize
+  \item \textbf{Depends on clinical action for membership.} The empty
+        pre-treatment window belongs to the onset rule: timed as the standard
+        specifies, it holds \pcPreTreatOnsetsVarF{} onsets.
+  \item \textbf{Is sensitive to how it is defined.} Cases nearly double across
+        readings ($\kappa = \pcKappaVsBA$), yet AUROC moves by only
+        \pcSpreadLabel.
+  \item \textbf{Produces unusable alert behaviour.} No operating point comes
+        near the 1.4 benchmark; the best under B costs
+        \pcUtilityOptBurdenGbtB{} false alerts per true one.
+\end{enumerate}
+\vspace{2pt}
+\begin{alertblock}{}
+  \scriptsize These problems are independent of model complexity. Addressing
+  them requires changing the label, not only the model.
+\end{alertblock}
+\end{column}
+\begin{column}{0.48\textwidth}
+\textbf{Key limitations}
+\begin{itemize}\itemsep2pt\scriptsize
+  \item \textbf{Current-hour estimand:} detection at the recorded onset, not
+        advance warning.
+  \item \textbf{External validation is bounded by label transport:}
+        \pcExtMicroCoverage\% culture coverage, \pcExtNEventsB{} events under B.
+  \item \textbf{Single-centre development}, with a selected base cohort
+        (first stays, $\geq 4$\,h).
+  \item \textbf{The pre-registered onset rule is not the standard one}; F
+        restores it post hoc.
+  \item \textbf{Variant D is not a validated construct}; its components
+        overlap the model inputs.
+  \item \textbf{Post-hoc protocol amendments} are disclosed as such; the
+        literature search is narrative, not systematic.
+\end{itemize}
+\end{column}
+\end{atucols}
+\end{frame}
+
+
+% =============================================================================
+%  VIII. CONCLUSION: CONTRIBUTIONS AND FUTURE WORK
+% =============================================================================
+\begin{frame}{VIII. Conclusion: Contributions and Future Work}
+\begin{center}\renewcommand{\arraystretch}{1.0}\scriptsize
+\begin{tabular}{cp{11.6cm}}
+\toprule
+C1 & Label and model-class spreads on the same test rows, each with an
+     interval: the label moves membership ($\kappa = \pcKappaVsBA$), not
+     discrimination (\pcSpreadLabel). \\
+C2 & Proof that the conjunction onset rule empties the pre-treatment window;
+     standard timing recovers \pcPreTreatOnsetsVarF{} onsets. \\
+C3 & Threshold-swept utility ceiling (\pcUtilityMaxGbtB{} under B) at
+     \pcUtilityOptBurdenGbtB{} false alerts per true one. \\
+C4 & \pcHTwoEst{} of \pcHTwoNTerms{} covariates unstable across labels;
+     \pcHTwoNRobust{} survive their own noise, all order indicators. \\
+C5 & Equity-by-label on the same strata: the finding concerns
+     documentation completeness, not race. \\
+C6 & Pre-registered, seed-fixed, TRIPOD+AI pipeline; the thesis numbers are
+     generated constants. \\
+C7 & Definitional vs.\ empirical label variance separated
+     ($\kappa_{D,B} = \pcKappaVsBD$;
+     $\phi_{\text{anchor}} = \pcPhiAnchorPrimary$). \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+{\scriptsize\textbf{Future work:} a sepsis definition grounded in objective
+physiology and adjudicated independently of the model's features; SEP-1 and
+CDC Adult Sepsis Event; prospective, protocol-blinded and multi-centre
+validation; utility-optimised training.\par}
+
+\vspace{2pt}
+\begin{block}{}
+  \centering\footnotesize The premise inverted; the motivating problem did not.
+  The label's consequence runs through \emph{who} is counted and \emph{when},
+  not through discrimination.
+\end{block}
+\end{frame}

@@ -1,0 +1,74 @@
+% =============================================================================
+%  IV. MATERIALS: DATA AND COHORT        
+% =============================================================================
+\begin{frame}{IV. Materials: Data and Cohort}
+\begin{atucols}[c]
+\begin{column}{0.47\textwidth}
+  \centering
+  \includegraphics[width=\columnwidth,height=0.74\textheight,
+                   keepaspectratio]{images/fig3.1_consort.pdf}
+\end{column}
+\begin{column}{0.51\textwidth}
+\begin{itemize}\itemsep3pt\small
+  \item \textbf{Development:} MIMIC-IV v3.1~\cite{johnson2023mimiciv}, a
+        single centre (BIDMC, Boston).
+  \item \textbf{Inclusion:} age $\geq 18$, first ICU stay per patient, length
+        of stay $\geq 4$\,h $\Rightarrow$ \textbf{\pcNStays{} stays}.
+  \item \textbf{External:} eICU-CRD v2.0~\cite{pollard2018eicu}, over 200 US
+        ICUs, \pcExtNCohortStays{} unit stays; models applied
+        \textbf{frozen, without retraining}.
+  \item \textbf{Person-hour panel:} 72\,h horizon; discharge and death are
+        competing events, not censoring.
+  \item \textbf{22 covariates} (6 vitals, 5 labs, 2 vasopressor flags, 3
+        six-hour slopes, 6 test-ordered indicators), \pcNCandidatePredictors{}
+        terms per outcome.
+\end{itemize}
+\end{column}
+\end{atucols}
+\end{frame}
+
+
+% =============================================================================
+%  IV. MATERIALS: THREE SEPSIS-3 LABEL VARIANTS   
+% =============================================================================
+\begin{frame}{IV. Materials: Three Pre-Registered Sepsis-3 Label Variants}
+\begin{center}\renewcommand{\arraystretch}{1.12}\scriptsize
+\begin{tabular}{llcccccr}
+\toprule
+\textbf{ID} & \textbf{Name} & \textbf{ABX$\to$cx} & \textbf{cx$\to$ABX}
+  & \textbf{SOFA$-$} & \textbf{SOFA$+$} & \textbf{Baseline} & \textbf{Septic stays} \\
+\midrule
+A & Narrow      & 24\,h & 24\,h & 24\,h & 12\,h & Admission     & \pcNOnsetsA{} (\pcPctOnsetsA\%) \\
+B & Seymour-Std & 72\,h & 24\,h & 48\,h & 24\,h & Admission     & \pcNOnsetsB{} (\pcPctOnsetsB\%) \\
+C & Liberal     & 72\,h & 72\,h & 48\,h & 24\,h & Rolling 24\,h & \pcNOnsetsC{} (\pcPctOnsetsC\%) \\
+\bottomrule
+\end{tabular}
+\end{center}
+{\tiny ABX = antibiotic; cx = culture; SOFA$-$/SOFA$+$ = hours before/after
+suspicion time in which a SOFA rise of $\geq 2$ must be observed.\par}
+
+\vspace{2pt}
+\begin{atucols}[c]
+\begin{column}{0.62\textwidth}
+\begin{itemize}\itemsep2pt\footnotesize
+  \item All three: \textbf{suspected infection} (antibiotic paired with a
+        culture inside the windows) \textbf{and} a SOFA rise of $\geq 2$
+        points~\cite{singer2016sepsis3,cohen2024subtle}.
+  \item \textbf{Variant B is the primary analysis}; A and C are
+        pre-specified alternatives.
+  \item Onset time is the suspicion time $t_{\text{susp}}$: the SOFA rise
+        gates \emph{membership}, not timing.
+\end{itemize}
+\vspace{2pt}
+\begin{alertblock}{}
+  \footnotesize A and B have near-identical prevalence but agree on which
+  stays are septic at only $\kappa = \pcKappaVsBA$.
+\end{alertblock}
+\end{column}
+\begin{column}{0.36\textwidth}
+  \centering
+  \includegraphics[width=\columnwidth,height=0.42\textheight,
+                   keepaspectratio]{images/fig2.2_label_variance_concept.pdf}
+\end{column}
+\end{atucols}
+\end{frame}
