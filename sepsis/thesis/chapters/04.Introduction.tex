@@ -12,26 +12,24 @@ the risk of death \cite{seymour2017time}. An early warning system that
 detects sepsis before doctors recognise it could save lives by starting
 treatment sooner.
 
-This potential has driven major research investment. Wang et al.\
+This potential has motivated a large body of research. Wang et al.\
 \cite{wang2025srpm} reviewed ninety-one published real-time sepsis
-prediction models and found a median internal AUROC of 0.811, suggesting
-strong performance. But the same review found that the clinical Utility Score
-collapsed from $+0.381$ internally to $-0.164$ externally. A negative score
-means the model's alerts cause more harm than benefit. AUROC did not detect
-this collapse because it only measures whether a model can rank patients
-correctly, not whether its alerts are timely or useful. This gap between
-apparent accuracy and real-world usefulness has also been observed in
-deployment: Wong et al.\ \cite{wong2026epic} validated the Epic Sepsis
+prediction models and found a median internal AUROC of 0.811. The same review
+found that the clinical Utility Score fell from $+0.381$ internally to
+$-0.164$ externally, and a negative score means the model's alerts cause more
+harm than benefit. AUROC did not capture this decline because it measures only
+whether a model ranks patients correctly, not whether its alerts are timely or
+useful. The same gap between discrimination and clinical usefulness has been
+observed in deployment: Wong et al.\ \cite{wong2026epic} validated the Epic Sepsis
 Model v2 prospectively across 227,091 encounters at four US health systems and
 found encounter-level AUROC between 0.82 and 0.92 alongside positive predictive
 value of 0.13 to 0.26: 21 to 35 alerts investigated for every sepsis case
 identified.
 
-``Which model is best?'' is therefore the wrong question to lead with. The
-question this thesis asks instead is \textit{how much of a model's reported
-performance comes from the model itself, and how much comes from how the study
-was designed: how sepsis was defined, how data was split, and which metric was
-reported?}
+The more relevant question is therefore not which model performs best but
+\textit{how much of a model's reported performance comes from the model itself,
+and how much from the design of the study: how sepsis was defined, how the data
+were split, and which metric was reported.}
 
 Cohen et al.\ \cite{cohen2024subtle} showed on MIMIC-III that varying only
 the Sepsis-3 definition changed the identified cohort from 867 to 2,178
@@ -39,12 +37,11 @@ patients, and that the label choice affected performance as much as the model
 choice. Kamran et al.\ \cite{kamran2024evaluation} showed that published
 models partly learn to predict when clinicians start treatment rather than when
 patients deteriorate. Together, these findings suggest that much of the reported
-performance may come from the researcher's design choices, not from the AI model.
+performance may reflect the researcher's design choices.
 
-This thesis tests that hypothesis directly. Instead of fixing the label, the
-split, and the metric and asking which model wins, it treats all three as
-\textbf{sources of variance} and measures how much each one contributes to the
-spread in reported performance.
+To evaluate this, the label, the split and the metric are treated here as
+\textbf{sources of variance} alongside the model, and the contribution of each
+to the spread in reported performance is measured.
 
 
 \section{Limitations of the Conventional Approach}
@@ -54,7 +51,7 @@ Sepsis-3 definition, use one train/test split, report AUROC, and compare models.
 Most of the ninety-one models reviewed by Wang et al.\ \cite{wang2025srpm}
 follow this pattern.
 
-This approach has four key problems:
+This approach has four limitations:
 
 \begin{enumerate}
     \item \textbf{The sepsis label is not fixed.} Cohen et al.\
@@ -68,10 +65,10 @@ This approach has four key problems:
     period. Random splits let future patterns leak into training, making models
     look better than they are.
 
-    \item \textbf{AUROC hides the real failure.} Wang et al.\
+    \item \textbf{AUROC does not reflect clinical usefulness.} Wang et al.\
     \cite{wang2025srpm} showed that a model can keep a high AUROC while its
-    clinical usefulness drops to harmful levels. The failure is invisible under
-    AUROC alone.
+    clinical utility falls below that of issuing no alerts. This decline is not
+    reflected in AUROC.
 
     \item \textbf{The label captures doctor behaviour.} Kamran et al.\
     \cite{kamran2024evaluation} showed that models may learn when doctors
@@ -80,12 +77,11 @@ This approach has four key problems:
 \end{enumerate}
 
 A study that fixes all of these choices and compares only models measures one
-source of variation and leaves three others unmeasured. Whether those three are
-of comparable size to the one that is reported is an open question rather than
-a settled one, and it cannot be answered by a literature that never varies
-them. This thesis fills in the missing cells of the comparison and estimates
-each contribution with an interval attached, so that the ordering between them
-is established rather than assumed.
+source of variation and leaves three unmeasured. Whether those three are
+comparable in size to the one that is reported cannot be answered by studies
+that never vary them. The present study varies them and estimates each
+contribution with an interval, so that their ordering can be compared
+directly.
 
 
 \section{Research Question and Pre-Registered Hypotheses}
@@ -96,20 +92,19 @@ MIMIC-IV, how much of the reported performance variation comes from (a) the
 choice of model, and (b) the researcher's decisions: how sepsis is defined,
     how data is split, when prediction is made, and how performance is measured?}
 
-One scoping statement belongs with the question rather than after it, because
-it governs how every number in this thesis should be read. The models estimate
-the hazard of sepsis onset in the \emph{current} hour, and every AUROC reported
-here scores that hazard against an indicator of the onset hour among the hours
-in which a patient is still at risk. That is detection at the recorded onset,
-not anticipation of it over a future horizon, and the timing is exact only to
-the hour: predictors and the onset are binned the same way, so within that one
-hour a measurement charted after the onset timestamp still enters the
-prediction assigned to it. ``Real-time'' here therefore describes the
-estimand's form, a hazard evaluated at every hour of the stay with no
-retrospective information, and not a demonstrated lead over the clinician.
-Where this thesis reports that events exist before treatment and are separable
-from their surroundings, it is reporting exactly that and nothing about advance
-warning; Limitation~\ref{lim:current_hour} states the consequence in full.
+One scoping statement governs how every reported number should be read. The
+models estimate the hazard of sepsis onset in the \emph{current} hour, and every
+AUROC reported here scores that hazard against an indicator of the onset hour
+among the hours in which a patient is still at risk. This is detection at the
+recorded onset, not anticipation over a future horizon. The timing is also
+exact only to the hour: predictors and onset are binned the same way, so a
+measurement charted after the onset timestamp within that hour still enters
+the prediction assigned to it. ``Real-time'' therefore describes the form of
+the estimand, a hazard evaluated at every hour of the stay without
+retrospective information, and does not imply a demonstrated lead over the
+clinician. Results showing that onsets occur before treatment and are separable
+from surrounding hours make no claim about advance warning
+(Limitation~\ref{lim:current_hour}).
 
 Six hypotheses were pre-registered before any of the modelling reported here:
 
@@ -124,28 +119,27 @@ Six hypotheses were pre-registered before any of the modelling reported here:
     \item[H4 (Split optimism)] Time-based testing gives at least 0.02 lower AUROC
     than random testing.
     \item[H5 (Metric divergence)] The Utility Score declines more than AUROC when
-    moving from internal to external validation. This proved not to be evaluable,
-    for the reasons given in Section~\ref{sec:h5}: there is no internal Utility
-    Score for a decline to be proportional to. A substituted
-    internal-to-external AUROC contrast was analysed in its place and retains
-    H5's slot in the multiplicity correction.
+    moving from internal to external validation. This was not evaluable
+    because there is no internal Utility Score against which to measure a
+    decline (Section~\ref{sec:h5}); a substituted internal-to-external AUROC
+    contrast takes its place in the multiplicity correction.
     \item[H6 (Model-class null)] The primary statistical model is not
     outperformed by gradient-boosted trees by more than 0.02 AUROC. The
     pre-registered statement is two-sided, so its null is an interval with two
-    boundaries; both are tested and neither is cleared, as
-    Section~\ref{sec:h6} sets out.
+    boundaries; both are tested and neither is cleared
+    (Section~\ref{sec:h6}).
 \end{description}
 
-H1 and H6 pull against each other by design. If H1 is confirmed, the label is
-the main source of variation. Rejecting H6 would instead put weight back on the
-model, and there is no outcome here that leaves the question unanswered.
+H1 and H6 were designed to pull against each other: confirming H1 would make
+the label the main source of variation, whereas rejecting H6 would place more
+weight on the model. Either outcome is informative.
 
 These six form a single confirmatory family and are tested with
 Holm--Bonferroni control of the family-wise error rate. Every analysis reported
-in this thesis carries an explicit status (confirmatory, exploratory or
-descriptive), and the status is not assigned in the prose: it is held in a
-machine-readable analysis register that the inference stage writes from the
-same objects it corrects, and reproduced in Table~\ref{tab:register}. Alongside
+carries a status (confirmatory, exploratory or descriptive) recorded in a
+machine-readable analysis register, which the inference stage writes from the
+same objects it corrects and which is reproduced in
+Table~\ref{tab:register}. Alongside
 H1--H6 the register marks a further nine analyses confirmatory because their
 estimand was fixed before any modelling, among them the internal performance
 estimates, calibration, decision-curve net benefit, per-patient detection and
@@ -153,46 +147,44 @@ the external validation; most of these are estimation rather than testing and
 so take no multiplicity correction. The equity analyses are exploratory: §9 of
 the protocol fixed their scope but not the levels, the reference or the
 direction of any contrast, so they are corrected by Benjamini--Hochberg within
-their own families. Section~\ref{sec:inference} sets out the plan and states
-plainly that it was written after the analyses had been run.
+their own families. Section~\ref{sec:inference} sets out the plan and notes
+that it was written after the analyses had been run.
 
 
 \section{Contributions}
 \label{sec:contrib}
 
 \begin{enumerate}
-    \item \textbf{C1 (Label variance).} Label sensitivity itself is established
-    by Cohen et al.\ \cite{cohen2024subtle} and Dutta et al.\
-    \cite{dutta2026performance}, and neither the survival setting nor the
-    multi-variant design is new. What is new, to the best of our knowledge, is
-    the combination: three Sepsis-3 readings applied to a discrete-time
-    competing-risks model on MIMIC-IV, with the label spread and the
-    model-class spread measured on the same test rows and each carrying an
-    interval, so that the two can be compared as estimands rather than as
-    ranges of point estimates (Section~\ref{sec:search_strategy} states the
-    search strategy and the bound on this claim).
+    \item \textbf{C1 (Label variance).} Prior work has established label
+    sensitivity \cite{cohen2024subtle, dutta2026performance}, and neither the
+    survival setting nor the multi-variant design is new. The contribution here,
+    to the best of our knowledge, is their combination: three Sepsis-3 readings
+    applied to a discrete-time competing-risks model on MIMIC-IV, with the label
+    spread and the model-class spread measured on the same test rows, each with
+    an interval, so that the two can be compared as estimands
+    (Section~\ref{sec:search_strategy} states the search strategy and the bound
+    on this claim).
 
-    \item \textbf{C2 (Treatment leakage separated: membership from onset
-    timing).} A proof that
-    a conjunction-based Sepsis-3 onset rule, the rule used here and widely in
-    the MIMIC-IV literature, makes pre-treatment prediction structurally
-    impossible, together with the measurement that the standard
-    $\min(t_{\text{susp}}, t_{\text{SOFA}})$ rule applied to the same stays,
-    whose septic membership it leaves cohort-wide unchanged,
-    recovers \pcPreTreatOnsetsVarF{} pre-treatment onsets, separable from
+    \item \textbf{C2 (Treatment leakage: membership and onset timing).} A
+    proof that a conjunction-based Sepsis-3 onset rule, the rule used here and
+    widely in the MIMIC-IV literature, makes pre-treatment prediction
+    structurally impossible. Applied to the same stays, with cohort-wide septic
+    membership unchanged, the standard $\min(t_{\text{susp}}, t_{\text{SOFA}})$
+    rule recovers \pcPreTreatOnsetsVarF{} pre-treatment onsets, separable from
     their surrounding at-risk hours at \pcPreTreatAurocPrimaryF{} AUROC on the
-    onset-hour estimand. Kamran et al.'s
-    \cite{kamran2024evaluation} concern is confirmed for label \emph{membership}
-    and narrowed for label \emph{timing}.
+    onset-hour estimand. Kamran et al.'s \cite{kamran2024evaluation} concern is
+    confirmed for label \emph{membership} and narrowed for label
+    \emph{timing}.
 
     \item \textbf{C3 (Utility ceiling documented).} Swept across the whole
     threshold grid rather than scored at a conventional cut-off, no model
     exceeds \pcUtilityMaxGbtB{} under the primary label or
     \pcUtilityMaxGbtC{} under any pre-registered variant (a few per cent
-    above the strategy of issuing no alerts, on a scale whose upper bound is 1), and reaching even that costs tens of false alerts per true one. This
+    above the strategy of issuing no alerts, on a scale whose upper bound is
+    1), and reaching that ceiling costs tens of false alerts per true one. This
     extends Wang et al.'s \cite{wang2025srpm} meta-analytic finding to a
-    controlled single-study comparison and settles it against the
-    operating-point objection.
+    controlled single-study comparison and shows that it does not depend on the
+    choice of operating point.
 
     \item \textbf{C4 (Coefficient instability).} \pcHTwoEst{} of the
     \pcHTwoNTerms{} shared clinical covariates are unstable across label
@@ -203,40 +195,37 @@ plainly that it was written after the analyses had been run.
     noise, all of them indicators of whether a test was ordered
     (Section~\ref{sec:h2_uncertainty}).
 
-    \item \textbf{C5 (Equity-by-label analysis).} Subgroup performance
-    disparity and subgroup variation in who gets labelled are both reported by
-    Wang et al.\ \cite{wang2022equity}, though for mortality prediction among
-    patients already identified as septic rather than for onset prediction.
-    What is new, to the best of our knowledge, is measuring the two on the
-    \emph{same} strata in the same onset-prediction cohort under common
-    false-discovery control, which is what shows that only one of them is
-    precisely enough estimated to support a claim
+    \item \textbf{C5 (Equity-by-label analysis).} Wang et al.\
+    \cite{wang2022equity} reported both subgroup performance disparity and
+    subgroup variation in who is labelled, for mortality prediction among
+    patients already identified as septic. The contribution here, to the best
+    of our knowledge, is to measure the two on the \emph{same} strata of an
+    onset-prediction cohort under common false-discovery control, which shows
+    that only one of them is estimated precisely enough to support a claim
     (Section~\ref{sec:search_strategy}).
 
     \item \textbf{C6 (Reproducible pipeline).} A pre-registered, seed-fixed
     pipeline following TRIPOD+AI \cite{collins2024tripodai} and PROBAST+AI
     \cite{moons2025probastai} reporting standards.
 
-    \item \textbf{C7 (Definitional vs.\ empirical label variance separated).}
-    The Sepsis-3 conjunction is split into its two limbs and each is labelled
-    separately, so that the part of the label effect guaranteed by the
-    definition can be told apart from the part discovered in the data. Two
-    results follow. The onset \emph{time} under every pre-registered Sepsis-3
-    variant is fixed entirely by the treatment anchor, the organ-dysfunction
-    criterion filters which stays are labelled and moves no onset by a single
-    hour, while an anchor-independent deterioration label agrees with
-    Sepsis-3 at $\kappa = \pcKappaVsBD$, close to chance. And the treatment
-    anchor alone is about as predictable as the Sepsis-3 conjunction built on
-    top of it, so the difficulty lies not in the conjunction but in when the
-    label is stamped. That second result is model-dependent and is reported as
-    such: the anchor-attributable fraction is
+    \item \textbf{C7 (Definitional and empirical label variance).} The
+    Sepsis-3 conjunction is split into its two limbs and each is labelled
+    separately, to distinguish the part of the label effect that follows from
+    the definition from the part found in the data. Under every pre-registered
+    Sepsis-3 variant the onset \emph{time} is fixed entirely by the treatment
+    anchor: the organ-dysfunction criterion filters which stays are labelled
+    but moves no onset, and an anchor-independent deterioration label agrees
+    with Sepsis-3 at $\kappa = \pcKappaVsBD$, close to chance. The treatment
+    anchor alone is also about as predictable as the Sepsis-3 conjunction built
+    on it, which locates the difficulty in when the label is stamped. This
+    second result is model-dependent: the anchor-attributable fraction is
     $\phi_{\text{anchor}} = \pcPhiAnchorPrimary$
     [\pcPhiAnchorCiLoPrimary, \pcPhiAnchorCiHiPrimary] for the primary model,
     an interval including 1, and $\pcPhiAnchorGbt$
     [\pcPhiAnchorCiLoGbt, \pcPhiAnchorCiHiGbt] for the gradient-boosted
-    comparator, which excludes it. The same
-    comparison shows the empty pre-treatment window of C2 to be a property of
-    the onset rule, not of the patients: an anchor-independent label records
+    comparator, which excludes it. The same comparison shows that the empty
+    pre-treatment window of C2 is a property of the onset rule: an
+    anchor-independent label records
     \pcPreTreatOnsetsVarD{} onsets there at \pcPreTreatAurocPrimaryD{} AUROC,
     and Sepsis-3 itself records \pcPreTreatOnsetsVarF{} once its onset is timed
     as the standard specifies (Section~\ref{sec:label_anchor_results}).
