@@ -16,99 +16,89 @@ Figure~\ref{fig:pipeline_dag} shows the data flow, and
 Appendix~\ref{app:stages} tabulates each stage's inputs and outputs in full.
 \end{sloppypar}
 
-This chapter describes what each stage does. It opens with why the architecture
-takes this shape, because the structure is not incidental: a study whose
-headline claim is that analyst decisions move results is obliged to make its own
-analyst decisions inspectable, and several of the choices below exist to make a
-specific class of silent error impossible rather than merely unlikely.
+This chapter describes each stage, after first setting out the principles
+behind the architecture. Because the study concerns the effect of analyst
+decisions on results, its own analyst decisions are made inspectable, and
+several of the choices below are designed to prevent specific classes of silent
+error.
 
 
 \section{Design Principles}
 \label{sec:design_principles}
 
-Four constraints shaped the architecture. Each is stated here with the decision
-it forced and what that decision rules out.
+Four constraints shaped the architecture.
 
-\paragraph{The source data does not fit in memory, and must not be modified.}
+\paragraph{Source data are streamed and read-only.}
 MIMIC-IV's \texttt{chartevents} table is 3.5\,GB compressed and
 \texttt{labevents} 2.6\,GB; expanded, either exceeds the working memory of the
 machine this study ran on. Both are therefore read through a DuckDB streaming
 layer that pushes the cohort filter and the item-identifier filter down into the
-scan, so only rows belonging to the analysis cohort are ever materialised. The
-alternative, extracting a reduced copy once and working from it, was
-rejected because it makes the extraction step invisible to everything
-downstream: a defect in the filter becomes indistinguishable from a property of
-the data. Reading from the original tables on every run keeps the extraction
-inside the reproducible chain.
+scan, so only rows belonging to the analysis cohort are materialised.
+Extracting a reduced copy once was rejected because it would place the
+extraction outside the reproducible chain, making a defect in the filter
+indistinguishable from a property of the data.
 
-The corollary is that the source directories are treated as strictly read-only.
-No stage writes to \texttt{data/}, and every stage writes only to
-\texttt{output/}. Reproduction is therefore a matter of deleting
-\texttt{output/} and re-running, with no possibility that a previous run has
-left the inputs in a state the next run depends on.
+The source directories are read-only: no stage writes to \texttt{data/}, and
+every stage writes only to \texttt{output/}. Reproduction therefore consists of
+deleting \texttt{output/} and re-running, and no run can leave the inputs in a
+state on which the next run depends.
 
-\paragraph{Every clinical constant must have exactly one definition.}
-The study varies label definitions deliberately, which means the same quantity (an antibiotic--culture window, a SOFA threshold, an evaluation horizon)
-is read by several stages and must mean the same thing in all of them. A
-constant duplicated across two scripts is a constant that can silently diverge,
-and in a study about definitional sensitivity such a divergence would be
-indistinguishable from a finding. \texttt{config.R} is therefore the single
-source of truth for every path, identifier, window, threshold, seed, family
-size, event floor and covariate vector in the pipeline, and no other file
-hard-codes any of them. The covariate vector is the case that matters most and
-was the last to be brought inside the rule: it is read by the two fitting
-stages and again by the external-validation stage, which reconstructs a stored
-model's column order from it, so a divergence between copies would have
-produced a permuted design matrix and predictions that are wrong while
-remaining perfectly well-formed. Where a stored model records its own feature
-names, disagreeing with the declaration is an error rather than a warning. The
-same discipline extends to the thesis: \texttt{thesis\_constants.R} writes the
-reported numbers into the document from the result tables, so a value cannot
-disagree between the code and the text either.
+\paragraph{Each clinical constant has a single definition.}
+Because the study varies label definitions, the same quantity (an
+antibiotic--culture window, a SOFA threshold, an evaluation horizon) is read by
+several stages and must mean the same thing in all of them. A constant
+duplicated across scripts can diverge silently, and in a study of definitional
+sensitivity such a divergence would be indistinguishable from a finding.
+\texttt{config.R} is therefore the single source of truth for every path,
+identifier, window, threshold, seed, family size, event floor and covariate
+vector, and no other file hard-codes any of them. Feature consistency is
+enforced through the covariate vector, which the two fitting stages and the
+external-validation stage all read; the latter reconstructs a stored model's
+column order from it, so divergent copies would produce a permuted design
+matrix and well-formed but wrong predictions. Where a stored model records its
+own feature names, disagreement with the declaration is an error. The same rule
+extends to the thesis: \texttt{thesis\_constants.R} writes the reported numbers
+into the document from the result tables.
 
-\paragraph{An interface between stages must fail loudly or not at all.}
-A crash is not the pipeline's most dangerous failure mode. That would be a
-stage that quietly does less than it was asked to. Selecting predictors by
-intersecting a
-declared feature list with the columns actually present, for instance, silently
-drops any predictor whose name does not match: the model still fits, the
-metrics still compute, and nothing in the output indicates that a variable is
-missing. Interfaces are therefore declared rather than inferred:
-\texttt{require\_features()} raises an error when a declared predictor is absent
-instead of proceeding without it, and the fit diagnostics record convergence
-status alongside the coefficient magnitudes that reveal an unidentified
-likelihood, because a convergence flag alone does not distinguish the two.
+\paragraph{Specification failures between stages are fatal errors.}
+A stage that silently does less than specified is harder to detect than one
+that crashes. Selecting predictors by intersecting a declared feature list with
+the columns present, for instance, silently drops any predictor whose name does
+not match, while the model still fits and the metrics still compute. Interfaces
+are therefore declared rather than inferred: \texttt{require\_features()} raises
+an error when a declared predictor is absent, and the fit diagnostics record
+convergence status alongside the coefficient magnitudes that reveal an
+unidentified likelihood, since the convergence flag alone cannot distinguish
+the two.
 
-The same principle governs the run-time invariants. Where a computation has a
-property that must hold by construction, the pipeline asserts it and halts:
-a threshold above every predicted probability must score exactly zero on the
-Utility Score, because it \emph{is} the no-alert strategy; no operating point may
-exceed the optimal strategy's score of one; and the three label variants must
-produce three distinct sets of external onsets, since a label that was never
-varied would otherwise present as a label that has no effect. These are stops,
-not warnings. A warning in a sixty-minute batch run is a line in a log nobody
-reads.
+Run-time invariants follow the same principle. Where a property must hold by
+construction, the pipeline asserts it and halts: a threshold above every
+predicted probability must score zero on the Utility Score, because it is the
+no-alert strategy; no operating point may exceed the optimal strategy's score
+of one; and the three label variants must produce three distinct sets of
+external onsets, since a label that was never varied would otherwise appear to
+have no effect. Validation failures terminate execution rather than generating
+warnings.
 
-\paragraph{Expensive fits must be refreshable without disturbing the others.}
+\paragraph{Fits can be refreshed independently.}
 Fitting is the dominant cost, and gradient-boosted tree fitting is not
-bit-stable across runs, so an incidental refit changes numbers throughout the
-document without any change of substance. Two environment variables scope a run
-accordingly: \texttt{V2\_VARIANTS} restricts the per-variant loops to a named
+guaranteed to be bit-stable across environments, so an incidental refit could
+change numbers throughout the document without any change of substance. Two
+environment variables scope a run accordingly: \texttt{V2\_VARIANTS} restricts the per-variant loops to a named
 subset, and \texttt{V2\_ARMS} restricts the fitting arm
 (Section~\ref{sec:ablation_method}). Adding an alternative label or an ablated
 specification therefore does not re-execute the fits that every headline number
 rests on, and the outputs of the additional arms are written to separate files
 so they cannot overwrite a pre-registered result.
 
-\paragraph{Why twelve scripts rather than one program.} The stage boundaries
-follow the analysis, not the code: each corresponds to a step that has to be
-separately inspectable because a claim in Chapter~\ref{ch:evaluation} rests on
-it. The inference layer is the clearest case: Stage 12 reads only the stored
+\paragraph{Stage boundaries.} Each of the twelve stages corresponds to an
+analysis step on which a claim in Chapter~\ref{ch:evaluation} rests, so each
+can be inspected separately. For example, Stage 12 reads only the stored
 predictions of earlier stages, so intervals and multiplicity corrections can be
-recomputed without refitting anything, and the correction applied to a result is
-verifiable independently of the model that produced it. The cost of this
-granularity is intermediate storage, which is paid in Parquet; the benefit is
-that any single stage can be re-run and checked against the rest.
+recomputed without refitting, and each correction can be verified independently
+of the model that produced it. The cost is intermediate storage, held in
+Parquet; the benefit is that any stage can be re-run and checked against the
+rest.
 
 \begin{figure}[H]
     \centering
@@ -160,8 +150,7 @@ and reports their sizes. The pipeline stops if any table is missing.
     \item \textbf{Onset time:} For the pre-registered variants A--C, the
     suspicion time $t_{\text{susp}}$, provided the SOFA rise occurs somewhere in
     the evaluation window. The SOFA criterion therefore gates \emph{membership}
-    and contributes no timing information: an implementation choice with
-    consequences developed in Section~\ref{sec:variant_f}.
+    and contributes no timing information (Section~\ref{sec:variant_f}).
 
     \item \textbf{Alternative labels (Protocol Amendments 2 and 4):} The Sepsis-3
     conjunction is also split into its two limbs
@@ -177,10 +166,8 @@ and reports their sizes. The pipeline stops if any table is missing.
 \end{enumerate}
 
 A single environment variable, \texttt{V2\_VARIANTS}, restricts the per-variant
-loops in Stages 02--07 to a named subset. Adding the alternative labels
-therefore did not require refitting variants A--C: XGBoost is not bit-stable
-across runs, so an incidental refit would have moved every GBT-dependent number
-in this thesis without any change of substance.
+loops in Stages 02--07 to a named subset, so the alternative labels were added
+without refitting variants A--C.
 
 
 \section{Stage 03: Person-Hour Table Construction}
@@ -203,10 +190,10 @@ memory. For each person-hour:
     recorded.
 \end{itemize}
 
-This is the pipeline's most expensive stage after model fitting, and the only
-one that reads the full-size source tables; it is also the stage whose outputs
-every later stage depends on, which is why the streaming and read-only
-disciplines of Section~\ref{sec:design_principles} matter most here.
+This is the most expensive stage after model fitting and the only one that
+reads the full-size source tables. Every later stage depends on its outputs,
+which is why the streaming and read-only rules of
+Section~\ref{sec:design_principles} apply most directly here.
 
 
 \section{Stage 04: Sample Size Calculation}
@@ -217,8 +204,8 @@ label variant. The criteria assume independent observations, so the calculation
 is parameterised on the \emph{stay} rather than the person-hour: the outcome
 proportion supplied is the fraction of training stays labelled septic, and the
 resulting minimum is compared against the number of training stays. The
-per-person-hour parameterisation is computed alongside and retained as a
-labelled reference, so that the two cannot be substituted for one another.
+per-person-hour parameterisation is computed alongside as a labelled
+reference.
 
 
 \section{Stage 05: Primary Model}
@@ -229,25 +216,22 @@ on the temporal training split. Baseline hazard splines use 5 knots, placed at
 quantiles of the training hour distribution. A random patient-level 75/25 split
 is also fitted to support H4.
 
-The fit carries two guards that are part of the specification rather than
-defensive extras. The declared predictor set is required rather than
-intersected, so a name mismatch stops the stage instead of producing a model
-with fewer terms than specified. And because the unpenalised likelihood for this
-design is completely separated (its maximum lies at infinity, while the
-optimiser's stopping rule reports success regardless
-(Section~\ref{sec:primary_model_spec})) the fit is ridge-penalised and the
-stage logs the largest fitted coefficient alongside the convergence flag, since
-only the former distinguishes an identified solution from an arbitrary stopping
-point. No analytic variance is available for the fitted object, so all
-uncertainty for this model comes from the stay-level cluster bootstrap of
-Stage 12.
+The fit carries two guards that form part of the specification. The declared
+predictor set is required rather than intersected, so a name mismatch stops the
+stage. Because the unpenalised likelihood is completely separated, with its
+maximum at infinity even though the optimiser reports success
+(Section~\ref{sec:primary_model_spec}), the fit is ridge-penalised and the stage
+logs the largest fitted coefficient alongside the convergence flag; only the
+former distinguishes an identified solution from an arbitrary stopping point.
+Intervals on performance quantities come from the stay-level cluster bootstrap
+of Stage 12, and the coefficient covariance is the ridge-regularised sandwich
+of Section~\ref{sec:primary_model_spec}.
 
 Both stages 05 and 06 run two \textbf{arms}: the pre-registered specification
 and the ablated one of Protocol Amendment 5
 (Section~\ref{sec:ablation_method}), which drops the action-derived features.
 The ablated arm writes to its own files and never overwrites a pre-registered
-fit, so it can be added or refreshed without re-executing the fits every
-headline number rests on.
+fit, so it can be refreshed without re-executing the headline fits.
 
 
 \section{Stage 06: Comparator Models}
@@ -276,10 +260,8 @@ same test rows, and the paired difference is written to
 The Utility Score is computed at the default 0.5 cut-off and swept across a
 sixty-point grid of alert rates, in a single pass: the per-stay reward is
 monotone in a falling threshold, so the whole grid costs one sort plus one
-traversal of the reward-window rows. Two invariants are asserted at run time
-rather than assumed: a threshold above every predicted probability must
-return exactly zero, since it \emph{is} the no-alert strategy, and no operating
-point may exceed the optimal strategy's score of one. A stand-alone Python
+traversal of the reward-window rows. The two Utility Score invariants of
+Section~\ref{sec:design_principles} are asserted here. A stand-alone Python
 implementation of the same scoring rule, \texttt{utility\_score.py}, is kept in
 step with the notebook so that prediction tables outside the pipeline can be
 scored and the two implementations cross-checked.
@@ -302,18 +284,17 @@ AUPRC are reported for each variant and model in both, alongside a
 labelling-input coverage table and an explicit reconciliation of the eICU-CRD
 and MIMIC-IV event rates.
 
-The third arm is Protocol Amendment 9 and is described here because nothing
-about it is inferable from the first two. It applies the frozen Variant D
+The third arm (Protocol Amendment 9) applies the frozen Variant D
 models (the same \texttt{05\_}/\texttt{06\_} objects the other arms use,
 loaded without retraining) to the whole eICU-CRD cohort rather than to the
 microbiology-covered sub-cohort, which is possible because Variant D's onset
 rule reads physiology alone and needs no culture record. The external panel is
 the one already built for the other arms, so the feature construction, the
 plausibility ranges and the last-observation-carried-forward rule are shared;
-harmonisation is the same \texttt{check\_model\_features()} path, which
-reconstructs the design matrix from the declared feature vector and errors
-rather than silently reordering it. The one substantive difference is in the
-label, not the features: eICU's \texttt{vitalPeriodic} carries no Glasgow Coma
+harmonisation uses the same \texttt{check\_model\_features()} path, which
+reconstructs the design matrix from the declared feature vector and raises an
+error rather than reordering it. The one substantive difference is in the
+label: eICU's \texttt{vitalPeriodic} carries no Glasgow Coma
 Scale, so the external SOFA delta rests on five components against MIMIC-IV's
 six (Section~\ref{sec:external_altlabel}). Results go to
 \texttt{08\_external\_validation\_results\_altlabel} and
@@ -323,11 +304,10 @@ transport interval from under Amendment 10. The arm writes to no file the
 pre-registered arms read.
 
 The stage asserts at run time that the three variants produce distinct external
-onset sets and halts otherwise, so that a label-invariant result can never be
-produced by a label that was never varied. Two further guards keep the arms
-apart: the Amendment 9 file may not contain a pre-registered variant, and the
-pre-registered file may not contain a post-hoc one, so a post-hoc label cannot
-enter H5 through the external door after being excluded from H1.
+onset sets. Two further guards keep the arms apart: the Amendment 9 file may
+not contain a pre-registered variant, and the pre-registered file may not
+contain a post-hoc one, so a post-hoc label cannot enter H5 after being
+excluded from H1.
 
 
 \section{Stage 09: Variance Decomposition}
@@ -364,9 +344,8 @@ eight largest per variable, and are strata of an administrative field rather
 than populations (Section~\ref{sec:equity_strata}). Discrimination is estimated
 for every stratum with enough rows to support an estimate, but only strata
 carrying at least \texttt{MIN\_\allowbreak SUBGROUP\_\allowbreak EVENTS\_\allowbreak INTERPRET} sepsis onsets enter
-the exploratory contrast family, so the multiplicity correction is applied over
-the analyses the study is willing to interpret rather than over every stratum
-that happens to exist. Label sensitivity, being a stay-level proportion, is
+the exploratory contrast family, so the multiplicity correction covers the
+interpreted analyses. Label sensitivity, being a stay-level proportion, is
 reported for all strata.
 
 
@@ -405,10 +384,10 @@ The pipeline is orchestrated by \texttt{run\_\allowbreak pipeline.R} (or the equ
 renders each stage to PDF in \texttt{output/pdf/}, and writes a per-stage and a
 combined run log to \texttt{output/logs/}. All intermediate outputs are Parquet
 (compressed, columnar). Small result tables ($<$1,000 rows) are also
-written as CSV for readability. The end-to-end run reported in this thesis
-completed in 60 minutes on an Apple silicon workstation; the dominant cost is
-stage 05, which fits the multinomial model on 2.3 million person-hours for each
-label variant.
+written as CSV for readability. The end-to-end run that produced the reported
+results took about two and a half hours on an Apple silicon workstation; the
+dominant cost is stage 05, which fits the multinomial model on 2.3 million
+person-hours for each label variant.
 
 \subsection{Fixed Random Seed}
 
