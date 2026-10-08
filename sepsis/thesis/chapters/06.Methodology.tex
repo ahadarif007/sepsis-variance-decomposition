@@ -10,8 +10,7 @@ de-identified critical-care data. It follows a pre-registered protocol
 here) and reports
 according to TRIPOD+AI \cite{collins2024tripodai} and PROBAST+AI
 \cite{moons2025probastai} guidelines. The design treats the label definition,
-validation split and evaluation metric as primary variables rather than as
-fixed background choices.
+validation split and evaluation metric as study variables alongside the model.
 
 All code is implemented in R (4.5.2) and Python (3.14, \texttt{pandas} 3.0.4),
 which are the versions the reported results were produced under; Appendix~\ref{app:repro} records the
@@ -19,21 +18,17 @@ minimum supported versions and the dependency pins. The pipeline is driven by a 
 configuration module (\texttt{config.R}) as the sole source of truth for all
 paths, clinical identifiers, and thresholds.
 
-\paragraph{Literature search protocol.} The design decisions set out in this
-chapter are warranted by evidence identified through a documented search, and
-two of the contributions claimed in Section~\ref{sec:contrib} are claims about
-what that search did \emph{not} find. The protocol (databases, date ranges,
-search strings, inclusion and exclusion criteria, verification standard, and
-yield) is specified in Table~\ref{tab:search_strategy} and the
-identification-to-inclusion counts in Figure~\ref{fig:prisma}. It is a
-structured narrative search rather than a systematic review: searches followed
-a written protocol and every included source was verified against a primary
-publisher, PubMed, PMC or repository record, but no title-and-abstract
-screening pass was performed over a full de-duplicated yield and no second
-reviewer screened independently. Every claim of the form ``no identified study
-does $X$'' in this thesis is therefore stated as ``to the best of our
-knowledge'' and is bounded by that coverage, which is recorded as a limitation
-in Section~\ref{sec:limitations}.
+\paragraph{Literature search protocol.} The design decisions in this chapter
+rest on evidence identified through a documented search, and two of the
+contributions in Section~\ref{sec:contrib} concern what that search did
+\emph{not} find. The protocol is specified in Table~\ref{tab:search_strategy}
+and the identification-to-inclusion counts in Figure~\ref{fig:prisma}. It is a
+structured narrative search rather than a systematic review: every included
+source was verified against a primary record, but no title-and-abstract
+screening of a full de-duplicated yield was performed and no second reviewer
+screened independently. Claims of the form ``no identified study does $X$'' are
+therefore stated as ``to the best of our knowledge'', and the bound is recorded
+as a limitation in Section~\ref{sec:limitations}.
 
 
 \section{Data Sources}
@@ -71,18 +66,18 @@ study uses eight clinical tables (Table~\ref{tab:data_sources}).
 External validation uses eICU-CRD v2.0 \cite{pollard2018eicu}, a
 multi-centre database from over 200 US ICUs. It uses different electronic health
 record systems and covers a broader range of hospitals and patient populations
-than the single-centre MIMIC-IV, making it a meaningful external test.
+than the single-centre MIMIC-IV.
 
-\subsubsection{Transporting the label, not just the model}
+\subsubsection{Transporting the label as well as the model}
 \label{sec:label_transport}
 
-External validation of a sepsis model requires transporting two things: the
-model and the \emph{label}. The model transports trivially, it is a frozen
-set of coefficients applied to harmonised features. The label does not, because
-Sepsis-3 onset is defined on documentation artefacts (an antibiotic order, a
-microbiology culture) whose recording conventions differ between databases far
-more than physiology does. Three properties of eICU-CRD govern how the label is
-constructed here.
+External validation of a sepsis model requires transporting both the model and
+the \emph{label}. The model is a frozen set of coefficients applied to
+harmonised features. The label is harder to transport, because Sepsis-3 onset
+is defined on documentation artefacts (an antibiotic order, a microbiology
+culture) whose recording conventions differ between databases far more than
+physiology does. Three properties of eICU-CRD govern how the label is
+constructed.
 
 \textbf{Drugs are recorded across two tables.} eICU-CRD has no item
 dictionary; drugs are free-text \texttt{drugname} strings, and they are split
@@ -97,36 +92,32 @@ its no-pressor value.
 suspicion anchor requires a culture, and \texttt{microLab} covers
 \pcExtMicroCoverage\% of the analysis cohort (\pcExtNMicroStays{} of
 \pcExtNCohortStays{} unit stays). In the remaining stays the conjunction cannot
-fire under \emph{any} variant, whatever the patient's physiology. Coverage of
-the culture limb is an upper bound on the conjunction rather than a measure of
-it: both limbs are documented for only \pcExtNBothLimbStays{} stays
-(\pcExtBothLimbCoverage\%), and the counts narrow further once the window and
-the organ-dysfunction criterion are applied
-(Section~\ref{sec:external_coverage} states each stage separately). Including
-those person-hours in the denominator would not estimate a low sepsis
-incidence; it would report the coverage of one source table as though it were
-an epidemiological quantity. The primary external analysis is therefore
-restricted to the microbiology-covered sub-cohort, in which an onset is
-observable in principle, and the reported external event rate is compared
-directly against MIMIC-IV's on that basis.
+fire under any variant, whatever the patient's physiology. Culture coverage is
+only an upper bound on the conjunction: both limbs are documented for
+\pcExtNBothLimbStays{} stays (\pcExtBothLimbCoverage\%), and the counts narrow
+further once the window and the organ-dysfunction criterion are applied
+(Section~\ref{sec:external_coverage}). Including the uncovered person-hours in
+the denominator would report the coverage of one source table as though it were
+a sepsis incidence. The primary external analysis is therefore restricted to
+the microbiology-covered sub-cohort, in which an onset is observable in
+principle, and its event rate is compared against MIMIC-IV's on that basis.
 
 \textbf{The organ-dysfunction criterion is a rise, not a level.} Onset is
 gated on a SOFA increase of at least two points over a baseline, evaluated
 inside each variant's own window and against each variant's own baseline
-(admission for Variants A and B, rolling 24-hour for Variant C), exactly as in
-the development cohort. An absolute SOFA threshold would be a different
-criterion, and because missing components are scored at assumed-normal values
-it would reject stays for incomplete documentation rather than for intact organ
-function, which in a database with sparser laboratory coverage than MIMIC-IV
-is a systematic bias towards the null.
+(admission for Variants A and B, rolling 24-hour for Variant C), as in the
+development cohort. An absolute SOFA threshold would be a different criterion,
+and because missing components are scored at assumed-normal values it would
+reject stays for incomplete documentation rather than intact organ function, a
+systematic bias towards the null in a database with sparser laboratory coverage
+than MIMIC-IV.
 
 Each of the three label variants is applied to eICU-CRD with its own
 antibiotic--culture windows, so the external label sets differ from one another
-as they do internally. This is verified rather than assumed: a
-label-invariant comparator such as NEWS2 can only score an identical AUROC
-across variants if the underlying label sets are identical, so the pipeline
-asserts at run time that the three external onset sets are distinct and halts
-if they are not.
+as they do internally. Because a label-invariant comparator such as NEWS2 can
+score an identical AUROC across variants only if the label sets are identical,
+the pipeline asserts at run time that the three external onset sets are
+distinct and halts if they are not.
 
 A secondary \textbf{antibiotic-only} arm relaxes the culture requirement across
 the full cohort and is reported separately. It measures how much of the event
@@ -187,8 +178,8 @@ Figure~\ref{fig:consort} shows the patient flow through each exclusion step.
     \texttt{02\_cohort\_labels.Rmd}. The age criterion is applied first and
     excludes \pcConsortNExclAge{} stays, which is why it appears as an
     annotation rather than as an exclusion box: MIMIC-IV's ICU module records
-    adult admissions only, so no minor is present to remove. The filter is run
-    rather than assumed, and its count is generated like every other. Sepsis counts are \textbf{cohort-wide},
+    adult admissions only. The filter is nevertheless run and its count
+    generated. Sepsis counts are \textbf{cohort-wide},
     at any hour of the stay; the subset falling inside the 72-hour modelling
     horizon, which is what the models are trained and evaluated on, is reported
     in the results chapter.}
@@ -239,24 +230,23 @@ are pre-specified sensitivity analyses for the variance decomposition.
 
 Variants A, B and C are three readings of one definition, and all three fire on
 the same trigger: a culture drawn near an antibiotic order. That shared anchor
-is a record of a clinician's decision to treat, not a measurement of the
-patient. Two consequences follow, and they must be separated.
+records a clinician's decision to treat rather than a measurement of the
+patient, and it has two separable consequences.
 
 The first is \textbf{definitional}. Sepsis-3 \cite{singer2016sepsis3} makes
-onset a function of when treatment was given, so any variation in the
+onset a function of when treatment was given, so any change to the
 antibiotic--culture windows necessarily moves the onsets. Part of the
-label-variant spread reported in Chapter~\ref{ch:evaluation} is therefore
-guaranteed by the construction of the definition and would appear even if the
-underlying physiology were identical across patients. The second is
-\textbf{empirical}: whether a label that owes nothing to treatment timing picks
-out different patients, at different hours, with different predictability. Only
-the second is a claim about the world, and it cannot be settled inside a family
-of labels that all share the anchor.
+label-variant spread reported in Chapter~\ref{ch:evaluation} therefore follows
+from the definition and would appear even if the underlying physiology were
+identical across patients. The second is \textbf{empirical}: whether a label
+that does not depend on treatment timing selects different patients, at
+different hours, with different predictability. Only the second is a claim
+about the patients, and it cannot be assessed within a family of labels that
+all share the anchor.
 
-Sepsis-3 is a conjunction: \emph{suspected infection} \textbf{and}
-\emph{acute organ dysfunction}. Under Protocol Amendment 2 the conjunction is
-split and each limb is labelled on its own
-(Table~\ref{tab:alt_label_variants}).
+Sepsis-3 is a conjunction of \emph{suspected infection} and \emph{acute organ
+dysfunction}. Under Protocol Amendment 2 the conjunction is split and each limb
+is labelled on its own (Table~\ref{tab:alt_label_variants}).
 
 \begin{table}[H]
     \centering\small
@@ -271,21 +261,20 @@ split and each limb is labelled on its own
         F & Sepsis-3 Early & required     & required     & \raggedright membership only\tabularnewline
         \bottomrule
     \end{tabular}
-    \caption{The two limbs of the Sepsis-3 conjunction, labelled separately
-    (Protocol Amendment 2), and the standard onset timing applied to the intact
-    conjunction (Variant F, Protocol Amendment 4). Variant E is Variant B's
-    suspicion anchor with the SOFA criterion removed; Variant D is acute organ
-    dysfunction with the infection criterion removed; Variant F has Variant B's
-    membership exactly and differs only in when the onset is placed.}
+    \caption{The two limbs of the Sepsis-3 conjunction labelled separately
+    (Variants E and D, Protocol Amendment 2), and the standard onset timing
+    applied to the intact conjunction (Variant F, Protocol Amendment 4).
+    Variant F has Variant B's membership and differs only in when the onset is
+    placed.}
     \label{tab:alt_label_variants}
 \end{table}
 
 \textbf{Variant E (Anchor-Only)} takes onset to be the suspicion time itself,
-using Variant B's windows, with no organ-dysfunction requirement. Its label is
-purely a record of clinician behaviour. Predicting it well means predicting who
-gets cultured and started on antibiotics, which is the quantity a
-treatment-anchored sepsis label partly encodes. The share of Variant B's
-above-chance discrimination that Variant E reproduces,
+using Variant B's windows, with no organ-dysfunction requirement. Its label
+records only clinician behaviour: predicting it means predicting who is
+cultured and started on antibiotics, which is the quantity a treatment-anchored
+sepsis label partly encodes. The share of Variant B's above-chance
+discrimination that Variant E reproduces,
 \begin{equation}
     \phi_{\text{anchor}}
     = \frac{\mathrm{AUROC}_E - 0.5}{\mathrm{AUROC}_B - 0.5},
@@ -295,114 +284,89 @@ is reported as the \textbf{anchor-attributable fraction}.
 
 \textbf{Variant D (Deterioration)} takes onset to be the first hour after hour~1
 at which a \emph{physiology-only} SOFA score rises at least 2 points above the
-patient's admission baseline (the mean of each component over hours 0--3).
-"Physiology-only" means the vasopressor and catecholamine terms are withheld,
-so the cardiovascular component is scored from mean arterial pressure alone.
-No antibiotic order, culture draw or drug administration enters the definition
-at any point: Variant D is the anchor-independent labelling that the
-pre-registered family lacked. Both variants are fitted with the identical model
-specification, feature set and temporal split, so the label is the only thing
-that changes.
+patient's admission baseline (the mean of each component over hours 0--3). The
+vasopressor and catecholamine terms are withheld, so the cardiovascular
+component is scored from mean arterial pressure alone, and no antibiotic order,
+culture draw or drug administration enters the definition. Both variants are
+fitted with the same model specification, feature set and temporal split, so
+the label is the only thing that changes.
 
-The term needs bounding, because it is easy to read as more than it is.
 ``Anchor-independent'' means independent of the treatment \emph{timestamps}
 that anchor Sepsis-3: no antibiotic, culture or vasopressor event contributes
-to membership or to onset timing. The label is called anchor-independent rather
-than treatment-independent throughout this thesis for exactly that reason. It
-does not mean independent of clinical care in any broader sense. Variant D is built from measurements that exist because
-somebody ordered them, on patients whose physiology already reflects whatever
-treatment they had received, and recorded at a frequency that itself tracks how
-closely a patient is being watched. Anchor-independence is what the comparison
-needs and what it has; causal independence from treatment is neither claimed
-nor constructible from routinely collected ICU data.
+to membership or onset timing. It does not mean independent of clinical care.
+Variant D is built from measurements that exist because they were ordered, on
+patients whose physiology already reflects any treatment received, recorded at
+a frequency that tracks how closely each patient is watched. The comparison
+requires anchor-independence only; causal independence from treatment is
+neither claimed nor constructible from routinely collected ICU data.
 
 The PhysioNet/CinC 2019 operationalisation \cite{reyna2020utility} was
-considered as the \emph{anchor-independent} alternative label and rejected
-for that purpose. It sets onset to
-$\min(t_{\text{susp}}, t_{\text{SOFA}})$ with the same
-culture-plus-antibiotic trigger, so membership is still anchored to treatment
-timing and it would not have broken the circularity. The same objection applies
-to SEP-1 and to the CDC Adult Sepsis Event \cite{dutta2026performance}, both of
-which are defined on antibiotic days.
+considered as the anchor-independent label and rejected for that purpose: it
+sets onset to $\min(t_{\text{susp}}, t_{\text{SOFA}})$ with the same
+culture-plus-antibiotic trigger, so membership remains anchored to treatment.
+SEP-1 and the CDC Adult Sepsis Event \cite{dutta2026performance} are excluded
+for the same reason, since both are defined on antibiotic days.
 
-Two limits on interpretation are stated here and carried through the results.
-Variant~E is not a sepsis model and its AUROC is not a sepsis result. Variant~D
-is a threshold function of recorded physiology, and five of the six SOFA
-components are themselves model inputs, so its discrimination is partly
-self-fulfilling and its \emph{level} is not comparable with Variant~B's. What
-is comparable, and what carries the empirical content, is whether Variant~D
-selects different patients at different hours: reported as onset agreement
-(Cohen's $\kappa$) and median onset shift in
+Two limits on interpretation carry through the results. Variant~E is not a
+sepsis model and its AUROC is not a sepsis result. Variant~D is a threshold
+function of recorded physiology, and five of the six SOFA components are also
+model inputs, so its discrimination is partly self-fulfilling and its
+\emph{level} is not comparable with Variant~B's. The empirical content lies in
+whether Variant~D selects different patients at different hours, reported as
+onset agreement (Cohen's $\kappa$) and median onset shift in
 Section~\ref{sec:label_anchor_results}.
 
 \subsection{Standard Onset Timing (Variant F, Protocol Amendment 4)}
 \label{sec:variant_f}
 
-That rejection settles the circularity question and no more. The $\min$ rule
-does not break the anchor, membership still requires the
-antibiotic-culture pair, but it does change something the pre-registered
-family holds fixed and never examines: \emph{when} the onset is placed. Anchored
-\emph{membership} and anchored \emph{timing} are separable properties, and only
-the second is what the treatment-anchored evaluation window tests.
+Although the $\min$ rule does not remove the treatment anchor from membership,
+it changes a property the pre-registered family holds fixed: \emph{when} the
+onset is placed. Anchored membership and anchored timing are separable, and the
+treatment-anchored evaluation window tests only the second.
 
 Variants A--C assign onset $= t_{\text{susp}}$ whenever the SOFA criterion is
 satisfied anywhere in the evaluation window, so the SOFA criterion gates
-membership and contributes no timing information. Seymour et al.\ \cite{seymour2016assessment} and the PhysioNet/CinC 2019 Challenge
+membership and contributes no timing information. Seymour et al.\
+\cite{seymour2016assessment} and the PhysioNet/CinC 2019 Challenge
 \cite{reyna2020utility} instead assign
 \begin{equation}
     t_{\text{onset}} = \min\bigl(t_{\text{susp}},\, t_{\text{SOFA}}\bigr),
     \label{eq:early_onset}
 \end{equation}
 with $t_{\text{SOFA}}$ the first hour in the evaluation window at which the
-$\geq 2$-point rise over the admission baseline is already present. Equation
-\eqref{eq:early_onset} is the branch that permits an onset to precede the first
-antibiotic or culture; dropping it makes the pre-treatment window empty as a
-matter of arithmetic (Proposition~\ref{prop:h3} in
+$\geq 2$-point rise over the admission baseline is present. Only this rule
+permits an onset to precede the first antibiotic or culture; without it the
+pre-treatment window is empty by construction (Proposition~\ref{prop:h3} in
 Chapter~\ref{ch:evaluation}).
 
-Variant F was added for that reason and only that reason. The pre-registered
-onset rule was found to make H3 unfalsifiable, so a variant carrying the
-standard timing was needed for the question to be answerable at all; the
-amendment was fixed before Variant F was fitted, and nothing about its
-performance entered the decision to add it.
+Variant F was added solely for this reason. The pre-registered onset rule made
+H3 unfalsifiable, so a variant with the standard timing was needed for the
+question to be answerable; the amendment was fixed before Variant F was fitted,
+and its performance played no part in the decision.
 
-\textbf{Variant F (Sepsis-3 Early-Onset)} restores it and changes nothing else.
-The suspicion windows, SOFA threshold, evaluation window and baseline are
-Variant B's, so the two variants label exactly the same stays cohort-wide; only
-the timestamp moves, and only ever earlier. Variant F therefore isolates the timing
-branch as cleanly as Variants D and E isolate the two limbs.
-
-Three properties are worth stating in advance. First, the SOFA score used for
-$t_{\text{SOFA}}$ is the \emph{full} score, vasopressor components included, as
-Seymour et al.\ specify; vasopressor administration is itself a treatment, so an
-onset placed by the cardiovascular component is free of the
-antibiotic-and-culture anchor that defines the pre-treatment window but is not
-free of treatment in general. Variant D remains the anchor-independent
-comparison, within the bound stated above.
-
-Second, F and B label the same stays septic, membership is identical at the
-level of the stay, so the informative agreement statistic for F is the onset
-\emph{shift}, not the overlap. Agreement is still not perfect once
-restricted to the modelled horizon, which leads to the third property.
-
-Third, moving an onset earlier can move it \emph{into} the 72-hour prediction
-window. A stay whose $t_{\text{susp}}$ falls after hour 72 contributes no
-labelled event to any model here, but if its SOFA rise occurred inside the
-window, Variant F places the onset there and the stay becomes a modellable
-event. This is a one-directional effect: $F \supseteq B$ within the horizon, and
-the extra stays are reported in Section~\ref{sec:pretreatment_label}. It means
-the choice of onset rule determines not only \emph{when} events are recorded but
-\emph{how many} are visible to a real-time model at all.
-
-Variant F is post-hoc, is never pooled with A--C, and takes no part in H1 or the
-variance decomposition. Its contrast against B joins exploratory family E3,
-which enlarges that family and makes every Benjamini--Hochberg adjustment within
-it stricter than before the amendment.
+\textbf{Variant F (Sepsis-3 Early-Onset)} restores the standard timing and
+changes nothing else. Its suspicion windows, SOFA threshold, evaluation window
+and baseline are Variant B's, so the two variants label the same stays
+cohort-wide and only the timestamp moves, always earlier. Three properties
+follow. First, $t_{\text{SOFA}}$ uses the \emph{full} SOFA score, vasopressor
+components included, as Seymour et al.\ specify; an onset placed by the
+cardiovascular component is therefore free of the antibiotic-and-culture anchor
+but not of treatment in general, and Variant D remains the anchor-independent
+comparison. Second, because membership is identical at the stay level, the
+informative agreement statistic for F is the onset \emph{shift} rather than the
+overlap. Third, moving an onset earlier can move it \emph{into} the 72-hour
+prediction window: a stay whose $t_{\text{susp}}$ falls after hour 72
+contributes no labelled event under B, but becomes a modellable event under F
+if its SOFA rise occurred inside the window. Within the horizon, therefore,
+$F \supseteq B$ (Section~\ref{sec:pretreatment_label}), and the onset rule
+determines not only \emph{when} events are recorded but \emph{how many} are
+visible to a real-time model.
 
 Variants D, E and F are post-hoc and are never pooled with A--C. They take no
-part in H1 or in the variance decomposition table, which are computed from
-exactly the same inputs as before the amendments; their contrasts form their own
-exploratory family (E3), corrected by Benjamini--Hochberg.
+part in H1 or the variance decomposition, which are computed from the same
+inputs as before the amendments. Their contrasts against B form exploratory
+family E3, corrected by Benjamini--Hochberg; adding Variant F enlarges that
+family and makes every adjustment within it stricter.
 
 
 \section{Prediction Framing}
@@ -426,34 +390,29 @@ Following Lauritsen et al.\ \cite{lauritsen2021framing} and Reyna et al.\
     per-patient detection metrics, not the quantity the models estimate.
 \end{itemize}
 
-\paragraph{What is estimated and what is scored, stated separately.} These are
-two different objects in this design and conflating them would misdescribe every
-discrimination number in Chapter~\ref{ch:evaluation}. The models estimate a
-per-hour hazard, and the ranking metrics (AUROC, AUPRC and the calibration
-curves) are computed on that hazard against an indicator that takes the value
-one at the onset hour and zero at every other at-risk hour. They therefore
-measure how well a model separates the hour in which onset is recorded from the
-hours that precede it in the same and other stays; they are not the AUROC of a
-``sepsis within the next six hours'' classifier, and they should not be read as
-one. The six-hour window enters through the clinically oriented metrics instead:
+\paragraph{Estimand and scoring target.} The models estimate a per-hour hazard,
+and the ranking metrics (AUROC, AUPRC and the calibration curves) are computed
+on that hazard against an indicator that is one at the onset hour and zero at
+every other at-risk hour. They therefore measure how well a model separates the
+hour in which onset is recorded from the preceding hours in the same and other
+stays, not the discrimination of a ``sepsis within the next six hours''
+classifier. The six-hour window enters through the clinically oriented metrics:
 the Utility Score pays a reward that decays linearly in lead time over that
 window (Section~\ref{sec:metrics}), episode sensitivity asks whether an
 alert fired inside it, and the lead-time distribution is reported against it
 directly.
 
-The choice follows from the competing-risks formulation rather than sitting
-beside it. A cumulative six-hour risk is a functional of the hazard together
-with the competing-cause hazards over the same window, so estimating the hazard
-is the more primitive operation and leaves the horizon a reporting decision
-rather than a modelling one. The cost is that a single number cannot be quoted
-as ``six-hour discrimination'', and the corresponding limitation is recorded in
+This choice follows from the competing-risks formulation. A cumulative six-hour
+risk is a function of the sepsis hazard and the competing-cause hazards over the
+same window, so estimating the hazard is the more basic operation and leaves the
+horizon a reporting decision. This approach does not yield a single measure of
+six-hour discrimination, a limitation recorded in
 Section~\ref{sec:limitations}.
 
 The alerting window and the utility scoring rule are adapted from the
 PhysioNet/CinC 2019 Challenge \cite{reyna2020utility} rather than reproduced
-from it, and Section~\ref{sec:metrics} states the adaptation in full. The
-estimand differs too, the Challenge having scored a binary label defined over
-the window itself.
+from it (Section~\ref{sec:metrics}). The estimand also differs, since the
+Challenge scored a binary label defined over the window itself.
 
 
 \section{Person-Hour Table and Competing Events}
@@ -499,13 +458,12 @@ inputevents. The feature set includes:
 Temperature in Fahrenheit is converted to Celsius. FiO$_2$ values above 1.0
 (percentage format) are divided by 100.
 
-Two boundaries of this list are worth stating because they are easy to
-misread. The P/F ratio enters as an \emph{order indicator} only: it is used in
+Two boundaries of this list require clarification. The P/F ratio enters as an \emph{order indicator} only: it is used in
 the SOFA respiratory component that constructs the label, and its measurement
 flag is a covariate, but the ratio itself is not a model input, because it is
 recorded for a minority of person-hours and its forward-filled value carries
-more information about ventilation practice than about the current hour. And
-there is no lactate slope: rolling slopes are computed for the three variables
+more information about ventilation practice than about the current hour.
+There is also no lactate slope: rolling slopes are computed for the three variables
 sampled densely enough to support one.
 
 The declared set therefore holds \textbf{22 covariates}, and the fitted model
@@ -544,77 +502,65 @@ data with onset probability below 1\%), it is mathematically equivalent to
 time-dependent Cox regression, without requiring the proportional-hazards
 assumption.
 
-\paragraph{Identification: the specification is penalised, and must be.}
+\paragraph{Identification and penalisation.}
 The unpenalised version of Equation~\eqref{eq:primary_model} is
-\textbf{completely separated} on this design. Driven to a tight tolerance by
-iteratively reweighted least squares, the whole coefficient vector diverges
-together, $|\beta|$ of order $10^{15}$ under \emph{every} label variant,
-which is the signature of separation along a direction in covariate space rather
-than of one badly behaved predictor; the design matrix is full rank, so this is
-not aliasing. A separated likelihood has no finite maximiser, so the fitted
-coefficients are not identified and the point at which a quasi-Newton optimiser
-stops is arbitrary.
+\textbf{completely separated} on this design. Under iteratively reweighted least
+squares run to a tight tolerance, the whole coefficient vector diverges
+together, with $|\beta|$ of order $10^{15}$ under every label variant. This
+indicates separation along a direction in covariate space rather than one badly
+behaved predictor; the design matrix is full rank, so it is not aliasing. A
+separated likelihood has no finite maximiser, so the coefficients are not
+identified and the point at which a quasi-Newton optimiser stops is arbitrary.
 
-This is a trap worth naming, because the standard diagnostic does not catch it:
-\texttt{nnet::multinom} returns \texttt{convergence = 0} for every variant here.
-That flag reports only that BFGS's relative-change stopping rule fired; it says
-nothing about whether an optimum exists. A ridge penalty of
-$\lambda = 10^{-4}$ is therefore applied, which makes the penalised
-log-likelihood strictly concave and the maximiser unique. The value is
-\textbf{not tuned}: across a 20-point ridge path the temporal-test AUROC moves
-by less than 0.02 for every variant, and that insensitivity, not an
-optimisation, is the justification for the constant. Every fit is checked
-after estimation and flagged if $\max|\beta|$ exceeds 20.
+The standard diagnostic does not detect this: \texttt{nnet::multinom} returns
+\texttt{convergence = 0} for every variant, because that flag reports only that
+the BFGS relative-change stopping rule fired, not that an optimum exists. A
+ridge penalty of $\lambda = 10^{-4}$ is therefore applied, which makes the
+penalised log-likelihood strictly concave and the maximiser unique. The value
+is \textbf{not tuned}: across a 20-point ridge path the temporal-test AUROC
+moves by less than 0.02 for every variant, and this insensitivity justifies the
+constant. Every fit is flagged after estimation if $\max|\beta|$ exceeds 20.
 
-Penalisation here is a precondition rather than a refinement. Coefficient
-comparisons across label variants (H2, Section~\ref{sec:h2}) are only meaningful
-against a unique maximiser, and an unpenalised fit can land in a degenerate
-region under one label and a benign region under another, manufacturing an
-apparent label effect where none exists.
+Penalisation was required to obtain a unique solution. Coefficient comparisons
+across label variants (H2, Section~\ref{sec:h2}) are meaningful only against a
+unique maximiser; an unpenalised fit could stop in a degenerate region under one
+label and a benign region under another, producing an apparent label effect.
 
-\paragraph{Uncertainty for this model comes from the bootstrap, with a
-cluster-robust covariance alongside it.}
-Person-hours are nested within stays, so a cluster-robust sandwich estimator
-clustered on stay is the natural choice for coefficient standard errors. It is
-not available off the shelf: \texttt{sandwich} supplies a \emph{bread} method
-for \texttt{multinom} objects but no score-function method, so the whole
-sandwich family fails on this class. The obstacle is narrow rather than
-fundamental, and the missing piece is supplied here. For row $i$ and
+\paragraph{Coefficient uncertainty.}
+Person-hours are nested within stays, so a sandwich estimator clustered on stay
+is the natural choice for coefficient standard errors. \texttt{sandwich}
+supplies a \emph{bread} method for \texttt{multinom} objects but no
+score-function method, so the missing piece is supplied here. For row $i$ and
 non-reference category $k$ the score with respect to the coefficient on
 covariate $j$ is $x_{ij}(y_{ik} - p_{ik})$, a residual matrix the fitted object
 already stores; providing it, and fitting with the Hessian retained, yields a
 clustered covariance for the primary model.
 
-Two qualifications attach to it and neither is cosmetic. Because the
-specification is ridge-penalised out of necessity
-(Section~\ref{sec:primary_model_spec}), what the estimator returns is the
-covariance of the \emph{penalised} estimator: the bread is the inverse penalised
-Hessian, so the two factors are mutually consistent, but this is a
-ridge-regularised sandwich and is described as one throughout. And it gives
-standard errors on \emph{coefficients}, not on H2's count of unstable
-covariates, which is a threshold rule applied across three separate fits and
-admits no analytic variance of its own. H2 therefore remains a descriptive
-count (Section~\ref{sec:h2}).
+Two qualifications apply. Because the specification is ridge-penalised, the
+estimator returns the covariance of the \emph{penalised} estimator (the bread
+is the inverse penalised Hessian), and it is described as a ridge-regularised
+sandwich throughout. It also gives standard errors on \emph{coefficients}, not
+on H2's count of unstable covariates, which is a threshold rule applied across
+three separate fits and has no analytic variance. H2 therefore remains a
+descriptive count (Section~\ref{sec:h2}).
 
-What the covariance does permit is a diagnostic on that count, added as
+The covariance does permit a diagnostic on that count, added as
 \textbf{Protocol Amendment 7} (post-hoc, \S21 of
 \texttt{00\_preregistration.md}). A rule that flags a coefficient for doubling
 in magnitude cannot distinguish a coefficient that genuinely moves from one
 estimated too imprecisely for a doubling to mean anything, so for each flagged
 covariate the difference between its two extreme estimates is referred to the
 pooled standard error of those two. The ratio is reported alongside the
-pre-registered count and never in place of it
-(Section~\ref{sec:h2_uncertainty}). It is deliberately not a test: the three
-fits share stays, so the differenced estimates are correlated and a pooled
-standard error assuming independence is conservative by an unquantified amount,
-and the penalisation qualification above applies to it as well. No $p$-value is
-computed for it and it enters no corrected family.
+pre-registered count, never in place of it
+(Section~\ref{sec:h2_uncertainty}). It is not a test: the three fits share
+stays, so the differenced estimates are correlated and a pooled standard error
+assuming independence is conservative by an unquantified amount, and the
+penalisation qualification also applies. It carries no $p$-value and enters no
+corrected family.
 
-Every interval on a performance quantity in this thesis continues to come from
-the stay-level cluster bootstrap of Section~\ref{sec:inference}, which
-resamples whole stays and so respects the same clustering. The analytic
-covariance is reported for the coefficients and does not enter any hypothesis
-verdict.
+Every interval on a performance quantity comes from the stay-level cluster
+bootstrap of Section~\ref{sec:inference}. The analytic covariance is reported
+for the coefficients only and does not enter any hypothesis verdict.
 
 \subsection{Comparator: Gradient-Boosted Trees (GBT)}
 \label{sec:gbt_spec}
@@ -623,41 +569,35 @@ An XGBoost model is fitted under the same conditions for each label variant and
 split. Settings: logistic objective, area under the precision-recall curve as
 the evaluation metric, maximum depth 6, learning rate 0.05, row and column
 subsampling at 0.8, minimum child weight 5, and positive-class weighting by the
-observed class ratio. None of these is tuned; they are the library's
-conventional starting values, fixed once and applied identically to every
-variant, split and feature arm. Tuning the comparator would confound the
-model-class contrast with a difference in search budget, which is the same
-objection that keeps the ablated arm on the full arm's hyperparameters
-(Section~\ref{sec:ablation_method}).
+observed class ratio. None of these is tuned: they are the library's
+conventional starting values, applied identically to every variant, split and
+feature arm, because tuning the comparator would confound the model-class
+contrast with a difference in search budget (the same reasoning applies to the
+ablated arm, Section~\ref{sec:ablation_method}).
 
-The number of boosting rounds is the one quantity that is chosen rather than
-fixed, and it is chosen by early stopping, which needs a set the model is not
-fitted on. That set is carved out of the \emph{training} rows: 15 per cent of
-training stays are held out, the model is fitted on the remainder, and boosting
-stops after 30 rounds without improvement on the holdout. The split is on the
-stay rather than the person-hour, because person-hours are roughly forty-five
-correlated rows per stay and a row-level split would leave the same patient on
-both sides of it. The test set is never used to select the number of rounds
-(Protocol Amendment 8).
+The number of boosting rounds is chosen by early stopping on a holdout carved
+from the \emph{training} rows: 15 per cent of training stays are held out, the
+model is fitted on the remainder, and boosting stops after 30 rounds without
+improvement on the holdout. The holdout is split by stay, because each stay
+contributes roughly forty-five correlated person-hours and a row-level split
+would place the same patient on both sides. The test set is never
+used to select the number of rounds (Protocol Amendment 8).
 
 \subsection{Comparator: Cox Proportional-Hazards Model}
 \label{sec:cox_spec}
 
-A Cox proportional-hazards model, included as the field's default
-survival specification and as a deliberately weak baseline. The
-pre-registration names it the \emph{static} comparator, and the sense in which
-it is static is worth stating exactly, because it is not the inputs. The model
-is fitted on the same training person-hours as every other comparator, in
-counting-process form: each hour contributes the interval
-$(t,\, t+1]$ with the event indicator of that hour, so the covariates entering
-it are the same hourly, forward-filled values the primary model sees. What is
-static is the \emph{coefficient} structure. Each covariate is given one
-time-constant log hazard ratio, the baseline hazard is left unspecified rather
-than modelled, and no interaction with elapsed time is estimated. That is the
-assumption Section~\ref{sec:schoenfeld} tests and rejects.
+A Cox proportional-hazards model is included as the field's default survival
+specification and as a deliberately weak baseline. The pre-registration calls
+it the \emph{static} comparator, which refers to its coefficients rather than
+its inputs. The model is fitted on the same training person-hours as every
+other comparator, in counting-process form: each hour contributes the interval
+$(t,\, t+1]$ with that hour's event indicator, so its covariates are the same
+hourly, forward-filled values the primary model sees. Each covariate has one
+time-constant log hazard ratio, the baseline hazard is left unspecified, and no
+interaction with elapsed time is estimated; Section~\ref{sec:schoenfeld} tests
+and rejects this assumption.
 
-The specification is otherwise restricted relative to the primary model, which
-is what makes it the weaker baseline:
+The specification is otherwise restricted relative to the primary model:
 
 \begin{itemize}
     \item \textbf{Covariates.} Twelve of the primary model's twenty-two: heart
@@ -675,8 +615,8 @@ is what makes it the weaker baseline:
     hour. Unlike the multinomial primary model, the Cox specification treats
     discharge and death as censoring rather than as competing causes; that
     difference is part of what the comparison is for.
-    \item \textbf{Ties.} Efron's approximation, which is the relevant choice
-    here because hourly binning makes ties the rule rather than the exception.
+    \item \textbf{Ties.} Efron's approximation, since hourly binning makes ties
+    common.
     \item \textbf{Uncertainty.} Standard errors are clustered on the stay, so
     the repeated hours a patient contributes are not treated as independent.
     \item \textbf{Scoring.} The linear predictor is mapped to the unit interval
@@ -728,27 +668,24 @@ NEWS2 is the headline comparator following Evans et al.\
 An \textbf{adapted PhysioNet-style Utility Score} is the primary metric. It
 rewards early true alerts and penalises late and false ones, following the
 design of the PhysioNet/CinC 2019 Challenge score \cite{reyna2020utility}.
-AUROC is reported only for comparison, because it hides the clinical failure
-mode \cite{wang2025srpm}.
+AUROC is reported for comparison only, because it does not reflect clinical
+utility \cite{wang2025srpm}.
 
-\paragraph{Where it departs from the Challenge score, and why.} The
-scoring rule used here is not the Challenge's own implementation and is not
-interchangeable with it, so scores reported in this thesis are not comparable
-with a published Challenge score. Three departures matter. The Challenge
+\paragraph{Departures from the Challenge score.} The scoring rule is not the
+Challenge's own implementation, so the scores reported here are not comparable
+with published Challenge scores. Three departures matter. The Challenge
 accumulates utility at \emph{every} time step of every record; the rule here
 accumulates it \emph{per stay}, crediting the earliest qualifying alert once
 rather than each alerting hour, so that a model is not rewarded for holding an
-alarm on. The reward window is the six hours this study pre-registered as its
-alerting window, rather than the Challenge's wider ramp beginning further ahead
-of onset, which keeps the metric aligned with the horizon used everywhere else
-in this design. And the penalty for never alerting on a septic stay is fixed at
-$-1$ per stay rather than accumulated over the post-onset hours. The
-normalisation against the inaction and optimal strategies is the Challenge's
-and is the part that carries the metric's meaning, which is why the score
-retains its reading of ``0 is exactly the no-alert strategy''. The parameters
-are pre-registered constants, not tuned quantities, and they are fixed in
-\texttt{config.R} for every model and variant alike, so the comparisons made
-\emph{within} this thesis are unaffected by the adaptation.
+alarm on. The reward window is the pre-registered six-hour alerting window
+rather than the Challenge's wider ramp, keeping the metric aligned with the
+horizon used elsewhere in the design. The penalty for never alerting on a
+septic stay is fixed at $-1$ per stay rather than accumulated over the
+post-onset hours. The normalisation against the inaction and optimal strategies
+follows the Challenge, so a score of 0 still corresponds to the no-alert
+strategy. The parameters are pre-registered constants fixed in
+\texttt{config.R} for every model and variant, so comparisons \emph{within}
+this study are unaffected by the adaptation.
 
 Each stay contributes a raw utility. A septic stay first alerted at hour $t$
 within the reward window $[t_{\mathrm{onset}} - 6,\ t_{\mathrm{onset}}]$ earns
@@ -770,12 +707,11 @@ stay. The reported score is
 \end{equation}
 so that $\widetilde{U} = 1$ is a perfect forecaster, $\widetilde{U} = 0$ is
 \emph{exactly} the no-alert strategy, and $\widetilde{U} < 0$ is worse than
-issuing no alerts at all. The inaction baseline has to appear in both numerator
-and denominator: normalising by the optimum alone would score a model that
-raises no alert at $-1$ rather than at $0$, contradicting the meaning of the
-metric. Equation~\eqref{eq:utility_norm} is verified against both bounds at run
-time, a threshold above every predicted probability is required to return
-exactly zero, and no operating point may exceed one.
+issuing no alerts at all. The inaction baseline must appear in both numerator
+and denominator; normalising by the optimum alone would score a model that
+raises no alert at $-1$ rather than $0$. Equation~\eqref{eq:utility_norm} is
+verified against both bounds at run time: a threshold above every predicted
+probability must return zero, and no operating point may exceed one.
 
 \textbf{Operating points.} A score of this kind is a property of a model
 \emph{and} a threshold. At an hourly event rate below 0.5 per cent no model's
@@ -788,7 +724,7 @@ spanning $10^{-5}$ to $0.5$ over sixty logarithmically spaced points, so that
 it adapts to each model's calibration and covers every operating point a ward
 could contemplate. The maximum is taken over thresholds that raise at least one
 alert, and the alert burden, alert rate and per-stay detection rate that attain
-it are reported alongside, because a utility maximum bought at an unusable
+it are reported alongside, because a utility maximum reached at an unusable
 alarm volume is not a deployable operating point.
 
 \textbf{Calibration} is assessed via calibration intercept and slope, following
@@ -817,7 +753,7 @@ range of thresholds any deployment would use.
 AUROC, AUPRC and the Utility Score characterise a model but not the alert load
 a ward would carry. The following are therefore reported alongside them, at a
 threshold set to the largest cut-off achieving a fixed per-hour sensitivity of
-80 per cent rather than at an arbitrary 0.5 cut-off:
+80 per cent:
 
 \begin{itemize}
     \item \textbf{Positive predictive value} and its reciprocal, the number
@@ -849,38 +785,32 @@ Sample size is calculated using the Riley et al.\ \cite{riley2019sample}
 method, targeting a shrinkage factor $\geq 0.9$ with \pcNCandidatePredictors{}
 parameters and an anticipated $C$-statistic of 0.846 from Moor et al.\
 \cite{moor2023review}. Each label variant is evaluated separately; an
-underpowered variant is a finding, not a failure.
+underpowered variant is reported as such.
 
-\paragraph{The parameter count, and the criterion's fit to this model.}
+\paragraph{Parameter count.}
 \pcNCandidatePredictors{} is the number of terms the model estimates for one
 outcome: 22 covariates, the six-column spline baseline and an intercept
-(Section~\ref{sec:features}). The mapping is imperfect and the imperfection runs
-against the study, so it is stated rather than left implicit. Riley et al.'s
-criteria are derived for a \emph{binary} outcome, whereas the primary model is a
-four-category multinomial estimating those \pcNCandidatePredictors{} terms for
-\emph{each} of three non-reference outcomes, three times that count in all.
-Taking the
-per-outcome count treats each cause-specific sub-model as the unit, which is the
-closest defensible reading of a binary criterion in this setting but still
-understates the dimensionality of the whole fit. The minimum sample size scales
-approximately linearly in the parameter count, so the margins reported below
-absorb even the all-outcomes reading with a factor of ten to spare, and the
-adequacy verdict does not depend on which reading is taken.
+(Section~\ref{sec:features}). Riley et al.'s criteria are derived for a
+\emph{binary} outcome, whereas the primary model is a four-category multinomial
+estimating those terms for \emph{each} of three non-reference outcomes. Taking
+the per-outcome count treats each cause-specific sub-model as the unit, the
+closest reading of a binary criterion in this setting, but it understates the
+dimensionality of the whole fit. Because the minimum sample size scales
+approximately linearly in the parameter count, the margins reported below
+absorb even the all-outcomes reading with a factor of ten to spare, so the
+adequacy verdict does not depend on the reading.
 
-\paragraph{The unit the criterion applies to.} Riley et al.'s criteria are
-derived for a sample of \emph{independent} observations, and person-hours are
-not independent, they are nested within ICU stays at roughly 45 correlated
-rows per stay, and one stay per patient. The adequacy calculation is therefore
-parameterised on the \textbf{stay}: the outcome proportion supplied to the
-criterion is the fraction of training stays labelled septic under that variant,
-and the resulting minimum is compared against the number of training stays. The
-person-hour count is reported alongside as the size of the design matrix and is
-never used as a sample size. This is the same unit that governs every interval
-in this thesis, for the same reason: the cluster bootstrap of
-Section~\ref{sec:inference} resamples stays, not rows. Reporting adequacy
-against 2.3 million person-hours would overstate the available information by
-roughly the mean number of at-risk hours per stay, and would do so in the
-direction that makes the study look better powered than it is.
+\paragraph{Unit of analysis.} Riley et al.'s criteria assume
+\emph{independent} observations, whereas person-hours are nested within ICU
+stays at roughly 45 correlated rows per stay, with one stay per patient. The
+calculation is therefore parameterised on the \textbf{stay}: the outcome
+proportion is the fraction of training stays labelled septic under that
+variant, and the resulting minimum is compared against the number of training
+stays. The person-hour count is reported only as the size of the design matrix.
+The same unit governs every interval, since the cluster bootstrap of
+Section~\ref{sec:inference} resamples stays. Assessing adequacy against 2.3
+million person-hours would overstate the available information by roughly the
+mean number of at-risk hours per stay.
 
 
 \section{Statistical Inference and Multiplicity}
@@ -922,9 +852,9 @@ and are corrected by Holm--Bonferroni at a family-wise error rate of 0.05. The
 family size is fixed at $m = 6$: the number of hypotheses that were
 pre-registered, not the number that turned out to be testable. H2 and H3 each
 reserve a slot without contributing a p-value (Section~\ref{sec:decomposition}
-explains why neither admits one), which is deliberately conservative. A
-hypothesis becoming untestable after the data were seen must not be allowed to
-relax the correction applied to the others.
+explains why), which is deliberately conservative: a hypothesis that becomes
+untestable after the data are seen should not relax the correction applied to
+the others.
 
 All subgroup analyses are \textbf{exploratory}. The pre-registration fixed
 their \emph{scope} (that race, language and insurance would be examined),
@@ -945,66 +875,55 @@ that a reader preferring family-wise control over false-discovery control can
 substitute them.
 
 The two procedures differ by design. A confirmatory claim must survive
-family-wise control, because one false confirmation invalidates the claim. An
-exploratory scan exists to generate hypotheses and needs only its
-false-discovery proportion bounded; applying family-wise control to it would
-suppress every signal the scan is meant to surface.
+family-wise control, because one false confirmation invalidates it, whereas an
+exploratory scan generates hypotheses and needs only its false-discovery
+proportion bounded.
 
 Each subgroup is contrasted against the largest level of its own variable. The
 reference is chosen by sample size alone, never by outcome.
 
-\paragraph{Two event floors, and what each decides (Protocol Amendment 6).}
-Two distinct thresholds govern the subgroup analysis and the distinction is
-load-bearing. \texttt{MIN\_SUBGROUP\_EVENTS} $= \pcMinSubgroupEventsEstimate$
+\paragraph{Event floors (Protocol Amendment 6).}
+Two distinct thresholds govern the subgroup analysis.
+\texttt{MIN\_SUBGROUP\_EVENTS} $= \pcMinSubgroupEventsEstimate$
 decides whether a subgroup AUROC is \emph{computed}: below it, together with a
 50 person-hour minimum, an AUROC is not estimable and the subgroup is listed as
 such rather than shown as a point estimate.
 \texttt{MIN\_SUBGROUP\_EVENTS\_INTERPRET} $= \pcMinSubgroupEvents$ decides
 whether a computed AUROC is \emph{interpreted}, and whether its contrast enters
-family E1. Strata below the interpretation floor are still estimated and still
-tabulated, flagged as such, because the figure showing their intervals reaching
-the chance line is itself the argument for the floor; they are excluded from
-every statement about spread and from the corrected family. The constant is set
-equal to the external-validation floor deliberately: it answers the same
-question on the same warrant, so the two cannot drift apart.
+family E1. Strata below the interpretation floor are still estimated and
+tabulated, flagged as such, because their intervals reaching the chance line
+illustrate the need for the floor; they are excluded from every statement about
+spread and from the corrected family. The constant equals the
+external-validation floor, since both address the same question.
 
 This is \textbf{Protocol Amendment 6}, adopted post-hoc on 6 August 2026 and
-recorded as \S20 of the pre-registration. It must be read against the rule
-stated two paragraphs above, namely that the correction denominator is the
-number of contrasts computed rather than the number selected for presentation.
-Restricting E1 from thirty computed contrasts to \pcNSubgroupContrasts{} is on
-its face the manoeuvre that rule prohibits.
-Three facts bear on whether it is admissible, and \S20.4 of the
-pre-registration sets out the full argument for a reader who wishes to reject
-it. The criterion is outcome-blind, depending only on a stratum's event count.
-The direction is exculpatory: under the thirty-contrast denominator exactly one
-contrast fell below the Benjamini--Hochberg threshold, a language contrast
-resting on twelve events, and the floor removed it. A family narrowed to
-manufacture significance narrows \emph{around} its significant results; this
-one discarded the only one it had. And the verdict is invariant for every
-contrast the reduced family retains: none of the
+recorded as \S20 of the pre-registration. Restricting E1 from thirty computed
+contrasts to \pcNSubgroupContrasts{} conflicts on its face with the rule above
+that the denominator is the number of contrasts computed. Three facts bear on
+its admissibility (\S20.4 of the pre-registration sets out the full argument).
+The criterion is outcome-blind, depending only on a stratum's event count. Its
+direction is unfavourable to this study: under the thirty-contrast denominator
+one contrast fell below the Benjamini--Hochberg threshold, a language contrast
+resting on twelve events, and the floor removed it. And the verdict is
+unchanged for every contrast the reduced family retains: none of the
 \pcNSubgroupContrasts{} clears Benjamini--Hochberg under either denominator, the
 smallest adjusted value being $q = \pcSubgroupMinQ$ at
 $m = \pcNSubgroupContrasts$ and larger still at $m = 30$. The amendment
 therefore changes which contrasts are read and, in the one case where it
-changes a verdict, changes it against this study.
-Section~\ref{sec:equity_strata} reports the consequence.
+changes a verdict, changes it against this study
+(Section~\ref{sec:equity_strata}).
 
-The floor applies to E1 and \emph{not} to E2, and the asymmetry is deliberate
-rather than an oversight. E1's estimand is an AUROC, which requires enough
-events to order cases against non-cases and is not usefully estimable on a
-handful; E2's is a stay-level proportion, which is estimable at any stratum size
-and simply carries a wide interval when the stratum is small. E2 therefore
-retains every stratum, including one insurance category resting on seven stays
-whose interval spans nearly sixty percentage points and is reported with that
-interval visible. Retaining it makes the correction \emph{stricter}, not more
-permissive, because it enlarges the denominator over which false-discovery
-control is applied; dropping it would be the manoeuvre that needs defending.
+The floor applies to E1 but not to E2. E1's estimand is an AUROC, which needs
+enough events to order cases against non-cases; E2's is a stay-level
+proportion, which is estimable at any stratum size and carries a wide interval
+when the stratum is small. E2 therefore retains every stratum, including one
+insurance category resting on seven stays whose interval spans nearly sixty
+percentage points. Retaining it makes the correction stricter, because it
+enlarges the denominator over which false-discovery control is applied.
 
 \subsection{Analysis Status Tagging}
 
-Every result in Chapter~\ref{ch:evaluation} carries an explicit status tag
-rather than relying on a single blanket statement in this chapter:
+Every result in Chapter~\ref{ch:evaluation} carries its own status tag:
 
 \begin{itemize}
     \item \textbf{Confirmatory}: estimand, threshold and direction were
@@ -1024,33 +943,28 @@ reproduced in Table~\ref{tab:register}.
 This inference and multiplicity plan is \textbf{Protocol Amendment 1}, dated
 30 July 2026 and recorded as \S13--15 of
 \texttt{00\_preregistration.md}. It was written \emph{after} the analyses of
-Chapter~\ref{ch:evaluation} had been run and inspected, and it is therefore
-itself post-hoc. It is reported as such rather than presented as
-pre-specification.
+Chapter~\ref{ch:evaluation} had been run and inspected, and is therefore
+post-hoc.
 
 The amendment changes no hypothesis, estimand, threshold, direction, subgroup
 or model. It attaches uncertainty to contrasts that were already pre-specified
 and imposes the multiplicity control the original protocol omitted. Where the
 correction changes a verdict recorded in the original protocol, the corrected
-verdict is the one reported, and the change is stated explicitly.
+verdict is reported and the change is stated.
 
 \subsection{Feature Ablation: Action-Derived Predictors (Protocol Amendment 5)}
 \label{sec:ablation_method}
 
-The central argument of this thesis is that the Sepsis-3 label is constituted
-by clinician action rather than merely correlated with it. The same objection
-applies, with equal force, to part of the \emph{feature} set, and it would be
-inconsistent to press it against the outcome while leaving the predictors
-unexamined.
-
-Two kinds of predictor record clinician behaviour rather than patient
-physiology. \textbf{Vasopressor exposure} is a treatment: it is something done
-to the patient, not something measured in them. The \textbf{per-test order
-indicators} (whether lactate, creatinine, bilirubin, platelets, white cells
-or a blood gas was obtained in a given hour) record a decision to look. Their
-predictive value is well established and is usually read as evidence that
-measurement patterns encode clinical suspicion, which is precisely the problem:
-a model that leans on them is partly learning when clinicians became worried.
+The Sepsis-3 label is partly determined by clinician action
+(Section~\ref{sec:label_action}), and the same concern applies to part of the
+\emph{feature} set. Two kinds of predictor record clinician behaviour rather
+than patient physiology. \textbf{Vasopressor exposure} is a treatment given to
+the patient rather than a measurement. The \textbf{per-test order indicators}
+(whether lactate, creatinine, bilirubin, platelets, white cells or a blood gas
+was obtained in a given hour) record a decision to test. Their predictive value
+is well established and is usually read as evidence that measurement patterns
+encode clinical suspicion, so a model that relies on them partly learns when
+clinicians became concerned.
 
 \textbf{Protocol Amendment 5} (post-hoc, dated 6 August 2026 and recorded as
 \S19 of \texttt{00\_preregistration.md}) therefore adds an ablated arm. The primary
@@ -1064,10 +978,10 @@ Three properties make the contrast interpretable:
 \begin{itemize}
     \item \textbf{The ablation is deliberately conservative.} Forward-filled
           laboratory \emph{values} are retained even though a value exists only
-          because someone ordered the test. Dropping them as well would remove
-          most of the laboratory signal and confound the ablation with a loss
-          of physiological information. What is removed is the set of features
-          that encode \emph{only} clinician behaviour.
+          because the test was ordered. Dropping them would remove most of the
+          laboratory signal and confound the ablation with a loss of
+          physiological information, so only features that encode
+          \emph{only} clinician behaviour are removed.
     \item \textbf{Nothing is re-tuned.} The gradient-boosted arm keeps the
           hyperparameters of the full fit. Re-tuning would confound the feature
           set with the search budget.
@@ -1082,13 +996,13 @@ stability, are given in Section~\ref{sec:ablation}.
 
 \section{Pre-Registration and Reporting}
 
-The full protocol was locked before the cohort extraction reported here. All six hypotheses,
+The full protocol was locked before the cohort extraction reported here. All
+six hypotheses,
 label variants, model classes, splits, metrics, and decision thresholds are
 specified in \texttt{00\_preregistration.md}. Any analysis not specified there
 is labelled exploratory or descriptive, according to whether it carries an
-inferential claim, and, following
-Section~\ref{sec:inference}, each individual result carries its status tag in
-the results table itself rather than inheriting it from this statement alone.
+inferential claim, and each result carries its own status tag
+(Section~\ref{sec:inference}).
 Reporting follows TRIPOD+AI \cite{collins2024tripodai}; code availability and
 the constraints the data use agreement places on it are set out in
 Section~\ref{sec:code_availability}.
