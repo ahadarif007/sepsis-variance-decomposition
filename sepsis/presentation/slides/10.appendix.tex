@@ -10,11 +10,12 @@
 \end{column}
 \begin{column}{0.56\textwidth}
 \begin{itemize}\itemsep3pt\small
-  \item One orchestration script runs stages 01--12; one configuration
-        module holds every path, identifier and threshold.
-  \item Every reported number is emitted as a generated constant, so the text
-        and the code cannot diverge.
-  \item Frozen run: \texttt{\pcFrozenTag}.
+  \item One orchestration script runs stages 01--12; a single configuration
+        module defines the file paths, identifiers and analytical thresholds.
+  \item Reported results are generated directly from the pipeline outputs,
+        reducing the risk of transcription errors between analysis and
+        thesis.
+  \item Frozen-run tag: \texttt{\pcFrozenTag}.
   \item Code and reproducibility:\\ {\scriptsize\repolink}
 \end{itemize}
 \end{column}

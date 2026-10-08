@@ -1,10 +1,10 @@
 % =============================================================================
 %  I. INTRODUCTION: THE CLINICAL PROBLEM          
 % =============================================================================
-\begin{frame}{I. Introduction: Accuracy Survives, Usefulness Does Not}
+\begin{frame}{I. Introduction: Discrimination Does Not Guarantee Clinical Utility}
 \begin{itemize}\itemsep2pt\small
-  \item Sepsis kills about \textbf{eleven million people a year}, nearly one
-        death in five worldwide~\cite{rudd2020global}; in the ICU every hour of
+  \item Sepsis is associated with about \textbf{11 million deaths a year},
+        nearly one in five deaths worldwide~\cite{rudd2020global}; in the ICU every hour of
         delayed treatment raises the risk of death~\cite{seymour2017time}.
   \item Wang et al.~\cite{wang2025srpm} reviewed \textbf{91} real-time sepsis
         prediction models:
@@ -22,9 +22,9 @@ Median Utility Score & \textbf{$+$0.381} & \textbf{$-$0.164} \\
 \end{center}
 
 \begin{itemize}\itemsep2pt\small
-  \item A negative Utility Score means the alerts cause more harm than benefit;
-        AUROC did not detect the collapse, because it measures ranking, not
-        whether alerts are timely or useful.
+  \item A negative Utility Score means performance worse than issuing no
+        alerts at all. AUROC did not detect this decline, because it measures
+        ranking, not whether alerts are timely or useful.
   \item The same gap appears in deployment: Epic Sepsis Model v2 across
         227,091 encounters, AUROC 0.82--0.92 with PPV
         0.13--0.26~\cite{wong2026epic}.
@@ -32,6 +32,7 @@ Median Utility Score & \textbf{$+$0.381} & \textbf{$-$0.164} \\
 
 \vfill
 \begin{alertblock}{}
-  \centering ``Which model is best?'' is the wrong question to lead with.
+  \centering\small Comparing models alone does not show whether reported performance
+  is robust or clinically useful.
 \end{alertblock}
 \end{frame}

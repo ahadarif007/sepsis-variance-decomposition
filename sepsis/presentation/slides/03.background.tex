@@ -14,18 +14,19 @@ split $\rightarrow$ report AUROC $\rightarrow$ compare models.\par}
   \item \textbf{The data split can inflate results.} Sepsis prediction suffers
         the largest drop of any clinical task under a temporal
         shift~\cite{guo2022temporal}.
-  \item \textbf{AUROC hides the real failure.} A model can keep a high AUROC
-        while its clinical usefulness becomes harmful~\cite{wang2025srpm}.
-  \item \textbf{The label captures doctor behaviour.} Models may learn when
-        doctors suspect sepsis and treat, not when the patient
-        worsens~\cite{kamran2024evaluation}.
+  \item \textbf{AUROC may not reveal poor clinical utility.} A model can keep a
+        high AUROC while its Utility Score falls below the no-alert
+        strategy~\cite{wang2025srpm}.
+  \item \textbf{The label partly reflects clinical practice.} Models may learn
+        patterns of sepsis recognition and treatment rather than physiological
+        deterioration alone~\cite{kamran2024evaluation}.
 \end{enumerate}
 
 \vspace{2pt}
 \begin{block}{This thesis}
-  \small Instead of fixing the label, the split and the metric and asking which model
-  wins, it treats all of them as \textbf{sources of variance} and estimates
-  each contribution \textbf{with an interval attached}, so that the ordering
-  between them is established rather than assumed.
+  \small This thesis evaluates model class, label definition, data split and
+  evaluation metric as separate \textbf{sources of variation}. Each
+  contribution is estimated with a \textbf{bootstrap confidence interval}, so
+  their relative sizes can be compared directly.
 \end{block}
 \end{frame}

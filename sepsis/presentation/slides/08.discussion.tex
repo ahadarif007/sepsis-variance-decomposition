@@ -7,21 +7,23 @@
 \textbf{The Sepsis-3 label on MIMIC-IV:}
 \begin{enumerate}\itemsep2pt\scriptsize
   \item \textbf{Depends on clinical action for membership.} The empty
-        pre-treatment window belongs to the onset rule: standard timing moves
+        pre-treatment window results from the pre-registered onset rule:
+        standard timing moves
         \pcFNMovedEarlier{} onsets earlier, \pcFNBeforeAnchorTest{} of them
         into the test set's pre-treatment window (onset-hour separability, not
         advance warning).
   \item \textbf{Is sensitive to how it is defined.} Cases nearly double across
-        readings ($\kappa = \pcKappaVsBA$), yet AUROC moves by only
+        definitions ($\kappa = \pcKappaVsBA$), yet AUROC moves by only
         \pcSpreadLabel.
-  \item \textbf{Produces unusable alert behaviour.} No operating point comes
-        near the 1.4 benchmark; the best under B costs
-        \pcUtilityOptBurdenGbtB{} false alerts per true one.
+  \item \textbf{Produces poor clinical utility at the evaluated thresholds.}
+        No operating point comes near the 1.4 benchmark; the best under B costs
+        \pcUtilityOptBurdenGbtB{} false alerts per true alert.
 \end{enumerate}
 \vspace{2pt}
 \begin{alertblock}{}
-  \scriptsize These problems are independent of model complexity. Addressing
-  them requires changing the label, not only the model.
+  \scriptsize These limitations are not resolved by a more complex model:
+  improving discrimination alone does not address limitations created by case
+  definition and onset timing.
 \end{alertblock}
 \end{column}
 \begin{column}{0.48\textwidth}
@@ -29,7 +31,8 @@
 \begin{itemize}\itemsep2pt\scriptsize
   \item \textbf{Current-hour estimand:} detection at the recorded onset, not
         advance warning.
-  \item \textbf{External validation is bounded by label transport:}
+  \item \textbf{External validation is limited by incomplete transport of the
+        Sepsis-3 label:}
         \pcExtMicroCoverage\% culture coverage, \pcExtNEventsB{} events under B.
   \item \textbf{Single-centre development}, with a selected base cohort
         (first stays, $\geq 4$\,h).
@@ -52,20 +55,22 @@
 \begin{center}\renewcommand{\arraystretch}{1.0}\scriptsize
 \begin{tabular}{cp{11.6cm}}
 \toprule
-C1 & Label and model-class spreads on the same test rows, each with an
-     interval: the label moves membership ($\kappa = \pcKappaVsBA$), not
-     discrimination (\pcSpreadLabel). \\
+C1 & Label and model-class spreads on the same test rows, with bootstrap
+     confidence intervals: label definition substantially changes case membership
+     ($\kappa = \pcKappaVsBA$) but changes discrimination only slightly
+     (\pcSpreadLabel). \\
 C2 & Proof that the conjunction onset rule empties the pre-treatment window;
      standard timing places \pcPreTreatOnsetsVarF{} test-set onsets there. \\
-C3 & Threshold-swept utility ceiling (\pcUtilityMaxGbtB{} under B) at
-     \pcUtilityOptBurdenGbtB{} false alerts per true one. \\
+C3 & Threshold-swept Utility Score: at most \pcUtilityMaxGbtB{} under B, at
+     \pcUtilityOptBurdenGbtB{} false alerts per true alert. \\
 C4 & \pcHTwoEst{} of \pcHTwoNTerms{} covariates unstable across labels;
-     \pcHTwoNRobust{} survive their own noise, all order indicators. \\
-C5 & Equity-by-label on the same strata: the finding concerns
-     documentation completeness, not race. \\
+     \pcHTwoNRobust{} remain unstable after accounting for estimation
+     uncertainty, all test-ordered indicators. \\
+C5 & Equity by label: differences are associated with missing demographic
+     documentation; no powered comparison between recorded race categories. \\
 C6 & Pre-registered hypothesis set; seed-fixed, reproducible pipeline with
-     disclosed post-hoc amendments; TRIPOD+AI reporting; numbers are generated
-     constants. \\
+     disclosed post-hoc amendments; TRIPOD+AI reporting; reported values
+     generated directly from the analysis outputs. \\
 C7 & Definitional vs.\ empirical label variance separated
      ($\kappa_{D,B} = \pcKappaVsBD$;
      $\phi_{\text{anchor}} = \pcPhiAnchorPrimary$). \\
@@ -80,8 +85,8 @@ validation; utility-optimised training.\par}
 
 \vspace{2pt}
 \begin{block}{}
-  \centering\footnotesize The premise inverted; the motivating problem did not.
-  The label's consequence runs through \emph{who} is counted and \emph{when},
-  not through discrimination.
+  \centering\footnotesize Label definition mainly changes which stays are
+  septic and when onset is assigned; its effect on AUROC is small
+  (\pcSpreadLabel).
 \end{block}
 \end{frame}

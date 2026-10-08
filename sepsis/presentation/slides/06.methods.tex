@@ -11,10 +11,10 @@
 \end{block}
 
 \vspace{2pt}
-{\footnotesize\textbf{Comparators:} gradient-boosted trees (XGBoost, fixed
-conventional hyperparameters; boosting rounds chosen by early stopping on a 15\%
-stay-level holdout within the \emph{training} data), Cox proportional hazards, NEWS2, qSOFA and
-SIRS~\cite{evans2021ssc}.\par}
+{\footnotesize\textbf{Comparators:} gradient-boosted trees (XGBoost), Cox
+proportional hazards, NEWS2, qSOFA and SIRS~\cite{evans2021ssc}. XGBoost uses
+fixed hyperparameters; the number of boosting rounds is chosen by early stopping
+on a 15\% stay-level holdout from the \emph{training} data.\par}
 
 \vspace{4pt}
 \begin{center}\renewcommand{\arraystretch}{1.12}\scriptsize
@@ -22,7 +22,7 @@ SIRS~\cite{evans2021ssc}.\par}
 \toprule
 \textbf{Split} & \textbf{How} & \textbf{Why} \\
 \midrule
-Internal (primary)   & Time-based: train 2008--2016, test 2017--2019~\cite{guo2022temporal} & Honest internal estimate \\
+Internal (primary)   & Time-based: train 2008--2016, test 2017--2019~\cite{guo2022temporal} & Primary internal evaluation \\
 Internal (secondary) & Random 75/25 patient-level split (seed 42)                    & Split optimism (H4) \\
 Treatment-anchored   & Hours before first culture or antibiotic~\cite{kamran2024evaluation} & Treatment leakage (H3) \\
 External             & eICU-CRD v2.0, no retraining~\cite{pollard2018eicu}           & Generalisability (H5) \\
@@ -52,8 +52,8 @@ Score}~\cite{reyna2020utility}
   \item Rewards early true alerts in $[t_{\text{onset}}-6,\,t_{\text{onset}}]$,
         penalises late and false ones.
   \item Reported at the 0.5 cut-off \textbf{and} at its maximum over a
-        60-point alert-rate grid, with the alert burden against the benchmark
-        of 1.4 false alerts per true one~\cite{moor2023review}.
+        60-point alert-rate grid. Alert burden is false alerts per true alert,
+        compared with the published benchmark of 1.4~\cite{moor2023review}.
   \item AUROC, AUPRC and calibration are reported alongside.
 \end{itemize}
 
@@ -62,8 +62,8 @@ Score}~\cite{reyna2020utility}
 \begin{itemize}\itemsep1pt\footnotesize
   \item Stay-level cluster bootstrap, $B = 2{,}000$; H1--H6 Holm-corrected
         ($m = 6$, FWER 0.05); exploratory families Benjamini--Hochberg.
-  \item Pre-registered protocol; post-hoc protocol amendments are declared as
-        such; TRIPOD+AI and PROBAST+AI
+  \item Pre-registered hypothesis set; every post-hoc protocol amendment is
+        identified explicitly; TRIPOD+AI and PROBAST+AI
         reporting~\cite{collins2024tripodai,moons2025probastai}.
 \end{itemize}
 \end{exampleblock}

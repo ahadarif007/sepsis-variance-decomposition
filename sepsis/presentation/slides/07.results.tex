@@ -24,11 +24,11 @@ $\infty$ = the best strategy is to raise no alert. Benchmark burden:
 
 \vspace{4pt}
 \begin{itemize}\itemsep2pt\small
-  \item The marginal intervals of the primary model and GBT overlap, but the
-        paired contrast favours the primary model by \pcHSixAbsEst{} AUROC
-        (H6); both are separated from the four remaining models.
-  \item Calibration is the primary model's strongest result: slope
-        \pcCalibSlopePrimaryB{} under Variant B (ideal = 1).
+  \item The marginal confidence intervals of the primary model and GBT overlap,
+        but the paired comparison favours the primary model by \pcHSixAbsEst{}
+        AUROC (H6). Both have higher AUROC than the four other comparators.
+  \item The primary model is well calibrated under Variant B: calibration slope
+        \pcCalibSlopePrimaryB{} (ideal = 1).
 \end{itemize}
 \end{frame}
 
@@ -53,17 +53,18 @@ GBT $-$ primary (label B, temporal)   & \pcHSixEst          & [\pcHSixCiLo, \pcH
 \end{center}
 {\scriptsize Ranges, not variance components: they cannot be summed or
 expressed as shares of a total. The model-class range spans six heterogeneous
-specifications, the label range three Sepsis-3 readings; even so, the narrowest
-contrast across the gap (GBT vs Cox, \pcAurocGbtB{} vs \pcAurocCoxB) exceeds
-the whole label range.\par}
+specifications, the label range three Sepsis-3 readings. Despite this
+asymmetry, the GBT--Cox difference (\pcAurocGbtB{} vs \pcAurocCoxB) is about
+eight times the whole label range.\par}
 
 \vspace{4pt}
 \begin{itemize}\itemsep2pt\small
-  \item \textbf{Model class dominates} across the six specifications compared.
-  \item Transport ranks second on the point estimate, but its interval is the
-        widest and covers zero: its rank is \emph{not} established.
-  \item The two decisions this literature scrutinises most, \textbf{label
-        reading and split design, move discrimination least}.
+  \item \textbf{Model class} produces the largest AUROC range of the factors
+        examined.
+  \item External transport has the second-largest point estimate, but its wide
+        interval includes zero, so its relative position is uncertain.
+  \item In this analysis, \textbf{label definition and split method produce the
+        smallest changes in AUROC}.
 \end{itemize}
 \end{frame}
 
@@ -93,12 +94,12 @@ no internal Utility Score to decline from.\par}
 
 \vspace{2pt}
 \begin{itemize}\itemsep1pt\footnotesize
-  \item \textbf{H1 reversed:} model spread \pcSpreadModelClass{} vs label
-        spread \pcSpreadLabel, more than tenfold; the interval on the
-        difference excludes zero.
-  \item \textbf{H4 reversed:} the random split scores \emph{lower}
-        (\pcAurocRandomPrimaryB{} vs \pcAurocPrimaryB); every model shows the
-        same sign.
+  \item \textbf{H1 not confirmed:} model spread \pcSpreadModelClass{} vs label
+        spread \pcSpreadLabel; the estimate lies in the opposite direction and
+        its interval excludes zero.
+  \item \textbf{H4 not confirmed:} opposite direction; the random split scores
+        \emph{lower} (\pcAurocRandomPrimaryB{} vs \pcAurocPrimaryB) for every
+        model.
   \item \textbf{H6 not rejected:} primary \pcAurocPrimaryB{} vs GBT
         \pcAurocGbtB. The upper limit lies inside the 0.02 margin, so
         one-sided \textbf{non-inferiority}, not two-sided equivalence.
@@ -113,11 +114,10 @@ no internal Utility Score to decline from.\par}
 \vspace*{0pt}%
 {\footnotesize Status: \notevaluable, because its contrast cannot be formed.\par}
 \begin{block}{Proposition (proved in the thesis)}
-  \footnotesize Under variants A, B, C (and E) the onset is $t_{\text{susp}}$,
-  the \emph{later} element of an antibiotic--culture pair, so
-  $t_{\text{onset}} \geq t_{\text{anchor}}$ for every labelled stay. The
-  pre-treatment window therefore contains no onset \textbf{by construction}:
-  a property of the implementation, not a measurement.
+  \footnotesize In Variants A, B, C and E, onset is assigned to the
+  \emph{later} event of the antibiotic--culture pair, so onset can never
+  precede the treatment anchor. The pre-treatment window therefore contains no
+  onsets \textbf{by construction}, not by observation.
 \end{block}
 
 \vspace{2pt}
@@ -141,10 +141,10 @@ D & Deterioration & \pcPreTreatPersonHoursVarD & \textbf{\pcPreTreatOnsetsVarD}
         standard $\min(t_{\text{susp}}, t_{\text{SOFA}})$.
         \pcFNMovedEarlier{} of \pcFNOnsets{} onsets move earlier
         (\pcFPctMovedEarlier\%, median \pcFMedianShiftH\,h).
-  \item Kamran et al.~\cite{kamran2024evaluation}: \textbf{confirmed for
-        label membership}, \textbf{narrowed for label timing}. These AUROCs
-        show the onsets exist and are separable, not that they are predictable
-        in advance.
+  \item Kamran et al.'s concern~\cite{kamran2024evaluation} is supported for case
+        membership but needs qualification for onset timing. These AUROCs
+        measure discrimination at the assigned onset hour; they do not
+        demonstrate advance prediction.
 \end{itemize}
 \end{frame}
 
@@ -162,15 +162,15 @@ D & Deterioration & \pcPreTreatPersonHoursVarD & \textbf{\pcPreTreatOnsetsVarD}
 \end{column}
 \begin{column}{0.46\textwidth}
 \begin{itemize}\itemsep2pt\footnotesize
-  \item \textbf{E (Anchor-Only)}, no SOFA gate, matches B's onset hour in
-        \pcPctExactMatchE\% of B's stays: SOFA moves no onset.
+  \item \textbf{E (Anchor-Only)}, no SOFA criterion, matches B's onset hour in
+        \pcPctExactMatchE\% of B's stays: SOFA does not change the onset hour.
   \item Anchor-attributable fraction:\\
         $\phi_{\text{anchor}} = \pcPhiAnchorPrimary$
         [\pcPhiAnchorCiLoPrimary, \pcPhiAnchorCiHiPrimary] (primary, includes
         1); \pcPhiAnchorGbt{} [\pcPhiAnchorCiLoGbt, \pcPhiAnchorCiHiGbt] (GBT).
   \item \textbf{D (Deterioration)}, no treatment timestamp: $\kappa =
-        \pcKappaVsBD$ with B. Its AUROC level is partly self-fulfilling, not a
-        sepsis result.
+        \pcKappaVsBD$ with B. D's definition overlaps the model inputs, so its
+        AUROC is not independent evidence of sepsis prediction.
   \item \textbf{F} (standard onset timing): primary \pcAltAurocFullPrimaryF{}
         vs \pcAurocPrimaryB; \textbf{not reproduced by GBT}
         ($\Delta = \pcAltDeltaGbtF$, $q = \pcAltDeltaPBhGbtF$).
@@ -180,8 +180,9 @@ D & Deterioration & \pcPreTreatPersonHoursVarD & \textbf{\pcPreTreatOnsetsVarD}
 
 \vspace{2pt}
 \begin{alertblock}{}
-  \footnotesize For the primary model, onset \emph{timing} matters more than
-  the conjunction itself; for GBT the timing effect is not detected.
+  \footnotesize For the primary model, changing the onset time matters more
+  than removing the SOFA criterion. For GBT the timing effect is not
+  statistically detectable.
 \end{alertblock}
 \end{frame}
 
@@ -189,20 +190,21 @@ D & Deterioration & \pcPreTreatPersonHoursVarD & \textbf{\pcPreTreatOnsetsVarD}
 % =============================================================================
 %  VI. RESULTS: UTILITY CEILING             
 % =============================================================================
-\begin{frame}{VI. Results: The Utility Ceiling}
+\begin{frame}{VI. Results: Clinical Utility Across Alert Thresholds}
 \begin{center}
-  \includegraphics[width=\textwidth,height=0.56\textheight,
+  \includegraphics[width=\textwidth,height=0.50\textheight,
                    keepaspectratio]{images/07_utility_threshold_sweep.png}
 \end{center}
 \vspace{-4pt}
 \begin{itemize}\itemsep1pt\footnotesize
   \item At the 0.5 cut-off the primary model scores \pcUtilityPrimaryB{}: it
         never alerts there, a threshold artefact.
-  \item Swept over the grid, \textbf{no model exceeds \pcUtilityMaxGbtB{}
-        under label B} (\pcUtilityMaxGbtC{} under any variant), at
-        \textbf{\pcUtilityOptBurdenGbtB{} false alerts per true one} vs a
-        benchmark of 1.4~\cite{moor2023review}.
-  \item Test-set thresholds: upper bounds, not deployed performance.
+  \item Across the threshold grid, the highest Utility Score under Variant B is
+        \textbf{\pcUtilityMaxGbtB} (\pcUtilityMaxGbtC{} under any variant), at
+        \textbf{\pcUtilityOptBurdenGbtB{} false alerts per true alert} against
+        the published benchmark of 1.4~\cite{moor2023review}.
+  \item Thresholds were chosen on the test set, so these values are optimistic and
+        are not estimates of deployed performance.
 \end{itemize}
 \end{frame}
 
@@ -228,16 +230,17 @@ models, no retraining.\par}
 
 \vspace{2pt}
 \begin{itemize}\itemsep1pt\footnotesize
-  \item \textbf{Label observability is the binding limitation:} culture
-        documentation restricts the Sepsis-3 arm to \pcExtMicroCoverage\% of
-        eICU stays, leaving \pcExtNEventsB{} Variant B events, below the
+  \item \textbf{The main limitation is incomplete label observability:} culture
+        records restrict the Sepsis-3 analysis to \pcExtMicroCoverage\% of eICU
+        stays, leaving \pcExtNEventsB{} Variant B events, below the
         \pcExtMinEvents-event floor.
   \item H5 substitute: degradation \pcHFiveEst{}
         [\pcHFiveCiLo, \pcHFiveCiHi], directionally consistent but
         inconclusive. Its causes are not decomposed.
-  \item Sensitivity arms (different targets, never pooled): antibiotic-only
-        (\pcExtAbxNEventsB{} events) and Variant D (\pcExtAltNEvents{} events)
-        both degrade in the same direction.
+  \item The antibiotic-only (\pcExtAbxNEventsB{} events) and Variant D
+        (\pcExtAltNEvents{} events) sensitivity analyses use different targets
+        and are reported separately. Both show lower external than internal
+        discrimination.
 \end{itemize}
 \end{frame}
 
@@ -252,13 +255,13 @@ models, no retraining.\par}
 \begin{itemize}\itemsep1pt\scriptsize
   \item \pcHTwoEst{} of \pcHTwoNTerms{} covariates unstable across labels:
         \pcHTwoNSign{} by sign, \pcHTwoNMag{} by magnitude.
-  \item \textbf{Only \pcHTwoNRobust{} exceed their own estimation noise,
-        all test-ordered indicators}~\cite{lauritsen2021framing}; the raw count
+  \item \textbf{Only \pcHTwoNRobust{} remain unstable after accounting for
+        estimation uncertainty, all test-ordered indicators}~\cite{lauritsen2021framing}; the raw count
         is a loose upper bound.
   \item \textbf{Ablation} (post-hoc): dropping the \pcAblNDropped{}
         action-derived covariates costs \pcAblDeltaAurocPrimaryB{} AUROC
         (primary, B), while instability falls to \pcAblHTwoNUnstable{} of
-        \pcAblHTwoNTerms. The cost is real but small.
+        \pcAblHTwoNTerms. The AUROC reduction is small but distinguishable from zero.
 \end{itemize}
 \end{block}
 \end{column}
@@ -267,13 +270,15 @@ models, no retraining.\par}
 \begin{itemize}\itemsep1pt\scriptsize
   \item Subgroup AUROC: \pcEquityNContrastsEOne{} contrasts clear the
         100-event floor and \textbf{none survives} BH correction.
-  \item Only two racial strata clear the floor, and one is \emph{Unknown}: no
-        powered comparison between two recorded demographic answers.
+  \item Only two race categories meet the 100-event floor, one of which is
+        \emph{Unknown}, so no powered comparison between two recorded
+        categories is possible.
   \item Label sensitivity \emph{does} survive: Unknown
         $+\pcLabelSensUnknownPp$\,pp ($q = \pcLabelSensUnknownQ$), Unable to
         obtain $+\pcLabelSensUnablePp$\,pp ($q = \pcLabelSensUnableQ$).
-  \item Both are missingness categories, so the finding concerns
-        \textbf{documentation completeness}, not race~\cite{wang2022equity}.
+  \item Both indicate missing demographic information, so the result is read as
+        an association with \textbf{documentation completeness}, not as a group
+        difference~\cite{wang2022equity}.
 \end{itemize}
 \end{block}
 \end{column}
