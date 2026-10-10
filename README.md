@@ -1,35 +1,44 @@
 # Quantifying Model, Label, and Methodological Contributions to Variance in Real-Time Sepsis Onset Prediction
 
+Analysis pipeline and thesis source for a pre-registered variance-decomposition
+study of real-time sepsis onset prediction.
+
 **Abdul Ahad** · M.Sc. in Computing · Atlantic Technological University (ATU), Galway
-Student ID G00486649
+Student ID: G00486649
+
+This repository holds the final analysis reported in the submitted M.Sc. thesis.
 
 ---
 
-## What this is
+## Overview
 
-A pre-registered variance-decomposition study of real-time sepsis onset
-prediction on MIMIC-IV v3.1, with external validation on eICU-CRD v2.0.
+This repository contains the code for a pre-registered variance-decomposition
+study of real-time sepsis onset prediction on MIMIC-IV v3.1, with external
+validation on eICU-CRD v2.0.
 
-Most of this literature fixes the sepsis label, fixes the train/test split,
-reports AUROC, and compares models. This study treats the label, the split, the
-prediction-time anchor and the evaluation metric as **variables**, and measures
-how much of the reported performance each of them accounts for relative to the
-choice of model.
+Comparative studies in this area usually hold the sepsis definition and the
+train/test split fixed, evaluate discrimination by AUROC (area under the ROC
+curve), and attribute differences in performance to the choice of model. This
+study treats the label definition, the split, the prediction-time anchor and the
+evaluation metric as analytical factors, and estimates how much of the
+variation in reported performance each accounts for relative to model class.
 
-**Research question.** In real-time sepsis onset prediction on MIMIC-IV, how is
-performance partitioned between (a) model class and (b) the analyst's
-discretionary choices: label operationalisation, temporal versus random split,
-prediction-time anchoring, and evaluation metric?
+**Research question.** In real-time sepsis onset prediction on MIMIC-IV, how much
+of the variation in reported performance is attributable to model class, and how
+much to label operationalisation, temporal versus random split, prediction-time
+anchoring and evaluation metric?
 
-Six hypotheses (H1–H6) were pre-registered before any of the modelling reported
-here. Three Sepsis-3
-label variants (A Narrow, B Seymour-Standard, C Liberal) are the primary
-analysis; three further variants (D, E, F) were added under disclosed protocol
-amendments to separate definitional from empirical label variance.
+Six hypotheses (H1–H6) were pre-registered before the reported models were
+fitted. The primary analysis uses three Sepsis-3 label variants: A (Narrow),
+B (Seymour-Standard) and C (Liberal). Variants D–F were added through dated
+protocol amendments, recorded in `00_preregistration.md`, to separate
+definitional from empirical variation in the label. They are analysed
+separately from A–C.
 
-> **This repository contains code only.** No MIMIC-IV or eICU-CRD record,
-> derived table, or fitted model is included. The PhysioNet Credentialed Health
-> Data Use Agreement prohibits redistribution of the underlying data.
+> [!IMPORTANT]
+> This repository contains code only. No MIMIC-IV or eICU-CRD records, derived
+> tables or fitted models are included, and the underlying data cannot be
+> redistributed under the PhysioNet data use agreement.
 
 ---
 
@@ -38,71 +47,71 @@ amendments to separate definitional from empirical label variance.
 ```
 sepsis-variance-decomposition/
 ├── sepsis/
-│   ├── project/        ← the analysis pipeline (R + Python)
-│   └── thesis/         ← the thesis (LaTeX)
-└── data/               ← NOT tracked; you supply this (see below)
+│   ├── project/        ← analysis pipeline (R, plus one Python script)
+│   └── thesis/         ← thesis source (LaTeX)
+└── data/               ← not tracked; populate after obtaining access (see below)
 ```
 
-The working documents for the project (the engineering handoff, the review
-rounds and the companion critical literature review) are deliberately not
-tracked here. They are development records rather than part of the submission.
+Internal development notes and review records are not included.
 
-### The pipeline: `sepsis/project/`
+### Pipeline files: `sepsis/project/`
 
 | File | Role |
 |---|---|
-| `00_preregistration.md` | The pre-registration, including the G0 analysis gate and Protocol Amendments 1–10, each dated and disclosed as post-hoc |
-| `config.R` | **Sole source of truth** for every constant: label-variant parameters, the covariate vector, plausibility ranges, seeds, bootstrap sizes, multiplicity families, event floors. `check_model_features()` turns a stored model whose columns disagree with it into an error rather than a wrong number |
-| `utils.R` | Shared helpers, including `require_features()` (errors rather than silently dropping a declared predictor) and `check_multinom_fit()` |
-| `clinical_scores.R` | SOFA, NEWS2, qSOFA, SIRS |
+| `00_preregistration.md` | Pre-registration, including the G0 analysis gate and the dated, post-hoc Protocol Amendments 1–10 |
+| `config.R` | Central configuration: label parameters, predictors, plausibility ranges, seeds, bootstrap settings, multiplicity families and event floors |
+| `utils.R` | Shared validation and utility functions |
+| `clinical_scores.R` | SOFA, NEWS2, qSOFA and SIRS |
 | `01_setup.Rmd` … `12_inference.Rmd` | The twelve pipeline stages, in execution order |
-| `run_pipeline.sh` / `run_pipeline.R` | Orchestration; runs all stages or a named subset |
-| `thesis_constants.R` | Reads the result tables and emits every number in the thesis as a LaTeX macro |
-| `utility_score.py` | Reference implementation of the PhysioNet Utility Score, maintained as a mirror of the R scoring rule |
-| `check_consistency.R` | Cross-file assertions over the generated result tables. A failure means two reported quantities disagree |
-| `check_thesis_numbers.R` | Literal-number linter for the thesis sources. Fails on any result-shaped number typed without recorded provenance |
-| `check_thesis_margins.R` | Measures the built PDF for anything running past the text block, which LaTeX does not warn about for tables |
+| `run_pipeline.sh` / `run_pipeline.R` | Runs all stages or a named subset |
+| `thesis_constants.R` | Writes every reported result into the thesis as a LaTeX macro |
+| `utility_score.py` | Independent Python implementation of the PhysioNet Utility Score, cross-checked against the R implementation in stage 07 |
+| `check_consistency.R` | Cross-checks the generated result tables against each other |
+| `check_thesis_numbers.R` | Checks the provenance of numbers written in the thesis source |
+| `check_thesis_margins.R` | Checks the built PDF for content extending past the text area |
 
 | # | Stage | Phase |
 |---|---|---|
 | 01 | Setup: verify source tables | 1 |
-| 02 | Cohort and labels, six variants (A--F) | 2 |
-| 03 | Person-hour panel (streams ~6 GB) | 2 |
+| 02 | Cohort and labels, six variants (A–F) | 2 |
+| 03 | Person-hour panel, built from about 6 GB of source tables | 2 |
 | 04 | Sample size (Riley et al.) | 3 |
-| 05 | Primary model: multinomial discrete-time competing risks | 4 |
-| 06 | Comparators: GBT, Cox, NEWS2/qSOFA/SIRS | 4 |
-| 07 | Metrics suite, including the utility threshold sweep | 5 |
+| 05 | Primary model: multinomial discrete-time competing-risks model | 4 |
+| 06 | Comparators: gradient-boosted trees (GBT), Cox, NEWS2, qSOFA, SIRS | 4 |
+| 07 | Performance metrics and utility-threshold sweep | 5 |
 | 08 | External validation on eICU-CRD | 6 |
 | 09 | Variance decomposition and label-anchor attribution | 7 |
 | 10 | Equity analysis | 7 |
-| 11 | Clinical metrics: calibration, DCA, operating points, lead time | 8 |
-| 12 | Inference: cluster bootstrap, Holm + BH, analysis register | 9 |
+| 11 | Clinical metrics: calibration, decision-curve analysis, operating points, lead time | 8 |
+| 12 | Inference: cluster bootstrap, Holm and Benjamini–Hochberg correction, and the analysis register (one row per reported test with its family and adjusted p-value) | 9 |
 
 ---
 
-## Running it
+## Running the analysis
 
-### Prerequisites
+### Requirements
 
-- **R 4.5+** with the packages listed in `sepsis/project/requirements.txt`,
-  which pins the version each dependency was at when the reported results were
-  produced. Check or install them with:
+- **R 4.5+** with the packages in `sepsis/project/requirements.txt`, an R
+  package-version manifest that records the versions used to produce the
+  reported results. The installer adds missing packages at the current CRAN
+  version and reports any installed package whose version differs from the
+  manifest:
 
   ```bash
   cd sepsis/project
   Rscript install_requirements.R --check   # report only
-  Rscript install_requirements.R           # install what is missing
+  Rscript install_requirements.R           # install missing packages
   ```
-- **Python 3.14** with `pandas` 3.0.4 (for the Utility Score mirror only),
-  pinned in `sepsis/project/requirements-python.txt`. pandas 3.x is required:
-  the script depends on its CSV datetime behaviour
-- **TeX** providing `xelatex` and `pdflatex` + `biber` (to build the thesis)
-- **Both databases**, obtained independently through PhysioNet credentialing:
-  - MIMIC-IV v3.1 → `data/mimic-iv-3.1/{hosp,icu}/*.csv.gz`
-  - eICU-CRD v2.0 → `data/eicu-collaborative-research-database-2.0/`
 
-`config.R` walks up the tree to locate `data/`; override with the
-`MIMIC_RESEARCH_ROOT` environment variable if it lives elsewhere.
+- **Python 3.14** with pandas 3.0.4 (`sepsis/project/requirements-python.txt`),
+  used only by `utility_score.py`. pandas 2.x is not supported.
+- **TeX** with `xelatex`, `pdflatex` and `biber`, to build the thesis.
+- **Credentialed PhysioNet access** to both databases, placed as follows:
+  - MIMIC-IV v3.1: `data/mimic-iv-3.1/{hosp,icu}/*.csv.gz`
+  - eICU-CRD v2.0: `data/eicu-collaborative-research-database-2.0/`
+
+`config.R` searches parent directories for `data/`. Set `MIMIC_RESEARCH_ROOT`
+to use a different location.
 
 ### Full run
 
@@ -111,31 +120,31 @@ cd sepsis/project
 ./run_pipeline.sh
 ```
 
-Runs stages 01–12 in order and, on success, regenerates the thesis constants
-and figures. **About 2 h 30 m end to end** on a 2023 MacBook Pro; stage 05
-(~73 min, nine model fits) and stage 12 (~26 min, the bootstrap) dominate, and
-stage 03 streams about 6 GB. Per-stage wall-clock, measured from the run that
-produced the reported results:
+This runs stages 01–12 in order and, if all of them succeed, regenerates the
+thesis constants and figures. The run that produced the reported results took
+about 2 hours 30 minutes on a 2023 MacBook Pro. Stage 05 (nine model fits) and
+stage 12 (the bootstrap) account for most of it. Timings will vary with
+hardware and library builds.
 
 | Stage | 01 | 02 | 03 | 04 | 05 | 06 | 07 | 08 | 09 | 10 | 11 | 12 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| min | <1 | 3 | 16 | <1 | 73 | 9 | 2 | 16 | <1 | <1 | 15 | 26 |
+| Minutes | <1 | 3 | 16 | <1 | 73 | 9 | 2 | 16 | <1 | <1 | 15 | 26 |
 
 ### Partial runs
 
 ```bash
-./run_pipeline.sh 10 11 12          # named stages only
-Rscript run_pipeline.R --phase 4    # a whole phase
-V2_VARIANTS=D,E ./run_pipeline.sh 02 03 05 06 07   # restrict the variant loop
-V2_ARMS=ablated ./run_pipeline.sh 05 06            # restrict the fitting arm
+./run_pipeline.sh 10 11 12                         # named stages only
+Rscript run_pipeline.R --phase 4                   # one phase
+V2_VARIANTS=D,E ./run_pipeline.sh 02 03 05 06 07   # restrict to some label variants
+V2_ARMS=ablated ./run_pipeline.sh 05 06            # restrict to one fitting arm
 ```
 
-One caution, learned the hard way: stages 05/06 should be restricted with
-`V2_VARIANTS` when adding a variant, because gradient-boosted tree fitting is
-not bit-stable and an incidental refit moves every GBT number. Stage 07's
-alternative-label table used to be overwritten from whatever ran, so a partial
-pass silently deleted the other variants' rows; it now merges, carrying forward
-any variant not in the current run and logging that it did so.
+> [!NOTE]
+> When adding a label variant, restrict stages 05 and 06 with `V2_VARIANTS`.
+> GBT fitting is not bit-reproducible across library builds, so refitting the
+> existing variants may change the reported GBT estimates. Stage 07 merges new
+> alternative-label results with the existing rows, so a partial run keeps the
+> results for variants it did not include.
 
 ### Building the thesis
 
@@ -144,149 +153,171 @@ cd sepsis/project && Rscript thesis_constants.R
 cd ../thesis && ./build.sh
 ```
 
-`build.sh` refuses to produce a PDF in which any macro a chapter references is
-unresolved, because such a macro typesets as a conspicuous red marker on the
-page.
+`build.sh` exits before compiling if a chapter references a macro the pipeline
+did not produce. Set `V2_ALLOW_MISSING=1` for a draft build.
 
-### Checking it
+### Validation checks
 
-Three read-only checks, none of which runs the pipeline. **All three are
-wired in**: `run_pipeline.sh` runs the first two after regenerating the thesis
-constants, and `build.sh` runs the third on the PDF it has just produced. Run
-them by hand only after editing the thesis without re-running anything:
+Three read-only checks run automatically: `run_pipeline.sh` runs the first two
+after regenerating the thesis constants, and `build.sh` runs the third on the
+PDF it produces. They can also be run by hand after editing the thesis:
 
 ```bash
 cd sepsis/project
-Rscript check_consistency.R       # cross-file arithmetic + claim predicates
-Rscript check_thesis_numbers.R    # literal provenance over the thesis sources
-Rscript check_thesis_margins.R    # does anything pass the text block
+Rscript check_consistency.R
+Rscript check_thesis_numbers.R
+Rscript check_thesis_margins.R
 ```
 
-The first asserts identities that must hold between tables written by different
-stages: a printed rate against its own numerator and denominator, a
-decomposition row against the hypothesis estimate it duplicates, the external
-labelled event count against the scored one, the cohort ladder's arithmetic. It
-also holds the **claim predicates**: sentences the thesis states in words,
-written as assertions on the result tables, so that a re-run which makes one of
-them false says so.
+- `check_consistency.R` checks relationships that must hold between outputs of
+  different stages, such as a rate against its numerator and denominator, or the
+  cohort-flow arithmetic. It also evaluates claim predicates: executable checks
+  of empirical statements made in the thesis text, which fail if a rerun no
+  longer supports the statement.
+- `check_thesis_numbers.R` classifies each result-like number in the thesis
+  source as cited, as an allow-listed design constant or source-data fact, or as
+  unaccounted for. It fails on any unaccounted number.
+- `check_thesis_margins.R` checks the built PDF for tables or other content
+  extending past the text area, which LaTeX does not report for tables.
 
-The second sorts every result-shaped number typed in the thesis into *cited*
-(quoting prior work), *allow-listed* (a design constant or a fact about the
-source data, each with its reason recorded) or *unaccounted for*, and fails on
-the third.
+`run_pipeline.sh` exit codes:
 
-The third measures the built PDF, because LaTeX cannot: a table is set at its
-natural width, so it has no target width to be overfull against and runs past
-the right margin without a warning.
-
-Together they cover the gap the generator cannot reach. It guarantees that a
-number in the thesis is the number the pipeline produced; it cannot check that
-two numbers which must agree do, that a number was not typed beside a macro
-instead of as one, or that what was typeset fits on the page.
-
-`run_pipeline.sh` exit codes: **1** a stage failed, **2** a macro or generated
-table body is unresolved, **3** a consistency check failed, **4** the thesis
-types a result-shaped number with no recorded provenance.
+- `1`: a pipeline stage failed
+- `2`: a macro or generated table is unresolved
+- `3`: a consistency check failed
+- `4`: the thesis source contains a result-like number without recorded provenance
+- `5`: the cohort-flow figure could not be regenerated and still shows counts
+  from an earlier run
 
 ---
 
 ## Reproducibility
 
-Every seed is fixed in `config.R`, and the train/test partition is defined by
-admission year rather than by sampling, so it is invariant. A repeated run
-reproduces the reported estimates exactly, with one documented exception:
-gradient-boosted tree fitting is not bit-reproducible across differing library
-builds, so the GBT rows serve as an explicit consistency check on any re-run.
+Seeds are fixed in `config.R`. The train/test split is defined by admission year
+rather than by random sampling, so it does not depend on the seed. With the
+package versions in `requirements.txt`, a rerun is expected to reproduce the
+reported estimates, with one documented exception: GBT fitting is not
+bit-reproducible across library builds. On a rerun the GBT rows are therefore
+the first place to look for drift, and `install_requirements.R --check` lists
+any package version that differs.
 
-**No quantity this study estimates is typed by hand into the thesis.** The
-exceptions are figures quoted from prior work, thresholds fixed by the
-pre-registration, and prose roundings of a macro stated exactly in the adjacent
-table. `thesis_constants.R` reads
-the result tables and writes every reported quantity into
-`sepsis/thesis/generated/pipeline_constants.tex` as a LaTeX macro, which the document
-includes; larger tables are generated whole. A quantity the pipeline did not
-produce typesets as a conspicuous marker rather than as a stale value, so a
-partial run cannot silently leave an outdated number in the text.
+Estimated quantities reach the thesis through generated code, not manual
+transcription. `thesis_constants.R` reads the result tables and writes each
+reported quantity to `sepsis/thesis/generated/pipeline_constants.tex` as a LaTeX
+macro, and generates the larger tables whole. Three kinds of number are typed
+directly: values quoted from prior studies, thresholds fixed by the
+pre-registration, and rounded values in the prose whose exact value appears in
+an adjacent generated table. A quantity the pipeline did not produce prints as a
+visible placeholder rather than an earlier value, and `build.sh` blocks it.
 
 ---
 
 ## Findings in brief
 
-- **Model class dominates discrimination, not the label.** The model-class
-  spread is an order of magnitude larger than the label spread, and the interval on the
-  difference excludes zero. That is the reverse of the pre-registered
-  hypothesis.
-- **An interpretable hazard model is not outperformed by gradient-boosted
-  trees.** The trees are not better by more than the pre-registered 0.02
-  margin, and the interval on the difference lies wholly below zero, so the
-  interpretable model is ahead rather than merely not behind. This is
-  non-inferiority rather than two-sided equivalence, because the interval
-  extends past the margin on the side that favours the interpretable model. It
-  is the strongest positive result in the study, and the lead is small enough
-  that the Utility Score orders the two models the other way round.
-- **What the label determines is which cohort exists**, not how learnable it is:
-  the two narrowest Sepsis-3 readings agree on which stays are septic at
-  κ = 0.267 despite near-identical prevalence.
-- **The empty pre-treatment window is a property of the onset rule**, not of the
-  patients. Under a conjunction onset rule it is a theorem; timed as the
-  standard specifies, the same stays yield pre-treatment onsets.
-- **The external event-rate gap is largely attributable to the label's
-  inputs, not the patients.** Under the Sepsis-3 anchor, eICU-CRD records onsets at 0.094 times
-  the MIMIC-IV rate, because its microbiology table covers few stays. Under
-  Variant D, a post-hoc deterioration label with no treatment anchor, scored on
-  all 181,589 eICU-CRD stays, the ratio is 0.746. Variant D is never pooled
-  with the Sepsis-3 results, and its AUROC is not a sepsis result: the label is
-  built from the same physiology the models use as inputs.
-- **No model reaches a deployable operating point.** Swept across the whole
-  threshold grid, the utility ceiling sits a few per cent above issuing no
-  alerts, at tens of false alerts per true one.
+AUROC differences are on the Variant B temporal test set unless stated
+otherwise. All intervals are 95% cluster-bootstrap confidence intervals.
 
-All four testable hypotheses are non-confirmations. Full numbers, intervals and
-multiplicity-corrected verdicts are in the thesis.
+- **Model class accounted for more of the AUROC spread than label choice.** The
+  AUROC range across model specifications was 0.1499, against 0.0123 across the
+  three Sepsis-3 labels. The difference (label − model) was −0.1375
+  (−0.162 to −0.108). H1 predicted the opposite.
+- **The primary model met the non-inferiority criterion against GBT.** GBT minus
+  primary AUROC was −0.0165 (−0.031 to −0.001). GBT did not exceed the primary
+  model by the pre-registered 0.02 margin. Because the lower limit passes −0.02,
+  this is non-inferiority, not equivalence. The two models' best utility values
+  were similar (0.031 for GBT, 0.025 for the primary model).
+- **Label choice mainly changed cohort membership.** Variants A and B had
+  stay-level prevalences of 8.8% and 9.2% but agreed on which stays were septic
+  at Cohen's κ = 0.267.
+- **The pre-treatment onset count of zero follows from the onset rule.** Variants
+  A–C time onset at suspicion of infection, so no onset can precede treatment.
+  Variant F, which keeps Variant B's membership and re-times onset to the
+  earlier of suspicion and SOFA increase, gives 71 pre-treatment onsets.
+- **The external event-rate gap tracks the label's data requirements.** Events per
+  1,000 person-hours in eICU-CRD were 0.094 times the MIMIC-IV rate under
+  Variant B. The ratio rose to 0.425 when the microbiology-culture requirement
+  was dropped (culture data cover 1.55% of eICU-CRD stays), and to 0.746 under
+  Variant D, a post-hoc deterioration label with no treatment anchor. Variant D
+  is not pooled with the Sepsis-3 results. Its AUROC is not a measure of sepsis
+  prediction, because the label is defined from physiology that the models also
+  use as input.
+- **No operating point approached the alert-burden benchmark.** Under Variant B
+  the highest Utility Score was 0.031 (GBT), within a few per cent of the
+  no-alert strategy, at 51.8 false alerts per true alert against a benchmark
+  of 1.4.
+
+The six pre-registered hypotheses resolved as follows. H1 and H4 were not
+confirmed. H2 was met descriptively. H3 and H5 could not be evaluated as
+pre-registered: H3's count is fixed at zero by the onset rule, and H5's internal
+Utility Score was too close to zero to define a proportional decline. H6
+supported non-inferiority. The thesis reports all estimates, confidence
+intervals and multiplicity-adjusted results.
 
 ---
 
-## Submission
+## Thesis and screencast
 
-- **Thesis**: [`sepsis/thesis/index.pdf`](sepsis/thesis/index.pdf), built from
-  the sources in `sepsis/thesis/` by `sepsis/thesis/build.sh`.
-- **Screencast**: in [`sepsis/Screencast/`](sepsis/Screencast/).
+- **Thesis:** [`sepsis/thesis/index.pdf`](sepsis/thesis/index.pdf), built from
+  `sepsis/thesis/` by `build.sh`.
+- **Screencast:** [`sepsis/Screencast/`](sepsis/Screencast/).
 
 ---
 
 ## Ethics and data access
 
-Both databases are de-identified and publicly available to credentialed
-researchers under the PhysioNet Credentialed Health Data Use Agreement. This
-analysis is retrospective and observational, involves no patient contact and no
-intervention, and required no additional ethical approval beyond that
-agreement. Its terms, including the prohibition on redistribution and on
-attempted re-identification, were observed throughout, and `.gitignore` is
-configured so that no patient-derived file can be committed.
+Both databases are de-identified and available to credentialed researchers
+through PhysioNet, under the PhysioNet Credentialed Health Data Use Agreement.
+They are distributed under the institutional approvals obtained by their
+custodians. This study is a retrospective secondary analysis with no patient
+contact or intervention. The terms of the data use agreement were followed
+throughout, including its prohibitions on redistribution and on attempted
+re-identification. The thesis (Section 3, Ethical Considerations) gives the
+details.
+
+`.gitignore` excludes `data/` and the pipeline's output directory from version
+control. Anyone running the pipeline is responsible for storing the source data
+as their own data use agreement requires.
+
+---
+
+## Citation
+
+```bibtex
+@mastersthesis{ahad2026sepsis,
+  author  = {Ahad, Abdul},
+  title   = {Quantifying Model, Label, and Methodological Contributions to
+             Variance in Real-Time Sepsis Onset Prediction},
+  school  = {Atlantic Technological University (ATU), Galway},
+  type    = {M.Sc. thesis},
+  year    = {2026},
+  url     = {https://github.com/ahadarif007/sepsis-variance-decomposition}
+}
+```
+
+---
 
 ## Licence
 
-The pipeline source code written for this study is released under the
-**Apache License 2.0**. See [`LICENSE`](LICENSE).
+The pipeline source code is released under the
+[Apache License 2.0](LICENSE). The licence covers only the parts of the
+repository listed in [`NOTICE`](NOTICE), which sets out the full boundary:
 
-The grant is scoped, and [`NOTICE`](NOTICE) states the boundary in full. In
-short:
+- **Covered:** everything under `sepsis/project/`, and the repository
+  documentation.
+- **Not covered:** the ATU thesis template and brand assets in `sepsis/thesis/`,
+  which are included only so the thesis compiles and remain subject to ATU's
+  terms; and the MIMIC-IV and eICU-CRD databases, which are not in this
+  repository.
+- **Thesis text and figures** are not licensed under Apache 2.0. They may be
+  read and cited in line with normal academic practice. Reproducing them
+  requires permission.
+- **Published methods** (SOFA, Sepsis-3, NEWS2, qSOFA, SIRS, the PhysioNet
+  Utility Score, Riley's sample-size criteria, pooled logistic regression,
+  decision-curve analysis) were implemented for this project from their
+  published descriptions. The methods are credited to their authors in
+  `NOTICE` and in the thesis.
 
-- **Covered**: everything under `sepsis/project/`, plus the repository
-  documentation. All of it was written for this study.
-- **Not covered**: the ATU thesis template and brand assets in
-  `sepsis/thesis/` (reproduced only so the thesis will typeset; ATU's
-  rights, not mine), and the MIMIC-IV and eICU-CRD databases, which are not in
-  this repository and cannot be redistributed under any licence.
-- **Thesis text and figures** are scholarly prose, not software. They are
-  available for reading, citation and academic reuse with attribution, and are
-  not placed under Apache-2.0. Please cite rather than reproduce.
-- **Published methods** (SOFA, Sepsis-3 criteria, NEWS2, qSOFA, SIRS, the
-  PhysioNet Utility Score, Riley's sample-size criteria, pooled logistic
-  regression, decision-curve analysis) are implemented here from their published
-  definitions. The implementations are original and Apache-2.0; the methods
-  belong to their authors and are cited in `NOTICE` and in the thesis. Nothing
-  was copied or adapted from a third party's source.
+## Clinical use
 
 This is research software. It is not a medical device, has not been validated
-for clinical use, and must not be used to inform the care of any patient.
+for clinical use, and must not be used to guide patient care.
