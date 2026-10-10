@@ -1,0 +1,59 @@
+%===========================================================================
+
+
+\section{Model Diagnostics}
+\label{sec:model_diagnostics}
+%===========================================================================
+
+Two checks on the comparator models are collected here: a test of the Cox
+comparator's proportional-hazards assumption, and the predictors the
+gradient-boosted trees used, which bear on Sections~\ref{sec:ablation}
+and~\ref{sec:h2}.
+
+\subsection{Proportional-Hazards Testing \texorpdfstring{[C]}{[C]}}
+\label{sec:schoenfeld}
+
+The Schoenfeld residual test on the Cox comparator (Variant B) rejects
+proportional hazards ($\chi^2 = \pcSchoenfeldChisq$, df = \pcSchoenfeldDf,
+$p = \pcSchoenfeldP$). Because the comparator uses hourly covariates but
+time-constant coefficients, the test rejects the hazard-ratio structure
+(Section~\ref{sec:cox_spec}).
+\pcSchoenfeldNViolate{} of the \pcSchoenfeldNCovariates{} covariates violate
+the assumption individually at $\alpha = 0.05$, led by GCS, bilirubin,
+respiratory rate and creatinine. These are per-covariate tests reported without
+multiplicity adjustment; the global test alone is sufficient for the
+pre-registered check, and the smallest p-values survive Bonferroni correction
+over the covariate set by many orders of magnitude. The Cox coefficients
+therefore cannot be read as time-constant hazard ratios on these data.
+
+\subsection{GBT Feature Importance \texorpdfstring{[E]}{[E]}}
+\label{sec:feature_importance}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{lrrr}
+        \toprule
+        \textbf{Feature}         & \textbf{Gain} & \textbf{Cover} & \textbf{Frequency} \\
+        \midrule
+        Temperature ($^\circ$C)  & \pcGbtGainTempC & \pcGbtCoverTempC & \pcGbtFreqTempC \\
+        Resp.\ rate slope (6\,h) & \pcGbtGainRespRateSlope & \pcGbtCoverRespRateSlope & \pcGbtFreqRespRateSlope \\
+        MAP slope (6\,h)         & \pcGbtGainMapSlope & \pcGbtCoverMapSlope & \pcGbtFreqMapSlope \\
+        GCS                      & \pcGbtGainGcs & \pcGbtCoverGcs & \pcGbtFreqGcs \\
+        Heart-rate slope (6\,h)  & \pcGbtGainHrSlope & \pcGbtCoverHrSlope & \pcGbtFreqHrSlope \\
+        Creatinine               & \pcGbtGainCreatinine & \pcGbtCoverCreatinine & \pcGbtFreqCreatinine \\
+        WBC                      & \pcGbtGainWbc & \pcGbtCoverWbc & \pcGbtFreqWbc \\
+        Heart rate (level)       & \pcGbtGainHr & \pcGbtCoverHr & \pcGbtFreqHr \\
+        Lactate                  & \pcGbtGainLactate & \pcGbtCoverLactate & \pcGbtFreqLactate \\
+        MAP (level)              & \pcGbtGainMap & \pcGbtCoverMap & \pcGbtFreqMap \\
+        \bottomrule
+    \end{tabular}
+    \caption{Top-10 GBT features by information gain (Variant B). Three of the
+        five most informative predictors are six-hour trend features.}
+    \label{tab:feature_importance}
+\end{table}
+
+The prominence of six-hour slope features is consistent with Lauritsen et al.'s
+\cite{lauritsen2021framing} concern: the GBT model draws much of its signal from
+trends, so its performance depends on the length of the history window used for
+feature construction, a choice rarely reported or varied in the comparable
+literature. Heart rate contributes through both its level and its slope.

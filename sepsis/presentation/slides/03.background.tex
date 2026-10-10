@@ -3,30 +3,28 @@
 % =============================================================================
 \begin{frame}{II. Background: Limitations of the Conventional Approach}
 \vspace*{0pt}%
-{\centering Choose one Sepsis-3 definition $\rightarrow$ use one train/test
-split $\rightarrow$ report AUROC $\rightarrow$ compare models.\par}
+{\centering One label $\rightarrow$ one split $\rightarrow$ AUROC
+$\rightarrow$ model comparison\par}
 
 \vspace{2pt}
 \begin{enumerate}\itemsep1pt\small
-  \item \textbf{The sepsis label is not fixed.} Different ways of applying
-        Sepsis-3 to the same database gave 867--2,178
-        cases~\cite{cohen2024subtle}.
-  \item \textbf{The data split can inflate results.} Sepsis prediction suffers
-        the largest drop of any clinical task under a temporal
-        shift~\cite{guo2022temporal}.
-  \item \textbf{AUROC may not reveal poor clinical utility.} A model can keep a
-        high AUROC while its Utility Score falls below the no-alert
-        strategy~\cite{wang2025srpm}.
-  \item \textbf{The label partly reflects clinical practice.} Models may learn
-        patterns of sepsis recognition and treatment rather than physiological
-        deterioration alone~\cite{kamran2024evaluation}.
+  \item \textbf{Label definition:} applying Sepsis-3 differently produced
+        867--2,178 cases in the same database~\cite{cohen2024subtle}.
+  \item \textbf{Data split:} sepsis prediction showed the largest performance
+        loss under temporal shift among the clinical tasks
+        evaluated~\cite{guo2022temporal}.
+  \item \textbf{Metric choice:} high AUROC can coexist with utility below the
+        no-alert strategy~\cite{wang2025srpm}.
+  \item \textbf{Clinical-action dependence:} labels may capture recognition and
+        treatment practice, not physiological deterioration
+        alone~\cite{kamran2024evaluation}.
 \end{enumerate}
 
 \vspace{2pt}
 \begin{block}{This thesis}
-  \small This thesis evaluates model class, label definition, data split and
-  evaluation metric as separate \textbf{sources of variation}. Each
-  contribution is estimated with a \textbf{bootstrap confidence interval}, so
-  their relative sizes can be compared directly.
+  \small Evaluates model class, label definition, data split, prediction
+  timing and evaluation metric as separate \textbf{sources of variation}, with
+  \textbf{bootstrap confidence intervals} so that their magnitudes can be
+  compared.
 \end{block}
 \end{frame}

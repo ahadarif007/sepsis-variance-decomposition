@@ -1,0 +1,87 @@
+\chapter{Analysis Register}
+\label{sec:register}
+
+Table~\ref{tab:register} records the status of every analysis reported in
+Chapter~\ref{ch:evaluation} and the multiplicity correction applied to it. Its confirmatory and
+exploratory rows are transcribed from
+\texttt{12\_analysis\_\allowbreak register\allowbreak .parquet}, which the
+inference stage writes from the same objects it corrects. Two rows marked
+$^\P$ have no counterpart in that file, because they are scored in stages 07
+and 08 and enter no corrected family; they are included so that the
+exploratory record is complete.
+
+{\footnotesize\setlength{\tabcolsep}{4pt}
+\begin{longtable}{p{5.0cm}lp{1.9cm}p{4.2cm}}
+    \caption{Analysis register. [C] confirmatory, [E] exploratory,
+    [D] descriptive. $^{**}$H5's pre-registered estimand is not evaluable
+    (Section~\ref{sec:h5}); the slot is retained and the contrast reported in
+    it is a post-hoc substitute, so the [C] tag marks the slot rather than the
+    estimand actually reported. Section numbers refer to
+    \texttt{00\_preregistration.md}. $^*$\S9 pre-registered the equity analysis
+    in scope only: neither the subgroup levels, the reference level, nor the
+    direction of any comparison was fixed in advance, so these analyses are
+    exploratory. $^\dagger$A2 = Protocol Amendment 2 (\S\S16--17), written after
+    notebooks 02--12 had been run; these analyses are post-hoc and change no
+    pre-registered estimand. $^\ddagger$A4 = Protocol Amendment 4 (\S18), which
+    adds the standard onset timing as Variant F; also post-hoc, and it enlarges
+    family E3, so every BH-adjusted p-value in that family is stricter than it
+    would be without the amendment. $^\S$A6 = Protocol Amendment 6 (\S20), the
+    subgroup interpretability floor; post-hoc, and it \emph{reduces} family E1,
+    which the inference plan's own denominator rule prohibits on its face;
+    Section~\ref{sec:limitations} states the tension and \S20.4 of the
+    pre-registration gives the argument. $^\|$A9 = Protocol Amendment 9 (\S23), the
+    full-cohort external arm under Variant D; post-hoc and registered as
+    descriptive, so it carries no p-value and is excluded from H5 on the terms
+    that exclude Variant D from H1. $^{\#}$A10 = Protocol Amendment 10
+    (\S24), which attaches intervals to three quantities otherwise reported as
+    point estimates and tests H6's interval null at its second boundary; also
+    post-hoc, and it changes no verdict. $^\P$Scored outside the inference
+    stage; no row in \texttt{12\_analysis\_register}.}\label{tab:register}\\
+    \toprule
+    \textbf{Analysis} & \textbf{Status} & \textbf{Pre-reg.} & \textbf{Correction} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Analysis} & \textbf{Status} & \textbf{Pre-reg.} & \textbf{Correction} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+
+        Cohort description by label variant       & [D] & \S2     & none                                   \\
+        Sample size adequacy                      & [C] & \S10    & none (single criterion)                \\
+        Internal temporal performance             & [C] & \S5--6  & none (estimation)                      \\
+        Calibration intercept and slope           & [C] & \S5     & none (estimation)                      \\
+        Decision-curve net benefit                & [C] & \S6     & none (estimation)                      \\
+        Operating points at fixed sensitivity     & [E] & n/a     & none (descriptive)                     \\
+        Per-patient detection and lead time       & [C] & \S6     & none (estimation)                      \\
+        H1 label dominance                        & [C] & \S7     & Holm ($m=6$)                           \\
+        H2 coefficient instability                & [C] & \S7     & slot reserved; no test statistic       \\
+        H2 instability vs.\ estimation noise      & [E] & Amd.\ 7 & none; ratio to pooled SE, not a test   \\
+        H3 treatment leakage                      & [C] & \S7     & slot reserved; exact bound             \\
+        H4 split optimism                         & [C] & \S7     & Holm ($m=6$)                           \\
+        H5 slot: metric divergence not evaluable;
+        substituted AUROC contrast$^{**}$          & [C] & \S7     & Holm ($m=6$)                           \\
+        H6 model-class null                       & [C] & \S7     & Holm ($m=6$)                           \\
+        External validation on eICU-CRD           & [C] & \S4     & none (estimation); feeds H5            \\
+        \quad antibiotic-only anchor (sensitivity)$^\P$ & [E] & n/a     & none; different target, not pooled \\
+        \quad Variant D on the full external cohort & [D] & A9$^\|$ & none; joins no family, excluded from H5 \\
+        \quad\quad its transport interval          & [D] & A10$^{\#}$ & none (estimation); excluded from H5 \\
+        Action-derived feature ablation           & [E] & A5      & none (estimation); enters no family    \\
+        \quad its contrast intervals               & [E] & A10$^{\#}$ & none (estimation); enters no family \\
+        \quad instability by feature kind$^\P$     & [E] & n/a     & none (descriptive split of H2)         \\
+        Cross-label calibration contrasts         & [E] & A10$^{\#}$ & none (estimation); enters no family \\
+        Variance decomposition table              & [C] & \S1     & none (assembly of H1--H6)              \\
+        Proportional-hazards testing              & [C] & \S8     & none (single check)                    \\
+        GBT feature importance                    & [E] & n/a     & none (ranking, no inference)           \\
+        Subgroup AUROC by demographic group       & [E] & \S9$^*$ & Benjamini--Hochberg, family E1         \\
+        \quad interpretability floor on E1         & [E] & A6$^\S$ & restricts E1 to \pcNSubgroupContrasts{} contrasts \\
+        Subgroup label sensitivity                & [E] & \S9$^*$ & Benjamini--Hochberg, family E2         \\
+        Label sensitivity vs.\ AUROC association  & [E] & n/a     & none (visual, no test)                 \\
+        Alternative-label AUROC vs.\ Sepsis-3     & [E] & A2$^\dagger$ & Benjamini--Hochberg, family E3    \\
+        Anchor-attributable fraction $\phi$       & [E] & A2$^\dagger$ & none (ratio, no null at zero)     \\
+        Onset agreement between definitions       & [D] & A2$^\dagger$ & none (descriptive)                \\
+        Standard onset timing $\min(t_s, t_{\text{SOFA}})$ & [E] & A4$^\ddagger$ & Benjamini--Hochberg, family E3 \\
+        Pre-treatment onsets under standard timing & [D] & A4$^\ddagger$ & none (event count, not a test)   \\
+\end{longtable}
+}

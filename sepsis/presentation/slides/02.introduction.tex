@@ -1,11 +1,12 @@
 % =============================================================================
-%  I. INTRODUCTION: THE CLINICAL PROBLEM          
+%  I. INTRODUCTION: THE CLINICAL PROBLEM
 % =============================================================================
-\begin{frame}{I. Introduction: Discrimination Does Not Guarantee Clinical Utility}
+\begin{frame}{I. Introduction: Discrimination and Clinical Utility}
 \begin{itemize}\itemsep2pt\small
   \item Sepsis is associated with about \textbf{11 million deaths a year},
-        nearly one in five deaths worldwide~\cite{rudd2020global}; in the ICU every hour of
-        delayed treatment raises the risk of death~\cite{seymour2017time}.
+        nearly one fifth of deaths worldwide~\cite{rudd2020global}. Each
+        additional hour before antibiotics is associated with higher
+        mortality~\cite{seymour2017time}.
   \item Wang et al.~\cite{wang2025srpm} reviewed \textbf{91} real-time sepsis
         prediction models:
 \end{itemize}
@@ -16,23 +17,22 @@
 \textbf{Metric} & \textbf{Internal} & \textbf{External} \\
 \midrule
 Median AUROC         & 0.811            & 0.783 \\
-Median Utility Score & \textbf{$+$0.381} & \textbf{$-$0.164} \\
+Median utility score & \textbf{$+$0.381} & \textbf{$-$0.164} \\
 \bottomrule
 \end{tabular}
 \end{center}
 
 \begin{itemize}\itemsep2pt\small
-  \item A negative Utility Score means performance worse than issuing no
-        alerts at all. AUROC did not detect this decline, because it measures
-        ranking, not whether alerts are timely or useful.
-  \item The same gap appears in deployment: Epic Sepsis Model v2 across
-        227,091 encounters, AUROC 0.82--0.92 with PPV
-        0.13--0.26~\cite{wong2026epic}.
+  \item Negative utility indicates performance below the no-alert strategy.
+        AUROC measures ranking, not alert timing or clinical value, and
+        therefore did not reflect the decline in utility.
+  \item Deployment: Epic Sepsis Model v2, 227,091 encounters, AUROC
+        0.82--0.92, PPV 0.13--0.26~\cite{wong2026epic}.
 \end{itemize}
 
 \vfill
 \begin{alertblock}{}
-  \centering\small Comparing models alone does not show whether reported performance
-  is robust or clinically useful.
+  \centering\small Model comparisons alone do not establish robustness or
+  clinical utility.
 \end{alertblock}
 \end{frame}

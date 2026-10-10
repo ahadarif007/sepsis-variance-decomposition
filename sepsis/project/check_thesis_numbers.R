@@ -90,10 +90,15 @@ ALLOWED <- list(
 #  stop reading, which is the failure mode that let the earlier defects
 #  through.
 # ---------------------------------------------------------------------------
-# Hand-written sources only: chapters/ plus index.tex. Everything under
-# generated/ is written by thesis_constants.R and is by definition provenanced.
+# Hand-written sources only: frontmatter/, chapters/ (and one level of
+# chapter subfolders, e.g. chapters/ch5-results/), appendices/ plus
+# index.tex. Everything under generated/ is written by thesis_constants.R and
+# is by definition provenanced.
 files <- c(sub(paste0("^", THESIS_DIR, "/"), "",
-               Sys.glob(file.path(THESIS_DIR, "chapters", "*.tex"))),
+               Sys.glob(file.path(THESIS_DIR,
+                                  c("frontmatter", "chapters", "chapters/*",
+                                    "appendices"),
+                                  "*.tex"))),
            "index.tex")
 
 LAYOUT <- paste0("includegraphics|vspace|hspace|rule\\{|tabcolsep|baselineskip|",

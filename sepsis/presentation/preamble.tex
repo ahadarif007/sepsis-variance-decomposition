@@ -17,6 +17,10 @@
 \usepackage[most]{tcolorbox}
 \usepackage{csquotes}
 \usepackage[style=ieee,backend=biber,defernumbers=true,doi=false,url=false,isbn=false,eprint=false,maxbibnames=2,minbibnames=1]{biblatex}
+% Shortened entries on the references slide; full details stay in the thesis.
+\AtEveryBibitem{\clearfield{pages}\clearfield{volume}\clearfield{number}%
+  \clearfield{month}\clearfield{note}\clearfield{eid}\clearlist{publisher}%
+  \clearlist{location}}
 \addbibresource{references.bib}
 
 % --- Result numbers ------------------------------------------------------------

@@ -230,12 +230,27 @@ partial run cannot silently leave an outdated number in the text.
 - **The empty pre-treatment window is a property of the onset rule**, not of the
   patients. Under a conjunction onset rule it is a theorem; timed as the
   standard specifies, the same stays yield pre-treatment onsets.
+- **The external event-rate gap is largely attributable to the label's
+  inputs, not the patients.** Under the Sepsis-3 anchor, eICU-CRD records onsets at 0.094 times
+  the MIMIC-IV rate, because its microbiology table covers few stays. Under
+  Variant D, a post-hoc deterioration label with no treatment anchor, scored on
+  all 181,589 eICU-CRD stays, the ratio is 0.746. Variant D is never pooled
+  with the Sepsis-3 results, and its AUROC is not a sepsis result: the label is
+  built from the same physiology the models use as inputs.
 - **No model reaches a deployable operating point.** Swept across the whole
   threshold grid, the utility ceiling sits a few per cent above issuing no
   alerts, at tens of false alerts per true one.
 
 All four testable hypotheses are non-confirmations. Full numbers, intervals and
 multiplicity-corrected verdicts are in the thesis.
+
+---
+
+## Submission
+
+- **Thesis**: [`sepsis/thesis/index.pdf`](sepsis/thesis/index.pdf), built from
+  the sources in `sepsis/thesis/` by `sepsis/thesis/build.sh`.
+- **Screencast**: in [`sepsis/Screencast/`](sepsis/Screencast/).
 
 ---
 

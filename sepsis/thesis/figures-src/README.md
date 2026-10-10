@@ -13,16 +13,16 @@ exported PDFs; there is no TikZ left, so there is exactly one place to edit.
         │  python3 figures-src/export_drawio.py --into-figures
         ▼
     figures-img/fig3.1_consort.pdf             (generated)
-        │  \includegraphics in chapters/06.Methodology.tex
+        │  \includegraphics in chapters/ch3-methodology.tex
         ▼
     index.pdf
 
 | Figure | Source | Included by |
 |---|---|---|
-| 2.1 PRISMA-style flow | `fig2.1_prisma.drawio` | `05.Review.tex` |
-| 2.2 Label variance | `fig2.2_label_variance_concept.drawio` | `05.Review.tex` |
-| 3.1 CONSORT flow | `fig3.1_consort.drawio` (**generated**) | `06.Methodology.tex` |
-| 4.1 Pipeline DAG | `fig4.1_pipeline_dag.drawio` | `07.Design.tex` |
+| 2.1 PRISMA-style flow | `fig2.1_prisma.drawio` | `ch2-literature-review.tex` |
+| 2.2 Label variance | `fig2.2_label_variance_concept.drawio` | `ch2-literature-review.tex` |
+| 3.1 CONSORT flow | `fig3.1_consort.drawio` (**generated**) | `ch3-methodology.tex` |
+| 4.1 Pipeline DAG | `fig4.1_pipeline_dag.drawio` | `ch4-system-design.tex` |
 
 ## Editing a figure
 

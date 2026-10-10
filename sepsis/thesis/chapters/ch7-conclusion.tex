@@ -1,0 +1,211 @@
+\chapter{Conclusion}
+\label{ch:conclusion}
+
+
+\section{Summary of Findings}
+
+This thesis asked how much of the reported performance of real-time sepsis
+prediction on MIMIC-IV comes from the choice of model, and how much from the
+researcher's choices about the label, the timing of prediction relative to
+treatment, the data split and the evaluation metric. Across the six evaluated
+model specifications, model choice affected AUROC more than the three Sepsis-3
+operationalisations did. External transport has the second-largest point
+estimate, but its interval is too wide to establish that rank, and the label
+and the split moved AUROC least. The main effect of label choice was on cohort
+membership and onset timing rather than on AUROC. The six pre-registered
+hypotheses were resolved as follows.
+
+\begin{enumerate}
+    \item \textbf{H1 was not confirmed.} The label spread was
+    \pcSpreadLabel{} AUROC against \pcSpreadModelClass{} across the six model
+    specifications, and the interval on the difference,
+    [\pcHOneCiLo, \pcHOneCiHi], excludes zero. Label choice nevertheless
+    changed cohort membership substantially: the two narrowest readings agree
+    at only $\kappa = \pcKappaVsBA$ despite near-identical prevalence.
+
+    \item \textbf{H2 was met descriptively.} \pcHTwoEst{} of the
+    \pcHTwoNTerms{} shared covariates met the pre-registered instability
+    criterion, but only \pcHTwoNRobust{} of the changes, all in indicators of
+    whether a test was ordered, exceeded their estimated noise.
+
+    \item \textbf{H3 was not evaluable as pre-registered.} The pre-treatment
+    event count was fixed at zero by the onset rule
+    (Proposition~\ref{prop:h3}); standard re-timing (Variant F, post-hoc)
+    recovered \pcPreTreatOnsetsVarF{} pre-treatment onsets on the same cohort.
+
+    \item \textbf{H4 was not confirmed.} Random splitting did not produce
+    higher AUROC: the random-minus-temporal difference was \pcHFourEst{}
+    (95\% CI \pcHFourCiLo--\pcHFourCiHi), and every model fitted under both
+    splits scored lower on the random split, although the two test sets also
+    differ in composition.
+
+    \item \textbf{H5 was not evaluable as pre-registered.} The internal Utility
+    Score was too close to zero for a proportional decline to be defined, and
+    the substituted external AUROC contrast, \pcHFiveEst{}
+    (95\% CI \pcHFiveCiLo--\pcHFiveCiHi) on \pcExtNEventsB{} events, was
+    imprecise. Every external point estimate was below its internal
+    counterpart, and the post-hoc anchor-independent analysis showed a
+    transport loss for the deterioration target, but the Sepsis-3 arm
+    establishes neither the existence nor the magnitude of a degradation.
+
+    \item \textbf{H6 supported one-sided non-inferiority, not equivalence.} GBT
+    did not outperform the primary model by the 0.02 margin: the difference
+    was \pcHSixEst{} [\pcHSixCiLo, \pcHSixCiHi], with the lower limit outside
+    the margin. The results do not support preferring GBT over the primary
+    model on predictive performance, and the small AUROC difference was not
+    accompanied by a meaningful utility difference (\pcUtilityMaxGbtB{}
+    against \pcUtilityMaxPrimaryB{} at each model's best threshold).
+\end{enumerate}
+
+
+\section{The Central Lesson}
+
+The main consequence of label choice was not a large change in AUROC but a
+change in who was labelled septic and when onset was assigned. Under the
+pre-registered timing rule, pre-treatment prediction was structurally
+impossible; standard re-timing recovered pre-treatment events on the same
+cohort. Across all pre-registered labels, no evaluated operating point
+approached the alert-burden benchmark: the best configuration under the
+primary label reached a Utility Score of \pcUtilityMaxGbtB{} at
+\pcUtilityOptBurdenGbtB{} false alerts per true alert, against a benchmark of
+1.4, while AUROC remained in the high 0.7s. These findings indicate that
+improving discrimination alone cannot resolve limitations introduced by outcome
+membership, onset timing and alert burden. They do not isolate the label as the
+sole cause of the gap between discrimination and usable alerting: the
+estimand, the threshold, calibration, prevalence and the Utility Score's own
+penalties all bear on it.
+
+Splitting the Sepsis-3 conjunction (Section~\ref{sec:label_anchor_results})
+both qualifies and sharpens this. Under every pre-registered variant the onset
+time is fixed by the treatment anchor, so part of the variation between
+variants follows from the definition. An anchor-independent deterioration
+label agrees with Sepsis-3 at $\kappa = \pcKappaVsBD$, close to chance, so the
+disagreement is not confined to readings of Sepsis-3. The treatment anchor
+alone is about as predictable as the conjunction built on it
+($\phi_{\text{anchor}} = \pcPhiAnchorPrimary$
+[\pcPhiAnchorCiLoPrimary, \pcPhiAnchorCiHiPrimary] for the primary model, an
+interval including 1, and $\pcPhiAnchorGbt$
+[\pcPhiAnchorCiLoGbt, \pcPhiAnchorCiHiGbt] for GBT), whereas Sepsis-3 under
+standard onset timing produced higher discrimination for the primary model
+(\pcAltAurocFullPrimaryF{} against \pcAurocPrimaryB), on an in-horizon event
+set slightly larger than Variant B's. Reduced discrimination is therefore
+associated more with an onset placed at the clinician's action than with the
+conjunction itself.
+
+
+\section{Contributions Revisited}
+
+\begin{enumerate}
+    \item \textbf{C1 (Label variation, separated from discrimination):} Three
+    Sepsis-3 operationalisations were applied to a discrete-time
+    competing-risks model on \pcNStays{} MIMIC-IV stays, with the label and
+    specification spreads estimated on the same test rows, each with an
+    interval; to the best of our knowledge this combination is not previously
+    reported. Label choice moved cohort membership substantially while moving
+    AUROC by \pcSpreadLabel.
+
+    \item \textbf{C2 (Treatment leakage: membership and onset timing):} The
+    study proves that the conjunction-based onset rule leaves the
+    pre-treatment window empty, and measures \pcPreTreatOnsetsVarF{}
+    pre-treatment onsets on the same cohort under standard timing. Kamran et
+    al.'s \cite{kamran2024evaluation} concern therefore holds for label
+    membership, while for onset timing it depends on the onset rule.
+
+    \item \textbf{C3 (Utility ceiling):} The Utility Score was swept across the
+    full threshold grid for every model and label. Under the primary label its
+    ceiling lies within a few per cent of the no-alert strategy and is reached
+    only at \pcUtilityOptBurdenGbtB{} false alerts per true alert, extending
+    Wang et al.'s \cite{wang2025srpm} meta-analytic finding to a controlled
+    single-study comparison that does not depend on one operating point.
+
+    \item \textbf{C4 (Coefficient instability):} \pcHTwoEst{} of the
+    \pcHTwoNTerms{} shared covariates were unstable across labels under the
+    pre-registered criterion; referred to their cluster-robust standard
+    errors, \pcHTwoNRobust{} remain, all order indicators. This supports
+    Lauritsen et al.'s \cite{lauritsen2021framing} framing-instability concern
+    for specific effect estimates on MIMIC-IV.
+
+    \item \textbf{C5 (Equity by label):} Subgroup discrimination and subgroup
+    label sensitivity were measured on the same strata of one onset-prediction
+    cohort under false-discovery control (Section~\ref{sec:search_strategy}).
+    The label-sensitivity contrasts survive correction and the discrimination
+    contrasts do not, and the surviving racial contrasts are missingness
+    categories, so the finding concerns record completeness rather than race.
+
+    \item \textbf{C6 (Reproducible pipeline):} A reproducible, seed-fixed
+    pipeline built around a pre-registered protocol, with every amendment
+    disclosed and reporting following TRIPOD+AI. Within the pinned environment
+    it reproduces the reported estimates from the raw databases, and it writes
+    the numbers in this document as generated constants
+    (Section~\ref{sec:code_availability}, Appendix~\ref{app:code}).
+
+    \item \textbf{C7 (Definitional vs.\ empirical label variation
+    separated):} An anchor-independent deterioration label agrees with
+    Sepsis-3 at $\kappa = \pcKappaVsBD$ and matches its onset hour in
+    \pcPctExactMatchD\% of shared stays, and records \pcPreTreatOnsetsVarD{}
+    onsets in the pre-treatment window that is empty of Sepsis-3 onsets under
+    the pre-registered rule. These results show that label membership and
+    onset timing shape the prediction task; they do not show that the
+    physiology is easy to predict, since Variant D's discrimination level is
+    set in part by its construction.
+\end{enumerate}
+
+
+\section{Future Work}
+
+\begin{enumerate}
+    \item \textbf{Better sepsis labels.} Future work should evaluate outcome
+    definitions that reduce direct dependence on treatment timestamps and are
+    adjudicated independently of the model inputs, for example definitions
+    built on lactate trajectories and organ-function biomarkers. The
+    deterioration label of Section~\ref{sec:label_anchor_results} is an
+    operational construct, not a validated definition.
+
+    \item \textbf{Lagged predictors.} A design that lags every predictor by one
+    hour, or applies a sub-hour timestamp cut-off, would show whether the
+    information associated with the recorded onset hour supports actionable
+    advance warning (Limitation~\ref{lim:current_hour}).
+
+    \item \textbf{Non-Sepsis-3 consensus definitions.} SEP-1 and the CDC Adult
+    Sepsis Event were not implemented. Both are defined on antibiotic days, so
+    neither tests treatment-independence, but each yields a different cohort,
+    and Dutta et al.\ \cite{dutta2026performance} report that performance
+    varies between them.
+
+    \item \textbf{Prospective validation.} A new label should be tested where
+    sepsis onset can be determined by a protocol-blinded assessor,
+    independently of treatment decisions.
+
+    \item \textbf{Utility-optimised training.} The models here are fitted to a
+    likelihood or surrogate loss and only afterwards read at the
+    utility-maximising threshold. Training against the Utility Score, through a
+    differentiable surrogate or cost-sensitive reweighting, would change what
+    the model learns. Such optimisation should use clinically justified costs
+    and validation thresholds defined independently of the test set; otherwise
+    it may improve the selected utility score without improving
+    deployability.
+
+    \item \textbf{Multi-hospital evaluation.} Whether any model can be
+    deployed at an acceptable alert burden requires prospective multi-centre
+    testing with clinical-staff feedback.
+\end{enumerate}
+
+
+\section{Closing Remark}
+
+The central hypothesis was not supported: across the evaluated
+specifications, model choice affected AUROC more than the three Sepsis-3
+operationalisations did. The smaller AUROC effect should not, however, be
+interpreted as evidence that label choice is unimportant. The variants selected
+substantially different cohorts, and the onset rule determined whether a
+pre-treatment prediction task could be defined at all.
+
+No evaluated configuration approached the pre-specified alert-burden
+benchmark. In addition, the reported discrimination concerns detection of the
+recorded onset hour and does not establish advance warning. Future studies
+should therefore report label agreement, onset timing, calibration, clinical
+utility and alert burden alongside discrimination.
+
+The principal contribution of this study is to show that outcome construction
+changes the population and timing of the prediction task in ways that AUROC
+alone does not reveal.

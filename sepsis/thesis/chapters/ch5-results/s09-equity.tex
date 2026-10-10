@@ -1,0 +1,180 @@
+%===========================================================================
+
+
+\section{Equity Analysis \texorpdfstring{[E]}{[E]}}
+\label{sec:equity}
+%===========================================================================
+
+\subsection{What the Subgroup Strata Are}
+\label{sec:equity_strata}
+
+Two properties of MIMIC-IV's administrative record govern how this section is
+read.
+
+\paragraph{Strata are documentation categories.}
+\texttt{race} in MIMIC-IV is a single code assigned at registration. Its levels
+mix broad categories with more granular ones drawn from the same population:
+``White'' and ``White -- Other European'' are separate levels, as are ``Asian''
+and ``Asian -- Chinese''. A stay carries exactly one code, so the levels
+partition the cohort, but they do not partition it into disjoint
+\emph{populations}: the reference level ``White'' is a residual category
+comprising stays not assigned a more specific European code, and a contrast
+against it is a contrast against that residual. ``Unknown'' and ``Unable to
+obtain'' record the \emph{absence} of an answer; they are retained because the
+completeness of the record is informative (Section~\ref{sec:label_sens_subgroup})
+but are not demographic groups.
+
+\paragraph{Event floor.}
+The interpretation floor is \pcMinSubgroupEvents{} sepsis onsets, the same as
+the external-validation floor (Section~\ref{sec:external_interpretability};
+\cite{riley2019sample, collins2024tripodai}). Strata below it are estimated and
+tabulated but \textbf{not interpreted}, and are excluded from statements about
+spread and from family E1, which therefore contains \pcEquityNContrastsEOne{}
+contrasts. Of the racial strata, \pcNSubgroupsAboveFloor{} clear the floor.
+
+\subsection{Performance Disparities by Subgroup \texorpdfstring{[E]}{[E]}}
+
+\begin{table}[H]
+    \centering\footnotesize
+    \adjustbox{max width=\textwidth}{\input{generated/table_equityperformance.tex}}
+    \caption{AUROC by racial stratum (Variant B, temporal test) with 95\%
+    stay-level cluster-bootstrap intervals, stratified within stratum,
+    $B = 2{,}000$, ordered by exposure. $\dagger$ marks strata with fewer than
+    \pcMinSubgroupEvents{} sepsis onsets, which are neither interpreted nor
+    entered into family E1 (Section~\ref{sec:equity_strata}).
+    \textbf{[E] exploratory.}}
+    \label{tab:equity_performance}
+\end{table}
+
+The spread of subgroup point estimates is not commensurable with the
+model-class and label spreads of Section~\ref{sec:decomposition}: those are
+whole-cohort contrasts with one factor varied, whereas a subgroup range is the
+extreme order statistic of separate estimates on disjoint slices with few
+events, and is biased upward by construction even when every underlying value
+is identical. The apparent spread largely reflects how few events the small
+strata contain. Of the racial strata,
+\pcNSubgroupsAboveFloor{} carry at least \pcMinSubgroupEvents{} onsets; the
+remaining \pcEquityRaceBelowFloorN{} are estimated on counts between
+\pcEquityRaceBelowFloorMin{} and \pcEquityRaceBelowFloorMax, and their
+intervals are correspondingly wide.
+
+Table~\ref{tab:equity_contrasts} therefore reports contrasts against the
+reference level on the same bootstrap replicates.
+
+\begin{table}[H]
+    \centering\footnotesize
+    \adjustbox{max width=\textwidth}{\input{generated/table_equitycontrasts.tex}}
+    \caption{Exploratory family E1 in full: all \pcEquityNContrastsEOne{}
+    subgroup AUROC contrasts clearing the \pcMinSubgroupEvents{}-event floor,
+    across race, language and insurance and for both fitted models, ordered by
+    adjusted $p$-value. $q_{\text{BH}}$ is the Benjamini--Hochberg adjusted
+    value over the whole family. \textbf{No contrast is significant}; two
+    unadjusted intervals exclude zero. The reference level is the largest
+    stratum of its variable (Section~\ref{sec:equity_strata}).
+    \textbf{[E] exploratory.}}
+    \label{tab:equity_contrasts}
+\end{table}
+
+Applying the floor leaves \pcEquityNContrastsEOne{} contrasts in family E1
+across all three equity variables and both models, and \textbf{none survives
+false-discovery correction}. The smallest adjusted value in the family belongs
+to a contrast on insurance rather than on race: \pcEquityTopEOneLevel{}
+insurance against the Medicare reference, \pcEquityTopEOneDelta{} AUROC for the
+gradient-boosted model, with a bootstrap interval of
+[\pcEquityTopEOneCiLo, \pcEquityTopEOneCiHi] and
+$q_{\text{BH}} = \pcEquityTopEOneQ$.
+
+Its interval excludes zero but its adjusted $p$-value does not clear the
+threshold. The corrected verdict is the one read here, because the protocol
+(§9) fixed the scope of the equity analysis but not the levels, reference or
+direction of any contrast; the contrast is reported but not claimed.
+
+Of the racial strata, only two carry enough events to be interpreted, and one
+of them is \emph{Unknown}, a missingness category
+(Section~\ref{sec:equity_strata}). \textbf{The study therefore contains no
+adequately powered comparison between two racial strata that both record a
+demographic answer.} The study is \textbf{underpowered to detect subgroup
+disparities}: even above the event floor, the intervals are compatible both
+with a stratum being served materially worse than the reference and with its
+being served slightly better.
+
+Wang et al.'s \cite{wang2022equity} finding of degraded performance for Asian,
+Hispanic and Spanish-speaking patients concerns mortality prediction
+(Section~\ref{sec:equity_lit}), and the corresponding strata here fall below the
+event floor, so it is neither confirmed nor contradicted. The point estimates
+for these strata lie below the reference under GBT, in the direction Wang et
+al.\ report, but are not interpreted.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.92\textwidth]{images/12_subgroup_auroc_ci.png}
+    \caption{AUROC by racial subgroup with 95\% stay-level cluster-bootstrap
+    intervals (Variant B, temporal test); sepsis onset count in parentheses.
+    Interval width is governed almost entirely by the stratum event count, and
+    several intervals reach the 0.5 chance line.}
+    \label{fig:auroc_by_race}
+\end{figure}
+
+\subsection{Label Sensitivity by Subgroup \texorpdfstring{[E]}{[E]}}
+\label{sec:label_sens_subgroup}
+
+\begin{table}[H]
+    \centering\footnotesize
+    \adjustbox{max width=\textwidth}{\input{generated/table_equitylabel.tex}}
+    \caption{Percentage of stays labelled as septic by racial subgroup and label
+    variant, with a 95\% stratified cluster-bootstrap interval on the A--C
+    range. The fraction roughly doubles from Variant A to C across all groups.
+    Per-variant intervals are in \texttt{12\_subgroup\_labelsens\_ci.csv}.
+    \textbf{[E] exploratory.}}
+    \label{tab:equity_label}
+\end{table}
+
+The fraction of patients labelled as septic changes by
+\pcLabelSensRangeLo--\pcLabelSensRangeHi{} percentage points across label
+variants within each racial stratum. Unlike discrimination, this contrast
+survives correction, because it is a stay-level proportion computed on the full
+\pcNStays{}-stay cohort rather than on the few hundred test-window onsets. No
+event floor is therefore applied; the construct limitation of
+Section~\ref{sec:equity_strata} still applies.
+
+\begin{table}[H]
+    \centering\footnotesize
+    \adjustbox{max width=\textwidth}{\input{generated/table_equitylabelcontrasts.tex}}
+    \caption{Difference in label sensitivity (A--C range) against the reference
+    group (White). $q_{\text{BH}}$ is adjusted over exploratory family E2, all
+    18 label-sensitivity contrasts across race, language and insurance. Two
+    racial contrasts survive at $q < 0.05$; across the full family,
+    \pcLabelSensNSig{} do (adding Spanish-speaking patients,
+    $+\pcLabelSensSpanishPp$ pp, $q = \pcLabelSensSpanishQ$, and privately
+    insured patients, $\pcLabelSensPrivatePp$ pp,
+    $q = \pcLabelSensPrivateQ$). \textbf{[E] exploratory.}}
+    \label{tab:equity_label_contrasts}
+\end{table}
+
+\pcLabelSensNSigRace{} racial strata are significantly more label-sensitive
+than the reference after false-discovery correction, and \emph{both of them are
+missingness categories}: Unknown ($+\pcLabelSensUnknownPp$ pp,
+$q = \pcLabelSensUnknownQ$) and Unable to obtain ($+\pcLabelSensUnablePp$ pp,
+$q = \pcLabelSensUnableQ$). No stratum recording an actual demographic answer
+differs from the reference. Across the full family, Spanish-speaking patients
+are more label-sensitive than English-speaking patients
+($+\pcLabelSensSpanishPp$ pp, $q = \pcLabelSensSpanishQ$), and privately
+insured patients are \emph{less} label-sensitive than Medicare patients
+($\pcLabelSensPrivatePp$ pp, $q = \pcLabelSensPrivateQ$).
+
+The significant contrasts involve documentation-related categories and
+strata of language and insurance, and may reflect differences in record
+completeness; this mechanism was not tested
+(Limitation~\ref{lim:subgroup}). Of the two equity analyses, only this one is
+precise enough to support a claim, and reporting either without the other
+would invert which conclusion the data support.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{images/10_label_sens_vs_auroc.png}
+    \caption{Label sensitivity (fraction labelled septic) vs.\ AUROC by racial
+    subgroup, across all three label variants. No association is tested, and
+    the AUROC uncertainty of Figure~\ref{fig:auroc_by_race} is not shown.
+    \textbf{[E] exploratory, visual only.}}
+    \label{fig:label_sens_vs_auroc}
+\end{figure}

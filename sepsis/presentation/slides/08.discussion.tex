@@ -1,47 +1,40 @@
 % =============================================================================
-%  VII. DISCUSSION: THE CENTRAL LESSON AND LIMITATIONS
+%  VII. DISCUSSION: MAIN FINDINGS AND LIMITATIONS
 % =============================================================================
-\begin{frame}{VII. Discussion: The Central Lesson and Limitations}
+\begin{frame}{VII. Discussion: Main Findings and Limitations}
 \begin{atucols}[t]
 \begin{column}{0.50\textwidth}
-\textbf{The Sepsis-3 label on MIMIC-IV:}
+\textbf{Main findings}
 \begin{enumerate}\itemsep2pt\scriptsize
-  \item \textbf{Depends on clinical action for membership.} The empty
-        pre-treatment window results from the pre-registered onset rule:
-        standard timing moves
-        \pcFNMovedEarlier{} onsets earlier, \pcFNBeforeAnchorTest{} of them
-        into the test set's pre-treatment window (onset-hour separability, not
-        advance warning).
-  \item \textbf{Is sensitive to how it is defined.} Cases nearly double across
-        definitions ($\kappa = \pcKappaVsBA$), yet AUROC moves by only
+  \item \textbf{Treatment-dependent membership and onset timing:} the
+        pre-registered onset rule made H3 non-evaluable; standard timing moved
+        \pcFNMovedEarlier{} onsets earlier.
+  \item \textbf{Definition sensitivity:} prevalence ranged from
+        \pcPctOnsetsA\% to \pcPctOnsetsC\% and case agreement was low
+        ($\kappa = \pcKappaVsBA$), but the AUROC range was only
         \pcSpreadLabel.
-  \item \textbf{Produces poor clinical utility at the evaluated thresholds.}
-        No operating point comes near the 1.4 benchmark; the best under B costs
-        \pcUtilityOptBurdenGbtB{} false alerts per true alert.
+  \item \textbf{Limited clinical utility:} the best Variant B operating point
+        required \pcUtilityOptBurdenGbtB{} false alerts per true alert
+        (benchmark 1.4).
 \end{enumerate}
 \vspace{2pt}
 \begin{alertblock}{}
-  \scriptsize These limitations are not resolved by a more complex model:
-  improving discrimination alone does not address limitations created by case
-  definition and onset timing.
+  \scriptsize Improving discrimination alone cannot resolve limitations
+  introduced by outcome membership, onset timing and alert burden.
 \end{alertblock}
 \end{column}
 \begin{column}{0.48\textwidth}
-\textbf{Key limitations}
+\textbf{Limitations}
 \begin{itemize}\itemsep2pt\scriptsize
-  \item \textbf{Current-hour estimand:} detection at the recorded onset, not
-        advance warning.
-  \item \textbf{External validation is limited by incomplete transport of the
-        Sepsis-3 label:}
-        \pcExtMicroCoverage\% culture coverage, \pcExtNEventsB{} events under B.
-  \item \textbf{Single-centre development}, with a selected base cohort
-        (first stays, $\geq 4$\,h).
-  \item \textbf{The pre-registered onset rule is not the standard one}; F
-        restores it post hoc.
-  \item \textbf{Variant D is not a validated construct}; its components
-        overlap the model inputs.
-  \item \textbf{Post-hoc protocol amendments} are disclosed as such; the
-        literature search is narrative, not systematic.
+  \item Current-hour onset detection, not advance prediction.
+  \item External Variant B analysis: \pcExtMicroCoverage\% culture coverage,
+        \pcExtNEventsB{} events.
+  \item Single-centre development; first ICU stays of at least 4\,h.
+  \item The pre-registered onset rule differs from the standard rule;
+        Variant F restores standard timing post hoc.
+  \item Variant D is an unvalidated label whose components overlap the
+        model inputs.
+  \item Post-hoc analyses are labelled; the literature review is narrative.
 \end{itemize}
 \end{column}
 \end{atucols}
@@ -50,43 +43,41 @@
 
 % =============================================================================
 %  VIII. CONCLUSION: CONTRIBUTIONS AND FUTURE WORK
+%  C-numbers match the contribution list in the thesis conclusion chapter.
 % =============================================================================
 \begin{frame}{VIII. Conclusion: Contributions and Future Work}
-\begin{center}\renewcommand{\arraystretch}{1.0}\scriptsize
+\begin{center}\renewcommand{\arraystretch}{1.1}\footnotesize
 \begin{tabular}{cp{11.6cm}}
 \toprule
-C1 & Label and model-class spreads on the same test rows, with bootstrap
-     confidence intervals: label definition substantially changes case membership
-     ($\kappa = \pcKappaVsBA$) but changes discrimination only slightly
-     (\pcSpreadLabel). \\
-C2 & Proof that the conjunction onset rule empties the pre-treatment window;
-     standard timing places \pcPreTreatOnsetsVarF{} test-set onsets there. \\
-C3 & Threshold-swept Utility Score: at most \pcUtilityMaxGbtB{} under B, at
+C1 & Model class produced the largest AUROC range; label definition changed
+     AUROC by only \pcSpreadLabel{} despite low case agreement
+     ($\kappa = \pcKappaVsBA$). \\
+C2 & The pre-registered onset rule leaves the pre-treatment window
+     structurally empty; standard timing places \pcPreTreatOnsetsVarF{} test-set onsets
+     there. \\
+C3 & Maximum Variant B utility was \pcUtilityMaxGbtB, requiring
      \pcUtilityOptBurdenGbtB{} false alerts per true alert. \\
-C4 & \pcHTwoEst{} of \pcHTwoNTerms{} covariates unstable across labels;
-     \pcHTwoNRobust{} remain unstable after accounting for estimation
-     uncertainty, all test-ordered indicators. \\
-C5 & Equity by label: differences are associated with missing demographic
-     documentation; no powered comparison between recorded race categories. \\
-C6 & Pre-registered hypothesis set; seed-fixed, reproducible pipeline with
-     disclosed post-hoc amendments; TRIPOD+AI reporting; reported values
-     generated directly from the analysis outputs. \\
-C7 & Definitional vs.\ empirical label variance separated
-     ($\kappa_{D,B} = \pcKappaVsBD$;
-     $\phi_{\text{anchor}} = \pcPhiAnchorPrimary$). \\
+C4 & \pcHTwoNRobust{} covariates remained unstable after accounting for
+     estimation uncertainty, all test-order indicators. \\
 \bottomrule
 \end{tabular}
 \end{center}
+{\scriptsize\color{MidGrey} Also: C5 significant label-sensitivity
+contrasts involve missingness categories; C6 pre-registered hypotheses,
+disclosed amendments, a fixed seed and values written mechanically from result
+tables; C7 definitional versus empirical label
+variation ($\kappa_{D,B}$, $\phi_{\text{anchor}}$).\par}
 
-{\scriptsize\textbf{Future work:} a sepsis definition grounded in objective
-physiology and adjudicated independently of the model's features; SEP-1 and
-CDC Adult Sepsis Event; prospective, protocol-blinded and multi-centre
-validation; utility-optimised training.\par}
+\vspace{4pt}
+{\scriptsize\textbf{Future work:} labels less dependent on treatment
+timestamps and adjudicated independently of the model inputs; lagged
+predictors; SEP-1 and CDC Adult Sepsis Event definitions; prospective
+multi-centre validation; utility-optimised training.\par}
 
 \vspace{2pt}
 \begin{block}{}
-  \centering\footnotesize Label definition mainly changes which stays are
-  septic and when onset is assigned; its effect on AUROC is small
-  (\pcSpreadLabel).
+  \centering\footnotesize The main effect of label choice was on cohort
+  membership and onset timing rather than on AUROC. Model choice affected
+  AUROC more, and utility stayed close to the no-alert strategy.
 \end{block}
 \end{frame}

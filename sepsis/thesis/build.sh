@@ -17,7 +17,7 @@ cd "$(dirname "$0")"
 # which is how the placeholders got into a committed PDF in the first place.
 # So: referenced-and-unresolved blocks, unreferenced-and-unresolved warns.
 if [ -z "${V2_ALLOW_MISSING:-}" ]; then
-  CHAPTERS=$(ls ./chapters/*.tex ./index.tex 2>/dev/null)
+  CHAPTERS=$(ls ./frontmatter/*.tex ./chapters/*.tex ./chapters/*/*.tex ./appendices/*.tex ./index.tex 2>/dev/null)
   BLOCKING=""
   UNUSED=""
   for m in $(grep -o 'newcommand{\\pc[A-Za-z]*}{\\pcMissing}' generated/pipeline_constants.tex 2>/dev/null |
@@ -98,7 +98,7 @@ MARGIN_STATUS=$?
 # clean build artifacts
 rm -f index.aux index.bbl index.bcf index.blg index.lof index.log index.lot \
       index.out index.run.xml index.toc
-rm -f chapters/*.aux generated/*.aux
+rm -f frontmatter/*.aux chapters/*.aux chapters/*/*.aux appendices/*.aux generated/*.aux
 
 echo "Done → index.pdf"
 exit $MARGIN_STATUS

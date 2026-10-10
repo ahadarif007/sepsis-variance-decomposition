@@ -1,0 +1,106 @@
+%===========================================================================
+
+
+\section{Action-Derived Features: An Ablation \texorpdfstring{[E]}{[E]}}
+\label{sec:ablation}
+%===========================================================================
+
+\pcAblNDropped{} of the \pcHTwoNTerms{} covariates record clinician actions:
+vasopressor exposure and the per-test indicators of whether a laboratory value
+was obtained in a given hour. Cross-label coefficient instability is
+concentrated in these features (Section~\ref{sec:h2_action}). This section
+tests whether the models depend on them by removing them and refitting, with
+the specification otherwise unchanged (Section~\ref{sec:ablation_method}).
+
+\begin{table}[H]
+    \centering\small
+    \adjustbox{max width=\textwidth}{%
+    \begin{tabular}{llrrrrr}
+        \toprule
+        \textbf{Var} & \textbf{Model} & \textbf{AUROC full} & \textbf{AUROC ablated}
+        & \textbf{$\Delta$} & \textbf{Utility$_{\max}$ full}
+        & \textbf{Utility$_{\max}$ ablated} \\
+        \midrule
+        A & Primary & \pcAurocPrimaryA & \pcAblAurocPrimaryA & \pcAblDeltaAurocPrimaryA & \pcUtilityMaxPrimaryA & \pcAblUtilityMaxPrimaryA \\
+        A & GBT     & \pcAurocGbtA     & \pcAblAurocGbtA     & \pcAblDeltaAurocGbtA     & \pcUtilityMaxGbtA     & \pcAblUtilityMaxGbtA \\
+        \midrule
+        B & Primary & \pcAurocPrimaryB & \pcAblAurocPrimaryB & \pcAblDeltaAurocPrimaryB & \pcUtilityMaxPrimaryB & \pcAblUtilityMaxPrimaryB \\
+        B & GBT     & \pcAurocGbtB     & \pcAblAurocGbtB     & \pcAblDeltaAurocGbtB     & \pcUtilityMaxGbtB     & \pcAblUtilityMaxGbtB \\
+        \midrule
+        C & Primary & \pcAurocPrimaryC & \pcAblAurocPrimaryC & \pcAblDeltaAurocPrimaryC & \pcUtilityMaxPrimaryC & \pcAblUtilityMaxPrimaryC \\
+        C & GBT     & \pcAurocGbtC     & \pcAblAurocGbtC     & \pcAblDeltaAurocGbtC     & \pcUtilityMaxGbtC     & \pcAblUtilityMaxGbtC \\
+        \bottomrule
+    \end{tabular}}
+    \caption{Discrimination and best-threshold Utility Score with and without
+    the \pcAblNDropped{} action-derived features. $\Delta$ is a paired
+    difference; Table~\ref{tab:ablation_ci} carries its interval.
+    \textbf{[E] exploratory.}}
+    \label{tab:ablation}
+\end{table}
+
+\subsection{Coefficient Stability After Ablation}
+
+Table~\ref{tab:ablation_stability} compares cross-label coefficient stability
+before and after ablation.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{lrrr}
+        \toprule
+        \textbf{Specification} & \textbf{Covariates} & \textbf{Unstable}
+        & \textbf{\% unstable} \\
+        \midrule
+        Full     & \pcHTwoNTerms     & \pcHTwoEst            & \pcHTwoPctUnstable \\
+        Ablated  & \pcAblHTwoNTerms  & \pcAblHTwoNUnstable   & \pcAblHTwoPctUnstable \\
+        \bottomrule
+    \end{tabular}
+    \caption{Cross-label coefficient instability before and after removing the
+    action-derived features, under the identical stability rule
+    (sign reversal or magnitude change $\geq 2\times$ across Variants A, B
+    and C). \textbf{[E] exploratory.}}
+    \label{tab:ablation_stability}
+\end{table}
+
+Removing \pcAblNDropped{} of the \pcHTwoNTerms{} covariates changes AUROC by
+\pcAblDeltaAurocPrimaryB{} for the primary model (95\% CI
+\pcAblDeltaCiPrimaryB) and \pcAblDeltaAurocGbtB{} for GBT (\pcAblDeltaCiGbtB)
+under the primary label, and by no more than \pcAblDeltaAurocPrimaryC{} for
+either model under any variant (Table~\ref{tab:ablation_ci}).
+\pcAblNExcludeZero{} of the six paired contrasts exclude zero, so the cost is
+small, below 0.01 AUROC everywhere, but not absent; no practical-equivalence
+margin was pre-registered.
+
+\begin{table}[H]
+    \centering\small
+    \begin{tabular}{llrrl}
+        \toprule
+        \textbf{Var} & \textbf{Model} & \textbf{AUROC full}
+        & \textbf{$\Delta$ (ablated $-$ full)} & \textbf{95\% CI} \\
+        \midrule
+        A & Primary & \pcAurocPrimaryA & \pcAblDeltaAurocPrimaryA & \pcAblDeltaCiPrimaryA \\
+        A & GBT     & \pcAurocGbtA     & \pcAblDeltaAurocGbtA     & \pcAblDeltaCiGbtA \\
+        \midrule
+        B & Primary & \pcAurocPrimaryB & \pcAblDeltaAurocPrimaryB & \pcAblDeltaCiPrimaryB \\
+        B & GBT     & \pcAurocGbtB     & \pcAblDeltaAurocGbtB     & \pcAblDeltaCiGbtB \\
+        \midrule
+        C & Primary & \pcAurocPrimaryC & \pcAblDeltaAurocPrimaryC & \pcAblDeltaCiPrimaryC \\
+        C & GBT     & \pcAurocGbtC     & \pcAblDeltaAurocGbtC     & \pcAblDeltaCiGbtC \\
+        \bottomrule
+    \end{tabular}
+    \caption[Paired ablation contrasts with intervals]{Paired
+    ablated-minus-full AUROC contrasts with 95\% stay-level cluster-bootstrap
+    intervals (Protocol Amendment 10), differenced within replicate.
+    \textbf{[E] exploratory; enters no corrected family.}}
+    \label{tab:ablation_ci}
+\end{table}
+
+The cross-label unstable count falls from \pcHTwoEst{} of \pcHTwoNTerms{}
+covariates to \pcAblHTwoNUnstable{} of \pcAblHTwoNTerms{}
+(\pcAblHTwoPctUnstable\%). This is not a subset relation: the single
+remaining flag falls on \texttt{lactate}, which the full fit does not flag,
+because the refit re-estimates the remaining coefficients. Together with the
+by-kind split of Section~\ref{sec:h2_action} (\pcHTwoPctUnstableAction\%
+unstable among action-derived features against \pcHTwoPctUnstablePhysio\% among
+physiological ones), these results indicate that the features recording
+clinician behaviour contribute little to discrimination and carry most of the
+cross-label instability (Section~\ref{sec:ablation_establishes}).

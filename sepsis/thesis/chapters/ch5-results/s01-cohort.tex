@@ -1,0 +1,38 @@
+%===========================================================================
+
+
+\section{Cohort Description and Label Variation \texorpdfstring{[D]}{[D]}}
+\label{sec:cohort_results}
+%===========================================================================
+
+Table~\ref{tab:cohort} summarises the three cohorts. The base extraction
+identifies \pcNStays{} adult first ICU stays. The database and patients are the
+same across all three variants; only the sepsis definition differs.
+
+\begin{table}[H]
+    \centering\small
+    \adjustbox{max width=\textwidth}{%
+    \begin{tabular}{llrrrrr}
+        \toprule
+        \textbf{Var} & \textbf{Name} & \textbf{Stays} & \textbf{Onsets (cohort)}
+        & \textbf{\%} & \textbf{Deaths, no sepsis} & \textbf{Onset h (IQR)} \\
+        \midrule
+        A & Narrow      & \pcNStays & \pcNOnsetsA & \pcPctOnsetsA & \pcNDeathsNoSepA & \pcMedianOnsetHA [\pcIqrOnsetLoHA--\pcIqrOnsetHiHA] \\
+        B & Seymour-Std & \pcNStays & \pcNOnsetsB & \pcPctOnsetsB & \pcNDeathsNoSepB & \pcMedianOnsetHB [\pcIqrOnsetLoHB--\pcIqrOnsetHiHB] \\
+        C & Liberal     & \pcNStays & \pcNOnsetsC & \pcPctOnsetsC & \pcNDeathsNoSepC & \pcMedianOnsetHC [\pcIqrOnsetLoHC--\pcIqrOnsetHiHC] \\
+        \bottomrule
+    \end{tabular}}
+    \caption{Cohort description by label variant. ``Deaths, no sepsis'' counts
+    stays ending in death with no labelled sepsis onset before it, so it varies
+    with the label. The Liberal variant's wider antibiotic-culture windows and
+    rolling SOFA baseline identify about twice as many cases. Onsets are counted
+    \textbf{cohort-wide, at any hour of the stay}; the subset inside the 72-hour
+    modelling horizon (\pcNPositiveA, \pcNPositiveBPanel{} and \pcNPositiveC),
+    on which the models are trained and evaluated, is reported in
+    Table~\ref{tab:label_agreement}.}
+    \label{tab:cohort}
+\end{table}
+
+The twofold difference in sepsis prevalence between Variant A
+(\pcPctOnsetsA\%) and Variant C (\pcPctOnsetsC\%) is consistent with the label
+sensitivity previously reported by Johnson et al.\ \cite{johnson2018comparative}.

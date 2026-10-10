@@ -1,0 +1,55 @@
+%===========================================================================
+
+
+\section{Sample Size Adequacy \texorpdfstring{[C]}{[C]}}
+\label{sec:sample_size_results}
+%===========================================================================
+
+Because Riley et al.'s criteria \cite{riley2019sample} assume independent
+observations, adequacy is assessed on the stay rather than the person-hour
+(Section~\ref{sec:sample_size}; Table~\ref{tab:sample_size}).
+
+\begin{table}[H]
+    \centering\small
+    \begin{tabular}{llrrrrr}
+        \toprule
+        \textbf{Var} & \textbf{Name} & \textbf{Train}
+        & \textbf{Sepsis} & \textbf{Stay}
+        & \textbf{Riley min-$N$} & \textbf{EPV} \\
+        & & \textbf{stays} & \textbf{stays} & \textbf{prev.}
+        & \textbf{(stays)} & \\
+        \midrule
+        A & Narrow      & \pcNTrainStays & \pcNOnsetEventsA & \pcStayPrevalenceA & \pcMinNRileyStayA & \pcEpvA \\
+        B & Seymour-Std & \pcNTrainStays & \pcNOnsetEventsB & \pcStayPrevalenceB & \pcMinNRileyStayB & \pcEpvB \\
+        C & Liberal     & \pcNTrainStays & \pcNOnsetEventsC & \pcStayPrevalenceC & \pcMinNRileyStayC & \pcEpvC \\
+        \bottomrule
+    \end{tabular}
+    \caption{Sample size adequacy on the independent unit. Every row is a count
+    of \emph{stays}: the training split contains \pcNTrainStays{} stays, of
+    which the given number are labelled septic under that variant. Riley
+    min-$N$ is the minimum number of independent observations required at that
+    variant's stay-level prevalence, an anticipated $C$-statistic of
+    \pcAnticipatedAuc{} \cite{moor2023review}, and
+    \pcNCandidatePredictors{} parameters, which is the number of terms in the
+    sepsis-specific linear predictor (\pcHTwoNTerms{} covariates, a six-column
+    spline baseline and an intercept). The criterion is applied as an
+    approximate binary-outcome assessment of the sepsis-versus-at-risk contrast
+    (Section~\ref{sec:sample_size}); EPV is events per parameter on that
+    reading. All three variants exceed the requirement by a wide margin
+    (\pcRileyMarginA$\times$, \pcRileyMarginB$\times$ and
+    \pcRileyMarginC$\times$ respectively).}
+    \label{tab:sample_size}
+\end{table}
+
+The corresponding design matrices contain \pcNTrainPersonHA{},
+\pcNTrainPersonHB{} and \pcNTrainPersonHC{} training person-hours, at per-hour
+event rates of \pcPerHourRateA{}, \pcPerHourRateB{} and \pcPerHourRateC{}.
+These figures govern the computational cost of the fit but do not multiply the
+effective sample size.
+
+Sample size is therefore not a binding constraint: under the primary label the
+requirement is \pcMinNRileyStayB{} independent observations against
+\pcNTrainStays{} available, a margin of \pcRileyMarginB$\times$. Precision is
+limited instead in the external cohort
+(Section~\ref{sec:external_interpretability}) and in the smaller demographic
+strata (Section~\ref{sec:equity}).

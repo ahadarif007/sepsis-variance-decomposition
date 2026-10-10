@@ -1,0 +1,245 @@
+%===========================================================================
+
+
+\section{External Validation on eICU-CRD \texorpdfstring{[C]}{[C]}}
+\label{sec:external_validation}
+\label{sec:external}
+%===========================================================================
+
+External validation asks whether a frozen model ranks person-hours as well in a
+different health system as in the one it was fitted on. Because the Sepsis-3
+label must be transported as well as the model, this section reports the
+labelling inputs first, then discrimination, then operating characteristics.
+
+\subsection{Coverage of the Sepsis-3 Anchor in eICU-CRD}
+\label{sec:external_coverage}
+
+In eICU-CRD the culture limb of the Sepsis-3 anchor is documented for
+\pcExtMicroCoverage\% of the analysis cohort (\pcExtNMicroStays{} of
+\pcExtNCohortStays{} unit stays), whereas antibiotic exposure, pooled across
+the \texttt{medication} and \texttt{infusionDrug} tables, reaches
+\pcExtAbxCoverage\% of stays. Both limbs are documented at any offset for
+\pcExtNBothLimbStays{} stays (\pcExtBothLimbCoverage\%); they co-occur inside
+each variant's antibiotic--culture window for \pcExtNSuspicionA{},
+\pcExtNSuspicionB{} and \pcExtNSuspicionC{} stays under Variants A, B and C;
+and adding the organ-dysfunction criterion leaves \pcExtNOnsetStaysA{},
+\pcExtNOnsetStaysB{} and \pcExtNOnsetStaysC{} labelled stays.
+
+Under Variant B, \pcExtNOnsetStaysB{} stays are labelled but \pcExtNEventsB{}
+events are scored: an onset after a stay's last observed hour is treated as
+right-censoring, the horizon rule the development cohort applies at 72 hours.
+Two of Variant B's onsets fall this way and none of Variant A's or C's; every
+other labelled onset hour receives a prediction from all three models.
+
+Because no onset is observable in a stay without a culture record, the primary
+external analysis is restricted to the \pcExtPanelHoursMicro{} person-hours of
+the microbiology-covered sub-cohort rather than all \pcExtPanelHoursFull{}.
+Table~\ref{tab:external_rates} reconciles the resulting event rates with the
+development cohort's.
+
+\begin{table}[H]
+    \centering\small
+    \adjustbox{max width=\textwidth}{%
+    \begin{tabular}{llrrr}
+        \toprule
+        \textbf{Var} & \textbf{Cohort} & \textbf{Person-hours}
+        & \textbf{Events} & \textbf{Events / 1{,}000 person-h} \\
+        \midrule
+        A & MIMIC-IV temporal test        & \pcNTestRowsA & \pcNTestEventsA & \pcExtRateMimicA \\
+        A & eICU, microbiology-covered    & \pcExtNRowsA  & \pcExtNEventsA  & \pcExtRateEicuA \\
+        A & eICU, antibiotic-only anchor  & \pcExtAbxNRowsA & \pcExtAbxNEventsA & \pcExtRateEicuAbxA \\
+        \midrule
+        B & MIMIC-IV temporal test        & \pcNTestRowsB & \pcNTestEventsB & \pcExtRateMimicB \\
+        B & eICU, microbiology-covered    & \pcExtNRowsB  & \pcExtNEventsB  & \pcExtRateEicuB \\
+        B & eICU, antibiotic-only anchor  & \pcExtAbxNRowsB & \pcExtAbxNEventsB & \pcExtRateEicuAbxB \\
+        \midrule
+        C & MIMIC-IV temporal test        & \pcNTestRowsC & \pcNTestEventsC & \pcExtRateMimicC \\
+        C & eICU, microbiology-covered    & \pcExtNRowsC  & \pcExtNEventsC  & \pcExtRateEicuC \\
+        C & eICU, antibiotic-only anchor  & \pcExtAbxNRowsC & \pcExtAbxNEventsC & \pcExtRateEicuAbxC \\
+        \bottomrule
+    \end{tabular}}
+    \caption{Event-rate reconciliation for the development cohort and both
+    external anchors. The antibiotic-only anchor is not Sepsis-3 and its rate
+    is not interchangeable with the other two.}
+    \label{tab:external_rates}
+\end{table}
+
+On the restricted cohort the external event rate is \pcExtRateEicuB{} per
+thousand person-hours against MIMIC-IV's \pcExtRateMimicB{} under the primary
+label, a ratio of \pcExtRateRatioB. Relaxing the culture requirement raises it
+to \pcExtRateEicuAbxB{} per thousand (ratio \pcExtRateRatioAbxB), suggesting
+that much of the gap lies in the culture limb. The residual includes case mix,
+charting frequency and differences in illness severity;
+Section~\ref{sec:external_altlabel} narrows it further by removing the anchor
+altogether. A gap of two or more orders of magnitude between two large adult
+ICU populations would be far more consistent with missing labelling inputs
+than with a difference in incidence, and would call for an audit of those
+inputs before the rate is interpreted.
+
+\subsection{Discrimination Under Transport}
+
+\begin{table}[H]
+    \centering
+    \adjustbox{max width=\textwidth}{%
+    \begin{tabular}{llrrrr}
+        \toprule
+        \textbf{Var} & \textbf{Model} & \textbf{N rows} & \textbf{N events}
+        & \textbf{AUROC (eICU)} & \textbf{AUROC (MIMIC)} \\
+        \midrule
+        A & Primary & \pcExtNRowsA & \pcExtNEventsA & \pcExtAurocPrimaryA & \pcAurocPrimaryA \\
+        A & GBT     & \pcExtNRowsA & \pcExtNEventsA & \pcExtAurocGbtA  & \pcAurocGbtA \\
+        A & NEWS2   & \pcExtNRowsA & \pcExtNEventsA & \pcExtAurocNewsA & \pcAurocNewsA \\
+        \midrule
+        B & Primary & \pcExtNRowsB & \pcExtNEventsB & \pcExtAurocPrimaryB & \pcAurocPrimaryB \\
+        B & GBT     & \pcExtNRowsB & \pcExtNEventsB & \pcExtAurocGbtB  & \pcAurocGbtB \\
+        B & NEWS2   & \pcExtNRowsB & \pcExtNEventsB & \pcExtAurocNewsB & \pcAurocNewsB \\
+        \midrule
+        C & Primary & \pcExtNRowsC & \pcExtNEventsC & \pcExtAurocPrimaryC & \pcAurocPrimaryC \\
+        C & GBT     & \pcExtNRowsC & \pcExtNEventsC & \pcExtAurocGbtC  & \pcAurocGbtC \\
+        C & NEWS2   & \pcExtNRowsC & \pcExtNEventsC & \pcExtAurocNewsC & \pcAurocNewsC \\
+        \bottomrule
+    \end{tabular}}
+    \caption{External validation on eICU-CRD (frozen models, no retraining),
+    Sepsis-3 anchor on the microbiology-covered sub-cohort. Each variant
+    carries its own external label set, so the row counts and event counts
+    differ across variants as they do internally.}
+    \label{tab:external}
+\end{table}
+
+\textbf{The point estimate falls under every label.} The primary
+model falls from \pcAurocPrimaryA{} to \pcExtAurocPrimaryA{} (Narrow), from
+\pcAurocPrimaryB{} to \pcExtAurocPrimaryB{} (Seymour-Standard) and from
+\pcAurocPrimaryC{} to \pcExtAurocPrimaryC{} (Liberal). Only the
+Seymour-Standard contrast, the tested contrast of H5, carries an interval, and
+it covers zero (Section~\ref{sec:h5}); the Narrow and Liberal figures are point
+estimates on \pcExtNEventsA{} and \pcExtNEventsC{} events, so the three
+indicate a direction rather than three established degradations. The
+Seymour-Standard drop of \pcHFiveEst{} is about three-quarters of the 0.085
+reference estimate reported by Moor et al.\ \cite{moor2023review}. The point
+estimates show the same cross-label ordering as the internal results, although
+the low event counts preclude interpreting that ordering.
+
+NEWS2 falls to \pcExtAurocNewsB{} under the primary label, close to chance. On
+this arm the fitted models therefore retain more of their advantage over a
+bedside score, although under the antibiotic-only anchor, with two orders of
+magnitude more events, the ordering between the boosted model and NEWS2 does
+not hold (Section~\ref{sec:external_interpretability}).
+
+The differing event counts and NEWS2 AUROCs across variants are consistent
+with variant-specific external labels: NEWS2's score is label-invariant, but
+its AUROC depends on the outcome it is ranked against.
+
+Every external event count above falls below the interpretability floor
+(Section~\ref{sec:external_interpretability}).
+
+\subsection{The Anchor-Independent Label on the Full External Cohort
+\texorpdfstring{[D]}{[D]}}
+\label{sec:external_altlabel}
+
+The estimates above are computed on the \pcExtNMicroStays{} stays
+(\pcExtMicroCoverage\%) with documented microbiology. Variant D carries no
+treatment timestamp, so it can be constructed on the whole cohort. This
+subsection reports the frozen Variant D models applied to all
+\pcExtAltNStays{} eICU-CRD stays under Protocol Amendment~9.
+
+\begin{table}[H]
+    \centering\small
+    \begin{tabular}{lrrlr}
+        \toprule
+        \textbf{Model} & \textbf{Internal AUROC} & \textbf{External AUROC}
+        & \textbf{Drop (95\% CI)} & \textbf{Events} \\
+        \midrule
+        Primary & \pcAltAurocFullPrimaryD & \pcExtAltAurocPrimary & \pcExtAltDropPrimary{} \pcExtAltDropCiPrimary & \pcExtAltNEvents \\
+        GBT     & \pcAltAurocFullGbtD     & \pcExtAltAurocGbt     & \pcExtAltDropGbt{} \pcExtAltDropCiGbt & \pcExtAltNEvents \\
+        NEWS2   & \pcNotApplicable        & \pcExtAltAurocNews    & \pcNotApplicable & \pcExtAltNEvents \\
+        \bottomrule
+    \end{tabular}
+    \caption[Variant D on the full eICU-CRD cohort]{Variant D applied to all
+    \pcExtAltNStays{} eICU-CRD stays (\pcExtAltNRows{} person-hours). The target
+    is acute organ dysfunction, not Sepsis-3, so these values are not pooled
+    with the Sepsis-3 arm. eICU-CRD's periodic vitals carry no Glasgow Coma
+    Scale, so the external SOFA delta rests on five components against
+    MIMIC-IV's six. The drop's interval resamples the two databases
+    independently and differences the streams, as for H5 (Protocol
+    Amendment~10). Post-hoc under Protocol Amendment~9; excluded from H5.}
+    \label{tab:external_altlabel}
+\end{table}
+
+The arm scores \pcExtAltNEvents{} events over \pcExtAltNRows{} person-hours,
+against \pcExtNEventsB{} under Variant B, and is the only external estimate that
+clears the \pcExtMinEvents-event interpretability floor
+(Section~\ref{sec:external_interpretability}).
+
+\textbf{AUROC drop.} The primary
+model falls from \pcAltAurocFullPrimaryD{} internally to
+\pcExtAltAurocPrimary{} externally, a difference of
+\pcExtAltDropPrimary{} (95\% CI \pcExtAltDropCiPrimary), and the
+gradient-boosted comparator from
+\pcAltAurocFullGbtD{} to \pcExtAltAurocGbt, a difference of
+\pcExtAltDropGbt{} (\pcExtAltDropCiGbt). Both drops are of the order of the
+0.085 degradation Moor et al.\ \cite{moor2023review} report across four
+databases, and of the same order as the H5 estimate. The event count affects
+the width rather than the location: both intervals exclude zero and are
+narrower than a hundredth of a point, whereas H5's substituted contrast,
+\pcHFiveEst{} [\pcHFiveCiLo, \pcHFiveCiHi] on \pcExtNEventsB{} events, is
+compatible with both no degradation and a degradation twice as large. For the
+deterioration target, transport between these databases therefore reduces
+discrimination; this is not evidence about the Sepsis-3 target, a different
+estimand.
+
+\textbf{Event rate.} Under the Sepsis-3 anchor the external event rate is
+\pcExtRateRatioB{} of the development cohort's, a gap of roughly an order of
+magnitude located largely in the culture limb
+(Section~\ref{sec:external_coverage}). Under the anchor-independent label the
+two databases give \pcExtAltRateMimic{} and \pcExtAltRateEicu{} events per
+1{,}000 person-hours, a ratio of \pcExtAltRateRatio. The reduction in the
+event-rate gap after removing the treatment anchor suggests that label
+transport accounts for a substantial part of the original discrepancy
+(Section~\ref{sec:variant_d_establishes}).
+
+\subsection{External Clinical Utility on eICU-CRD \texorpdfstring{[C]}{[C]}}
+
+Operating characteristics are reported on the same microbiology-covered
+sub-cohort and inherit its coverage limitation
+(Section~\ref{sec:external_coverage}).
+
+\begin{table}[H]
+    \centering\small
+    \begin{tabular}{llrrrrr}
+        \toprule
+        \textbf{Var} & \textbf{Model} & \textbf{Specificity} & \textbf{PPV}
+        & \textbf{NNE} & \textbf{FA/pt-day} & \textbf{Patient PPV} \\
+        \midrule
+        A & Primary & \pcExtSpecPrimaryA & \pcExtPpvPrimaryA & \pcExtNnePrimaryA & \pcExtFaPerPtDayPrimaryA & \pcExtPatientPpvPrimaryA \\
+        B & Primary & \pcExtSpecPrimaryB & \pcExtPpvPrimaryB & \pcExtNnePrimaryB & \pcExtFaPerPtDayPrimaryB & \pcExtPatientPpvPrimaryB \\
+        C & Primary & \pcExtSpecPrimaryC & \pcExtPpvPrimaryC & \pcExtNnePrimaryC & \pcExtFaPerPtDayPrimaryC & \pcExtPatientPpvPrimaryC \\
+        \midrule
+        A--C & NEWS2 & \pcExtSpecNewsB & \pcExtPpvNewsB & \pcExtNneNewsB & \pcExtFaPerPtDayNewsB & \pcExtPatientPpvNewsB \\
+        \bottomrule
+    \end{tabular}
+    \caption{eICU-CRD operating characteristics at the same 80\% target
+    sensitivity, thresholds re-derived on the external cohort. All rows are
+    drawn from the same \pcExtNStays{} microbiology-covered stays, but each
+    variant carries its own label and therefore its own denominator:
+    \pcExtNRowsA, \pcExtNRowsB{} and \pcExtNRowsC{} person-hours on
+    \pcExtNEventsA, \pcExtNEventsB{} and \pcExtNEventsC{} event hours under
+    A, B and C (Table~\ref{tab:external}). The NEWS2 row is scored under
+    Variant B. Re-deriving thresholds externally excludes the further loss a
+    threshold transported from MIMIC-IV would incur.}
+    \label{tab:external_utility}
+\end{table}
+
+Operating characteristics on eICU-CRD are substantially worse than internal ones
+at the same target sensitivity. Reaching 80 per cent sensitivity requires
+\pcExtNnePrimaryC{} to \pcExtNnePrimaryA{} alerted person-hours per true event
+hour, at \pcExtFaPerPtDayPrimaryB--\pcExtFaPerPtDayPrimaryA{} false-alert hours
+per patient-day, roughly one alert every two hours per patient. NEWS2 cannot
+reach the target without alerting on nearly
+every person-hour (specificity \pcExtSpecNewsB, \pcExtFaPerPtDayNewsB{}
+false-alert hours per patient-day). Patient-level PPV of
+\pcExtPatientPpvPrimaryB{} is again the cohort septic fraction
+(\pcExtNSepsisStays/\pcExtNStays), because the model alerts on essentially
+every stay. At this event count the contributions of model and label cannot be
+separated, since PPV, NNE and false-alarm rate all scale with the event rate;
+these figures are therefore reported as an upper bound on transferability and
+support no separate conclusion.

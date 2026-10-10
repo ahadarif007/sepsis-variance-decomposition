@@ -10,18 +10,20 @@
 \end{column}
 \begin{column}{0.51\textwidth}
 \begin{itemize}\itemsep3pt\small
-  \item \textbf{Development:} MIMIC-IV v3.1~\cite{johnson2023mimiciv}, a
+  \item \textbf{Development data:} MIMIC-IV v3.1~\cite{johnson2023mimiciv},
         single centre (BIDMC, Boston).
-  \item \textbf{Inclusion:} age $\geq 18$, first ICU stay per patient, length
-        of stay $\geq 4$\,h $\Rightarrow$ \textbf{\pcNStays{} stays}.
-  \item \textbf{External:} eICU-CRD v2.0~\cite{pollard2018eicu}, over 200 US
-        ICUs, \pcExtNCohortStays{} unit stays; models applied
-        \textbf{frozen, without retraining}.
-  \item \textbf{Person-hour panel:} 72\,h horizon; discharge and death are
-        competing events, not censoring.
-  \item \textbf{22 covariates} (6 vitals, 5 labs, 2 vasopressor flags, 3
-        six-hour slopes, 6 test-ordered indicators), \pcNCandidatePredictors{}
-        terms per outcome.
+  \item \textbf{Cohort:} adults, first ICU stay, length of stay $\geq 4$\,h;
+        \textbf{n = \pcNStays}.
+  \item \textbf{External validation:} eICU-CRD v2.0~\cite{pollard2018eicu};
+        \textbf{frozen models, no retraining}.\\
+        {\scriptsize\color{MidGrey} over 200 US ICUs, \pcExtNCohortStays{}
+        unit stays}
+  \item \textbf{Person-hour data:} first 72\,h; discharge and death modelled
+        as competing events.
+  \item \textbf{22 covariates; \pcNCandidatePredictors{} model terms per
+        outcome.}\\
+        {\scriptsize\color{MidGrey} 6 vitals, 5 labs, 2 vasopressor flags,
+        3 six-hour slopes, 6 test-order indicators}
 \end{itemize}
 \end{column}
 \end{atucols}
@@ -31,7 +33,7 @@
 % =============================================================================
 %  IV. MATERIALS: THREE SEPSIS-3 LABEL VARIANTS   
 % =============================================================================
-\begin{frame}{IV. Materials: Three Pre-Registered Sepsis-3 Label Variants}
+\begin{frame}{IV. Materials: Three Pre-Registered Sepsis-3 Label Definitions}
 \begin{center}\renewcommand{\arraystretch}{1.12}\scriptsize
 \begin{tabular}{llcccccr}
 \toprule
@@ -44,25 +46,24 @@ C & Liberal     & 72\,h & 72\,h & 48\,h & 24\,h & Rolling 24\,h & \pcNOnsetsC{} 
 \bottomrule
 \end{tabular}
 \end{center}
-{\tiny ABX = antibiotic; cx = culture; SOFA$-$/SOFA$+$ = hours before/after
-suspicion time in which a SOFA rise of $\geq 2$ must be observed.\par}
+{\tiny ABX: antibiotic; cx: culture; SOFA$-$/SOFA$+$: permitted hours
+before/after suspected infection for a $\geq 2$-point SOFA increase.\par}
 
 \vspace{2pt}
 \begin{atucols}[c]
 \begin{column}{0.62\textwidth}
 \begin{itemize}\itemsep2pt\footnotesize
-  \item All three: \textbf{suspected infection} (antibiotic paired with a
-        culture inside the windows) \textbf{and} a SOFA rise of $\geq 2$
-        points~\cite{singer2016sepsis3,cohen2024subtle}.
-  \item \textbf{Variant B is the primary analysis}; A and C are
-        pre-specified alternatives.
-  \item Onset is assigned at the suspicion time $t_{\text{susp}}$. The SOFA
-        criterion decides which stays are septic, not when onset occurs.
+  \item All definitions require \textbf{suspected infection} (antibiotic
+        paired with a culture) \textbf{plus} a $\geq 2$-point SOFA
+        increase~\cite{singer2016sepsis3,cohen2024subtle}.
+  \item \textbf{B is primary}; A and C are pre-specified alternatives.
+  \item Onset is assigned at suspected infection, $t_{\text{susp}}$. SOFA
+        determines case membership, not onset time.
 \end{itemize}
 \vspace{2pt}
 \begin{alertblock}{}
-  \footnotesize A and B have near-identical prevalence but agree on which
-  stays are septic at only $\kappa = \pcKappaVsBA$.
+  \footnotesize A and B have similar prevalence but low case agreement:
+  $\kappa = \pcKappaVsBA$.
 \end{alertblock}
 \end{column}
 \begin{column}{0.36\textwidth}

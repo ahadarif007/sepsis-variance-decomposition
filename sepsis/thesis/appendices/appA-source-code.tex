@@ -236,6 +236,15 @@ stochastic step is seeded, so within the pinned analysis environment a repeated
 run reproduces the reported estimates; the gradient-boosted comparator may vary
 slightly across library builds or architectures, as noted below.
 
+\paragraph{Partial runs.} Three environment variables scope a run without
+changing any reported result. \texttt{V2\_VARIANTS} restricts the per-variant
+loops in Stages 02--07 to a named subset, so an alternative label can be added
+without refitting Variants A--C; \texttt{V2\_ARMS} restricts Stages 05 and 06 to
+the full or the ablated feature arm (Section~\ref{sec:ablation_method}); and
+\texttt{V2\_BOOT\_B} overrides the bootstrap replicate count of Stage 12 for a
+fast smoke test. Reported results always use the values fixed in
+\texttt{config.R}.
+
 \paragraph{How the thesis stays aligned with the pipeline.} No quantity
 estimated by this study is typed by hand into this document; the exceptions are
 figures quoted from prior work, constants fixed by the pre-registration, and
@@ -260,106 +269,8 @@ re-run, and every other estimate is invariant to it.
 
 Both databases are de-identified and publicly available to credentialed
 researchers under the PhysioNet Credentialed Health Data Use Agreement. The
-analysis is retrospective and observational, involves no patient contact and no
-intervention, and required no additional ethical approval beyond the data use
-agreement, whose terms, including the prohibition on redistribution and on
-attempted re-identification, were observed throughout.
+analysis is retrospective and observational and involves no patient contact
+and no intervention, and the terms of the data use agreement, including the
+prohibition on redistribution and on attempted re-identification, were
+observed throughout.
 Section~\ref{sec:ethics} sets out the full statement.
-
-
-\chapter{Pipeline Stage Reference}
-\label{app:stages}
-
-Chapter~\ref{ch:design} describes what each stage does and why the architecture
-takes the shape it does. This appendix records the file-level interface: what
-each stage reads and what it writes; the mapping from an analysis to its
-inference status is in the analysis register (Section~\ref{sec:register})
-rather than repeated here. Paths are relative to \texttt{sepsis/project/}; all intermediate tables
-are Parquet, with a CSV mirror written for any result table small enough to read
-directly.
-
-\begin{table}[H]
-    \centering\scriptsize\setlength{\tabcolsep}{4pt}
-    \begin{tabularx}{\textwidth}{p{0.9cm}p{4.2cm}X}
-        \toprule
-        \textbf{Stage} & \textbf{Reads} & \textbf{Writes} \\
-        \midrule
-        01 & MIMIC-IV source tables &
-        n/a (validation only; halts on a missing table) \\
-        \addlinespace
-        02 & \texttt{hosp/}, \texttt{icu/} source tables &
-        \texttt{02\_cohort\_\{A..F\}}, \texttt{02\_label\_variance\_table},
-        \texttt{02\_alt\_label\_variance\_table} \\
-        \addlinespace
-        03 & \texttt{02\_cohort\_*}; \texttt{chartevents}, \texttt{labevents},
-        \texttt{inputevents} (streamed) &
-        \texttt{03\_person\_hours\_\{A..F\}}, \texttt{03\_early\_onset\_shift} \\
-        \addlinespace
-        04 & \texttt{03\_person\_hours\_*} (three columns) &
-        \texttt{04\_sample\_size} \\
-        \addlinespace
-        05 & \texttt{03\_person\_hours\_*} &
-        \texttt{05\_model\_primary\_*}, \texttt{05\_coef\_all\_variants},
-        \texttt{05\_predictions\_primary\_*}, \texttt{05\_h2\_stability\_*};
-        \texttt{*\_ablated} counterparts \\
-        \addlinespace
-        06 & \texttt{03\_person\_hours\_*} &
-        \texttt{06\_model\_gbt\_*}, \texttt{06\_predictions\_comparators\_*},
-        \texttt{06\_gbt\_importance\_*}, \texttt{06\_schoenfeld\_*};
-        ablated GBT counterparts \\
-        \addlinespace
-        07 & \texttt{05\_*}, \texttt{06\_*} predictions &
-        \texttt{07\_metric\_results}, \texttt{\_random}, \texttt{\_altlabel},
-        \texttt{07\_utility\_sweep}, \texttt{07\_utility\_max},
-        \texttt{07\_ablation\_metrics} \\
-        \addlinespace
-        08 & eICU-CRD source tables; frozen \texttt{05\_}/\texttt{06\_} models
-        (including the Variant D fits, for the Amendment 9 arm) &
-        \texttt{08\_external\_validation\_results}, \texttt{\_abxonly},
-        \texttt{\_altlabel}, \texttt{08\_eicu\_predictions\_*} (A--C on the
-        microbiology-covered sub-cohort, D on the full cohort),
-        \texttt{08\_eicu\_coverage},
-        \texttt{08\_event\_rate\_reconciliation}, \texttt{\_altlabel},
-        \texttt{08\_h5\_internal\_external} \\
-        \addlinespace
-        09 & \texttt{07\_metric\_results*} &
-        \texttt{09\_variance\_decomposition\_table},
-        \texttt{09\_hypothesis\_verdicts},
-        \texttt{09\_label\_anchor\_attribution},
-        \texttt{09\_label\_agreement}, \texttt{09\_pretreatment\_onsets} \\
-        \addlinespace
-        10 & \texttt{03\_person\_hours\_*}, \texttt{05\_}/\texttt{06\_}
-        predictions &
-        Per-stratum performance and label-sensitivity tables \\
-        \addlinespace
-        11 & \texttt{05\_}/\texttt{06\_}/\texttt{08\_} predictions &
-        \texttt{11\_calibration\_summary}, \texttt{11\_operating\_points},
-        \texttt{11\_net\_benefit\_at\_prevalence},
-        \texttt{11\_patient\_level\_metrics},
-        \texttt{11\_lead\_time\_summary}, external counterparts \\
-        \addlinespace
-        12 & Stored predictions only (refits nothing) &
-        \texttt{12\_confirmatory\_tests}, \texttt{12\_internal\_ci},
-        \texttt{12\_subgroup\_auroc\_ci}, \texttt{\_contrasts},
-        \texttt{12\_subgroup\_labelsens\_*}, \texttt{12\_altlabel\_*}
-        (including \texttt{\_transport\_ci}),
-        \texttt{12\_ablation\_ci}, \texttt{12\_calibration\_ci},
-        \texttt{\_contrasts},
-        \texttt{12\_h2\_*}, \texttt{12\_analysis\_register} \\
-        \bottomrule
-    \end{tabularx}
-    \caption{Stage inputs and outputs. Which result each stage supports is
-    recorded once, in the analysis register of
-    Section~\ref{sec:register}, and is not repeated here. Stage 03 is
-    the only stage that reads the full-size source tables, and Stage 12 is the
-    only one that reads nothing but stored predictions, which is what allows
-    the inference layer to be re-run and checked without refitting any model.}
-    \label{tab:stage_reference}
-\end{table}
-
-\paragraph{Naming conventions.} A file's numeric prefix is the stage that wrote
-it. A \texttt{\_\{A..F\}} suffix denotes the label variant; \texttt{\_ablated}
-denotes the Protocol Amendment 5 feature arm; \texttt{\_random} denotes the
-random-split arm used only for H4. Files without a variant suffix are pooled
-across variants by construction. No stage overwrites a file written by another
-stage.

@@ -1,0 +1,448 @@
+\chapter{Discussion}
+\label{ch:discussion}
+
+This chapter interprets the results of Chapter~\ref{ch:evaluation}.
+Section~\ref{sec:discussion_core} states the central finding and
+Section~\ref{sec:discussion_h1h6} reads H1 and H6 together.
+Sections~\ref{sec:external_interpretability} to~\ref{sec:ablation_establishes}
+set out the scope of the external estimate, the anchor-independent label and
+the feature ablation. Section~\ref{sec:implications} draws out implications for
+how studies of this kind are reported, and Section~\ref{sec:limitations} sets
+out the limitations.
+
+
+\section{The Core Finding}
+\label{sec:discussion_core}
+
+The central finding concerns outcome construction. Under the pre-registered
+conjunction-based timing rule, no Sepsis-3 onset can occur before the treatment
+anchor (Proposition~\ref{prop:h3}). Applying the standard
+$\min(t_{\text{susp}}, t_{\text{SOFA}})$ timing to the same cohort, whose
+septic membership is cohort-wide identical, recovered \pcPreTreatOnsetsVarF{}
+pre-treatment onsets, separable from their surrounding at-risk hours at
+\pcPreTreatAurocPrimaryF{} AUROC on the onset-hour estimand. Whether those
+onsets are predictable in advance cannot be assessed here, because predictors
+are binned to the onset hour (Limitation~\ref{lim:current_hour}).
+
+This finding has an analytic and a measured part. Analytically, any study that
+uses a conjunction-based onset rule and reports pre-treatment performance is
+reporting on an empty set, and a study that does not restrict the window is,
+to that extent, scoring discrimination around a clinician-defined decision.
+Empirically, the operationalisation rather than the data removes the
+pre-treatment onsets. Neither part supports the proposition that no patient
+develops sepsis before clinicians act, which external evidence contradicts:
+the Epic Sepsis Model v2 evaluation \cite{wong2026epic} reports median lead
+times of 1.4--7.1 hours ahead of clinician recognition across four sites.
+Sepsis-3 \emph{membership}, however, depends on clinical action under every
+timing rule, since without a qualifying antibiotic--culture pair there is no
+label, so Kamran et al.'s \cite{kamran2024evaluation} concern applies to which
+patients can enter the positive class.
+
+The Utility Score stays close to the no-alert strategy for every model. This
+reflects both the low hourly event rate and the scoring rule's cumulative
+penalty for false-alert hours, which is charged for every alerting hour while
+only the first timely alert is credited; the study does not separate their
+individual contributions, nor test whether the temporal split contributes
+through era-related differences in recording. AUROC remains in the high 0.7s
+under the same conditions because the ranking of person-hours is preserved
+even when the achievable alert volume is not clinically usable. Wang et al.\
+\cite{wang2025srpm} documented this divergence across 91 models moving from
+internal to external validation (Section~\ref{sec:auroc_illusion}); here it is
+already present internally, under a time-based split, where utility is close
+to the no-alert baseline before any external validation.
+
+
+\section{H1 and H6 Together}
+\label{sec:discussion_h1h6}
+
+H1 and H6 address different levels of comparison. H1 compares the label spread
+with the spread across six complete model specifications, which captures the
+large gap between flexible fitted models and simpler comparators: the
+specification spread \pcSpreadModelClass{} exceeds the label spread
+\pcSpreadLabel{}, and the interval on the difference excludes zero. H6
+compares two flexible models fitted on the same predictors and shows a much
+smaller difference, \pcHSixAbsEst{} AUROC in the primary model's favour, with
+GBT not better by more than the pre-registered margin. In this study,
+therefore, the difference between the two flexible estimators was small
+relative to the difference between fitted models and simpler comparators,
+while the label changed which patients were counted far more than it changed
+discrimination.
+
+The H6 result also bears on the statistics-versus-machine-learning question of
+Section~\ref{sec:false_dichotomy}. Christodoulou et al.'s
+\cite{christodoulou2019cox} equivalence finding concerns binary outcomes on
+tabular data, and Fagerstr{\"o}m et al.\ \cite{fagerstrom2019lisep} reported a
+deep model detecting septic-shock onset up to 20 hours earlier than a Cox
+baseline. Here, with the label, the split, the features and the evaluation
+held fixed, the primary discrete-time hazard model is not outperformed by
+GBT. This does not contradict Fagerstr{\"o}m et al.: their comparator was a
+static Cox specification, the same family as the Cox benchmark retained here,
+which is also well behind the fitted models in this study (\pcAurocCoxB{}
+against \pcAurocPrimaryB).
+
+The intervals add one thing the point estimates could not. The label spread's
+interval [\pcSpreadLabelCiLo, \pcSpreadLabelCiHi] and the specification
+spread's [\pcSpreadModelClassCiLo, \pcSpreadModelClassCiHi] do not overlap, so
+H1's reversal is not attributable to resampling noise. The label effect is
+real, since its interval excludes zero, but its main consequence is on the
+cohort, the event count and every denominator computed on it, which AUROC does
+not capture.
+
+
+\section{Interpreting the External Validation}
+\label{sec:external_interpretability}
+
+The interpretability floor adopted here is \pcExtMinEvents{} events, following
+the external-validation sample-size guidance of Riley et al.\
+\cite{riley2019sample} and Collins et al.\ \cite{collins2024tripodai}: below it
+the confidence interval on an external AUROC is wider than the degradation the
+study is trying to detect. All three Sepsis-3 variants fall below it, with
+\pcExtNEventsB{} events under the primary label, so the external Sepsis-3
+degradations are stated as directions rather than magnitudes, and the H5
+interval is the formal expression of that limit. External AUPRC and Utility
+Score are not interpreted at this event count.
+
+The microbiology-covered sub-cohort is also selected by documentation: a
+culture is ordered when infection is already suspected, so the covered stays
+are enriched for patients a clinician had begun to investigate, and the
+external estimate describes transport into that sub-population rather than
+into eICU-CRD as a whole (Limitation~\ref{lim:label_transport}).
+
+The antibiotic-only arm clears the floor with two orders of magnitude more
+events, but it labels a broader target, treated suspicion of infection without
+the culture limb, and is never pooled with the Sepsis-3 arm. Its degradation
+has the same sign and label ordering as the Sepsis-3 arm's and a somewhat
+larger magnitude. Because the two arms label different targets, that agreement
+is descriptive. Accordingly, the external analysis supports a direction of
+effect but not a precise estimate for Sepsis-3. The same arm shows that the
+internal ordering of comparators does not transport: GBT scores
+\pcExtAbxAurocGbtB{} under Variant B, close to chance under the two narrower
+labels, while NEWS2 scores \pcExtAbxAurocNewsB, and a bedside score ranks ahead
+of GBT under every label in this arm. The two flexible estimators are close
+internally, but only the primary model stays ahead of NEWS2 externally. The
+arm's event count supports this ordering but not the size of any gap.
+
+The Variant D arm is the one external estimate above the floor for its own
+target (Section~\ref{sec:variant_d_establishes}); it provides precise
+transport estimates for deterioration but does not improve inference for
+Sepsis-3. The Sepsis-3 point estimate, \pcHFiveEst, is about three-quarters of
+the 0.085 penalty Moor et al.\ \cite{moor2023review} report across four
+databases. Unlike Moor et al., this study cannot attribute the loss, because
+their harmonised databases shared labelling inputs and eICU-CRD does not.
+
+
+\section{Scope of the Variant D Results}
+\label{sec:variant_d_establishes}
+
+Variant D's label is a threshold function of recorded physiology, and five of
+the six SOFA components are model inputs, so its discrimination is partly
+self-fulfilling (Section~\ref{sec:alt_labels}). Its AUROC \emph{level}, internal
+or external, is therefore not comparable with Variant B's and is not evidence
+about sepsis prediction. This caveat applies throughout this section. Within
+it, Variant D supports four conclusions.
+
+\begin{enumerate}
+    \item \textbf{The label sensitivity is not wholly definitional.} At
+    $\kappa = \pcKappaVsBD$ and a \pcPctExactMatchD\% onset match, an
+    anchor-independent label disagrees with Sepsis-3 about both membership and
+    timing, so the H1 label result is not only an artefact of how one
+    definition is read.
+
+    \item \textbf{The alert burden remains high under every label; the
+    utility ceiling does not.} The best achievable Utility Score rises from
+    \pcUtilityMaxGbtB{} under Variant B to \pcUtilityMaxGbtE{} under E and
+    \pcUtilityMaxGbtD{} under D, with the primary model following the same
+    pattern. Even D's best configuration carries \pcUtilityOptBurdenGbtD{}
+    false alerts per true alert, several times the 1.4 benchmark of Moor et
+    al.\ \cite{moor2023review}. Contribution C3 therefore holds across labels
+    in its alarm-volume form but not as a utility ceiling near zero; the rise
+    is itself expected for a label built from recorded physiology.
+
+    \item \textbf{The two metrics order the models differently, and the
+    ordering is stable across labels.} At its own best threshold GBT leads on
+    the Utility Score under B, D and E alike, while on AUROC the primary model
+    leads under B and E and GBT only under D. Changing the label does not
+    reverse either ordering; changing the metric does. This illustrates the
+    concern behind H5, that the verdict depends on the metric reported, without
+    testing H5's internal-to-external contrast.
+
+    \item \textbf{The external event-rate gap is largely attributable to the
+    anchor.} The Sepsis-3 arm yields an external event rate
+    \pcExtRateRatioB{} times the development cohort's. Applied to all
+    \pcExtAltNStays{} eICU-CRD stays (Protocol Amendment~9), Variant D gives a
+    ratio of \pcExtAltRateRatio. Because the two labels are applied to the
+    same two cohorts, a population difference large enough to produce the
+    anchored ratio would also have produced a comparable shortfall under the
+    anchor-independent label, and it does not. The reduction therefore
+    suggests that label transport accounts for a substantial part of the
+    original discrepancy. It bounds the anchor's contribution rather than
+    isolating it: roughly a quarter of the development cohort's rate remains
+    unaccounted for, and case mix, charting frequency, the five-component
+    external SOFA rise and differences in illness severity all sit inside that
+    residual.
+\end{enumerate}
+
+The large Variant D event count also supports the transport \emph{drop} with
+an interval (Protocol Amendment 10): both models lose AUROC on transport, and
+both intervals exclude zero (Table~\ref{tab:external_altlabel}). This is the
+study's one demonstrated transport loss. It concerns a deterioration rule, not
+Sepsis-3, and cannot be pooled with the anchored arm. It does show that the two
+databases are not similar enough for a frozen model to move between them at no
+cost, which is consistent with the Sepsis-3 arm being unable to resolve a
+degradation of the size the literature anticipates on \pcExtNEventsB{} events.
+
+
+\section{Interpreting the Ablation}
+\label{sec:ablation_establishes}
+
+The ablation is exploratory and run on one cohort, and with \pcHTwoNTerms{}
+covariates the stability counts are small enough that the comparison is
+descriptive. Its interpretation has three parts.
+
+First, the explicit action-derived features contribute little to AUROC.
+Removing them changes discrimination by \pcAblDeltaAurocPrimaryB{} for the
+primary model under the primary label and by less than 0.01 in all six
+comparisons. \pcAblNExcludeZero{} of the \pcAblNContrasts{} paired intervals
+exclude zero, and no margin of practical equivalence was pre-registered, so
+this is a statement about magnitude, not absence; a feature that moves AUROC
+little may still be the reason a particular alert fires.
+
+Second, these features account for most of the cross-label coefficient
+instability: \pcHTwoPctUnstable\% of terms are flagged in the full fit against
+\pcAblHTwoPctUnstable\% in the ablated one. A published effect estimate for a
+treatment or order indicator from a model of this kind therefore reflects the
+labelling regime as much as the patient.
+
+Third, removing them does not remove all clinician-action information. The
+retained laboratory values are forward-filled from tests somebody chose to
+order, and vital signs are recorded on schedules that reflect how closely a
+patient is watched, so the ablation measures the effect of removing the
+explicit traces only (Limitation~\ref{lim:features}).
+
+
+\section{Implications for How These Studies Are Reported}
+\label{sec:implications}
+
+The findings bear less on which model to build than on what a sepsis prediction
+study needs to report before its headline number can be interpreted.
+
+\paragraph{Report label agreement, not only performance sensitivity.}
+Performance across label variants should not be reported as the only
+label-sensitivity analysis. Here, label choice moved AUROC by \pcSpreadLabel{}
+while the two narrowest readings agreed at $\kappa = \pcKappaVsBA$ despite
+near-identical prevalence, so every count, rate and denominator changed
+substantially while discrimination barely moved. Agreement between the
+variants is where the variation lies, and AUROC does not show it.
+
+\paragraph{State the onset rule and its consequence for the evaluation
+window.} Two studies can share a cohort, a definition and a model and still
+differ on whether pre-onset prediction is measurable, purely through the choice
+between $t_{\text{susp}}$ and $\min(t_{\text{susp}}, t_{\text{SOFA}})$. That
+choice is often left implicit in a reference to Sepsis-3. It should be stated
+in the methods with its consequence for the evaluation window, because under a
+conjunction rule an empty pre-treatment window is not evidence of anything
+(Proposition~\ref{prop:h3}).
+
+\paragraph{Report discrimination and operating-point burden together.} At the
+event rate here the conventional 0.5 cut-off separates models by calibration
+rather than clinical value. A threshold-dependent metric is interpretable only
+as a swept ceiling with the attaining operating point reported beside it,
+including its alert burden (\pcUtilityOptBurdenGbtB{} false alerts per true
+alert at the best configuration under the primary label, against the 1.4
+benchmark of Moor et al.\ \cite{moor2023review}). Alert burden is rarely
+reported among the 91 models Wang et al.\ \cite{wang2025srpm} reviewed.
+
+\paragraph{Audit label-input coverage before external validation.} In this
+study the main constraint on the external estimate was whether the label's
+inputs existed in the destination database, which neither a reported AUROC
+nor a reported cohort size reveals. A study transporting a treatment-anchored
+label should report the coverage of each labelling input in the destination
+cohort, and the event count an estimate rests on, before reporting performance.
+
+\paragraph{Interpret comparisons between flexible estimators in context.}
+Within this study, comparisons between flexible estimators were less
+informative than comparisons of label membership, onset timing and alert
+burden: the two flexible estimators differ by \pcHSixAbsEst{} AUROC against
+\pcSpreadModelClass{} across the six specifications. Two estimators are a
+narrow base for a general claim, since no deep temporal model was fitted and
+GBT was not tuned (Limitation~\ref{lim:comparators}).
+
+\paragraph{Declare subgroup event floors in advance.} At a low event rate most
+demographic strata carry too few events for a subgroup AUROC to be
+interpretable, and an interval reaching the chance line is easily read as a
+null result rather than an absent measurement. Declaring the floor before
+estimation, tabulating below-floor strata rather than suppressing them, and
+excluding them from the corrected family keeps that distinction visible.
+
+
+\section{Limitations}
+\label{sec:limitations}
+
+The limitations below are not of equal weight, and three bound the central
+claims most directly: the discrimination figures measure detection at the
+recorded onset hour rather than advance warning
+(Limitation~\ref{lim:current_hour}); part of the label-variant spread is
+definitional, because the pre-registered variants share one treatment-based
+anchor (Limitation~\ref{lim:label_construction}); and the strongest positive
+result, H6, is non-inferiority against a single untuned comparator whose
+boosting-round selection was corrected under Protocol Amendment~8
+(Limitation~\ref{lim:comparators}). The remainder qualify the scope of
+particular analyses rather than the direction of the main findings.
+
+\begin{enumerate}
+    \item \textbf{Development cohort and population
+    selection.}\label{lim:cohort_selection} All models were developed on
+    MIMIC-IV, from a single academic medical centre, and the findings apply to
+    the Sepsis-3 definition on that database; clinical practice, documentation
+    and antibiotic prescribing elsewhere may differ, and SEP-1 and the CDC
+    Adult Sepsis Event were not implemented. The base cohort is also selected:
+    only the first ICU stay of each patient and stays of at least four hours
+    are retained (Section~\ref{sec:cohort}). Repeat admissions differ
+    systematically from first admissions, and short stays mix rapid deaths,
+    rapid transfers and low-acuity observation admissions; the two
+    restrictions pull acuity in opposite directions, so their net effect is not
+    signed here. The population is the subset of adult ICU admissions for
+    which an hourly real-time task is well posed.
+
+    \item \textbf{External label transport and external sample
+    size.}\label{lim:label_transport} The Sepsis-3 anchor requires a culture,
+    which \texttt{microLab} documents for only \pcExtMicroCoverage\% of the
+    \pcExtNCohortStays{} eICU-CRD stays, so the primary external analysis rests
+    on \pcExtNEventsB{} events under the primary label, below the
+    \pcExtMinEvents{}-event floor. More data of the same kind would not remove
+    this; it would require a destination database whose microbiology recording
+    matches MIMIC-IV's. The covered sub-cohort is documentation-selected, with
+    a direction of selection that cannot be signed, and the external
+    degradation is not decomposed into case mix, measurement frequency,
+    presentation or residual label imperfection. NEWS2 is also not scored
+    identically in the two cohorts: in MIMIC-IV a person-hour with no recorded
+    Glasgow Coma Scale after forward-fill is charged three points as ``not
+    alert'', whereas in eICU-CRD, which lacks the variable, it is charged none,
+    so NEWS2 thresholds, specificity and alert burden should be compared within
+    a cohort, not across the pair. No decomposition, verdict or primary-model
+    result depends on NEWS2.
+
+    \item \label{lim:current_hour}\textbf{Discrimination is measured on the
+    current-hour hazard, not on a six-hour horizon.} Every AUROC, AUPRC and
+    calibration figure scores the current-hour hazard against an indicator
+    marking the onset hour among at-risk hours (Section~\ref{sec:framing}).
+    The figures are therefore not directly comparable with published AUROCs for
+    binary ``onset within $k$ hours'' labels, whose positives are more numerous
+    and whose task is easier to score well on, and comparisons with such
+    figures in Chapter~\ref{ch:review} are indicative only. Covariates are
+    binned to the hour, so a measurement charted after the onset timestamp
+    within the onset hour still enters that hour's prediction: the figures
+    measure detection at the recorded onset hour, not anticipation, and the
+    lead-time distribution, which speaks to anticipation, is uninformative at
+    these alert rates. A design that lagged every predictor by one hour, or
+    applied a sub-hour timestamp cut-off, would separate the two and is not
+    implemented here. A cumulative six-hour risk, which a deployed instrument
+    would display, is also not reported.
+
+    \item \textbf{Label construction.}\label{lim:label_construction} Part of the label-variant spread is
+    definitional: Variants A--C share the culture-plus-antibiotic anchor, so
+    moving the antibiotic--culture windows must move the onsets. The
+    pre-registered onset rule is also not the standard one, so the
+    pre-registered family cannot address onset timing on its own, H3 among
+    it. The alternative labels that address these points are post-hoc
+    (Protocol Amendments 2 and 4) and rest on few variants. Variant F uses the
+    full SOFA score, so its onsets are free of the antibiotic--culture anchor
+    but not of treatment in general, and its $t_{\text{SOFA}}$ is searched only
+    inside the 72-hour panel. Variant D is an operational deterioration label
+    built for this comparison, not a validated construct, its onsets have no
+    external adjudication, and its overlap with the model inputs makes its
+    discrimination level uninterpretable.
+
+    \item \textbf{Feature construction.}\label{lim:features} The feature set
+    cannot be fully purged of clinician action: the ablation removes the
+    explicit action-derived predictors, but retained laboratory values and
+    vital signs still reflect ordering and monitoring decisions. Clinical
+    notes, procedure codes and ventilator settings were not included. The
+    covariate panel is also single-analyst work with no independent
+    re-implementation; declared-but-absent features and implausible recorded
+    values are guarded against, by an error on any missing feature and a
+    plausibility range on all nineteen physiological variables before
+    forward-fill, but neither guard substitutes for independent replication.
+
+    \item \textbf{Comparator coverage and the scope of
+    H6.}\label{lim:comparators} A deep survival comparator was planned but not
+    built, so H6 establishes non-inferiority against GBT only, not against
+    every flexible estimator. GBT was not tuned, which keeps the search budget
+    equal across the H6 comparison but may place it below its attainable
+    performance. The contrast supports one-sided non-inferiority, not two-sided
+    equivalence (Section~\ref{sec:h6}). GBT's boosting-round count is chosen on
+    a holdout from the training stays (Protocol Amendment 8); under the earlier
+    procedure it was chosen on the test set, which favoured the comparator, and
+    the correction moved H6 in the primary model's favour, so H6 is a finding
+    the uncorrected fits already supported and the correction strengthened.
+
+    \item \textbf{Penalised estimation and H2 uncertainty.} The unpenalised
+    likelihood is completely separated, so the reported fits are
+    ridge-penalised; test AUROC varies by less than 0.02 across a 20-point
+    penalty path, but the coefficients are shrunk estimates and the H2
+    counts are properties of the penalised solution. The cluster-robust
+    covariance is that of the penalised estimator, so Wald-type
+    interpretation is approximate, and it bears on coefficients only: H2's
+    count has no sampling distribution. The Amendment 7 diagnostic shows that
+    \pcHTwoNNoise{} of the \pcHTwoNFlagged{} flagged covariates move by less
+    than their own estimation noise, so the count is a loose upper bound, but
+    the diagnostic is not a test. Performance intervals come from the cluster
+    bootstrap and are unaffected.
+
+    \item \textbf{Threshold selection and alarm implementation.} Operating
+    points and maximum Utility Scores are selected on the test set on which
+    they are evaluated, so they are optimistic upper bounds; selecting
+    thresholds on the training years would give a lower deployment estimate.
+    External thresholds are re-derived on eICU-CRD, which hides the further
+    loss a transferred threshold would incur. False-alarm episodes are defined
+    by contiguity rather than acknowledgement; suppression and escalation logic
+    would reduce them, so the alert-hour and episode rates bound the true
+    burden from above and below.
+
+    \item \textbf{Subgroup analysis.}\label{lim:subgroup} Only
+    \pcNSubgroupsAboveFloor{} of the racial strata clear the
+    \pcMinSubgroupEvents{}-event floor and no contrast in family E1 survives
+    correction, so the data are consistent both with no disparity and with
+    material disparities. The strata are also administrative: the
+    \texttt{race} field mixes broad and granular codes from the same
+    population, so the reference level is a residual category, and two levels
+    record the absence of an answer. The label-sensitivity result is better
+    powered but inherits the construct limitation, and its two significant
+    racial strata are the missingness categories. A documentation-based
+    explanation, in which an incomplete registration record accompanies an
+    incomplete clinical record and so makes a label built on two documented
+    clinician actions less stable, is assumed rather than measured; comparing
+    charting density or laboratory coverage between strata would test it.
+
+    \item \textbf{Literature-search scope.} The search in
+    Section~\ref{sec:search_strategy} is structured and verified but not
+    systematic: no title-and-abstract screening of a full deduplicated yield
+    was performed and no second reviewer screened independently. The novelty
+    claims for contributions C1 and C5 concern combinations of analyses, each
+    with precedent, and a systematic review could surface a prior study
+    combining them.
+
+    \item \textbf{Post-hoc amendments and hypothesis evaluability.} Ten
+    protocol amendments were introduced after the initial analyses had been
+    inspected. They are dated and disclosed in the pre-registration, and their
+    analyses are tagged exploratory or descriptive (Appendix~\ref{sec:register}),
+    but the confirmatory interpretation should be read as a pre-specified
+    hypothesis set analysed under a retrospectively specified inference plan
+    (Amendment 1). Amendment 8 corrected test-set use in GBT early stopping and
+    changed the GBT estimates; no amendment altered an H1--H6 estimand. Three
+    others warrant a note. Amendment 6 reduced family E1 from thirty computed
+    contrasts to six, a departure from the rule that the denominator is the
+    number of contrasts computed; the outcome-blind event floor removed the one
+    contrast that had cleared correction, resting on twelve events, so the
+    change runs against this study, and none of the six retained contrasts
+    clears correction under either denominator. Amendment 7's diagnostic
+    favours this thesis's argument and is computed from the same fits as the
+    ablation, so it is not independent evidence. Amendment 10 attached
+    intervals to three quantities outside the corrected families:
+    \pcAblNExcludeZero{} of the \pcAblNContrasts{} ablation contrasts and one
+    cross-label calibration-intercept contrast exclude zero. Of the
+    hypotheses, H2 has no test statistic, H3 is degenerate by construction,
+    and H5 is tested on a substituted estimand; that substitution is a
+    departure from the protocol, and H5's verdict is weaker evidence than H1's
+    or H4's for that reason.
+\end{enumerate}

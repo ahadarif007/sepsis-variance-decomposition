@@ -203,9 +203,9 @@
 % contents, figures and tables, which is not where a reader looks for it and
 % not where a signed declaration belongs. \addcontentsline in each file still
 % registers them, so all three appear in the contents either way.
-\input{chapters/01.Abstract.tex}
-\input{chapters/02.Declaration.tex}
-\input{chapters/03.Acknowledgments.tex}
+\input{frontmatter/abstract.tex}
+\input{frontmatter/declaration.tex}
+\input{frontmatter/acknowledgements.tex}
 
     \tableofcontents
     \listoffigures
@@ -213,24 +213,26 @@
 
 % The arabic reset has to be issued on a page of its own, after the last piece
 % of front matter has been shipped out. Placed immediately after
-% \input{chapters/03.Acknowledgments.tex} it took effect while that page was
+% \input{frontmatter/acknowledgements.tex} it took effect while that page was
 % still open, so that page was numbered 1 and the table of contents listed
 % "Acknowledgments ... 1" against "Introduction ... 2".
 \cleardoublepage
 \pagenumbering{arabic}
 \setcounter{page}{1}
 
-\input{chapters/04.Introduction.tex}
-\input{chapters/05.Review.tex}
-\input{chapters/06.Methodology.tex}
-\input{chapters/07.Design.tex}
-\input{chapters/08.Evaluation.tex}
-\input{chapters/09.Discussion.tex}
-\input{chapters/10.Conclusion.tex}
+\input{chapters/ch1-introduction.tex}
+\input{chapters/ch2-literature-review.tex}
+\input{chapters/ch3-methodology.tex}
+\input{chapters/ch4-system-design.tex}
+\input{chapters/ch5-results/ch5-results.tex}
+\input{chapters/ch6-discussion.tex}
+\input{chapters/ch7-conclusion.tex}
 
 \printbibliography[heading=bibintoc, title={References}]
 
 \appendix
-\input{chapters/11.Appendix.tex}
+\input{appendices/appA-source-code.tex}
+\input{appendices/appB-pipeline-stages.tex}
+\input{appendices/appC-analysis-register.tex}
 
 \end{document}

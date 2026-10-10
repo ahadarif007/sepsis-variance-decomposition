@@ -1,35 +1,33 @@
 % =============================================================================
-%  III. RESEARCH QUESTION AND PRE-REGISTERED HYPOTHESES  
+%  III. RESEARCH QUESTION AND PRE-REGISTERED HYPOTHESES
 % =============================================================================
 \begin{frame}{III. Research Question and Pre-Registered Hypotheses}
 \begin{block}{Research Question}
-  \small In real-time sepsis prediction on MIMIC-IV~\cite{johnson2023mimiciv},
-  how much of the reported performance variation comes from (a)~the choice of
-  model, and (b)~the researcher's decisions: how sepsis is defined, how data
-  is split, when prediction is made, and how performance is measured?
+  \small How much of the variation in reported performance comes from the
+  model, and how much from how sepsis is defined, how data are split, when
+  prediction is made relative to treatment, and which metric is reported?\\[2pt]
+  {\footnotesize\color{MidGrey} Setting: real-time sepsis detection in
+  MIMIC-IV~\cite{johnson2023mimiciv}.}
 \end{block}
 
-\vspace{2pt}
-\begin{itemize}\itemsep0pt\footnotesize
-  \item \textbf{H1 (Label dominance):} changing the sepsis definition affects
-        AUROC at least as much as changing the model.
-  \item \textbf{H2 (Coefficient instability):} at least one feature changes
-        direction, or magnitude $\geq 2\times$, across label variants.
-  \item \textbf{H3 (Treatment leakage):} restricting evaluation to before
-        treatment reduces AUROC by $\geq 0.03$.
-  \item \textbf{H4 (Split optimism):} temporal testing gives $\geq 0.02$ lower
-        AUROC than random testing.
-  \item \textbf{H5 (Metric divergence):} Utility declines more than AUROC from
-        internal to external validation.
-  \item \textbf{H6 (Model-class null):} the primary statistical model is not
-        outperformed by gradient-boosted trees by more than 0.02 AUROC.
+\begin{itemize}\itemsep1pt\footnotesize
+  \item \textbf{H1 Label dominance:} label variation $\geq$ model variation in
+        AUROC.
+  \item \textbf{H2 Coefficient instability:} $\geq 1$ coefficient changes sign
+        or by $\geq 2$-fold across labels.
+  \item \textbf{H3 Treatment leakage:} pre-treatment restriction reduces AUROC
+        by $\geq 0.03$.
+  \item \textbf{H4 Split optimism:} temporal AUROC is $\geq 0.02$ below
+        random-split AUROC.
+  \item \textbf{H5 Metric divergence:} utility declines proportionally more
+        than AUROC from internal to external validation.
+  \item \textbf{H6 Model-class null:} GBT improves AUROC over the primary model
+        by no more than 0.02.
 \end{itemize}
 
 \vspace{2pt}
-{\scriptsize The six hypotheses form one Holm-corrected family ($m = 6$). H2
-and H3 keep their places in the family but produce no p-value; the reported H5
-contrast is a post-hoc substitute for the pre-registered estimand.
-\textbf{Scope:} the models estimate the hazard of onset in the
-\emph{current} hour, i.e.\ detection at the recorded onset, not advance
-warning.\par}
+{\scriptsize\textbf{Multiplicity:} Holm correction across H1--H6.
+\textbf{Protocol note:} H2 and H3 yield no p-value; the reported H5 analysis
+uses a post-hoc substitute estimand.
+\textbf{Estimand:} current-hour onset detection, not advance prediction.\par}
 \end{frame}

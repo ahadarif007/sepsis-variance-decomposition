@@ -1,0 +1,206 @@
+\chapter{Introduction}
+\label{ch:introduction}
+
+
+\section{Context and Motivation}
+
+Sepsis is a life-threatening condition caused by a dysregulated host response
+to infection \cite{singer2016sepsis3}. It accounts for approximately 11 million
+deaths annually, nearly one fifth of deaths worldwide \cite{rudd2020global},
+and each additional hour before antibiotic administration is associated with
+higher mortality \cite{seymour2017time}. An early warning system that detects
+sepsis before clinical recognition could allow treatment to start sooner.
+
+This potential has motivated a large body of research, but high
+discrimination has not translated reliably into clinical value. Wang et al.\
+\cite{wang2025srpm} reviewed 91 published real-time sepsis prediction models
+and found a median internal AUROC of 0.811. Among the models that reported it,
+the median Utility Score, which rewards timely alerts and penalises late and
+false ones, fell from $+0.381$ internally to $-0.164$ externally; a negative
+score means that alerting does more harm than issuing no alerts at all. In
+prospective deployment, Wong et al.\ \cite{wong2026epic} found encounter-level
+AUROC between 0.82 and 0.92 for the Epic Sepsis Model v2 across 227,091
+encounters at four US health systems, with positive predictive value of 0.13
+to 0.26, or 21 to 35 alerts investigated per sepsis case identified. These
+studies show that discrimination can remain high while external utility is
+poor and alert burden substantial.
+
+Study design is a further source of variation. Cohen et al.\
+\cite{cohen2024subtle} showed on MIMIC-III that varying only the
+operationalisation of Sepsis-3 changed the identified cohort from 867 to 2,178
+patients, and that the label choice affected performance as much as the model
+choice. Kamran et al.\ \cite{kamran2024evaluation} showed that published models
+partly learn to predict when clinicians start treatment rather than when
+patients deteriorate.
+
+These findings shift the focus from model ranking to study design. This thesis
+asks how much of the variation in reported performance is attributable to the
+choice of model, and how much to four design choices: how sepsis is defined,
+when prediction is made relative to treatment, how the data are split, and
+which metric is reported. Each is treated as a separate source of variation
+and its contribution is estimated. The pre-registered term \emph{variance
+decomposition}, which the title reflects, refers here to a comparison of
+one-factor-at-a-time performance ranges, not to a formal partition of
+statistical variance (Section~\ref{sec:decomposition}).
+
+
+\section{Limitations of the Conventional Approach}
+
+The conventional approach to sepsis prediction selects one Sepsis-3
+operationalisation, one train/test split and one headline metric, usually
+AUROC, and then compares models. Most of the 91 models reviewed by Wang et al.\
+\cite{wang2025srpm} follow this pattern, which has four limitations:
+
+\begin{enumerate}
+    \item \textbf{The sepsis label is not fixed.} Different operationalisations
+    of Sepsis-3 applied to the same database produce substantially different
+    cohorts and performance estimates \cite{cohen2024subtle}. The label choice
+    can change results as much as the model choice.
+
+    \item \textbf{The data split can produce optimistic estimates.} Guo et al.\
+    \cite{guo2022temporal} found that sepsis prediction degraded more than any
+    of the other clinical tasks they evaluated when tested on a later admission
+    era. Random splits mix admission eras and may therefore produce optimistic
+    estimates when clinical practice or documentation changes over time.
+
+    \item \textbf{AUROC does not reflect clinical usefulness.} A model can
+    retain a high AUROC while its clinical utility falls below that of issuing
+    no alerts \cite{wang2025srpm}.
+
+    \item \textbf{The label incorporates clinician behaviour.} Because
+    Sepsis-3 is operationalised through culture and antibiotic orders, models
+    may learn when clinicians suspect sepsis and begin treatment rather than
+    when the patient's condition worsens \cite{kamran2024evaluation}. The time
+    at which prediction is evaluated relative to treatment therefore matters.
+\end{enumerate}
+
+Comparing models while holding these design choices fixed leaves their
+contributions unmeasured. This study varies them explicitly and estimates each
+contribution with an uncertainty interval, to compare their effects on
+reported performance with the effect of model choice.
+
+
+\section{Research Question and Pre-Registered Hypotheses}
+\label{sec:rq}
+
+\noindent\textbf{Research question.} \textit{In real-time sepsis prediction on
+MIMIC-IV, how much of the variation in reported performance is attributable to
+(a) the choice of model, and (b) the researcher's decisions: how sepsis is
+defined, how the data are split, when prediction is made, and how performance
+is measured?}
+
+All discrimination estimates concern detection of the recorded onset hour
+among at-risk person-hours: the models estimate the hazard of onset in the
+current hour, so they measure onset detection rather than prediction over a
+future horizon. Because predictors and outcomes are binned hourly, the analysis
+does not establish that measurements preceded onset within the scored hour
+(Section~\ref{sec:framing}; Limitation~\ref{lim:current_hour}). Here,
+``real-time'' denotes hourly dynamic estimation without retrospective
+information, not demonstrated advance warning.
+
+Six hypotheses were pre-registered before any of the modelling reported here:
+
+\begin{description}
+    \item[H1 (Label dominance)] Changing the sepsis definition affects AUROC at
+    least as much as changing the model.
+    \item[H2 (Coefficient instability)] At least one clinical feature changes its
+    effect direction, or changes in magnitude by a factor of two or more, across
+    label variants.
+    \item[H3 (Treatment leakage)] Restricting evaluation to before treatment
+    begins reduces AUROC by at least 0.03.
+    \item[H4 (Split optimism)] Time-based testing gives at least 0.02 lower AUROC
+    than random testing.
+    \item[H5 (Metric divergence)] The Utility Score declines proportionally more
+    than AUROC when moving from internal to external validation.
+    \item[H6 (Model-class null)] The primary discrete-time hazard model is not
+    outperformed by gradient-boosted trees by more than 0.02 AUROC, under a
+    fixed label and temporal split.
+\end{description}
+
+H1 and H6 represent competing explanations of performance variation:
+confirming H1 would make the label the main source, whereas rejecting H6 would
+place more weight on the model.
+
+Two hypotheses could not be evaluated in their pre-registered form. Under the
+pre-registered onset rule the pre-treatment window of H3 contains no onsets by
+construction (Section~\ref{sec:h3}), and the internal Utility Score is too
+close to zero for the proportional decline of H5 to be defined, so an
+internal-to-external AUROC contrast takes its place (Section~\ref{sec:h5}).
+Section~\ref{sec:h6} sets out how the interval null of H6 is tested.
+
+The formal inference and multiplicity plan, unlike the hypotheses, was
+specified after the analyses had been run (Protocol Amendment 1). The six
+hypotheses form one
+confirmatory family controlled by Holm--Bonferroni correction. Other analyses
+are classified as confirmatory, exploratory or descriptive;
+Section~\ref{sec:inference} defines these classifications and the
+corresponding multiplicity procedures.
+
+
+\section{Contributions}
+\label{sec:contrib}
+
+To the best of our knowledge, and within the limits of the structured narrative
+search described in Section~\ref{sec:search_strategy}, the study makes seven
+contributions.
+
+\begin{enumerate}
+    \item \textbf{C1 (Label variation).} Three Sepsis-3 operationalisations are
+    evaluated with a discrete-time competing-risks model on MIMIC-IV.
+    Label-related and model-related AUROC spreads are estimated on the same test
+    rows, each with an uncertainty interval, so that the two can be compared
+    directly. Label sensitivity itself is established
+    \cite{cohen2024subtle, dutta2026performance}; the contribution is this
+    combination.
+
+    \item \textbf{C2 (Onset timing and treatment anchoring).} The study proves
+    that a conjunction-based Sepsis-3 onset rule, used here and widely in the
+    MIMIC-IV literature, leaves the pre-treatment evaluation window structurally
+    empty. The standard $\min(t_{\text{susp}}, t_{\text{SOFA}})$ timing rule is
+    then evaluated empirically on the same cohort in a post-hoc analysis. C2
+    concerns the logical consequence of the onset-timing rule.
+
+    \item \textbf{C3 (Utility ceiling).} The adapted Utility Score is evaluated
+    across the full threshold grid rather than at a single conventional
+    cut-off, to test whether the low utility reported by Wang et al.\
+    \cite{wang2025srpm} persists at every operating point in a controlled
+    single-study comparison. Under the primary label no model exceeds
+    \pcUtilityMaxGbtB{}, on a scale whose upper bound is 1.
+
+    \item \textbf{C4 (Coefficient stability).} Cross-label coefficient
+    stability is evaluated with pre-registered sign and magnitude criteria,
+    testing Lauritsen et al.'s \cite{lauritsen2021framing} framing-instability
+    finding on MIMIC-IV, followed by an exploratory comparison of each flagged
+    change against its cluster-robust standard error.
+
+    \item \textbf{C5 (Equity by label).} Subgroup discrimination and subgroup
+    variation in who is labelled septic are measured on the same strata of an
+    onset-prediction cohort under common false-discovery control. Wang et al.\
+    \cite{wang2022equity} reported both quantities, but for mortality
+    prediction among patients already identified as septic.
+
+    \item \textbf{C6 (Reproducible pipeline).} A reproducible, seed-fixed
+    pipeline built around a pre-registered study protocol, with every protocol
+    amendment disclosed, and reported following TRIPOD+AI
+    \cite{collins2024tripodai} and PROBAST+AI \cite{moons2025probastai}.
+
+    \item \textbf{C7 (Anchor attribution).} In a post-hoc analysis, the
+    Sepsis-3 conjunction is separated into its treatment-anchor and
+    organ-dysfunction components, each labelled separately, to distinguish
+    definitional label variation from empirical differences in membership,
+    onset timing and predictability. Where C2 concerns the logic of the onset
+    rule, C7 attributes the label effect empirically to its two components.
+\end{enumerate}
+
+
+\section{Thesis Structure}
+
+Chapter~\ref{ch:review} reviews the evidence motivating the study.
+Chapter~\ref{ch:methodology} describes the data, labels, models, validation
+design and statistical analysis, and Chapter~\ref{ch:design} presents the
+pipeline architecture. Chapter~\ref{ch:evaluation} reports the results,
+organised around the six hypotheses; Chapter~\ref{ch:discussion} interprets
+them and discusses their limitations; and Chapter~\ref{ch:conclusion}
+summarises the conclusions and future work. Appendix~\ref{app:code} gives the
+source-code repository and the procedure for reproducing every reported
+number, and Appendix~\ref{app:stages} documents the pipeline stages.
