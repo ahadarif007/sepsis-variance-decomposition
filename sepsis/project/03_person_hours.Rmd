@@ -1,5 +1,5 @@
 ---
-title: "03 Person-Hours - Person-Hour Table Construction"
+title: "03 Person-Hours - Hourly Panel and Competing-Event Coding"
 author: "Abdul Ahad. Student ID: G00486649"
 date: "`r format(Sys.Date(), '%d %B %Y')`"
 output:
@@ -34,24 +34,31 @@ knitr::opts_chunk$set(
 
 ## Introduction
 
-This notebook expands each ICU stay into an hourly grid, attaches time-varying vitals and labs via LOCF (last-observation-carried-forward), and codes each row with its competing-event status (D'Agostino et al., 1990; Heyard et al., 2019).
+This notebook expands each ICU stay into an hourly panel, attaches
+time-varying vital signs and laboratory values using last observation carried
+forward (LOCF), and assigns each person-hour one of four mutually exclusive
+competing-event states (D'Agostino et al., 1990; Heyard et al., 2019). Hour
+$h$ covers the interval from $h$ to $h + 1$ hours after ICU admission. The
+panel runs from hour 0 to ICU discharge or hour 72 (`MAX_PANEL_HOURS` in
+`config.R`), whichever comes first.
 
-Four mutually exclusive states at each hour:
+| Code | Event | Meaning |
+|------|-------|---------|
+| 0 | At risk | No event in this hour; the stay remains at risk |
+| 1 | Label onset | The variant's onset falls in this hour |
+| 2 | Discharge alive | Last panel hour of a stay with no onset, for a patient who survived to hospital discharge |
+| 3 | Death without onset | Last panel hour of a stay with no onset, for a patient who died in hospital |
 
-| Code | Event | Interpretation |
-|------|-------|----------------|
-| 0 | In-progress | Patient remains at risk (censored at this hour) |
-| 1 | Label onset | The variant's onset criteria are met in this hour |
-| 2 | Discharge alive | ICU discharge without reaching onset |
-| 3 | Death without onset | In-ICU mortality without prior onset |
+A stay with an onset never receives state 2 or 3, so the states cannot
+coincide. The event in state 1 depends on the label variant: Sepsis-3 onset for
+Variants A--C and F, the suspected-infection time for Variant E, and acute organ
+dysfunction for Variant D. The onsets for Variants D and F are derived in this
+notebook from the hourly panel; the others are taken from
+`02_cohort_labels.Rmd`.
 
-For variants A--C, state 1 is Sepsis-3 onset. For the alternative-label variants
-it is that variant's own onset: suspicion of infection (E) or acute organ
-dysfunction (D) under Protocol Amendment 2, and Sepsis-3 onset under the
-standard $\min(t_{\text{susp}}, t_{\text{SOFA}})$ timing (F) under Protocol
-Amendment 4.
-
-Treatment anchor timestamps (first antibiotic, first culture) are recorded for the treatment-anchored evaluation window (Kamran et al., 2024).
+The first antibiotic order and the first culture of each hospital admission are
+also recorded, as hours from ICU admission. They define the treatment-anchored
+evaluation window used in later stages (Kamran et al., 2024).
 
 ```{r load-deps}
 suppressPackageStartupMessages({
@@ -67,9 +74,13 @@ source("clinical_scores.R")
 step("=== Phase 2b: Person-hour table construction ===")
 ```
 
-## Load Cohort IDs
+## Cohort Identifiers
 
-Cohort stay and admission IDs are collected so the large source tables can be filtered in a single DuckDB pass.
+The ICU stay and hospital-admission identifiers of the base cohort are
+collected first, so that the large source tables can be restricted to the
+cohort when they are read. Because the base cohort keeps one ICU stay per
+patient, each stay belongs to a different hospital admission, and the two
+counts printed below are equal.
 
 ```{r load-cohort-ids}
 step("Loading cohort IDs for pre-filtering...")
@@ -90,9 +101,17 @@ cat(sprintf("Cohort: %d stays, %d hadm_ids\n",
             length(all_stay_ids), length(all_hadm_ids)))
 ```
 
-## Load and Pre-Filter Large Tables
+## Source Tables
 
-Chartevents and labevents are loaded via DuckDB with pushdown filters on item IDs and cohort membership. Temperature F is converted to C, and FiO$_2$ percentages are rescaled to fractions.
+The `chartevents` and `labevents` tables are read with two filters applied at
+the source: the item identifiers required by the panel, and membership of the
+cohort. The printed row counts are the numbers of measurements retained.
+Temperatures recorded in degrees Fahrenheit are converted to degrees Celsius.
+An FiO$_2$ value greater than 1 is taken to be a percentage and divided by 100;
+values of 1 or less are taken to be fractions already. Vasopressor infusions
+are read from `inputevents`. The first antibiotic order (from `prescriptions`)
+and the first non-surveillance culture with a recorded time (from
+`microbiologyevents`) are taken for each hospital admission.
 
 ```{r load-chartevents}
 step("Loading chartevents (vitals) via DuckDB...")
@@ -163,9 +182,35 @@ microbio <- microbio[!(spec_type_desc %in% SURVEILLANCE_SPEC_TYPES) & !is.na(cha
 first_culture <- microbio[, .(first_culture_time = min(charttime, na.rm = TRUE)), by = hadm_id]
 ```
 
-## Per-Hour Covariate Extraction
+## Hourly Covariate Construction
 
-A dense hourly grid is built for each stay. Vitals and labs are aggregated to hourly means, then forward-filled (LOCF). Missingness indicators flag unmeasured hours. Six-hour rolling slopes capture vital-sign trends.
+Each measurement is assigned to the hour in which it was recorded. Measurements
+taken before ICU admission are not used. Within each hour, repeated
+measurements of the same item are averaged, with three exceptions. MAP and
+systolic blood pressure take the lower of the invasive and non-invasive hourly
+means. GCS is the sum of the eye, verbal and motor components recorded in the
+hour, and a total outside 3--15 is set to missing. Vasopressor exposure is
+marked for every hour in which an infusion was running. The PaO$_2$/FiO$_2$
+ratio is calculated from the hourly PaO$_2$ and FiO$_2$ values.
+
+The hourly values are then checked against the physiological ranges in
+`PLAUSIBLE_RANGES` in `config.R`, and any value outside its range (bounds
+included as plausible) is set to missing. This check runs after hourly
+averaging and before forward-filling, so an implausible value is never carried
+forward. The panel is rebuilt for each variant, so the same check and its log
+appear once per variant.
+
+Missing values are then forward-filled within the stay, with no limit on how
+long a value is carried; a value measured once is carried until the next
+measurement or the end of the panel. Hours before a variable's first
+measurement remain missing. Six indicator columns (`*_measured`) record, for
+lactate, creatinine, bilirubin, platelets, white cell count and the
+PaO$_2$/FiO$_2$ ratio, whether a value is present after forward-filling. Each
+indicator is therefore 1 from the first measurement of that test onwards,
+rather than marking only the hours in which a test was taken. Columns named
+`*_slope6h` hold the mean of the forward-filled value over the current and five
+preceding hours, for heart rate, respiratory rate, MAP, temperature and GCS.
+These values are trailing six-hour means, not regression slopes.
 
 ```{r hourly-covariates-fn, code_folding="hide"}
 build_hourly_covariates <- function(stays_dt) {
@@ -300,19 +345,26 @@ build_hourly_covariates <- function(stays_dt) {
 }
 ```
 
-## Treatment-Independent Deterioration Onset (Variant D)
+## Deterioration Onset (Variant D)
 
-Variant D (Protocol Amendment 2) has no suspicion anchor, so its onset cannot be
-assigned in `02_cohort_labels.Rmd`; it is derived here, where the hourly panel
-exists. Onset is the first hour after hour 1 at which the **physiology-only**
-SOFA score rises $\geq$ `r SOFA_INCREASE_THRESHOLD` points above the stay's
-admission baseline (hours 0--`r DETERIORATION_BASELINE_H`, mirroring the
-admission baseline used by variants A and B).
+Variant D, introduced by Protocol Amendment 2, has no suspected-infection
+anchor. Its onset is therefore defined on the hourly panel rather than when the
+stay-level cohort is built. The onset is the first hour from hour
+`r MIN_OBS_HOURS + 1` onwards (at least `r MIN_OBS_HOURS + 1` hours after ICU
+admission) at which a SOFA score computed without vasopressor terms is at least
+`r SOFA_INCREASE_THRESHOLD` points above the stay's admission baseline. The
+baseline averages each SOFA component over hours 0--`r DETERIORATION_BASELINE_H`
+and scores the averages once, the same admission-baseline definition used by
+Variants A and B. Because onset can be assigned from hour
+`r MIN_OBS_HOURS + 1`, the baseline of an onset in hours
+`r MIN_OBS_HOURS + 1`--`r DETERIORATION_BASELINE_H` includes that hour's own
+values.
 
-"Physiology-only" means the vasopressor and catecholamine columns are withheld
-from `score_sofa()`, so the cardiovascular component is scored from MAP alone.
-The resulting label therefore contains no antibiotic order, no culture draw and
-no drug administration: nothing that records a clinician's decision to treat.
+The hourly score uses the forward-filled values. Vasopressor exposure is not
+passed to the scoring function, so the cardiovascular component is graded from
+MAP alone. The label therefore uses no antibiotic order, culture or vasopressor
+record. Its physiological inputs can still reflect treatment already given,
+because MAP, laboratory values and GCS are measured in patients under care.
 
 ```{r deterioration-onset-fn, code_folding="hide"}
 SOFA_PHYS_COMPONENTS <- c("pf_ratio", "platelets", "bilirubin", "map",
@@ -352,34 +404,38 @@ derive_deterioration_onsets <- function(panel) {
 }
 ```
 
-## Standard Sepsis-3 Onset Timing (Variant F, Protocol Amendment 4)
+## Sepsis-3 Early-Onset Timing (Variant F)
 
-Variants A--C take the onset to be the suspicion time $t_{\text{susp}}$ whenever
-the SOFA criterion is met anywhere in the evaluation window. The standard
-operationalisation of Seymour et al. (2016), followed by the PhysioNet/CinC 2019
-Challenge (Reyna et al., 2020), instead takes
+Variants A--C place the onset at the suspected-infection time
+$t_{\text{susp}}$ whenever the SOFA criterion is met anywhere in the evaluation
+window. Variant F, introduced by Protocol Amendment 4, instead uses the onset
+convention of Seymour et al. (2016) and the PhysioNet/CinC 2019 Challenge
+(Reyna et al., 2020):
 
-$$t_{\text{onset}} = \min\!\left(t_{\text{susp}},\, t_{\text{SOFA}}\right),$$
+$$t_{\text{onset}} = \min\!\left(t_{\text{susp}},\, t_{\text{SOFA}}\right).$$
 
-where $t_{\text{SOFA}}$ is the first hour inside the evaluation window
+Here $t_{\text{susp}}$ is Variant B's onset hour, and $t_{\text{SOFA}}$ is the
+first panel hour in the closed window
 $[t_{\text{susp}} - `r LABEL_VARIANTS$B$sofa_window_before_h`\,\text{h},\;
 t_{\text{susp}} + `r LABEL_VARIANTS$B$sofa_window_after_h`\,\text{h}]$ at which
-the SOFA score is already $\geq$ `r SOFA_INCREASE_THRESHOLD` points above the
-admission baseline. That branch is what allows an onset to precede the first
-antibiotic or culture; dropping it makes the pre-treatment window empty as a
-matter of definition rather than of fact.
+the hourly SOFA score is at least `r SOFA_INCREASE_THRESHOLD` points above the
+admission baseline. Only panel hours from hour `r MIN_OBS_HOURS + 1` onwards
+are searched, so a SOFA rise before ICU admission does not move the onset.
 
-Variant F restores it. Membership is **identical to Variant B** --- the
-conjunction is unchanged, so exactly the same stays are septic --- and only the
-onset timestamp moves, always weakly earlier. F therefore isolates the timing
-branch and nothing else.
+Variant F uses Variant B's positive stays without change, so the same stays
+receive an onset. Only the onset time can differ, and it is never later than
+Variant B's. When the SOFA rise comes first, the onset precedes the
+suspected-infection time. Under Variants A--C, an onset can never precede its
+own suspected-infection time, by construction.
 
-Unlike Variant D, the SOFA score here is the full score, vasopressor components
-included, because that is what Seymour et al. specify. Vasopressor
-administration is itself a treatment, so an onset placed by the cardiovascular
-component is not treatment-free; it is only free of the *antibiotic-and-culture*
-anchor that defines the pre-treatment window. Variant D remains the fully
-treatment-independent comparison.
+The SOFA score here includes the vasopressor terms, as Seymour et al. specify.
+Its baseline averages each component over hours 0--`r DETERIORATION_BASELINE_H`
+and counts vasopressor exposure if any infusion ran in that window, so a
+patient already receiving vasopressors on admission does not register a rise.
+Because vasopressor administration is itself a treatment, an onset placed by the
+cardiovascular component can precede the antibiotic-and-culture anchor without
+preceding all treatment. Variant D is the variant whose label uses no
+antibiotic, culture or vasopressor record.
 
 ```{r early-onset-fn, code_folding="hide"}
 SOFA_FULL_COMPONENTS <- c("pf_ratio", "platelets", "bilirubin", "map",
@@ -442,9 +498,49 @@ derive_early_onsets <- function(panel, vid) {
 }
 ```
 
-## Build Person-Hour Tables Per Variant
+## Variant-Specific Person-Hour Tables
 
-For each label variant, the hourly panel is assembled, treatment anchors merged, competing events coded, and clinical scores (SOFA, NEWS2, qSOFA, SIRS) computed. Post-outcome rows are dropped. A temporal train/test split based on `anchor_year_group` follows Guo et al. (2022).
+For each label variant, the hourly panel is joined to the variant's onsets and
+to the treatment-anchor times, and each row receives its event state. Rows after
+the onset hour are dropped; the onset hour itself is kept. Four clinical scores
+are then computed on every remaining row: SOFA, the National Early Warning Score
+2 (NEWS2), quick SOFA (qSOFA) and the Systemic Inflammatory Response Syndrome
+(SIRS) criteria.
+
+Each stay is assigned to two train/test splits. The temporal split, which is
+primary, places stays from the `anchor_year_group` values in
+`TEMPORAL_TEST_GROUPS` in the test set and all other stays in the training set,
+following Guo et al. (2022). The random split assigns
+`r round(100 * RANDOM_SPLIT_TEST_FRAC)`% of stays to the test set with a fixed
+seed, the same seed for every variant. It is used only to measure how much a
+random split overstates performance relative to the temporal split (H4).
+Because the cohort keeps one stay per patient, both splits are also
+patient-level.
+
+Several points help when reading the printed counts. The number printed as
+"censored" is the number of at-risk person-hours (state 0), not a count of
+stays. The number printed as "sepsis" is the number of onset rows (state 1),
+whatever the variant's event. It is lower than the stage-02 count of positive
+stays because an onset after hour `r MAX_PANEL_HOURS` lies outside the panel.
+Such a stay keeps every row in state 0 and is right-censored at hour
+`r MAX_PANEL_HOURS`. Tables differ in row count across variants mainly because
+rows after an onset are removed, and variants with more and earlier onsets
+remove more rows. For Variant F, its earlier onsets can bring a stay that
+Variant B places after hour `r MAX_PANEL_HOURS` inside the panel, so Variant F
+can have more onset rows than Variant B. Variant F's table also has two extra
+columns, `onset_hour_susp` (Variant B's onset hour) and `t_sofa_hour`, from
+which the shift summary is computed.
+
+The Variant F shift summary counts onsets that moved earlier and how far they
+moved, where a negative shift means an earlier onset. It also counts onsets
+that fall before the treatment anchor, defined as the first antibiotic order or
+first culture of the admission, whichever came first. Because this anchor is
+the first such event in the admission and not the suspected-infection time, an
+onset can move earlier than Variant B's and still fall after the anchor.
+
+Each table is saved as `03_person_hours_<variant>.parquet`, with a stay-level
+onset file `03_onsets_<variant>.parquet`, in `output/processed_data/`. The
+Variant F shift summary is saved as `03_early_onset_shift`.
 
 ```{r build-person-hours}
 for (vid in active_variants()) {
