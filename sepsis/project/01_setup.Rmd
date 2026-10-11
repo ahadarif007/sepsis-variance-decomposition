@@ -1,5 +1,5 @@
 ---
-title: "01 Setup - Environment Setup and Data Verification"
+title: "01 Setup - Environment and Data Verification"
 author: "Abdul Ahad. Student ID: G00486649"
 date: "`r format(Sys.Date(), '%d %B %Y')`"
 output:
@@ -34,7 +34,12 @@ knitr::opts_chunk$set(
 
 ## Introduction
 
-This notebook checks that all required packages, data directories, and file schemas are in place before the pipeline runs.
+This notebook verifies the conditions that every later stage assumes: the
+required R packages are installed, the MIMIC-IV and eICU-CRD directories and
+their source tables are at the locations set in `config.R`, the patient table
+contains the variable that defines the temporal split, and the output
+directory accepts writes. It inspects file metadata and the first rows of two
+tables only. It does not validate the contents of the data.
 
 ```{r load-config}
 source("config.R")
@@ -45,7 +50,13 @@ step("=== Phase 1: Environment Setup ===")
 
 ## Required Packages
 
-All required packages are checked and missing ones are installed automatically.
+Each required package is tested for whether it can be loaded, and any package
+that cannot is installed from CRAN. The table reports the status found before
+that installation step: a package marked MISSING was absent when the run began,
+and an installation was attempted for it. A package installed here takes the
+current CRAN version. The versions under which the reported results were
+produced are pinned in `requirements.txt` and installed by
+`install_requirements.R`.
 
 ```{r check-packages}
 REQUIRED_PKGS <- c(
@@ -74,7 +85,14 @@ knitr::kable(pkg_report, caption = "Package availability")
 
 ## Data Directories
 
-MIMIC-IV (Johnson et al., 2023) and eICU-CRD (Pollard et al., 2018) must be accessible at the paths defined in `config.R`.
+The notebook checks that the MIMIC-IV v3.1 root directory (Johnson et al.,
+2023) and its `hosp` and `icu` modules exist, together with the eICU-CRD v2.0
+root directory (Pollard et al., 2018). Both datasets are located under the
+project root, which `config.R` takes from the `MIMIC_RESEARCH_ROOT`
+environment variable or, if that is unset, finds by searching upward from the
+pipeline directory for `data/mimic-iv-3.1`. The project root can therefore sit
+above the pipeline directory, whereas outputs are always written to `output/`
+inside the pipeline directory.
 
 ```{r check-dirs}
 step("Verifying data directories...")
@@ -99,9 +117,13 @@ dir_report <- data.frame(
 knitr::kable(dir_report, caption = "Data directory status")
 ```
 
-## Key File Spot-Check
+## Source Table Availability
 
-Checks that key source tables exist and reports their file sizes.
+For the principal MIMIC-IV and eICU-CRD source tables read by later stages,
+the notebook records whether each file exists and its size on disk. The files
+are not opened at this point, so a file that is present may still be
+truncated or unreadable. Such a fault appears when a later stage first reads
+the file.
 
 ```{r check-mimic-files}
 step("Spot-checking key MIMIC-IV files...")
@@ -153,9 +175,13 @@ eicu_df <- do.call(rbind, eicu_report)
 knitr::kable(eicu_df, caption = "eICU key files")
 ```
 
-## Schema Verification
+## Column Check
 
-Confirms that key columns exist and that `anchor_year_group` (needed for temporal splitting) is present.
+Two tables are read for their first five rows only. The column names of
+`icustays` are printed for inspection and are not tested against an expected
+list. The `patients` table is tested for `anchor_year_group`, the variable
+from which stage 03 builds the temporal train/test split. Column types and
+value ranges are not checked here.
 
 ```{r check-schema}
 step("Peeking at icustays to verify schema...")
@@ -178,9 +204,12 @@ if (file.exists(icustays_path)) {
 }
 ```
 
-## Output Directory Writability
+## Output Directory Write Check
 
-Verifies the output directory is writable.
+The notebook writes a small test file to the output directory and then
+deletes it. `config.R` creates the directory when it is absent, so this step
+tests write permission only. A failure is printed below but does not stop the
+run.
 
 ```{r check-output-dir}
 step("Checking output directory...")
@@ -197,9 +226,16 @@ tryCatch({
 
 ## Summary
 
-Everything the later stages depend on, collected into one table: where the
-project root resolved to, which of the two databases were found, and the R
-version this run will be recorded against.
+The summary table lists the resolved project root, the availability of each
+database, the output directory, the R version, and the label variants. MIMIC-IV
+is reported as available only when both its `hosp` and `icu` modules are
+present. The label-variant row lists the three pre-registered variants on
+which the confirmatory analyses are defined; their names and Sepsis-3
+operationalisations are set in `LABEL_VARIANTS` in `config.R`, and stage 02
+builds a cohort for each. The alternative variants D to F are defined
+separately in `config.R` and are not listed here. The MIMIC-IV source table
+report is also saved as `01_setup_file_report.parquet` in
+`output/processed_data/`.
 
 ```{r summary}
 step("=== Setup Summary ===")
