@@ -34,39 +34,59 @@ knitr::opts_chunk$set(
 
 ## Introduction
 
-Notebook 07 reports discrimination (AUROC, AUPRC), the PhysioNet Utility
-Score, calibration intercept and slope, and a ratio-based alert burden. That
-suite leaves six clinically relevant questions unanswered, and this notebook
-answers them:
+`07_metrics_suite.Rmd` reports discrimination (AUROC and AUPRC), the PhysioNet
+Utility Score, the calibration intercept and slope, and a ratio-based alert
+burden. This notebook extends that evaluation to six further aspects of
+clinical usefulness:
 
-1. **Calibration curves.** Intercept and slope are two numbers summarising a
-   whole curve. The flexible calibration curve is plotted directly, and
-   summarised with the Integrated Calibration Index (ICI), E50, E90 and the
-   scaled Brier score (Austin & Steyerberg, 2019; Van Calster et al., 2019).
-2. **Decision-curve / net-benefit analysis.** Notebook 07 evaluated net
-   benefit on a threshold grid of 0.01--0.20. Event prevalence in the
-   person-hour table is roughly 0.2 per cent, so every threshold on that grid
-   is an order of magnitude above the prevalence and the whole curve is
-   trivially below "treat none". Net benefit is recomputed here on a
-   prevalence-appropriate grid (Vickers & Elkin, 2006; Vickers et al., 2019).
-3. **PPV at a fixed sensitivity.** Alerting systems are commissioned at an
-   operating point, not at a default 0.5 cut-off. Thresholds are chosen to
-   hit sensitivity 0.50 / 0.80 / 0.90 and PPV, specificity and number needed
-   to evaluate are reported there.
-4. **False alarms per patient-day.** The ratio-based burden (false alerts per
-   true alert) is not time-normalised, so it cannot be compared against
-   ward-level alarm-fatigue thresholds. Both alert-hours and distinct
-   alarm *episodes* per patient-day are computed here.
-5. **Per-patient (event-level) detection.** All of notebook 07's
-   discrimination is per person-hour. Episode-level sensitivity ("what
-   fraction of septic patients were alerted before onset?"), per-patient PPV
-   and the fraction of non-septic stays that received at least one alert are
-   reported alongside the per-hour figures.
-6. **Lead time.** Reported as a full distribution (median, IQR, proportion
-   detected at least 3 h ahead), not a single median buried in a wide table.
+1. **Calibration curves.** The intercept and slope summarise calibration in two
+   numbers and do not show where along the range of predicted risk a model is
+   miscalibrated. The flexible calibration curve is therefore plotted. It is
+   summarised by three measures of the distance between predicted and observed
+   risk, the Integrated Calibration Index (ICI), E50 and E90, and by the scaled
+   Brier score (Austin & Steyerberg, 2019; Van Calster et al., 2019).
+2. **Decision-curve analysis.** Stage 07 evaluated net benefit on a threshold
+   grid of 0.01--0.20. The hourly event prevalence is about 0.2--0.4 per cent,
+   so even the lowest threshold on that grid is several times the prevalence.
+   On that grid the treat-all strategy has negative net benefit throughout, and
+   the primary model's net benefit stays close to zero. Net benefit is
+   therefore recomputed here on a grid scaled to the prevalence (Vickers &
+   Elkin, 2006; Vickers et al., 2019).
+3. **Performance at fixed sensitivity.** An alerting system is evaluated at a
+   chosen operating threshold rather than at a default threshold of 0.5.
+   Thresholds are selected to give per-hour sensitivities of 0.50, 0.80 and
+   0.90. At each threshold, the PPV, specificity and number needed to evaluate
+   are reported.
+4. **False alerts per patient-day.** The ratio-based burden (false alerts per
+   true alert) is not expressed per unit of time, so it is hard to compare with
+   alert-frequency figures from clinical practice. Both false-alert hours and
+   distinct alert episodes per patient-day are computed here.
+5. **Per-patient detection.** All of stage 07's discrimination measures are
+   per person-hour. Here the analysis also reports three per-patient measures:
+   the proportion of label-positive stays alerted at or before onset, a
+   per-patient PPV, and the proportion of label-negative stays that receive at
+   least one alert. They appear alongside the per-hour figures. A
+   label-positive stay is one with an onset under the variant's label
+   definition.
+6. **Lead time.** Lead time is reported as a distribution: its median and
+   interquartile range, and the proportions of label-positive stays alerted at
+   least 3 and 6 hours before onset.
 
-Everything is computed on the temporal test set (2017--2019) using the
-predictions already written by notebooks 05, 06 and 08. No model is refitted.
+All measures are computed on the temporal test set (2017--2019), from the
+predictions written by `05_primary_model.Rmd`, `06_comparators.Rmd` and
+`08_external_validation.Rmd`. No model is refitted.
+
+The prediction scales differ between models, which matters for every
+probability-based measure below. The primary model returns a probability of
+onset in the hour. The GBT returns a probability from a model trained with the
+onset rows up-weighted, so its values are far above the observed event rate.
+The Cox score is the logistic transform of a relative hazard. NEWS2, qSOFA and
+SIRS are integer scores divided by their maxima (20, 3 and 4). Only the primary
+model's output is intended as a calibrated probability. For the other models,
+the calibration measures, the Brier score and the probability thresholds of
+the decision curves describe a score treated as if it were a probability.
+Their ranking-based results (sensitivity, specificity and PPV at a chosen
+threshold) are unaffected.
 
 ```{r load-deps}
 suppressPackageStartupMessages({
@@ -102,9 +122,28 @@ MODEL_LABELS <- c(primary = "Primary (pooled logistic)", gbt = "GBT",
 
 ## Metric Functions
 
-The helpers the rest of the notebook runs on. `counts_at_thresholds()` carries
-the cost that matters: it sorts the predictions once, then reads every
-threshold off cumulative sums instead of rescanning the vector per threshold.
+This section defines the functions used for the measures below. The
+threshold-counting function (`counts_at_thresholds()`) gives the number of
+alerts, true positives and false positives at each threshold. It sorts the
+predictions once and derives all the counts from cumulative sums, so the cost
+of a long threshold grid stays low.
+
+- **Calibration.** A logistic regression of the outcome on a natural cubic
+  spline (3 degrees of freedom) of the logit of the predicted risk gives the
+  flexible calibration curve. ICI, E50 and E90 are the mean, median and 90th
+  percentile of the absolute difference between that curve and the predicted
+  risk. The intercept is estimated with the logit of the prediction as an
+  offset, and the slope is the coefficient of that logit.
+- **Net benefit.** Net benefit follows Vickers and Elkin (2006):
+  $\text{NB}(t) = \text{TP}/N - (\text{FP}/N)\,t/(1-t)$.
+- **Operating points.** The operating threshold for a target sensitivity is
+  the corresponding quantile of the predictions in event hours. Every
+  person-hour with a prediction at or above it raises an alert. For an integer
+  score, all hours tied at the threshold alert together, so the achieved
+  sensitivity can exceed the target. Patient-days are the number of evaluated
+  person-hours divided by 24.
+- **Per-patient measures.** These work at the level of the stay, as described
+  under "Per-Patient (Event-Level) Detection".
 
 ```{r metric-fns}
 # --------------------------------------------------------------------------- #
@@ -372,10 +411,12 @@ patient_level_metrics <- function(dt, pred_col, thr) {
 
 ## Data Assembly
 
-The same merge as notebook 07: primary-model predictions joined to the
-comparator predictions on `(stay_id, hour)`. Only the unrestricted evaluation
-window is used: the treatment-anchored window contains zero event hours
-(notebook 07, H3), so no operating point can be defined in it.
+As in stage 07, the primary-model predictions are joined to the comparator
+predictions on `stay_id` and `hour`, for Variants A--C. Only the unrestricted
+evaluation window is used. Under the onset rule of Variants A--C, onset is
+placed at the suspicion-of-infection time, so the treatment-anchored window,
+which ends before the first antibiotic or culture, contains no event hours.
+No sensitivity-based threshold can be set in it.
 
 ```{r assemble}
 load_variant <- function(vid) {
@@ -407,11 +448,32 @@ for (vid in names(ph_list)) {
 
 ## Calibration Curves
 
-Predicted risk against observed event rate. The diagonal is perfect
-calibration. The spline curve is the flexible calibration curve; the points
-are twenty equal-sized bins of predicted risk with binomial confidence
-intervals. Axes are restricted to the observed prediction range, because at a
-0.2 per cent event rate no model ever predicts a risk near 1.
+Each panel plots the observed event rate against the predicted value, and the
+diagonal marks perfect calibration. The curve is the flexible calibration curve
+from the spline model above. Its shaded band is a pointwise 95% confidence
+interval for the curve. The points are 20 groups formed at quantiles of the
+predicted value, so each holds about the same number of person-hours. Each
+point is drawn with a normal-approximation (Wald) binomial 95% interval. In
+every panel the outcome is onset in the hour, the event each model predicts.
+
+The axes follow each panel's own range of predicted values, because those
+ranges differ by orders of magnitude between models. Deviations should
+therefore be compared between panels with care. The same distance from the
+diagonal can look large in a narrow panel and small in a wide one.
+
+Table 1 reports the calibration measures:
+
+- The primary model's ICI, E50 and E90 are about an order of magnitude below
+  the event rate.
+- The GBT and NEWS2 rows show values about three orders of magnitude larger,
+  and strongly negative scaled Brier scores. This reflects their scales: their
+  outputs are not calibrated probabilities (see the Introduction).
+- The scaled Brier score is $1 - \text{Brier}/\text{Brier}_{\text{null}}$,
+  where the null model predicts the prevalence for every hour. A value near 0
+  means no improvement over that model. A large negative value means the
+  squared error is many times that of the null model.
+- For NEWS2, the intercept and slope describe a logistic recalibration of the
+  rescaled score, not the calibration of a probability.
 
 ```{r calibration, fig.height=4.6, fig.cap="Flexible calibration curves on the temporal test set. The dashed line is perfect calibration, points are twenty equal-sized bins of predicted risk, and the shaded band is the 95 per cent confidence interval. Each panel carries its own scale because the predicted-risk ranges differ by orders of magnitude."}
 calib_summ  <- list()
@@ -511,14 +573,38 @@ if (nrow(calib_summ_dt) > 0) {
 
 ## Decision-Curve Analysis
 
-Net benefit is evaluated on a grid running from one tenth of the event
-prevalence to roughly ten times it. This is the range in which a
-sepsis-alerting threshold could plausibly be set: a threshold probability of
-$t$ encodes a willingness to accept $\left(1-t\right)/t$ false alarms per
-true detection. At a 0.2 per cent event rate, a threshold of 0.01 already
-encodes a willingness to tolerate only 99 false alarms per detection, which
-is why the 0.01--0.20 grid used in notebook 07 produced nothing but
-negative curves.
+For each variant, net benefit is evaluated on 80 thresholds from one tenth to
+ten times the event prevalence, with the prevalence itself added. Choosing a
+threshold probability $t$ implies that up to $(1-t)/t$ false alerts are
+acceptable for each true detection. A threshold of 0.01, for example, accepts
+at most 99. At an hourly prevalence of 0.2 per cent, a model alerting at
+random would raise about 500 alerts per true detection. Thresholds near the
+prevalence are therefore the range in which an hourly alert could add
+benefit. Which threshold is clinically appropriate depends on the relative
+harms of missed and false alerts, and this grid does not settle that.
+
+Figure 2 shows the primary model, the GBT and NEWS2, with the treat-all and
+treat-none strategies as references. To keep the region around zero readable,
+values below $-1.75$ times the prevalence are not drawn. A curve that leaves
+the bottom of a panel has lower net benefit than treat-none from that
+threshold onwards.
+
+Table 2 gives each model's net benefit at the threshold equal to the
+prevalence. At that threshold, treat-all and treat-none both have a net
+benefit of exactly zero, and a perfect model would reach the prevalence. The
+standardised net benefit (net benefit divided by the prevalence) is therefore
+the share of that maximum which the model achieves. The alert-rate span is the
+change in the alert rate across the whole grid. A span of zero means that the
+model's alerts are the same at every threshold on the grid. This happens for
+two reasons:
+
+- The GBT and Cox scores all lie above the highest threshold, so these models
+  alert in every hour and their curves coincide with treat-all.
+- NEWS2, qSOFA and SIRS take values in steps (multiples of 1/20, 1/3 and 1/4)
+  that are coarser than the whole grid, so the alert depends only on whether
+  the score is above zero.
+
+Only the primary model can be tuned within this range.
 
 ```{r dca, fig.height=4.6, fig.cap="Decision curves on the temporal test set. Net benefit against threshold probability, with both default strategies shown. Curves are clipped below 1.75 times prevalence so the near-zero region stays legible; a line leaving the bottom of a panel is worse than treating nobody from that threshold onward."}
 nb_list <- list()
@@ -633,10 +719,28 @@ if (nrow(nb_dt) > 0) {
 
 ## Operating Points at Fixed Sensitivity
 
-For each model the threshold is set to the largest cut-off achieving the
-target per-hour sensitivity, and PPV, specificity, number needed to evaluate
-(NNE $=1/\text{PPV}$), alert rate and time-normalised false-alarm rate are
-read off at that point.
+For each model and each target sensitivity
+(`r paste(SENS_TARGETS, collapse = ", ")`), the threshold is the largest value
+at which the per-hour sensitivity reaches the target. Because NEWS2 takes
+discrete values, its achieved sensitivity can exceed the target, as the table
+shows.
+
+The table reports the `r HEADLINE_SENS * 100`% target, and Figure 3 adds the
+other two. Its columns are calculated at the selected threshold:
+
+- sensitivity and specificity (`Sens`, `Spec`);
+- PPV;
+- the number needed to evaluate (NNE $= 1/\text{PPV}$), the number of alerted
+  person-hours per true event hour;
+- alerted person-hours and false-alert person-hours per patient-day
+  (`Alerts/pt-day`, `FA/pt-day`), with patient-days equal to the evaluated
+  person-hours divided by 24;
+- the ratio of false-positive to true-positive hours (`FP:TP`).
+
+NNE and FP:TP differ by one by construction, since NNE counts the true alert
+as well. An alert that stays on for several hours counts once for each hour in
+these per-hour measures. Distinct alert episodes are counted in the
+per-patient section.
 
 ```{r operating-points}
 op_list <- list()
@@ -706,14 +810,38 @@ if (nrow(op_dt) > 0) {
 
 ## Per-Patient (Event-Level) Detection
 
-Every figure above is per person-hour. Under the discrete-time
-competing-risks framing, `event == 1` marks the sepsis onset hour itself
-(states 2 and 3 are discharge alive and death without sepsis), so each septic
-stay contributes exactly one event hour. Per-hour sensitivity is therefore a
-strict quantity: the alert must fire *in the onset hour itself*. Per-patient
-sensitivity is the clinically meaningful counterpart: it asks only whether
-the patient was alerted at all before onset. The gap between the two, and the
-price paid for it in false alarms, is the point of this section.
+The measures above are per person-hour. In the discrete-time competing-risks
+coding, `event == 1` marks the onset hour itself, so each label-positive stay
+contributes exactly one event hour. States 2 and 3 are discharge alive and
+death without onset. Per-hour sensitivity is therefore strict: an alert counts
+as a true positive only if it occurs in the onset hour. The per-patient
+measures ask a different and complementary question, namely whether a stay was
+alerted at all before its onset. They are computed at the thresholds of the
+operating-point table:
+
+- **Sensitivity in the 6-hour window.** The proportion of label-positive stays
+  with an alert from 6 hours before onset to onset (`Episode sens (6h)`).
+- **Sensitivity at any time before onset.** The proportion with an alert at
+  any time from the start of the stay up to and including the onset hour
+  (`Episode sens (any pre)`). This measure has no limit on how far ahead the
+  alert may come, so an alert early in the stay counts even if it was
+  unrelated to the later onset. The 6-hour measure is the stricter of the two.
+- **Patient PPV.** The proportion of alerted stays that are label-positive and
+  alerted at or before onset.
+- **Stays alerted.** The percentages of all stays and of label-negative stays
+  (`% non-sepsis alerted`) with at least one alert.
+- **False-alert episodes.** An episode is a run of consecutive alert hours
+  within a stay. It is false if it does not overlap the window from 6 hours
+  before to 3 hours after onset, the true-positive window of the Utility Score
+  (Reyna et al., 2020). The panel ends at onset, so in practice the window
+  reaches only to the onset hour. Every episode in a label-negative stay is
+  false. Episodes are counted per patient-day.
+
+The column headed "Sepsis stays" counts label-positive stays, whose onset is
+defined by the variant's label rather than by a clinical diagnosis. At the
+`r HEADLINE_SENS * 100`% per-hour operating point, almost all stays,
+label-negative ones included, receive at least one alert. That is the main
+limitation on how usable these operating points would be in practice.
 
 ```{r patient-level}
 pat_list  <- list()
@@ -768,10 +896,18 @@ if (nrow(pat_dt) > 0) {
 
 ### Per-Hour versus Per-Patient, Side by Side
 
-The same operating point read two ways. An hourly false-alarm rate and a
-per-patient one answer different questions, and a model can look tolerable on
-the first while being unusable on the second. Both are carried at the headline
-sensitivity so the gap between them stays visible.
+This table sets the per-hour and per-patient measures of the same
+`r HEADLINE_SENS * 100`% operating point side by side. `Sens (patient)` is the
+same measure as `Episode sens (any pre)` above. In these results the
+per-patient sensitivity and PPV are well above their per-hour counterparts:
+
+- A single alert at any time before onset is enough to detect a stay.
+- An alert lasting several hours counts as one alerted stay, not as many
+  alerted hours.
+
+A favourable per-hour figure can therefore coexist with a high proportion of
+stays receiving false alerts. The table reports both false-alert hours and
+false-alert episodes per patient-day for this reason.
 
 ```{r hour-vs-patient}
 if (nrow(op_dt) > 0 && nrow(pat_dt) > 0) {
@@ -809,9 +945,30 @@ if (nrow(op_dt) > 0 && nrow(pat_dt) > 0) {
 
 ## Lead Time to Onset
 
-Lead time is the interval between the first alert issued at or before onset
-and the onset hour itself, computed at the fixed-sensitivity threshold and
-over the septic stays that were alerted at all.
+Lead time is the interval from a stay's first alert at or before onset to the
+onset hour. It is computed at the `r HEADLINE_SENS * 100`% operating threshold
+for the label-positive stays that receive such an alert. The first alert can
+come at any time in the stay, so a long lead time may reflect an alert that
+was not related to the later onset. A lead time shows that an alert came early
+enough to allow a response, not that a response would have helped.
+
+The measures in the table have different denominators:
+
+- The median and interquartile range (`IQR`, lower and upper quartiles)
+  describe only the stays that were detected.
+- `detected_pre` is the proportion of label-positive stays that were detected.
+- `>= 3 h` and `>= 6 h` are proportions of all label-positive stays alerted at
+  least that many hours ahead.
+
+Figure 4 shows lead times from 0 to 48 hours as counts of stays. Longer lead
+times are omitted from the figure but included in the table. The y-axes differ
+between panels, and Variant C has about twice as many label-positive stays as
+A and B, so the shapes of the distributions are easier to compare than their
+heights. Similar medians can hide different distributions, which is why the
+quartiles and proportions are also given. Lead time also depends on how the
+onset is timed. Under Variants A--C, onset is placed at the
+suspicion-of-infection time, so these lead times are not comparable with
+published lead times computed under another onset rule.
 
 ```{r lead-time, fig.height=3.6, fig.cap="Distribution of lead time before onset at the 80 per cent sensitivity operating point, truncated at 48 hours."}
 lead_dt <- rbindlist(lead_list, fill = TRUE)
@@ -859,9 +1016,26 @@ knitr::kable(
 
 ## External Validation: Clinical Utility on eICU-CRD
 
-The same operating-point and per-patient machinery applied to the eICU
-predictions from notebook 08, so that the clinical-utility picture is
-available externally as well as internally.
+The operating-point and per-patient calculations are also applied to the
+eICU-CRD predictions of `08_external_validation.Rmd`. These come from the
+Sepsis-3 arm on the microbiology-covered stays, for the primary model, the GBT
+and NEWS2. The onsets follow the same rule for each variant as internally, as
+derived in stage 08.
+
+The thresholds here are selected on the external cohort itself, to reach
+`r HEADLINE_SENS * 100`% per-hour sensitivity among eICU-CRD event hours.
+They are not the internal thresholds applied unchanged. These results
+therefore show what the models would achieve if the threshold were reset at
+the new site. They are not a fixed-threshold test of transportability, and
+the selection uses the external labels, which may make them optimistic.
+
+No variant reaches the `r MIN_EXTERNAL_EVENTS`-event minimum used in stage
+08. The label-positive stays number only in the tens, as the table shows, and
+no intervals are reported here, so the results are descriptive. A
+per-patient sensitivity of 1.000 on a few dozen stays is compatible with a
+much lower true value. The external PPVs are far lower than the internal ones,
+corresponding to thousands of alerted person-hours per true event hour (NNE).
+This low external event rate is examined in stage 08.
 
 ```{r external}
 ext_op  <- list()
@@ -926,9 +1100,18 @@ if (nrow(ext_pat_dt) > 0) {
 
 ## Cross-Check Against Notebook 07
 
-The net-benefit computation here is implemented directly from the
-Vickers--Elkin formula rather than through `dcurves`. The two are compared at
-the thresholds they have in common, as a correctness check.
+Net benefit is calculated here directly from the Vickers--Elkin formula,
+whereas stage 07 uses the `dcurves` package. As a check, the stage-07 values
+for the primary model and the GBT are compared with the values here. The
+comparison uses the stage-07 thresholds that fall inside this notebook's
+grid, each matched to the nearest grid point. Table 6 gives the number of
+thresholds compared and the largest absolute difference. This notebook's
+grid ends at ten times the prevalence. It overlaps only the lowest thresholds
+of stage 07's grid, so one threshold is compared for Variants A and B and four
+for Variant C. This makes it a check at a few points, not across the
+whole curve. The small differences are consistent with matching each
+stage-07 threshold to a nearby, not identical, grid point. A comparison on an
+identical threshold vector would be needed to rule out any other source.
 
 ```{r crosscheck}
 chk_rows <- list()
@@ -976,27 +1159,44 @@ if (length(chk_rows) > 0) {
 
 ## What These Metrics Add to Discrimination
 
-Everything in this notebook exists because AUROC cannot see it.
+AUROC measures discrimination. It does not assess calibration, the benefit of
+acting at a particular threshold, alert burden or lead time.
 
-Calibration answers whether a predicted risk means what it says. A model can
-rank patients correctly and still put every probability in the wrong place,
-which matters the moment anyone picks a threshold to act on.
+Calibration assesses whether predicted probabilities agree with observed event
+rates. A model can rank person-hours well and still give probabilities that
+are systematically too high or too low. This matters as soon as a probability
+threshold is used to guide decisions. Here the primary model is close to
+calibrated. The GBT and NEWS2 outputs are not probabilities on the scale of
+the event rate, so their calibration and net-benefit results describe that
+scale rather than a probability forecast.
 
-Net benefit and the operating-point tables answer whether acting on the model
-beats the two strategies that need no model at all. A curve sitting on top of
-treat-all is discriminating and contributing nothing.
+Net benefit compares acting on a model with the treat-all and treat-none
+strategies. A model whose curve does not rise above both gives no additional
+benefit at those thresholds, whatever its discrimination. Within the
+prevalence-scaled grid, only the primary model's alerts vary with the
+threshold.
 
-Lead time answers whether a correct alert arrives early enough to change what
-happens next. It is also the metric most sensitive to how onset was timed, so
-it should be read against the label's own construction rather than against
-published lead times computed under a different onset rule.
+The operating-point and per-patient tables show the cost of high sensitivity.
+At `r HEADLINE_SENS * 100`% per-hour sensitivity, every model has a per-hour
+PPV of well under 1 per cent. Almost every stay, label-negative stays
+included, receives at least one alert. Externally, with thresholds reset on
+the eICU-CRD cohort, the PPV is lower still, and the event counts are too
+small for firm conclusions.
 
-Taken together these can disagree with the discrimination ranking, and where
-they do the disagreement is the finding rather than a problem to reconcile.
+Lead time indicates whether an alert comes early enough to allow a clinical
+response. It depends strongly on how onset is timed, so it should be read
+against the onset rule used to build the label.
+
+The ranking of models can differ between discrimination, calibration and
+these clinical measures. Such differences are reported rather than resolved,
+because the measures assess different aspects of performance.
 
 ## Summary
 
-What this stage leaves behind for stage 12 and for the thesis generator.
+This stage produces the calibration, net-benefit, operating-point,
+per-patient and lead-time tables listed below. They are written to
+`output/processed_data/`, with the figures in `output/figures/`, for
+`12_inference.Rmd` and for the thesis tables.
 
 ```{r summary-out}
 cat("Artefacts written to", DATA_DIR, ":\n")
