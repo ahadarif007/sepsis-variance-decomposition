@@ -34,15 +34,63 @@ knitr::opts_chunk$set(
 
 ## Introduction
 
-The primary model is a **multinomial pooled logistic regression** (D'Agostino et al., 1990; Heyard et al., 2019). If this interpretable regression matches gradient-boosted trees (H6), black-box complexity is unnecessary.
+This notebook fits the primary model of the study, a multinomial pooled
+logistic regression for discrete-time competing events (D'Agostino et al.,
+1990; Heyard et al., 2019). It is the pre-registered main model: the
+coefficient-stability hypothesis (H2), the split hypothesis (H4) and the
+external-validation hypothesis (H5) are all evaluated on it. It is also the
+interpretable benchmark for H6, which compares its temporal-test AUROC (area
+under the receiver operating characteristic curve) with that of the
+gradient-boosted trees (GBT) fitted in `06_comparators.Rmd`. H6's
+pre-registered criterion is a difference of no more than 0.02 in AUROC. If the
+criterion is met, the boosted trees give no material gain in discrimination
+over the regression in this setting. That would not show that the more complex
+model has no value for other outcomes or other data.
 
-For patient $i$ at hour $t$, with competing events $r \in \{1\text{=sepsis}, 2\text{=discharge}, 3\text{=death}\}$:
+For patient $i$ at hour $t$, with competing events
+$r \in \{1\text{=onset}, 2\text{=discharge}, 3\text{=death}\}$:
 
-$$\lambda_r(t \mid X_{it}) = \frac{\exp\bigl(\alpha_r(t) + \boldsymbol{\beta}_r^\top \mathbf{X}_{it}\bigr)}{1 + \sum_{s} \exp\bigl(\alpha_s(t) + \boldsymbol{\beta}_s^\top \mathbf{X}_{it}\bigr)}$$
+$$\lambda_r(t \mid \mathbf{X}_{it}) = \frac{\exp\bigl(\alpha_r(t) + \boldsymbol{\beta}_r^\top \mathbf{X}_{it}\bigr)}{1 + \sum_{s=1}^{3} \exp\bigl(\alpha_s(t) + \boldsymbol{\beta}_s^\top \mathbf{X}_{it}\bigr)}$$
 
-$\alpha_r(t)$ is the baseline log-hazard (natural cubic spline in hours since admission) and $\boldsymbol{\beta}_r$ are cause-specific covariate coefficients. Standard errors use a cluster-robust sandwich estimator (clustered on `stay_id`).
+The reference outcome, which gives the 1 in the denominator, is that the stay
+remains at risk with no event in hour $t$ (state 0 in `03_person_hours.Rmd`).
+The three events are mutually exclusive within an hour, and a stay leaves the
+risk set at its first event. Each $\lambda_r$ is therefore a discrete-time
+cause-specific hazard: the probability of event $r$ in hour $t$, given that no
+event has occurred before $t$. The three hazards are estimated jointly in one
+multinomial fit rather than as three separate models. Event 1 is the onset
+defined by the label variant, which is Sepsis-3 onset for Variants A--C and F.
 
-Models are fitted per label variant: Variant B is primary; A and C support the cross-label coefficient comparison (H2). The alternative-label variants of Protocol Amendment 2 (D, E) are fitted with exactly the same specification so that the label is the only thing that differs; their coefficients are kept in a separate file and take no part in H2.
+$\alpha_r(t)$ is the baseline log-odds of event $r$ against remaining at risk.
+It is modelled as a natural cubic spline in hours since ICU admission with five
+interior knots, so each event has an intercept and six spline coefficients.
+$\boldsymbol{\beta}_r$ holds the covariate coefficients for event $r$, so each
+covariate has a separate coefficient for each event. A small ridge penalty is
+applied to the coefficients (Protocol Amendment 3), because without it the
+likelihood is separated and the coefficients are not identified. Standard
+errors are cluster-robust sandwich estimates, clustered by ICU stay
+(`stay_id`). Because the cohort keeps one stay per patient, this is also
+clustering by patient. With the penalty in place, these are the standard
+errors of the penalised estimator.
+
+The model is fitted separately for each label variant. Variants A (Narrow),
+B (Seymour-Standard) and C (Liberal) are the pre-registered Sepsis-3
+definitions. They differ in the suspicion-of-infection windows, the SOFA
+evaluation window and the SOFA baseline, as defined in `02_cohort_labels.Rmd`.
+Variant B is the primary analysis, and H2 compares its coefficients with those
+of A and C. Three post-hoc variants are fitted by the same procedure. Variants
+D (Deterioration) and E (Anchor-Only), from Protocol Amendment 2, each keep one
+limb of the Sepsis-3 definition. Variant F (Sepsis-3 Early-Onset), from
+Protocol Amendment 4, keeps Variant B's patients but times the onset at the
+earlier of suspicion of infection and the SOFA rise. The coefficients of D--F
+are written to a separate file and are excluded from H2.
+
+The procedure and the covariates are the same for every variant, but the
+fitted rows are not. Because a stay leaves the risk set at its onset, the label
+determines how many person-hours each stay contributes and how many onsets
+there are. Through the training hours, it also determines where the spline
+knots fall. Differences between the variants' fits therefore reflect the label
+together with these consequences of it.
 
 ```{r load-deps}
 suppressPackageStartupMessages({
@@ -64,7 +112,53 @@ step("=== Phase 3a: Primary discrete-time competing-risks model ===")
 
 ## Feature Set
 
-Predictors include vitals, lab values, vasopressor exposure, and 6-hour rolling slopes. Missingness indicators let the model distinguish normal values from unmeasured ones.
+The 22 covariates are declared once in `config.R`, as `BASE_FEATURES` and
+`MISSINGNESS_FEATURES`, and are printed below under their column names. They
+enter the model on their recorded scales, without centring or
+standardisation, so each coefficient is a change in log-odds per unit of its
+covariate. They are:
+
+- vital signs: heart rate (`hr`, beats/min), respiratory rate (`resp_rate`,
+  breaths/min), oxygen saturation (`spo2`, %), mean arterial pressure (`map`,
+  mmHg), temperature (`temp_c`, °C) and the Glasgow Coma Scale total (`gcs`,
+  3--15);
+- laboratory values: lactate (mmol/L), creatinine (mg/dL), total bilirubin
+  (`bilirubin_total`, mg/dL), platelets ($\times 10^9$/L) and white blood cell
+  count (`wbc`, $\times 10^9$/L);
+- vasopressor exposure: `vaso_any` is true in any hour in which a vasopressor
+  infusion is running, and `norepi_epi_any` is true when that infusion is
+  norepinephrine or epinephrine. The second is a subset of the first, so its
+  coefficient is the additional association of these two agents beyond that of
+  vasopressor exposure in general;
+- six-hour means: `hr_slope6h`, `resp_rate_slope6h` and `map_slope6h` hold the
+  mean of the forward-filled value over the current and five preceding hours.
+  Despite their names they are trailing means, not regression slopes
+  (`03_person_hours.Rmd`);
+- six indicators (`*_measured`), for the five laboratory values and the
+  PaO$_2$/FiO$_2$ ratio. Each is 1 from the first measurement of that test in
+  the stay onwards and 0 before it.
+
+Vital signs and laboratory values are forward-filled within the stay in
+`03_person_hours.Rmd`, so a value is missing only in the hours before it is
+first recorded. These remaining missing values are set to zero before fitting.
+For each laboratory value, its indicator is 0 in exactly those hours. The
+indicator's coefficient therefore absorbs the offset that the zero would
+otherwise create, and the value's coefficient is estimated from measured hours.
+The indicators record that a test was ordered, which reflects clinical
+attention as well as the patient's state, so they are not physiological
+measurements. The PaO$_2$/FiO$_2$ ratio enters only through its indicator. The
+ratio itself is not a covariate, because it is recorded for a minority of
+person-hours and its forward-filled value reflects ventilation practice more
+than the current hour.
+
+The vital signs and the six-hour means have no indicators. An hour before a
+vital sign is first recorded therefore enters with a value of zero, which lies
+outside every plausible range; this affects mainly the first hours of a stay.
+The six-hour means are computed only over a complete six-hour window, so they
+are missing, and are set to zero, in hours 0--4 of every stay. In those hours
+the zero acts as a shared offset common to all stays, which the baseline spline
+in hour of stay can partly absorb. It is not a measured value, and the
+six-hour-mean coefficients should be read with this in mind.
 
 ```{r feature-set}
 # BASE_FEATURES and MISSINGNESS_FEATURES are declared once, in config.R, and
@@ -75,9 +169,72 @@ cat("Base features:", paste(BASE_FEATURES, collapse = ", "), "\n")
 cat("Missingness indicators:", paste(MISSINGNESS_FEATURES, collapse = ", "), "\n")
 ```
 
-## Fit Primary Model Per Variant
+## Fit Primary Model by Variant
 
-Per variant: load training person-hours, impute remaining NAs to zero, fit the multinomial model via `nnet::multinom`, compute cluster-robust SEs, predict on the test set, and save outputs. A binary logistic fallback handles non-convergence.
+For each variant, the model is fitted to the training person-hours of the
+temporal split. That split trains on the anchor-year groups up to 2014--2016
+and tests on 2017--2019 (`03_person_hours.Rmd`). The outcome is coded as a
+four-level factor with the at-risk state as the reference (`inprogress`).
+Remaining missing values are set to zero, or to false for logical columns, as
+described above. The model is fitted with `nnet::multinom`, with ridge decay
+`r PRIMARY_MODEL_DECAY` and at most `r PRIMARY_MODEL_MAXIT` iterations.
+
+The baseline spline has interior knots at the 10th, 30th, 50th, 70th and 90th
+percentiles of the training hours. Its boundary knots are hour 0 and the last
+training hour. The knots are recomputed for every fit from that fit's own
+training rows, so they differ slightly between variants, as the printed
+positions show, while the rule stays the same. The knots and the zero
+imputation are determined from training rows only. The test rows receive the
+same imputation and are scored with the fitted spline basis.
+
+Cluster-robust standard errors are computed with `sandwich::vcovCL`, clustered
+by `stay_id`. The `sandwich` package has no score function for `multinom`
+fits, so `utils.R` supplies one (`estfun.multinom`). Predicted onset
+probabilities for the temporal test set are saved, and `07_metrics_suite.Rmd`
+turns these hourly predictions into performance measures.
+
+If `nnet::multinom` stops with an error, the notebook falls back to a binary
+logistic regression of onset against all other states, with the same
+covariates and spline. That model has no competing events, so its estimates
+are not comparable with the multinomial ones. It exists so that the pipeline
+can complete, and a fallback fit is marked as such (`is_binary_fallback`).
+Reaching the iteration limit is not an error: it is logged as a warning and the
+multinomial fit is kept. Only multinomial fits print the fit diagnostics
+described below, so a fit printed without them would be a fallback.
+
+For each fit, the output prints the following:
+
+- the number of training person-hours;
+- the number of onset rows, printed as `events (sepsis)`, although for
+  Variants D and E the event is not Sepsis-3 onset. Each stay has at most one
+  onset row, so this is also the number of training stays with an onset in the
+  panel;
+- a check that all 22 declared covariates are present;
+- the knot positions;
+- three fit diagnostics.
+
+`convergence=0` means only that the optimiser met its stopping rule before the
+iteration limit. On its own, it does not show that the coefficients are
+identified, because `nnet` reports the same code on a separated likelihood.
+Identification comes from the ridge penalty, which makes the penalised
+likelihood strictly concave. It is checked through `max|coef|`, the largest
+absolute coefficient in the fit, with intercepts and spline terms included. A
+value above 20 is logged as a warning of possible separation. In these fits the
+largest coefficient is a spline-basis term of the death outcome, not a
+covariate effect. `deviance` is twice the penalised negative log-likelihood at
+the fitted values. The variants are fitted to different rows, so their
+deviances are not comparable with one another.
+
+When the ablated specification of Protocol Amendment 5 is run, its fits are
+printed after the full ones, labelled `arm = ablated`. The printed output uses
+"arm" for what this notebook calls a specification. The procedure is the same
+except that it omits the eight action-derived covariates: `vaso_any`,
+`norepi_epi_any` and the six `*_measured` indicators. These record clinician
+actions, namely a treatment given or a test ordered, rather than the patient's
+physiology. The laboratory values themselves stay in the model, so 14 of the
+22 covariates remain. Only Variants A--C are refitted. The ablation asks
+whether H2's cross-label instability, which is defined on those three
+variants, depends on these covariates.
 
 ```{r fit-primary-model, code_folding="hide"}
 fit_primary_model <- function(vid, arm = "full") {
@@ -267,9 +424,27 @@ if ("ablated" %in% run_arms) {
 }
 ```
 
-## Random-Split Re-Fit (H4: Split Optimism)
+## Random-Split Refit (H4: Split Optimism)
 
-The same primary model is re-fitted on a random patient-level split (Guo et al., 2022). Only Variant B is needed: H4 compares temporal vs. random AUROC under a fixed label and model class.
+H4 asks whether a random train/test split overstates performance relative to
+the temporal split (Guo et al., 2022). The temporal split tests the model on
+later admissions, so its test set includes any change in case mix or care
+practice over time. A random split mixes admission years, so its test set does
+not, and the pre-registered expectation was that it would give the higher
+AUROC. To measure the difference, Variant B's model is refitted on the random
+split built in `03_person_hours.Rmd`, with the same covariates, spline rule,
+penalty and outcome definition. That split assigns
+`r round(100 * RANDOM_SPLIT_TEST_FRAC)`% of stays to the test set with seed
+`r RANDOM_SPLIT_SEED`. It is made on stays, so all hours of a stay fall on the
+same side. With one stay per patient, it is also a patient-level split. Only
+Variant B is refitted, because H4 holds the label and the model class fixed.
+H4 is defined on AUROC, and the contrast is computed in later stages.
+
+The two training sets differ in size. The temporal split's proportion is set by
+the anchor-year groups rather than fixed, and the printed row counts show its
+training set to be the larger. Part of any AUROC difference between the two
+splits may therefore come from training-set size rather than from the split
+itself.
 
 ```{r fit-random-split}
 step("--- Re-fitting primary model on random split (H4) ---")
@@ -381,7 +556,41 @@ random_split_done <- if (!"full" %in% run_arms) {
 
 ## Cross-Label Coefficient Stability
 
-The combined coefficient table across variants feeds the H2 (coefficient instability) test: if a covariate changes sign across label variants, the label choice qualitatively alters the model's clinical logic.
+H2 asks whether the choice of label changes the fitted covariate effects. Its
+pre-registered rule compares each covariate's onset-outcome coefficient across
+Variants A, B and C. A covariate is flagged for a sign reversal if its
+coefficient is positive under one variant and negative under another. It is
+flagged for a magnitude change if its largest absolute coefficient is at least
+twice its smallest. Intercepts and spline terms are excluded. The rule uses
+point estimates and has no minimum magnitude, so a coefficient close to zero
+can be flagged after a small absolute change.
+
+A sign reversal shows that the estimated direction of association, conditional
+on the other covariates, depends on the label. It does not by itself show a
+change in an underlying clinical relationship. Collinearity among the
+covariates, the different at-risk rows and the different numbers of onsets can
+all move a coefficient. The comparison is like for like in coding, reference
+category and covariates. The knots differ slightly between the three fits,
+which acts mainly on the baseline terms that the rule excludes.
+
+This notebook writes the combined coefficient table for A--C. The H2 count for
+the full specification is computed in `12_inference.Rmd`. That notebook also
+checks each flagged change against its cluster-robust standard errors
+(Protocol Amendment 7). The coefficients of D--F go to a separate file for the
+analyses of Protocol Amendments 2 and 4.
+
+Table 1 lists the fifteen onset-outcome covariate coefficients of Variant B's
+full fit with the largest absolute values, with their cluster-robust standard
+errors (`se_cluster`). Each coefficient is the change in the log-odds of onset,
+relative to remaining at risk, per unit of the covariate, holding the other
+covariates and the hour fixed. The covariates are unstandardised, so the
+ordering compares unlike units. A binary indicator moves by 1 between its two
+states, while heart rate moves by 1 per beat per minute, so the table is not a
+ranking of importance. The `*_measured` indicators record testing rather than
+physiology. A laboratory value's coefficient is conditional on its indicator
+and on the other covariates. Neither kind should be read as a clinical effect.
+Factor terms carry R's level suffix, so `vaso_anyTRUE` denotes vasopressor
+exposure.
 
 ```{r cross-label-coefs}
 step("Computing cross-label coefficient stability (→ H2)...")
@@ -427,13 +636,25 @@ if (length(alt_run) > 0) {
 }
 ```
 
-### Ablated-Arm Stability (Protocol Amendment 5)
+### Stability of the Ablated Specification (Protocol Amendment 5)
 
-The same instability rule applied to the ablated fit. The question is whether
-the cross-label instability observed in the full specification is a property of
-the model as a whole or specifically of the features that record clinician
-behaviour: if the latter, removing those features should leave a markedly more
-stable set of coefficients behind.
+The same rule, implemented by the same function (`coef_stability_flags()` in
+`utils.R`), is applied to the ablated fits of Variants A--C. Comparing the
+result with the full specification shows whether the cross-label instability
+is concentrated in the eight action-derived covariates or spread across the
+physiological ones. If it is concentrated in them, a smaller proportion of the
+ablated covariates should be flagged than of the full set. The full set has 22
+covariates and the ablated set 14, so the counts are compared as proportions.
+No threshold for a meaningful reduction was set in advance and no formal test
+is made, so the comparison is descriptive. The full-specification count comes
+from `12_inference.Rmd`.
+
+The printed line gives the number of covariates shared by the three ablated
+fits. It then gives how many of them reverse sign, how many change magnitude at
+least twofold, and how many meet either criterion. Table 2 lists the flagged
+covariates, with `TRUE` marking each criterion met. Because the flags are based
+on point estimates only, a flagged covariate is not necessarily one whose
+change exceeds its sampling uncertainty.
 
 ```{r ablated-coef-stability}
 if (!is.null(models_ablated) && length(models_ablated) >= 2) {
