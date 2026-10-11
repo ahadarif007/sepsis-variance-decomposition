@@ -34,11 +34,30 @@ knitr::opts_chunk$set(
 
 ## Introduction
 
-Wang et al. (2022) showed that sepsis prediction models perform worse for Asian, Hispanic, and Spanish-speaking patients. This notebook extends their work with:
+Wang et al. (2022), working in MIMIC-III, reported two findings. Competing
+sepsis identification criteria selected sub-populations that differed by race,
+insurance and language. Separately, mortality prediction among patients already
+identified as septic was worse for Asian, Hispanic and Spanish-speaking
+patients. Their performance finding concerns mortality rather than sepsis
+onset, so it gives no prior estimate for an onset model. Together, however, the
+two findings motivate examining both quantities on the same subgroups of one
+onset-prediction cohort, which this notebook does.
 
-1. **Subgroup performance**: AUROC, AUPRC, and alert burden evaluated per demographic subgroup (race/ethnicity, language, insurance).
+The first quantity is subgroup performance: AUROC, AUPRC and alert burden for
+each recorded level of the race, language and insurance fields. The second is
+subgroup label sensitivity: the range, in percentage points, of the proportion
+of stays labelled septic across Variants A, B and C, computed within each
+subgroup level. If that range differs between subgroups, the choice of label
+changes subgroup event rates by different amounts, and any rate computed later
+depends on which label was chosen.
 
-2. **Subgroup label-sensitivity**: How the fraction labelled septic varies across the three label variants *within each subgroup*. Non-uniform sensitivity means label choice has equity implications beyond aggregate event-rate differences.
+The subgroup fields are taken from the hospital admission record of each stay.
+`config.R` declares four equity variables, but MIMIC-IV records race and
+ethnicity in a single field, so three carry data: race (which includes
+ethnicity), language and insurance. These are administrative registration
+fields. Insurance is included as a recorded administrative characteristic, not
+as a measure of socioeconomic position, and none of the three fields defines a
+homogeneous population.
 
 ```{r load-deps}
 suppressPackageStartupMessages({
@@ -57,20 +76,25 @@ step("=== Phase 6b: Equity Analysis ===")
 
 ## Subgroup Performance
 
-Whether the models discriminate equally well across demographic strata. Every
-metric below is computed on the same test rows and the same predictions as the
-aggregate results, sliced by subgroup rather than recomputed, so a difference
-between strata is a difference in performance and not an artefact of scoring
-them separately.
+This section estimates model performance within each subgroup level. Every
+metric is computed from the same Variant B test-set predictions as the
+aggregate results, stratified by subgroup, with no model refitted within a
+subgroup. A difference between strata therefore cannot come from separate
+fitting or from a different metric implementation. It can still reflect
+differences in sample size, event prevalence, case mix or data completeness.
 
-Two things limit what this section can conclude, and both are structural rather
-than incidental. Small strata carry intervals wide enough to reach the chance
-line, and the demographic fields themselves are administrative categories with
-a missingness level of their own.
+Two features of the data limit interpretation. Strata with few onsets have
+wide intervals, often wide enough to include an AUROC of 0.5. The subgroup
+fields are administrative categories, and some of their levels record missing
+or unobtainable information rather than a demographic answer.
 
-### Metric Helper
+### Subgroup Metric Calculation
 
-Computes AUROC, AUPRC, and alert burden for any subgroup slice with minimum-sample guards.
+The function below computes AUROC, AUPRC and alert burden for one subgroup
+level and one model. It returns nothing for a level with fewer than 50 scored
+person-hours or with no onset. All three metrics are computed over
+person-hours. Alert burden is the number of false alerts per true alert at the
+default threshold of 0.5.
 
 ```{r subgroup-helper}
 compute_subgroup_metrics <- function(dt, pred_col, subgroup_col, subgroup_val) {
@@ -107,15 +131,38 @@ compute_subgroup_metrics <- function(dt, pred_col, subgroup_col, subgroup_val) {
 }
 ```
 
-### Performance by Subgroup (Variant B, Primary Model)
+### Performance by Subgroup (Variant B)
 
-Subgroup levels are taken in order of sample size and scored across the primary
-model, GBT and NEWS2. Selecting by size keeps the choice outcome-blind, and it
-is also the only selection rule that leaves enough events in a stratum for the
-metrics to return anything at all.
+For each subgroup field, the eight levels with the most test person-hours are
+selected. Each is scored for three models: the primary model, gradient-boosted
+trees fitted with XGBoost (GBT) and NEWS2, shown in the table as
+`pred_sepsis`, `pred_gbt` and `pred_news2`. The table therefore covers all three
+models, not only the primary model. The selection uses counts alone, not
+performance or outcomes. The requirement of at least one onset, applied by the
+function above, does use outcomes, and it removes levels that have none.
 
-Levels that clear the counting floor still need not clear the floor for being
-read. Stage 12 applies the second one.
+Two event floors apply to these strata, and they serve different purposes. The
+floor here only decides whether a metric can be computed. `12_inference.Rmd`
+computes a bootstrap interval for a stratum with at least 5 onsets. It
+interprets a stratum, and includes it in the exploratory contrast family E1,
+only if it has at least 100 onsets (Protocol Amendment 6). Strata below 100
+onsets are still estimated and shown, but they support no comparison. Several
+rows in the table rest on fewer than 20 onsets, and their AUROCs should not be
+read or ranked. The race strata that reach 100 onsets are White and Unknown,
+and Unknown records missing information.
+
+Some entries need explanation. `n_rows` is the number of test person-hours and
+`n_sepsis` the number of onsets. A blank `subgroup_val` means the field is
+empty in the admission record. The race levels are reproduced exactly as
+MIMIC-IV records them. That field mixes broad and specific levels from the same
+population, such as WHITE and WHITE - OTHER EUROPEAN, so the levels overlap in
+meaning and are not disjoint populations. The primary model's alert burden is
+infinite in every row because it raises no alert at the 0.5 threshold, so
+there is no true alert to divide by. The other models alert on many
+person-hours at 0.5, which gives burdens in the hundreds. AUPRC is low
+throughout because onsets are rare per person-hour, and it depends on each
+stratum's event rate, so AUPRCs are not comparable between strata with
+different rates.
 
 ```{r subgroup-performance}
 step("Subgroup performance analysis...")
@@ -181,10 +228,14 @@ if (!file.exists(prim_path)) {
 
 ### AUROC by Race
 
-Discrimination by racial and ethnic stratum, set beside Wang et al.'s (2022)
-report of degraded performance for Asian, Hispanic and Spanish-speaking
-patients. Bar heights on their own support no claim. The contrasts, their
-intervals and the false-discovery correction are computed in stage 12.
+The figure shows the primary model's AUROC for each race level in the table
+above, ordered from highest to lowest AUROC. The dashed line is the unweighted
+mean of these stratum AUROCs, not the AUROC of the whole test set, so a stratum
+with 13 onsets counts as much as one with 597. The subtitle refers to the
+mortality finding of Wang et al. (2022) described in the introduction. Only
+the White and Unknown strata reach the interpretation floor, so differences in
+bar height support no comparison. The contrasts, their bootstrap intervals and
+the false-discovery-rate correction are computed in `12_inference.Rmd`.
 
 ```{r auroc-by-race, fig.cap="AUROC stratified by race/ethnicity for the primary model (Variant B). Dashed line indicates the overall mean.", fig.width=8, fig.height=5}
 if (!is.null(perf_df) && "race" %in% perf_df$subgroup_col) {
@@ -210,7 +261,24 @@ if (!is.null(perf_df) && "race" %in% perf_df$subgroup_col) {
 
 ## Subgroup Label-Sensitivity
 
-For each subgroup, the fraction labelled septic is computed under all three label variants. A large spread (pp range across A, B, C) means the label choice disproportionately affects that group.
+For each subgroup level, the percentage of stays labelled septic is computed
+under each of Variants A, B and C over the whole cohort, not only the test set.
+The label sensitivity of the level is the largest of the three percentages
+minus the smallest, in percentage points (pp). A larger range means that the
+level's event rate changes more with the choice of label. The measure compares
+proportions, so it does not show which individual stays change status between
+labels.
+
+The levels are the eight with the most stays under Variant B. A field with
+fewer than eight non-missing levels contributes all of them, however small.
+Insurance is such a field: its "No charge" level holds only seven stays, so its
+range of 28.6 pp is a difference of two stays and carries no information. As
+above, a blank level means an empty field. The table is sorted by range. The
+second table repeats the levels with a range above 5 pp, a display filter that
+was not pre-specified. The stratum sizes are not printed here, so small levels
+should be read with care. The stratum sizes and the bootstrap contrasts
+against each field's reference level, corrected within exploratory family E2,
+are produced in `12_inference.Rmd`.
 
 ```{r label-sensitivity}
 step("Subgroup label-sensitivity analysis...")
@@ -285,9 +353,17 @@ if (length(label_sens_results) > 0) {
 }
 ```
 
-### Label Sensitivity vs. AUROC Deficit
+### Label Sensitivity and AUROC
 
-Tests whether subgroups with higher label sensitivity also have lower AUROC. A negative trend would suggest label ambiguity compounds prediction difficulty.
+The figure plots each subgroup level's label sensitivity against the primary
+model's AUROC for that level under Variant B. It is exploratory and tests
+nothing. The fitted line is an unweighted least-squares line, so a level with
+a handful of onsets counts as much as one with hundreds. It also pools three
+different fields whose levels are not exchangeable and, for race, overlap in
+meaning, and it treats both axes as exact when both are estimated. A downward
+slope would mean only that levels whose event rate depends more on the label
+also tend to have lower estimated AUROC. It would not show that one causes the
+other.
 
 ```{r label-sens-vs-auroc, fig.cap="Subgroup label sensitivity (x) vs. AUROC (y). Each point is a demographic subgroup; a downward trend suggests label ambiguity compounds prediction difficulty.", fig.width=8, fig.height=4.8}
 if (length(label_sens_results) > 0 && !is.null(perf_df)) {
@@ -321,25 +397,30 @@ cat("\nEquity analysis and all V2 analyses complete.\n")
 
 ## Reading the Equity Results
 
-Two readings are available here and only one of them is supported by this
-design.
+The two analyses support conclusions of different strength.
 
-The subgroup performance results are a precision problem before they are a
-fairness problem. Sepsis onsets are rare per stay, and splitting them across
-demographic strata leaves most strata with event counts that cannot carry a
-discrimination estimate. Where a contrast comes back with no significant
-difference, the honest statement is that the study could not detect one, which
-is not the same as showing the model treats strata alike. Stage 12 applies the
-interpretation floor that decides which strata can be read at all.
+The subgroup performance estimates are limited mainly by their event counts.
+Onsets are rare, and dividing them across subgroup levels leaves most levels
+with too few onsets for a precise AUROC. A contrast that is not significant
+means that the study did not detect a difference. It does not show that the
+model performs equally across strata. `12_inference.Rmd` applies the 100-onset
+interpretation floor, and only contrasts between strata that reach it are
+corrected and interpreted. The analysis covers discrimination only. Subgroup
+calibration is not estimated here, and the alert burden at a common threshold
+depends on calibration and event rate as well as on discrimination.
 
-Label-sensitivity is on firmer ground, because it is a proportion computed over
-stays rather than a discrimination metric estimated from events. If the spread
-across variants A, B and C is uneven across subgroups, then who counts as
-septic depends on the definition differently for different groups, and every
-downstream rate inherits that. A model is not required for the effect to exist.
+The label-sensitivity analysis rests on stay-level proportions rather than on
+a discrimination estimate, so it is less limited by onset counts. Its
+proportions are still subject to sampling variability, as the seven-stay
+"No charge" level shows. If the range across Variants A, B and C differs
+between subgroups, then the proportion of stays labelled septic depends on the
+definition to different degrees in different subgroups. Subgroup event rates,
+and the performance estimates computed on them, then depend on the label
+chosen. This variation arises when the outcome is constructed, so it exists
+independently of any model.
 
-There is a further limit worth stating plainly: the demographic fields are
-administrative categories carrying their own missingness, and a stratum
-recording an absence of information is not a demographic answer. A comparison
-that clears the event floor on such a stratum still supports no claim about the
-group it appears to name.
+The quality of the administrative fields limits both analyses. Levels such as
+UNKNOWN, UNABLE TO OBTAIN and a blank entry record the absence of information,
+so they are data-quality categories rather than demographic groups. A result
+for such a level, even one that reaches the event floor, supports no
+conclusion about any particular population.
