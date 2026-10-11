@@ -1,5 +1,5 @@
 ---
-title: "02 Cohort Labels - Cohort Extraction Under Sepsis-3 and Alternative Label Variants"
+title: "02 Cohort Labels - Base Cohort and Sepsis Label Variants"
 author: "Abdul Ahad. Student ID: G00486649"
 date: "`r format(Sys.Date(), '%d %B %Y')`"
 output:
@@ -34,13 +34,36 @@ knitr::opts_chunk$set(
 
 ## Introduction
 
-This notebook applies three Sepsis-3 label variants to the same adult ICU cohort from MIMIC-IV. Following Cohen et al. (2024), the variants use different antibiotic-culture windows and SOFA evaluation periods, producing cohorts that differ in size, event rate, and onset timing.
+This notebook builds the study's base cohort from MIMIC-IV and assigns a
+sepsis label to every stay under each label variant. The base cohort is fixed:
+every variant is applied to the same ICU stays, so the variants differ only in
+which stays receive a sepsis onset and when that onset is placed.
 
-All three cohorts share the same inclusion criteria (adults $\geq$ 18, first ICU stay, LOS $\geq$ 4 h). The label-variance summary table produced here (M1 deliverable) quantifies these differences before any modelling.
+The three pre-registered variants, A (Narrow), B (Seymour-Standard) and C
+(Liberal), are alternative operationalisations of Sepsis-3 (Singer et al.,
+2016), following Cohen et al. (2024). They differ in the antibiotic-culture
+windows that define suspected infection, in the window over which the SOFA
+(Sequential Organ Failure Assessment) score is evaluated, and in the SOFA
+baseline. These three variants form the comparison for the label-dominance
+hypothesis (H1), which states that the spread in AUROC across label variants is
+at least as large as the spread across model classes. The label-variance table
+in this notebook describes how far the three labels differ before any model is
+fitted.
 
-Because all three are Sepsis-3 readings anchored to the same culture-plus-antibiotic trigger, two further variants are built alongside them under Protocol Amendment 2: **E (Anchor-Only)**, the suspicion-of-infection time with the organ-dysfunction requirement removed, and **D (Deterioration)**, acute organ dysfunction with no infection criterion and no treatment timestamp.
+Three further variants are built for analyses that lie outside H1. Protocol
+Amendment 2 labels the two parts of the Sepsis-3 definition separately.
+Variant E (Anchor-Only) takes the suspected-infection time as the onset and
+does not require organ dysfunction. Variant D (Deterioration) requires acute
+organ dysfunction but uses no infection criterion and no treatment timestamp.
 
-Protocol Amendment 4 adds a third, **F (Sepsis-3 Early-Onset)**. Its cohort is built here exactly as Variant B's --- same suspicion windows, same SOFA criterion, therefore the same septic stays --- and only the onset *timestamp* differs: `03_person_hours.Rmd` moves it back to $\min(t_{\text{susp}}, t_{\text{SOFA}})$, the standard operationalisation of Seymour et al. (2016) and the PhysioNet/CinC 2019 Challenge. All three are reported separately and never enter the pre-registered H1 comparison.
+Protocol Amendment 4 adds Variant F (Sepsis-3 Early-Onset). It uses Variant
+B's suspected-infection windows and SOFA criterion, so it labels exactly the
+same stays as septic. Only its onset time differs. That time is assigned in
+`03_person_hours.Rmd` as $\min(t_{\text{susp}}, t_{\text{SOFA}})$, the
+earlier of the suspected-infection time and the first hour at which the SOFA
+rise is present. This is the onset convention used by Seymour et al. (2016) and
+the PhysioNet/CinC 2019 Challenge (Reyna et al., 2020). Variants D, E and F are
+reported separately and never enter the H1 comparison.
 
 ```{r load-deps}
 suppressPackageStartupMessages({
@@ -58,7 +81,10 @@ step(sprintf("=== Phase 2a: Cohort extraction under %d label variants ===",
 
 ## Base Tables
 
-The three source tables (patients, admissions, and ICU stays) provide demographics, hospital-level outcomes, and the time spine for each ICU episode.
+The `patients`, `admissions` and `icustays` tables supply patient
+demographics and anchor year group, hospital-admission details including
+in-hospital death, and the ICU admission and discharge times that bound each
+stay.
 
 ```{r load-base-tables}
 step("Loading base tables...")
@@ -84,7 +110,17 @@ icustays[, los_hours := hours_diff(intime, outtime)]
 
 ## Base Cohort Criteria
 
-Standard inclusion filters: adults ($\geq$ 18), first ICU stay per patient, and minimum ICU LOS $\geq$ 4 hours.
+Three inclusion criteria are applied in order: age of at least 18 years, the
+earliest ICU stay of each patient (ordered by ICU admission time), and an ICU
+length of stay (LOS) of at least four hours. Age is MIMIC-IV's `anchor_age`,
+the patient's age in their anchor year. MIMIC-IV's ICU module records adult
+patients only, so the age criterion is expected to exclude no stays; it is
+still applied so that its count is reported. Because one stay is kept per
+patient, the final cohort has as many stays as patients.
+
+The table below gives, for each criterion, the number of stays remaining and
+the number removed by that criterion alone. The same counts are written to
+`02_cohort_flow`, from which the thesis cohort flow diagram is generated.
 
 ```{r build-base-cohort}
 step("Building base cohort (adult, first ICU stay, min LOS)...")
@@ -137,7 +173,20 @@ cat(sprintf("Base cohort: %s stays, %s unique patients\n",
 
 ## Suspected Infection
 
-Sepsis-3 (Singer et al., 2016) requires temporal co-occurrence of an antibiotic order and a microbiology culture. All antibiotic-culture pairs within each admission are generated here; variant-specific time-window filters are applied in the cohort-building step. Surveillance cultures are excluded.
+Sepsis-3 (Singer et al., 2016) defines sepsis as life-threatening organ
+dysfunction caused by a dysregulated host response to infection. Following
+Seymour et al. (2016), suspected infection is identified from an antibiotic
+order and a microbiology culture placed within a set interval of each other.
+Antibiotic orders come from `prescriptions`: systemic antibiotics matched by
+drug name, timed by the order start. Cultures come from `microbiologyevents`.
+Screening specimens listed in `SURVEILLANCE_SPEC_TYPES` in `config.R`, such as
+MRSA and CRE screens, are excluded, and a culture recorded with a date but no
+time is placed at midnight on that date.
+
+Every antibiotic order is paired with every culture from the same hospital
+admission. The number of pairs is therefore much larger than the number of
+admissions and is not an event count. Each variant's time windows are applied
+to these pairs when its labels are constructed.
 
 ```{r suspected-infection}
 step("Identifying suspected infection episodes...")
@@ -176,7 +225,14 @@ cat(sprintf("ABX-culture pairs (raw): %s\n",
 
 ## SOFA Components
 
-The SOFA score (Vincent et al., 1996) quantifies organ dysfunction across six systems. Lab values (platelets, bilirubin, creatinine, PaO$_2$/FiO$_2$), vitals (MAP, GCS), and vasopressor records are loaded and filtered to the cohort.
+The SOFA score (Vincent et al., 1996) grades dysfunction in six organ
+systems. At this stage it is computed from laboratory values (PaO$_2$/FiO$_2$
+ratio, platelets, bilirubin and creatinine) and from charted mean arterial
+pressure (MAP) and Glasgow Coma Scale (GCS) scores. The large `labevents` and
+`chartevents` tables are read only for hospital admissions in the base cohort.
+Vasopressor infusions are also read, but they are not passed to the score at
+this stage, so the cardiovascular component is graded from MAP alone and the
+renal component from creatinine alone.
 
 ```{r sofa-components}
 step("Computing SOFA components for all stays...")
@@ -224,9 +280,19 @@ inputevents[, endtime   := parse_dt(endtime)]
 setkeyv(inputevents, c("hadm_id", "starttime"))
 ```
 
-## Vectorised SOFA Delta
+## SOFA Change from Baseline
 
-Sepsis-3 requires a SOFA increase $\geq$ 2 points relative to baseline. `data.table::foverlaps` performs interval joins to aggregate measurements within evaluation and baseline windows without per-row loops.
+A stay meets the organ-dysfunction criterion when its SOFA score in the
+evaluation window is at least two points above its baseline score. The
+evaluation window runs from a set number of hours before the suspected-infection
+time to a set number after it, with both bounds defined per variant in
+`config.R`. The baseline window is either the first four hours of the ICU stay
+(admission baseline, Variants A and B) or the 24 hours before the evaluation
+window opens (Variant C). Within each window, the measurements of each item are
+averaged and the averages are scored. Missing laboratory and MAP values are
+scored as normal, and a window with no measurements at all scores zero.
+Measurements are matched to windows with interval joins
+(`data.table::foverlaps`).
 
 ```{r sofa-delta, code_folding="hide"}
 source("clinical_scores.R")
@@ -340,9 +406,25 @@ compute_sofa_delta_vectorized <- function(rows, v) {
 }
 ```
 
-## Build Cohort Per Variant
+## Variant-Specific Label Construction
 
-Each variant applies its own antibiotic-culture time window and SOFA evaluation period, producing a distinct set of labelled onsets. Onsets outside the ICU stay or within the first hour are excluded.
+For each variant, an antibiotic-culture pair is kept when the antibiotic was
+ordered no more than the variant's limit before the culture, or the culture
+was drawn no more than its limit before the antibiotic. The suspected-infection
+time of a pair is the later of its two timestamps, and only the earliest
+suspected-infection time in each admission is evaluated. For Variants A, B, C
+and F, that time becomes the onset when the SOFA criterion is met. For Variant
+E, it becomes the onset without the SOFA criterion. Variant D receives no
+onset here, because its onsets are derived hour by hour in
+`03_person_hours.Rmd`.
+
+Two rules then discard onsets that cannot be used: an onset before ICU
+admission or after ICU discharge, and an onset in hour 0 or hour 1 of the stay
+(less than two hours after ICU admission). A stay whose onset is discarded
+remains in the cohort without an onset; it is never removed. Every variant
+therefore keeps the full base cohort, and each event rate below uses all
+base-cohort stays as its denominator. Variants B and F report identical counts
+because they label the same stays.
 
 ```{r build-cohorts}
 build_cohort_for_variant <- function(variant_id) {
@@ -431,9 +513,17 @@ for (vid in names(cohorts))
   save_parquet(cohorts[[vid]], paste0("02_cohort_", vid), DATA_DIR)
 ```
 
-## Label-Variance Table (M1 Deliverable)
+## Label-Variance Table (Variants A--C)
 
-The label-variance table summarises cohort size, event count, event rate, and onset-time distribution for each variant. This is the empirical foundation for the label-dominance hypothesis (H1).
+The label-variance table reports, for each pre-registered variant, the number
+of stays, the number and percentage with a sepsis onset, the number without
+one, in-hospital deaths among stays without an onset, and the median and
+interquartile range of the onset hour. Because the three variants share the
+same stays, every difference in the table comes from the label definition. A
+large spread in event rate or onset timing across A--C shows that the labels
+disagree. It does not test H1, which concerns discrimination and is evaluated
+in later stages. The table is saved as `02_label_variance_table.parquet` in
+`output/processed_data/`.
 
 ```{r label-variance-table}
 step("Building M1 label-variance table...")
@@ -463,14 +553,23 @@ if (length(prereg_run) > 0) {
 }
 ```
 
-## Alternative-Label Variance Table (Protocol Amendment 2)
+## Alternative-Label Variance Table (Variants D, E and F)
 
-Variants A--C are three readings of one definition and share a single
-culture-plus-antibiotic anchor, so part of their disagreement is definitional
-rather than empirical. Variant E keeps that anchor and drops the
-organ-dysfunction requirement; Variant D keeps organ dysfunction and drops the
-anchor entirely. Variant D's onsets are assigned per hour in
-`03_person_hours.Rmd` and so are not counted here.
+Variants A--C anchor suspected infection in the same way, on a clinician's
+decision to culture and treat, and differ only in the windows around that
+anchor and in the SOFA baseline. Part of their spread therefore follows from
+the definition itself. Variants E and D separate the two parts of the
+definition: Variant E keeps the suspected-infection anchor and drops the
+organ-dysfunction requirement, while Variant D keeps organ dysfunction and
+drops the anchor. The table has the same columns as the label-variance table,
+plus the label family of each variant.
+
+Two rows need care. Variant D's onset count, percentage and non-onset count are
+left empty, because its onsets are assigned hourly in `03_person_hours.Rmd` and
+none exist at this stage. Variant F's counts and onset hours match Variant B's,
+because its earlier onset time is also assigned in `03_person_hours.Rmd`. The
+table is saved as `02_alt_label_variance_table.parquet` in
+`output/processed_data/`.
 
 ```{r alt-label-variance-table}
 alt_run <- intersect(names(cohorts), names(ALT_LABEL_VARIANTS))
