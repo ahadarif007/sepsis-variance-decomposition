@@ -34,16 +34,26 @@ knitr::opts_chunk$set(
 
 ## Introduction
 
-All comparators share the same cohort, labels, features, temporal split, and metrics as the primary model (Reyna et al., 2020).
+This notebook produces the comparator models against which the primary model
+of `05_primary_model.Rmd` is judged. Every comparator is evaluated on the same
+cohort, label variants and temporal split as the primary model, and on the
+same test person-hours. `07_metrics_suite.Rmd` then scores all of them with the
+same metrics. The hourly prediction task follows the framing of the
+PhysioNet/Computing in Cardiology Challenge 2019 (Reyna et al., 2020). The
+primary model estimates onset, discharge and death jointly, whereas every
+comparator here predicts onset only.
 
-| Comparator | Rationale |
+| Comparator | Role |
 |---|---|
-| **NEWS2** | Rule-based sepsis screening score (Evans et al., 2021). Pre-computed. |
-| **qSOFA, SIRS** | Descriptive context only. |
-| **Static Cox PH** | Weak baseline with time-fixed covariates. PH assumption expected to be violated. |
-| **XGBoost** | ML comparator per PhysioNet conventions (Reyna et al., 2020). Tests H6. |
+| **NEWS2** | The National Early Warning Score 2, a bedside deterioration score. It is the principal rule-based comparator, because the Surviving Sepsis Campaign guidelines advise against using qSOFA as a sole screening tool (Evans et al., 2021). It is computed in `03_person_hours.Rmd` and needs no fitting. |
+| **qSOFA, SIRS** | The quick SOFA score and the Systemic Inflammatory Response Syndrome criteria, also computed in `03_person_hours.Rmd`. They are reported for descriptive comparison only. |
+| **Cox** | A Cox proportional-hazards (PH) model with time-varying covariates and time-constant coefficients, which the pre-registration calls the static comparator. It is a conventional survival-model baseline. Its PH assumption is tested with Schoenfeld residuals and was not expected to hold. |
+| **GBT** | Gradient-boosted trees (GBT), fitted with the XGBoost library. This is the flexible machine-learning comparator, and its contrast with the primary model is H6. |
 
-Variant B is the primary comparison; A and C feed the variance decomposition.
+All comparators are produced for every variant in the run. Variant B is the
+primary analysis and the variant on which H6 is evaluated. Variants A--C
+together provide the label component of the variance decomposition. Variants
+D--F are the post-hoc variants of Protocol Amendments 2 and 4.
 
 ```{r load-deps}
 suppressPackageStartupMessages({
@@ -63,11 +73,24 @@ step("=== Phase 3b: Comparator models ===")
 
 ## Feature Set
 
-Same feature set as the primary model, and the identity is load-bearing. H6
-asks whether the model class matters once everything else is fixed, so the
-comparators have to see exactly the columns the primary model saw. Give
-XGBoost a richer input and any gap it opens up is a difference in features
-wearing the costume of a difference in learners.
+The GBT uses the same 22 covariates as the primary model, in the same order
+(`model_features()` in `config.R`). H6 asks whether performance differs by
+model class when the other conditions are held fixed. If the GBT received
+covariates that the primary model lacked, a difference in AUROC could come
+from the covariates rather than from the model class. The two inputs still
+differ in one respect. The primary model also includes a spline in hours since
+ICU admission, whereas the GBT has no time input beyond the 22 covariates.
+
+The Cox model uses 12 of the 22 covariates: the six vital signs, the five
+laboratory values and `vaso_any`. It omits the six-hour means,
+`norepi_epi_any` and the six `*_measured` indicators. Hours since admission
+form its time scale, and it treats discharge and death as censoring. Its
+contrast with the primary model therefore compares complete specifications
+rather than model form alone. NEWS2, qSOFA and SIRS apply their own fixed
+scoring rules.
+
+Missing covariate values are set to zero, or to false for logical columns, as
+in `05_primary_model.Rmd`.
 
 ```{r feature-set}
 # The comparators are fitted on the same covariate vector as the primary model,
@@ -78,9 +101,60 @@ wearing the costume of a difference in learners.
 MODEL_FEATURES <- model_features()
 ```
 
-## Fit Comparators Per Variant
+## Fit Comparators by Variant
 
-Per variant: NEWS2/qSOFA/SIRS scores are read from the person-hour table (no fitting); Cox is fitted with Schoenfeld testing; XGBoost uses class-imbalance weighting, an AUCPR evaluation metric, and early stopping on a 15% stay-level holdout carved out of the *training* rows (Protocol Amendment 8). The test set is never in the watchlist.
+For each variant, the Cox model and the GBT are fitted to the training
+person-hours of the temporal split. All comparators are then scored on the
+test person-hours of that split.
+
+**Rule-based scores.** NEWS2, qSOFA and SIRS are read from the person-hour
+table. Each score is divided by its maximum (20, 3 and 4 respectively) to give
+a value between 0 and 1. This rescaling preserves the ranking and so leaves the
+AUROC unchanged, but the rescaled values are not probabilities. An NEWS2 alert
+is a total of 5 or more. The printed alert rate is the percentage of test
+person-hours at or above that threshold.
+
+**Cox model.** The Cox model is fitted in counting-process form. Each
+person-hour contributes the interval from hour $t$ to $t + 1$, with its onset
+indicator as the event. Ties are handled by Efron's method, and standard errors
+are clustered by stay. The printed line gives the p-value of the global
+Schoenfeld test of the PH assumption. It is printed to three decimal places,
+so `p = 0.000` means $p < 0.0005$. With more than a million training
+person-hours in every variant, the test detects even small departures from proportionality. A
+small p-value therefore shows that the assumption fails, not how far it fails.
+The test-set score is the linear predictor passed through the logistic
+function. It ranks person-hours by relative hazard and so supports measures of
+discrimination, but it is not a calibrated probability.
+
+**GBT.** The GBT uses a binary logistic objective, onset against all other
+states, with maximum tree depth 6, learning rate 0.05, row and column
+subsampling of 0.8 and minimum child weight 5. These settings are fixed rather
+than tuned. They are the same for every variant, split and specification. The
+onset rows are up-weighted by the ratio of non-onset to onset rows in the
+fitting part of the training data. This offsets the rarity of onsets, but it
+also inflates the predicted probabilities, so the GBT's scores are not
+calibrated probabilities either.
+
+The number of boosting rounds is chosen by early stopping (Protocol Amendment
+8). `r 100 * GBT_VALID_FRACTION`% of training stays, drawn with seed
+`r GBT_VALID_SEED`, form a validation subset, and the model is fitted on the
+remaining training stays. The area under the precision-recall curve is
+monitored on the validation subset. Boosting stops after `r GBT_EARLY_STOP`
+rounds without improvement, or at `r GBT_NROUNDS_MAX` rounds. The subset is
+drawn by stay, so all hours of a stay fall on the same side. The test set is
+not used for fitting, for early stopping or for any other modelling choice.
+
+For each variant, the output prints the following:
+
+- the covariate check;
+- the NEWS2 alert rate;
+- the Schoenfeld result;
+- the early-stopping split, giving the number of training stays used for
+  fitting, the number in the validation subset and the onset rows on each side.
+
+Every variant draws the split from the same training stays with the same seed,
+so the stay counts are identical across variants and only the onset counts
+differ.
 
 ```{r fit-comparators-fn, code_folding="hide"}
 fit_comparators <- function(vid) {
@@ -277,11 +351,18 @@ if ("full" %in% run_arms) {
 
 ## Ablated GBT (Protocol Amendment 5)
 
-The gradient-boosted comparator is re-fitted without the action-derived
-features, so the ablation is measured on both a linear and a flexible learner.
-Only XGBoost is ablated: NEWS2, qSOFA and SIRS never used these features, and
-the Cox comparator is a static single-row-per-stay specification whose role in
-the thesis is the proportional-hazards check rather than discrimination.
+The GBT is refitted for Variants A--C without the eight action-derived
+covariates: `vaso_any`, `norepi_epi_any` and the six `*_measured` indicators.
+The primary model is refitted in the same way in `05_primary_model.Rmd`, so the
+ablation is measured on both the regression and the tree-based model. The
+hyperparameters, the early-stopping rule and the validation stays are the same
+as in the full GBT, so the two GBT fits differ only in their covariates. The
+printed output calls the ablated specification the "ablated arm".
+
+No other comparator is ablated. NEWS2, qSOFA and SIRS do not use these
+covariates. The Cox model already omits all of them except `vaso_any`, and its
+main purpose in the study is the test of the PH assumption rather than
+discrimination.
 
 ```{r fit-gbt-ablated}
 fit_gbt_ablated <- function(vid) {
@@ -368,7 +449,15 @@ if ("ablated" %in% run_arms) {
 
 ## Random-Split Comparators (H4)
 
-GBT and rule-based comparators are re-fitted on the random patient-level split for Variant B, so H4 can compare temporal vs. random AUROC across all models.
+For H4, which compares AUROC under the temporal and random splits, the Cox
+model and the GBT are refitted for Variant B on the random patient-level split
+described in `03_person_hours.Rmd`. Their settings, including the
+early-stopping rule, are those of the temporal fits. NEWS2 needs no fitting.
+Its scores are taken from the random-split test rows. The predictions saved
+here are those of NEWS2, the Cox model and the GBT. qSOFA and SIRS are not
+included, so the random-split comparison in `07_metrics_suite.Rmd` covers
+these three models and the primary model refitted in `05_primary_model.Rmd`.
+No Schoenfeld test is run on the random-split Cox fit.
 
 ```{r fit-random-comparators}
 step("--- Random-split comparators for Variant B (H4) ---")
@@ -519,7 +608,32 @@ if ("random_split" %in% names(ph)) {
 
 ## Feature Importance (GBT)
 
-GBT feature importance provides a cross-check: if GBT relies on the same features as the multinomial regression, both model classes are learning similar structure.
+Table 1 lists the 20 covariates with the highest gain in Variant B's full GBT.
+The three measures are those reported by XGBoost, and each is expressed as a
+share of its total across all covariates, so it sums to 1:
+
+- **gain** is the covariate's share of the total improvement in the training
+  objective achieved by the splits that use it;
+- **cover** is its share of the training observations affected by those
+  splits;
+- **frequency** is its share of all splits.
+
+These measures describe how the trees use each covariate. They are not effect
+sizes and carry no direction.
+
+The table gives a complementary view of the primary multinomial regression of
+`05_primary_model.Rmd`. Broad agreement between the covariates that rank high
+here and those with large effects in the regression would suggest that the two
+model classes draw on similar predictive information. The two quantities are
+not directly comparable, however. Gain measures contribution to tree splits,
+while a regression coefficient is a conditional association per unit of an
+unstandardised covariate, so close agreement in ranking is not expected.
+
+One feature of the input bears on the ranking. The GBT has no time input, but
+the six-hour means are set to zero in hours 0--4 of every stay (see
+`05_primary_model.Rmd`). A split on these covariates can therefore separate the
+first hours of a stay from later ones, and part of their gain may reflect
+elapsed time rather than physiology.
 
 ```{r gbt-importance}
 imp_files <- file.path(DATA_DIR, sprintf("06_gbt_feature_importance_%s.parquet",
