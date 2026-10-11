@@ -1,5 +1,5 @@
 ---
-title: "07 Metrics Suite - Full Evaluation Metric Suite"
+title: "07 Metrics Suite - Evaluation Metrics and Operating Points"
 author: "Abdul Ahad. Student ID: G00486649"
 date: "`r format(Sys.Date(), '%d %B %Y')`"
 output:
@@ -34,13 +34,25 @@ knitr::opts_chunk$set(
 
 ## Introduction
 
-This notebook applies a full metric suite following Wang et al. (2025) and Van Calster et al. (2019).
+This notebook scores the test-set predictions of every model with the
+pre-specified evaluation metrics, following Wang et al. (2025) and Van Calster
+et al. (2019).
 
-**Primary:** PhysioNet Utility Score (Reyna et al., 2020), calibration (intercept + slope).
+The primary metrics are an adapted PhysioNet-style Utility Score and the
+calibration intercept and slope. The Utility Score keeps the normalisation of
+the PhysioNet/Computing in Cardiology Challenge 2019 score (Reyna et al., 2020)
+but departs from that score in other respects, described under Metric
+Functions. Its values are therefore not comparable with published Challenge
+scores. The secondary metrics are AUROC, AUPRC, decision-curve net benefit,
+alert burden and median lead time. Alert burden is the number of false alerts
+per true alert, and the benchmark for it is the 1.4 reported by Moor et al.
+(2023).
 
-**Secondary:** AUPRC, AUROC, decision-curve net benefit, alert burden ($\leq 1.4$ benchmark; Moor et al., 2023), median lead time.
-
-All metrics are computed in two windows: **unrestricted** (all test hours) and **treatment-anchored** (pre-treatment hours only; Kamran et al., 2024).
+Every metric is computed in two evaluation windows. The unrestricted window
+contains all test person-hours. The treatment-anchored window contains only the
+hours before a stay's first antibiotic or first culture, whichever comes first
+(Kamran et al., 2024). All results come from the temporal test set, except in
+the final section, which scores the random-split predictions used for H4.
 
 ```{r load-deps}
 suppressPackageStartupMessages({
@@ -60,11 +72,37 @@ step("=== Full Evaluation Metric Suite ===")
 
 ## Metric Functions
 
-Standalone metric functions, reused across internal, external, and subgroup
-evaluations. Keeping one implementation matters more than it looks: internal
-and external AUROC are differenced in H5, and per-hour and per-patient
-operating points are compared in stage 11. Two scoring paths that disagreed
-even slightly would put that disagreement into the contrast.
+The metric functions are defined in the chunk below and used throughout this
+notebook. Stages 08 (external validation) and 10 (subgroups) compute AUROC and
+AUPRC with the same `PRROC` functions, and stage 08 reads its internal AUROC
+from this notebook's output. Both sides of the H5 contrast between internal and
+external AUROC therefore come from the same estimator, so a difference between
+them cannot arise from a difference in implementation.
+
+The Utility Score is computed per stay. A septic stay that receives an alert
+between six hours before onset and onset earns a reward equal to the warning
+time of its earliest such alert divided by six hours. A six-hour warning
+therefore earns 1, and an alert at onset earns 0. A septic stay whose only
+alerts fall in the three hours after onset is charged 0.05 for each of those
+alerts, and a septic stay with no alert in either window is charged 1. Every
+alert hour outside these two windows, on any stay, is charged 0.05. The raw
+total $U$ is then normalised against two reference strategies, issuing no
+alerts ($U_{\text{inaction}}$) and alerting perfectly with no false alarms
+($U_{\text{optimal}}$):
+
+$$U_{\text{norm}} = \frac{U - U_{\text{inaction}}}{U_{\text{optimal}} - U_{\text{inaction}}}.$$
+
+A score of 1 is a perfect forecaster, 0 is exactly the no-alert strategy, and a
+negative score is worse than issuing no alerts. This normalisation follows
+Reyna et al. (2020). The reward window, the single penalty for a missed stay
+and the accumulation per stay rather than per hour do not, which is why the
+score is described as adapted. The constants are the same for every model and
+variant, so comparisons within this study are unaffected.
+
+The calibration intercept and slope come from logistic recalibration of the
+outcome on the logit of the predicted probability. Median lead time is taken
+over septic stays with at least one alert at the 0.5 threshold, and is the
+number of hours from the first alert to onset.
 
 ```{r metric-fns}
 # --------------------------------------------------------------------------- #
@@ -290,7 +328,21 @@ compute_lead_time <- function(ph_pred, pred_col, threshold = 0.5) {
 
 ## Evaluation Loop
 
-The full models x variants x windows grid is evaluated. Decision-curve analysis runs where both primary and GBT predictions are available.
+Every model is scored under every label variant in both evaluation windows.
+The models are the primary model, a multinomial discrete-time competing-risks
+hazard model (`05_primary_model.Rmd`), and the comparators of
+`06_comparators.Rmd`: gradient-boosted trees fitted with XGBoost (GBT), the Cox
+model, and the NEWS2, qSOFA and SIRS scores. A model is skipped in a window
+with fewer than 100 scored person-hours. AUROC, AUPRC and calibration use every
+scored person-hour. Alert burden, lead time and the Utility Score are first
+computed at the default threshold of 0.5, and the Utility Score is also
+computed across the threshold grid described below.
+
+For each variant, a decision-curve analysis of the primary model and the GBT is
+also run with the `dcurves` package over thresholds from 0.01 to 0.20, and
+saved as `07_dca_<variant>.parquet`. It serves only as a cross-check on the
+net-benefit analysis in `11_clinical_metrics.Rmd`, which uses a threshold grid
+scaled to the event rate.
 
 ```{r evaluate-all}
 MODEL_NAMES <- c(primary = "pred_sepsis", news2 = "pred_news2",
@@ -428,22 +480,50 @@ for (vid in run_variants) {
 
 ## Results and Interpretation
 
-The central performance comparison. Three readings are worth making from the
-table, and each answers a different question.
+The table below gives the results for the pre-registered Variants A--C on the
+temporal test set. It is saved as `07_metric_results.parquet`, the input to
+the variance decomposition. Variants D--F are written to a separate file (see
+below), so they cannot enter H1 or the decomposition. The table supports three
+comparisons.
 
-Primary against GBT on the Utility Score speaks to H6, though the two models
-can order differently on utility than on AUROC; where they do, the disagreement
-is itself informative and the thesis reports both orderings rather than
-choosing one.
+The first is between the primary model and the GBT. H6 compares the two on
+AUROC under Variant B. The table also gives their Utility Scores, and the two
+metrics rank the models differently: the primary model has the higher AUROC
+under every variant, and the GBT the higher maximum Utility Score. AUROC
+measures how well a model ranks person-hours by risk, whereas the Utility Score
+rewards early alerts and penalises false ones at a given threshold, so the two
+need not agree. Both rankings are reported.
 
-Treatment-anchored against unrestricted speaks to H3. A gap here would be
-leakage from clinician suspicion. No gap is harder to interpret than it looks,
-because under a conjunction onset rule the pre-treatment window may hold no
-events at all, in which case the comparison has nothing to measure.
+The second is between the two evaluation windows, and it is the comparison H3
+was defined on. H3 predicted that restricting evaluation to pre-treatment hours
+would reduce AUROC by at least 0.03. Such a reduction would suggest that the
+unrestricted AUROC draws on information reflecting clinicians' suspicion of
+infection. Under Variants A--C the comparison cannot be made. Their onset is
+the time at which suspected infection is established from an antibiotic and a
+culture together, and that time cannot precede the first of the two. The
+pre-treatment window therefore contains no onsets by construction, and its
+AUROC is undefined (shown as NA). The empirical counterpart is Variant F of
+Protocol Amendment 4, whose onset can precede treatment. Its treatment-anchored
+results appear in the alternative-label table.
 
-Calibration slope is read against 1.0. A slope well below 1 means predicted
-risks are too extreme at both ends, which a discrimination metric cannot see
-and which matters for any threshold a clinician would actually deploy.
+The third concerns the threshold. The Utility Score, alert burden and lead time
+in this table are read at 0.5. The primary model raises no alert at that
+threshold, so its Utility Score is exactly 0, its alert burden is infinite and
+its lead time is missing. These values describe the threshold rather than the
+model, and the next section evaluates the Utility Score across a grid of
+thresholds.
+
+The calibration intercept and slope are saved in `07_metric_results.parquet`
+but not displayed. They are estimated with predictions clipped to the interval
+[0.001, 0.999]. At an hourly event rate of about 0.2 per cent, that clip alters
+between about 9 and 47 per cent of the primary model's predictions, depending
+on the variant. The calibration analysis of record is therefore the one in
+`11_clinical_metrics.Rmd`, which uses a floor of $10^{-6}$, and the clipped
+estimates here serve only to show the effect of the clip. In either analysis
+the ideal slope is 1. A slope below 1 means the predictions are too extreme,
+and a slope above 1 means they are too moderate. Discrimination metrics such
+as AUROC do not detect either departure, but both matter when a threshold is
+chosen.
 
 ```{r show-results}
 display_cols <- c("variant", "model", "eval_window", "auroc", "auprc",
@@ -472,16 +552,33 @@ if (!is.null(prereg_df) && nrow(prereg_df) > 0) {
 
 ## Utility Score Across the Threshold Grid
 
-Every Utility Score in the table above is read at the default 0.5 cut-off. At an
-hourly event rate below 0.5 per cent no model's predicted probability comes near
-0.5, so that cut-off measures the no-alert strategy for some models and an
-arbitrary point for the others. The full grid is written to
-`07_utility_sweep.csv`; the maximum over all thresholds that raise at least one
-alert is the honest statement of what each model can achieve.
+The Utility Scores in the table above are read at the default threshold of
+0.5, which is not informative here. The primary model's largest hourly
+predicted probability is well below 0.5, so it raises no alert at that
+threshold. The other models alert on a large share of person-hours at 0.5,
+because their outputs are not calibrated probabilities. The GBT is trained with
+up-weighted onset rows, the Cox score is a transformed linear predictor, and
+the rule-based scores are rescaled to lie between 0 and 1. The 0.5 threshold
+therefore gives the no-alert strategy for the primary model and an arbitrary
+operating point for the others.
 
-Two invariants are checked here rather than asserted: a threshold above every
-predicted probability must score exactly 0 (it *is* the no-alert strategy), and
-the normalised score must never exceed 1.
+The Utility Score is therefore also computed over a grid of thresholds defined
+on the alert rate rather than on the probability scale, so that the grid
+adapts to each model's calibration. For each model, up to 60 thresholds are
+placed at the quantiles of its predictions that give alert rates evenly spaced
+on a log scale from 0.001 to 50 per cent of person-hours, and 0.5 is added. The
+full grid is saved to `07_utility_sweep.csv`. The maximum Utility Score over
+the thresholds that raise at least one alert, with the operating point that
+attains it, is saved to `07_utility_max.csv` and shown below for the
+unrestricted window. Both the threshold and the score come from the test set,
+so this maximum is an optimistic ceiling on the performance observed here. It
+is not an estimate of the performance of a threshold chosen in advance.
+
+Two properties of the normalisation are enforced at run time, and the notebook
+stops with an error if either fails. A threshold above every predicted
+probability raises no alerts and must score exactly 0, and no operating point
+may score above the upper bound of 1. The two lines printed below confirm that
+both held.
 
 ```{r utility-sweep}
 sweep_df <- if (length(all_sweeps) > 0) rbindlist(all_sweeps, fill = TRUE) else NULL
@@ -564,12 +661,21 @@ if (!is.null(sweep_df) && nrow(sweep_df) > 0) {
 }
 ```
 
-## Alternative-Label Evaluation (Protocol Amendment 2)
+## Alternative-Label Evaluation (Protocol Amendments 2 and 4)
 
-Variants D and E are evaluated with the identical metric suite. Because a
-label change alters the event definition, the event counts and prevalences
-differ from the Sepsis-3 variants and are reported alongside the metrics; the
-comparison of interest is made in `09_variance_decomposition.Rmd`.
+The post-hoc Variants D and E (Protocol Amendment 2) and F (Protocol Amendment
+4) are scored with the same metric suite. Their results are written to
+`07_metric_results_altlabel.parquet` and `07_metric_results_altlabel.csv`,
+separately from the pre-registered results, so they cannot enter H1 or the
+variance decomposition. Variants D and E define the event differently from the
+Sepsis-3 variants, and Variant F re-times onset, so their event counts and
+prevalences differ from those of Variants A--C. The table therefore adds the
+number of events to each row. The comparisons between these variants and
+Variant B are made in `09_variance_decomposition.Rmd`. Variant F's
+treatment-anchored rows give the empirical counterpart to H3 described above.
+
+When only some of these variants are run, the rows of the variants not in the
+run are carried forward from the existing file rather than deleted.
 
 ```{r show-alt-results}
 alt_df <- if (!is.null(results_df))
@@ -614,12 +720,29 @@ if (!is.null(alt_df) && nrow(alt_df) > 0) {
 
 ## Feature-Ablation Evaluation (Protocol Amendment 5)
 
-The ablated fits from stages 05 and 06 are scored with the identical metric
-suite on the identical test rows, so the difference between the two arms is
-attributable to the feature set alone. The ablation removes the action-derived
-features --- vasopressor exposure and the per-test order indicators --- and
-retains all physiological measurements, including forward-filled laboratory
-values.
+Protocol Amendment 5 is a post-hoc, exploratory analysis. It enters no
+hypothesis test and no part of the variance decomposition. The ablated primary
+model and GBT from stages 05 and 06 are fitted without the eight
+action-derived covariates, which record clinicians' actions rather than the
+patient's state. These are the two vasopressor indicators (`vaso_any` and
+`norepi_epi_any`) and the six indicators of whether a laboratory test has been
+measured (lactate, creatinine, total bilirubin, platelets, white cell count and
+P/F ratio). The remaining 14 covariates, all physiological, are retained,
+including the forward-filled laboratory values. A laboratory value exists only
+because the test was ordered, so these values also carry some information about
+clinicians' actions. They are retained because removing them would also remove
+physiological signal, and the ablation would then no longer isolate the
+action-derived covariates.
+
+Everything else in the fit is held fixed, including, for the GBT, the
+hyperparameters and the stay-level validation subset. The ablated models are
+scored with the same metric suite on the same temporal test person-hours as
+the full models, in the unrestricted window. Each ablated result is paired with
+the full model's result for the same variant and model, and the difference
+(ablated minus full) is the quantity of interest. The difference in maximum
+Utility Score compares two test-set maxima and carries the caveat given above.
+The output is saved to `07_ablation_metrics.parquet` and
+`07_ablation_metrics.csv`.
 
 ```{r evaluate-ablation}
 step("--- Evaluating the ablated arm (Protocol Amendment 5) ---")
@@ -715,7 +838,15 @@ if (length(ablation_rows) > 0) {
 
 ## Random-Split Evaluation (H4: Split Optimism)
 
-The same metric suite is applied to random-split predictions (Variant B only). The output `07_metric_results_random.parquet` feeds the variance decomposition for H4 (Guo et al., 2022).
+H4 asks whether a random train/test split overstates performance relative to
+the temporal split (Guo et al., 2022). The same metric suite is applied to the
+predictions of the models refitted on the random split in stages 05 and 06.
+That split, built in `03_person_hours.Rmd`, assigns 25 per cent of stays to the
+test set, so all hours of a stay fall on the same side. With one stay per
+patient, it is also a patient-level split. Only Variant B is evaluated, because
+H4 holds the label fixed. The results are saved to
+`07_metric_results_random.parquet`, from which `09_variance_decomposition.Rmd`
+computes the split component of the decomposition.
 
 ```{r evaluate-random-split}
 step("--- Random-split evaluation for H4 ---")
