@@ -1,5 +1,5 @@
 ---
-title: "12 Inference - Bootstrap Uncertainty, Multiplicity Control, and Analysis Status"
+title: "12 Inference - Bootstrap Uncertainty and Multiplicity Control"
 author: "Abdul Ahad. Student ID: G00486649"
 date: "`r format(Sys.Date(), '%d %B %Y')`"
 output:
@@ -34,43 +34,52 @@ knitr::opts_chunk$set(
 
 ## Introduction
 
-Every result reported so far is a point estimate. This notebook attaches
-uncertainty to those estimates and controls the error rate incurred by testing
-many of them at once. Three things are produced:
+The preceding stages report point estimates. This notebook adds intervals to
+them and controls the error rates that arise from testing many contrasts. It
+has three components.
 
-1. **Cluster-bootstrap confidence intervals** for every headline and subgroup
-   estimate. Person-hours are nested within ICU stays, so the resampling unit
-   is the stay: naive row-level intervals would be far too narrow.
+1. **Cluster-bootstrap confidence intervals** for the primary and subgroup
+   estimates. Person-hours are nested within ICU stays, so the stay is the
+   resampling unit. Resampling individual person-hours would ignore the
+   dependence between hours of the same stay and would understate the
+   uncertainty.
 
-2. **Multiplicity control.** The six pre-registered hypotheses form a
-   *confirmatory* family and are corrected by Holm--Bonferroni at
-   $\alpha = 0.05$ (FWER). The subgroup analyses and the alternative-label
-   comparison form *exploratory* families (E1 subgroup discrimination, E2
-   subgroup label sensitivity, E3 alternative-label contrasts) and are
-   corrected by Benjamini--Hochberg at $q = 0.05$ (FDR). The two
-   procedures are deliberately different: a confirmatory claim must survive
-   strict family-wise control, whereas an exploratory scan is intended to
-   generate hypotheses and only needs its false-discovery proportion bounded.
+2. **Multiplicity control.** The six pre-registered hypotheses form the
+   confirmatory family, and the Holm-Bonferroni procedure controls its
+   family-wise error rate at $\alpha = 0.05$. The subgroup analyses and the
+   alternative-label comparisons form three exploratory families: E1 (subgroup
+   discrimination), E2 (subgroup label sensitivity) and E3 (alternative-label
+   contrasts). Within each, the Benjamini-Hochberg (BH) procedure controls the
+   expected false-discovery rate at $q = 0.05$. The two procedures differ
+   because the families serve different purposes: a confirmatory claim must
+   meet strict family-wise control, whereas an exploratory family is intended
+   to generate hypotheses for later confirmation. BH is valid under
+   independence and under positive dependence between the tests. The contrasts
+   within a family share stays and, within a field, a reference level, so they
+   are dependent. That dependence is expected to be positive, and a
+   Bonferroni-adjusted p-value, which needs no assumption about dependence, is
+   computed beside each BH value as a check.
 
-3. **An analysis register** tagging every reported analysis as confirmatory,
-   exploratory, or descriptive, with the pre-registration clause that licenses
-   it. The register is written to disk so the thesis tables can carry the tag
-   in the table itself rather than relying on a blanket methodological
-   statement.
+3. **An analysis register** that tags every reported analysis as
+   confirmatory, exploratory or descriptive and names the section of the
+   pre-registration or the protocol amendment under which it was specified. It
+   is saved as a table so that the thesis tables can state each analysis's
+   status directly rather than through a general methodological statement.
 
 **Status of this notebook.** The uncertainty and multiplicity plan is
-*Protocol Amendment 1* (`00_preregistration.md` §13), written after the
-analyses in notebooks 02--11 had been run. The amendment is therefore itself
-post-hoc. It does not change any hypothesis, threshold, or estimand; it only
-attaches uncertainty to contrasts that were pre-specified and imposes a
-correction that the original protocol omitted. Where a correction changes a
-verdict, that is reported as the corrected verdict.
+Protocol Amendment 1 (`00_preregistration.md` §13), written after the analyses
+in notebooks 02--11 had been run. The amendment is therefore itself post-hoc.
+It does not alter the definitions of H1--H6, their thresholds or their
+estimands, except where §13.6 records that H5's estimand cannot be formed
+(see below). It adds intervals and a multiplicity correction that the original
+protocol did not specify, and these can change a conclusion. Where the
+correction changes a verdict, the corrected verdict is the one reported.
 
-Family E3 belongs to *Protocol Amendment 2* (`00_preregistration.md` §§16--17),
-which adds two non-Sepsis-3 label definitions. It too is post-hoc, and it
-likewise leaves every pre-registered hypothesis untouched: variants D and E are
-never pooled with A--C, so H1 and the variance decomposition are computed from
-exactly the same inputs as before.
+Family E3 belongs to Protocol Amendment 2 (`00_preregistration.md` §§16--17),
+which adds two non-Sepsis-3 label definitions, and to Protocol Amendment 4,
+which adds Variant F. Both amendments are post-hoc. They do not modify the
+definitions of H1--H6: Variants D, E and F are kept out of H1 and out of the
+variance decomposition, which are computed from Variants A--C alone.
 
 ```{r load-deps}
 suppressPackageStartupMessages({
@@ -108,11 +117,21 @@ fmt_ci <- function(lo, hi, digits = 3)
 
 The temporal test predictions for each label variant are joined to the
 comparator predictions and to stay-level demographics. Rows are ordered by
-`stay_id` so that a stay maps to a contiguous block, and each stay is given an
-index into a **common resampling frame** shared by variants A, B and C. Because
-all three variants are built on the same 12,132 test stays, one replicate draw
-can be applied to all three simultaneously, which makes the label-variant
-contrast in H1 a *paired* comparison.
+`stay_id`, so the hours of each stay form one block that can be resampled as a
+cluster, and each stay is given an index into a **common resampling frame**
+shared by Variants A, B and C. All three variants are built on the same 12,132
+test stays, so the same bootstrap sample of stays is applied to all three
+within each replicate, which makes the label-variant contrast in H1 a paired
+comparison.
+
+The pairing is by stay, not by person-hour. The output below shows that the
+three variants contain different numbers of person-hours. The panel keeps each
+stay's at-risk hours only, up to and including its onset, and the variants
+place onsets at different hours or not at all, so the same stay contributes a
+different number of hours under each variant. Variant C labels the most stays
+and so has the fewest hours. Each onset contributes exactly one positive
+person-hour, the hour in which it occurs, so the number of onsets equals the
+number of positive person-hours (`n_events` in later tables).
 
 ```{r assemble}
 load_test_table <- function(vid) {
@@ -159,9 +178,16 @@ for (v in names(test_tab))
 
 AUROC and AUPRC for every model on the Variant B temporal test set, with
 percentile intervals from `r format(BOOT_B_MAIN, big.mark=",")` stay-level
-bootstrap replicates. A single replicate is shared across all six models, so
-the intervals are mutually consistent and model-to-model differences can be
-read off the same replicates as paired contrasts.
+bootstrap replicates. The same replicate samples are used for all six models,
+so a difference between two models can be computed within each replicate and
+its interval keeps the pairing.
+
+Percentile intervals are used throughout. They respect the [0, 1] range of
+AUROC and AUPRC, and the bootstrap p-values below are obtained by inverting the
+same percentile distribution, so a test and its interval cannot disagree. A
+replicate in which a metric is undefined, because the resampled stays contain
+no onset or no non-onset hour, is dropped. An interval is reported only if at
+least 10 replicates remain. In this table `n_events` is the number of onsets.
 
 ```{r main-ci}
 tb <- test_tab[["B"]]
@@ -205,18 +231,38 @@ knitr::kable(main_ci[, .(model, n_events, auroc = round(auroc, 4), auroc_ci,
 ## Confirmatory Family: the Six Pre-Registered Hypotheses
 
 Each hypothesis is expressed as a single scalar contrast $\theta$ tested
-against its **pre-registered** threshold $\theta_0$. Because the protocol
-states each hypothesis directionally, the tests are one-sided. P-values are
-obtained by recentring the bootstrap distribution on the null boundary and
-reading off the tail area, with the $(1+\#)/(B+1)$ convention so that no
-p-value is reported as exactly zero.
+against its pre-registered threshold $\theta_0$. The protocol states each
+hypothesis directionally, so the tests are one-sided. The bootstrap replicates
+$\theta^*_b$ are centred on the observed estimate $\hat\theta$, and
+$\theta^*_b - \hat\theta$ is taken as the distribution of
+$\hat\theta - \theta$ under the null. For the null $\theta \leq \theta_0$, the
+p-value is
+
+$$p = \frac{1 + \#\{b : \theta^*_b - \hat\theta \geq \hat\theta - \theta_0\}}{B + 1},$$
+
+with the inequality reversed for a null of the form $\theta \geq \theta_0$.
+The $(1 + \#)/(B + 1)$ form is the standard finite-simulation estimate of a
+bootstrap p-value. It also sets the Monte Carlo resolution: with $B = 2{,}000$
+the smallest attainable p-value is about 0.0005, so values near 0.001 should be
+read as "at the resolution limit" rather than as precise.
 
 ### Contrast Estimation
 
-H1 and H6 are drawn from the same replicates. Both compare quantities measured
-on one set of test stays, so a single resampling of stays serves both, and the
-resulting intervals keep the correlation between the spreads being differenced
-rather than treating them as independent.
+H1 and H6 are computed from the same replicates. Both compare quantities
+measured on one set of test stays, so a single resampling of stays serves both,
+and the intervals keep the correlation between the quantities being
+differenced rather than treating them as independent.
+
+H4 and H5 cannot be paired in this way. H5 compares two different databases,
+so its two bootstrap streams are drawn separately. H4 compares the temporal
+test set with the random-split test set, and these overlap, because the random
+split's test set is a 25 per cent sample from all admission years and so
+includes stays from the temporal test years. H4's two streams are nevertheless
+drawn separately. If the two AUROC estimates are positively correlated, which
+the shared stays make likely, ignoring that correlation overstates the
+variance of the difference, and H4's interval is then conservative. Linked
+resampling of the shared stays would remove the approximation but is not
+implemented.
 
 ```{r confirmatory-boot}
 # --- H1 / H6: label spread, model spread, and the primary-vs-GBT gap --------
@@ -404,12 +450,56 @@ if (!is.null(h3_f) && nrow(h3_f) == 1)
               if (is.na(h3_f$auroc[1])) "undefined" else sprintf("%.4f", h3_f$auroc[1])))
 ```
 
-### Corrected Confirmatory Verdicts
+### Multiplicity-Adjusted Confirmatory Results
 
-Each hypothesis becomes one row: the contrast, its interval, the null it is
-referred to, and the raw p-value Holm will correct. The two spreads are
-persisted as data here rather than left inside H1's free-text note, so the
-thesis table reads them instead of transcribing them by hand.
+Each hypothesis is given its contrast, interval, null hypothesis, raw p-value
+and Holm-adjusted p-value. The direction of subtraction is stated in each
+contrast. H1's contrast is the label spread minus the model-class spread, so
+the alternative H1 predicts is $\theta > 0$. H4's is random-split minus
+temporal-split AUROC, and H6's is GBT AUROC minus primary AUROC. H1's two
+spreads are also saved as separate fields, so the thesis table takes them from
+the data rather than by transcription.
+
+The verdict column reports the pre-registered test only. "NOT confirmed" means
+that the pre-registered threshold was not met. It does not establish the
+absence of an effect, and an estimate on the opposite side of its null is
+shown by the interval rather than by the verdict. Four rows need more than
+the verdict:
+
+- **H2** has no p-value. It reports the pre-registered count, the number of
+  covariates that change sign or differ at least twofold in magnitude across
+  Variants A--C. A covariate meeting both criteria is counted once, so the
+  count is the size of the union. Beside it is the Protocol Amendment 7
+  diagnostic, which compares each flagged covariate's largest cross-label
+  difference with the pooled cluster-robust standard error of the two
+  estimates involved. The diagnostic is a heuristic benchmark, not a test. The
+  three fits share stays, so their estimates are correlated, which the pooled
+  standard error ignores, and the sandwich estimator is ridge-regularised. A
+  difference below the benchmark is not shown to be noise; it is only not
+  distinguishable from it by this measure.
+- **H3** has no p-value. Under Variants A--C the pre-treatment window contains
+  no onsets by construction (`09_variance_decomposition.Rmd`), so the AUROC
+  difference is undefined. The row instead reports a one-sided 95 per cent
+  upper bound on the hourly onset rate in that window, the exact
+  Clopper-Pearson bound for zero events in $n$ hours, $1 - 0.05^{1/n}$. The
+  bound treats hours as independent and the zero as a sampling outcome, whereas
+  the zero is imposed by the onset rule, so it describes the window's size
+  rather than the absence of leakage. Variant F's pre-treatment result is a
+  post-hoc analysis of a different onset-timing rule, not a test of H3.
+- **H5** is tested on a substitute estimand. The pre-registered H5 compares
+  the proportional decline of the Utility Score with that of AUROC, and that
+  contrast cannot be formed: the internal Utility Score under the primary label
+  is 0.000 at the default threshold and only slightly above zero at its best
+  threshold, so a proportional decline is undefined or has no usable sampling
+  distribution. Section 13.6 of the pre-registration records the substitute,
+  internal minus external AUROC for the primary model under Variant B against
+  $\theta_0 = 0$, and places it in H5's slot in the Holm family. Its adjusted
+  p-value refers to that AUROC contrast. It neither tests nor establishes the
+  pre-registered metric-divergence claim. The external estimate also rests on
+  29 onsets in the microbiology-covered eICU sub-cohort, below the 100-onset
+  floor, so the contrast reflects differences in label ascertainment as well
+  as transport.
+- **H6** is discussed under item 3 of "Reading the Corrected Family" below.
 
 ```{r confirmatory-table}
 mk <- function(id, label, contrast, theta, ci, null_txt, p, note = "") {
@@ -602,15 +692,26 @@ knitr::kable(conf[nzchar(note), .(H = hypothesis, note)],
 
 ## Exploratory Family E1: Subgroup Discrimination
 
-Subgroup AUROC is estimated with a bootstrap **stratified by subgroup level**:
+Subgroup AUROC is estimated with a bootstrap stratified by subgroup level:
 stays are resampled within each level, so the level sizes are held at their
-observed values. This is the correct design when the subgroups themselves are
-the estimand rather than a random draw.
+observed values. The intervals are therefore conditional on the observed
+subgroup composition and do not include variation in how many stays fall in
+each level. That is the appropriate estimand when the subgroups themselves are
+the object of interest.
 
-Each subgroup is contrasted against the largest level of its own variable
-(the reference), and the resulting family of differences is corrected by
-Benjamini--Hochberg. The reference level is chosen by sample size, not by
-outcome, and is recorded in the output.
+Each level is contrasted with the largest level of its own field, the
+reference, which is chosen by sample size rather than by outcome and is
+recorded in the output. The levels of a field are disjoint, so each contrast
+compares two independently resampled groups and is not paired. Protocol
+Amendment 6, which is post-hoc, restricts the corrected family to contrasts
+in which both levels have at least 100 onsets. Levels with at least 5 onsets
+are still estimated and shown, but they enter no contrast. The family is
+therefore smaller than the set of all level-by-model comparisons, and its size
+is printed in the output. BH is applied across the whole family. The two
+tables below show the race field only; the full family, including the language
+and insurance contrasts, is saved in `12_subgroup_auroc_contrasts.csv`.
+Whether a small level's interval includes 0.5 is shown row by row in the
+first table.
 
 ```{r subgroup-auroc}
 subgroup_models <- c(primary = "pred_sepsis", gbt = "pred_gbt")
@@ -750,11 +851,21 @@ if (nrow(sub_delta) > 0)
 
 ## Exploratory Family E2: Subgroup Label Sensitivity
 
-The fraction of stays labelled septic under each variant is a stay-level
-proportion, so the bootstrap resamples whole stays within subgroup. Because the
-same 65,078 stays are labelled under all three variants, the A/B/C comparison
-is paired within replicate, and the interval on the A--C *range* correctly
-reflects that pairing.
+The proportion of stays labelled septic under each variant is a stay-level
+proportion, so the bootstrap resamples whole stays within subgroup. The same
+65,078 stays are labelled under all three variants, so the comparison of
+Variants A, B and C is paired within each replicate. Within a replicate, a
+level's range is the largest of its three proportions minus the smallest, and
+its interval keeps the pairing. A range is not a smooth function of the
+proportions, because the variant giving the maximum or minimum can change
+between replicates, but percentile intervals remain usable for it.
+
+Each level's range is contrasted with that of the reference level of its field
+(the largest), giving a difference in percentage points, and BH is applied
+across the whole family. As in E1, the tables below show the race field only;
+the full family is saved in `12_subgroup_labelsens_contrasts.csv`. Levels such
+as UNKNOWN and UNABLE TO OBTAIN record missing information, so a difference
+for them concerns documentation, not a demographic group.
 
 ```{r label-sens-ci}
 coh <- lapply(c(A = "A", B = "B", C = "C"), function(v) {
@@ -885,24 +996,30 @@ if (nrow(ls_delta) > 0)
 
 ## Exploratory Family E3: Alternative-Label Contrasts
 
-Families E1 and E2 vary the label only *within* Sepsis-3, so they cannot say
-whether the label sensitivity is empirical or definitional. This family attaches
-intervals to the Protocol Amendment 2 comparison: Variant E is Sepsis-3's
-treatment anchor with the organ-dysfunction requirement removed, Variant D is
-the organ-dysfunction limb with no treatment timestamp at all. Protocol
-Amendment 4 adds Variant F, which keeps the Sepsis-3 conjunction intact and
-changes only the onset timestamp to the standard
-$\min(t_{\text{susp}}, t_{\text{SOFA}})$; its contrast against B is therefore a
-pure timing effect. Adding it enlarges family E3, so every BH-adjusted p-value
-in this family is computed over the larger set and is correspondingly stricter.
+Families E1 and E2 vary the label only within Sepsis-3, so they cannot
+separate the effect of how one definition is operationalised from the effect
+of using a label that depends on a treatment timestamp. This family attaches
+intervals to the comparisons of Protocol Amendment 2. Variant E is Sepsis-3's
+suspected-infection anchor with the organ-dysfunction requirement removed, and
+Variant D is the organ-dysfunction component with no treatment timestamp.
+Protocol Amendment 4 adds Variant F, which labels the same stays as Variant B
+cohort-wide and moves the onset to $\min(t_{\text{susp}}, t_{\text{SOFA}})$.
+Its contrast with Variant B is designed to isolate the effect of that timing
+rule. It is not a pure timing effect, because moving an onset earlier also
+shortens the stay's at-risk hours and brings some stays inside the 72-hour
+horizon. Adding Variant F enlarged family E3, and every BH-adjusted p-value in
+the family is computed over the enlarged set.
 
-All variants are labelled on the same test stays, so one replicate draw applies
-to all of them and each contrast is paired within replicate. Reported alongside
-the differences is the **anchor-attributable fraction**
-$\phi = (\mathrm{AUROC}_E - 0.5)/(\mathrm{AUROC}_B - 0.5)$, the share of Variant
-B's above-chance discrimination that the treatment anchor reproduces on its own.
-$\phi$ is a ratio with no meaningful null at zero, so it is reported as an
-interval and is not part of the corrected family.
+All variants are labelled on the same test stays, so the same bootstrap sample
+of stays applies to all of them and each contrast is paired within replicate.
+Reported beside the differences is the **anchor-attributable fraction**
+$\phi = (\mathrm{AUROC}_E - 0.5)/(\mathrm{AUROC}_B - 0.5)$, the ratio of
+Variant E's above-chance AUROC to Variant B's. It compares discrimination on
+two different outcomes and is descriptive, not a causal share. A value above 1
+means only that the model discriminates Variant E's label slightly better.
+The natural reference value is 1, at which the two above-chance AUROCs are
+equal. $\phi$ is reported as an interval and read against 1, and it is not
+part of the corrected family.
 
 ```{r alt-label-ci}
 alt_ids <- setNames(names(ALT_LABEL_VARIANTS), names(ALT_LABEL_VARIANTS))
@@ -1040,21 +1157,27 @@ if (nrow(alt_delta) > 0)
 
 ## Intervals Added Under Protocol Amendment 10
 
-Three quantities were reported as point estimates in earlier rounds, and each
-carried a claim in the thesis prose that a point estimate cannot support: that
-dropping the action-derived features leaves discrimination "essentially
-unaffected", that the three label definitions make no practical difference to
-calibration, and that the frozen models degrade on transport to the full
-external cohort under Variant D. Amendment 10 attaches an interval to each.
-None of them enters a corrected family: the ablation arm and the Variant D arm
-are excluded from every family by Amendments 5 and 9 respectively, and the
-calibration contrasts are estimation, not testing.
+Three quantities belong to post-hoc analyses, and Amendment 1 attaches
+intervals only to contrasts inside a corrected family. They are the effect on
+discrimination of dropping the action-derived features, the effect of the
+label definition on calibration, and the loss of discrimination when the
+models are transported to the full external cohort under Variant D. Each
+supports a statement in the thesis, and a point estimate alone cannot show how
+precise it is. Protocol Amendment 10 therefore attaches an interval to each.
+None of them enters a corrected family. Amendments 5 and 9 exclude the
+ablation and the Variant D analysis from every family, and the calibration
+contrasts are estimates, not tests. For all three, an interval that excludes
+zero shows that the difference is detectable. Whether it is large enough to
+matter is a separate question, answered by its magnitude.
 
 ### Action-Derived Feature Ablation (Amendment 5 arm)
 
-Both arms are fitted on the same training stays and scored on the same test
-stays, so the difference is paired within replicate and the interval is on the
-difference rather than on two marginal estimates that happen to overlap.
+The full and ablated specifications are fitted on the same training stays and
+scored on the same test stays. The difference (ablated minus full) is
+therefore paired within replicate, and its interval describes the difference
+itself. Two separate intervals for the full and ablated AUROCs would not
+measure the uncertainty of that difference. Each of the six contrasts (two
+models under three variants) is reported with its own size and direction.
 
 ```{r ablation-ci}
 abl_ci <- data.table()
@@ -1120,11 +1243,14 @@ if (length(abl_pre) > 0) {
 
 ### Calibration Across Label Definitions
 
-The calibration intercept and slope are refit inside each replicate on the same
-stays as every other quantity here, so the cross-label differences are paired.
-The claim under test is the thesis's, that the label definition does not change
-how faithfully the fitted hazard tracks the observed rate; the contrast is
-therefore each variant against the primary label B.
+The calibration intercept and slope are refitted inside each replicate on the
+same stays as every other quantity here, so the cross-label differences are
+paired. The estimand is the change in the calibration intercept or slope
+between each alternative label and the primary label, Variant B. Both are on
+the logit scale. An intercept difference $d$ multiplies the predicted odds by
+$e^{d}$, so a difference below 0.1 corresponds to a change of less than about
+10 per cent in the predicted odds. The column `excludes_zero` is a descriptive
+indicator of whether the interval excludes zero, not a test.
 
 ```{r calibration-ci}
 calib_ci <- data.table(); calib_delta <- data.table()
@@ -1212,9 +1338,13 @@ if (length(cal_pre) > 0) {
 ### Variant D Transport to the Full External Cohort (Amendment 9 arm)
 
 The internal and external cohorts are disjoint databases, so the two bootstrap
-streams are drawn separately and differenced, exactly as for H5. This arm is
-the only external estimate in the study that clears the interpretability floor,
-and it was the only one carrying no interval.
+streams are drawn separately and differenced, as for H5. The external stream
+uses fewer replicates than the internal one because it resamples several
+million person-hours. Unlike the Sepsis-3 external arm, which has 29 onsets
+under Variant B, Variant D on the full eICU cohort has far more than the 100
+onsets needed for interpretation. Its label is a threshold on
+physiology that is itself a model input, so the transport loss concerns a
+deterioration target, not sepsis.
 
 ```{r altlabel-transport-ci}
 alt_transport <- data.table()
@@ -1276,10 +1406,14 @@ if (file.exists(alt_ext_path) && "D" %in% names(alt_tab)) {
 
 ## Subgroup Interval Widths
 
-The point of attaching intervals to the equity tables is that a subgroup with
-few events cannot support a claim in either direction. This figure plots each
-subgroup AUROC with its interval against the number of sepsis onsets in that
-subgroup.
+The intervals show how precise each subgroup AUROC is, and that precision
+falls as the number of onsets falls. A subgroup with few onsets gives too
+little precision for a conclusion about a difference in either direction. The
+figure plots each subgroup AUROC with its interval against the number of
+onsets in the subgroup. Interval width generally increases as the number of
+onsets decreases, and several of the smallest subgroups have intervals that
+include an AUROC of 0.5. The race levels are reproduced as MIMIC-IV records
+them, and UNKNOWN is a missing-information category, not a demographic group.
 
 ```{r subgroup-ci-plot, fig.cap="Subgroup AUROC with 95\\% cluster-bootstrap intervals (Variant B, temporal test). Interval width is driven almost entirely by the subgroup event count; the smallest groups cannot distinguish their AUROC from chance.", fig.width=8, fig.height=5.5}
 if (nrow(sub_auroc) > 0) {
@@ -1304,11 +1438,18 @@ if (nrow(sub_auroc) > 0) {
 
 ## Analysis Register
 
-Every analysis reported in the thesis is tagged here. `confirmatory` means the
-estimand, threshold, and direction were fixed in `00_preregistration.md` before
-any modelling. `exploratory` means the analysis was pre-registered in *scope*
-but not in specific contrasts, so it generates hypotheses rather than testing
-them. `descriptive` means no inferential claim is attached.
+Every analysis reported in the thesis is tagged here. The tag records the
+analysis's inferential role, and a separate column records the section of the
+pre-registration or the protocol amendment that specifies it. `confirmatory`
+means that the estimand, and where one exists the threshold and direction,
+were fixed in `00_preregistration.md` before any modelling. Some confirmatory
+analyses are estimates with an interval and no test, and their correction
+column says so. `exploratory` means that the analysis was pre-registered in
+scope but not in its specific contrasts, so it generates hypotheses rather
+than confirming them. `descriptive` means that no inferential claim is
+attached. The rows for post-hoc amendments, including Amendment 6's
+100-onset floor, which decides which contrasts enter family E1, state their
+post-hoc status explicitly.
 
 ```{r register}
 register <- rbindlist(list(
@@ -1450,35 +1591,71 @@ knitr::kable(register, caption = "Analysis register: confirmatory vs.\\ explorat
 
 ## Reading the Corrected Family
 
-Four things govern how the tables above should be read.
+Four principles guide the interpretation of the tables above.
 
-1. **The family is deliberately larger than the number of testable
-   hypotheses.** Holm runs at $m = 6$, the count pre-registered, not the count
-   that survived contact with the data. H2 and H3 hold slots without supplying
-   a p-value. A hypothesis that becomes untestable after unblinding must not
-   loosen the correction on the ones that remain, so the cost of that choice is
-   carried here rather than passed to the surviving hypotheses.
-2. **A non-confirmation is not a null result.** Failing to meet a
-   pre-registered threshold and finding no effect are different outcomes, and
-   the direction of a miss carries information the p-value does not. Where an
-   estimate lands on the opposite side of its null from the one predicted, the
-   interval is what shows it; the verdict column alone will not.
-3. **Non-inferiority is read off the interval, not the test.** For H6 the
-   question is whether the confidence limit falls inside the pre-registered
-   margin. A large p-value on its own establishes nothing, because failing to
-   reject is not evidence of equivalence. H6's null is an interval with two
-   boundaries, and Amendment 10 tests both: the upper limb is large whenever
-   the estimate is negative, so it is the lower limb that carries whatever
-   information the test has.
-4. **Exploratory families generate hypotheses and do not test them.** E1, E2
-   and E3 are corrected by Benjamini--Hochberg within themselves and never
-   pooled with the confirmatory family. A contrast surviving BH is a candidate
-   worth a future study, not a finding this design can claim.
+1. **The family keeps its pre-registered size.** Holm is applied with
+   $m = 6$, the number of pre-registered hypotheses, not the number that
+   remained testable. H2 and H3 remain members of the family but contribute no
+   p-value. In practice the four available p-values are ranked and multiplied
+   by 6, 5, 4 and 3 in turn, with the usual running maximum. This is the same
+   as Holm over six hypotheses with H2 and H3 entered as $p = 1$. Keeping the
+   original family size prevents the correction from becoming less stringent
+   after the data showed that two hypotheses could not be tested.
+2. **Failure to meet a threshold does not establish the absence of an
+   effect.** Failing to meet a pre-registered threshold and finding no effect
+   are different outcomes. The estimate and its interval also show whether an
+   effect is smaller than predicted or lies in the opposite direction, which
+   the verdict column cannot show. The verdict should therefore be read
+   together with the estimate and interval.
+3. **H6's test and H6's conclusion answer different questions.** Here
+   $\theta$ is GBT AUROC minus primary AUROC. The pre-registered test treats the
+   margin as the null, $H_0: -0.02 \leq \theta \leq 0.02$, so rejecting it
+   would show that the models differ by more than 0.02 in one direction or the
+   other. Amendment 10 tests both boundaries and reports the smaller of the two
+   one-sided p-values. The boundaries are 0.04 apart, about five standard
+   errors of $\hat\theta$, so for any $\theta$ inside the null at most one of
+   the two p-values can be small, and the test has essentially the size of a
+   single one-sided test. With $\hat\theta$ negative, the upper-bound test
+   returns a p-value near 1 for arithmetic reasons, and the lower-bound test is
+   the informative one. This is not the two one-sided tests (TOST) procedure,
+   in which equivalence is the alternative and the larger p-value governs.
+   Failing to reject this null does not establish equivalence. What the data
+   support is read from the interval. Its upper limit lies below $+0.02$, so
+   the GBT is not better than the primary model by more than the margin, which
+   is one-sided non-inferiority of the primary model. Its lower limit lies
+   below $-0.02$, so two-sided equivalence within $\pm 0.02$ is not
+   established; that side of the interval corresponds to the primary model
+   being the better of the two.
+4. **Exploratory families are for generating hypotheses, not for
+   confirmatory claims.** E1, E2 and E3 are corrected by BH within themselves
+   and are never pooled with the confirmatory family. A contrast that meets
+   the BH criterion is an exploratory association that needs independent
+   confirmation, not a confirmed effect.
 
 ## Summary
 
-The confirmatory family as it stands after correction, printed for the run log.
-The thesis reads these values from the saved tables, not from this output.
+None of the four testable hypotheses meets its pre-registered threshold after
+correction. H1's estimate lies on the opposite side of its null: AUROC varies
+far more across model classes than across label variants, although the
+model-class spread runs from the rule-based scores up to the primary model. H2
+meets its point-estimate criterion, but only some of its flagged covariates
+exceed the Amendment 7 benchmark. H3 cannot be tested, because the onset rule
+leaves no onsets in the pre-treatment window. H4's estimate is negative, so the
+random split gave the lower AUROC, the opposite of the predicted direction. H5
+is tested only on its substitute AUROC contrast. That contrast has the
+predicted sign but an interval that includes zero, and it says nothing about
+the pre-registered metric-divergence claim. H6 is not rejected, and its
+interval supports one-sided non-inferiority of the primary model but not
+two-sided equivalence. The exploratory families are summarised by their
+smallest adjusted p-values and the number of contrasts meeting the BH
+criterion, and they require independent confirmation.
+
+The lines below print these results in compact form. "NOT confirmed" means
+that the threshold was not met, and "significant at BH q < 0.05" means that
+the BH criterion was met. The exploratory lines cover each complete family,
+not only the race rows shown in the tables above, which is why their smallest
+p-values can differ from those tables. The thesis takes its values from the
+saved tables, not from this output.
 
 ```{r summary}
 cat("Confirmatory family (Holm, m = 6, FWER = 0.05):\n")
