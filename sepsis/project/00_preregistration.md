@@ -1,9 +1,13 @@
-# Pre-registered Protocol: V2 Sepsis Prediction Study
-# "Quantifying Model, Label, and Methodological Contributions to Variance in Real-Time Sepsis Onset Prediction"
+# Pre-registered Protocol: Sepsis Prediction Study
+
+*Quantifying Model, Label, and Methodological Contributions to Variance in
+Real-Time Sepsis Onset Prediction*
 
 **Version:** 2.0
 **Date:** 2026-07-13
-**Status:** Pre-registered (Phase 0 deliverable; locked before any of the modelling reported in this study)
+**Status:** Sections 1–12 pre-registered: written as the first deliverable of
+the project and locked before any of the modelling reported in this study.
+Sections 13–24 are dated post-hoc amendments.
 
 ---
 
@@ -11,12 +15,17 @@
 
 Sections 1–12 are the protocol proper. They were locked on the date above,
 before any of the modelling reported in the thesis, and their content has not
-been altered since.
+been altered since. Their wording is therefore left as written, including
+phrasing that a later edit would change.
 
-Everything after §12 is an **amendment**, each one dated, each one explicitly
-marked POST-HOC. An amendment never edits §§1–12; it appends. Where an
-amendment changes a verdict that §7 anticipated, the amendment says so and the
-corrected verdict is the one the thesis reports.
+Everything after §12 is an **amendment**, each one dated and explicitly marked
+POST-HOC. Amendments never edit §§1–12; they are appended. An amendment can
+still change what was analysed. Depending on the amendment, it may add an
+estimand, substitute one that could not be formed, correct a defective
+implementation, or change how a family is corrected for multiplicity. Each
+amendment states which of these it does. Where an amendment changes the
+inferential classification that §7 anticipated, it says so, and the thesis
+reports the amended classification.
 
 | # | Amendment | Date | Adds | What it does |
 |---|-----------|------|------|--------------|
@@ -29,9 +38,10 @@ corrected verdict is the one the thesis reports.
 | 7 | Uncertainty Diagnostic for H2 | 2026-08-10 | §21 | Adds a noise-scale diagnostic beside H2's pre-registered count |
 | 8 | Comparator Fit Isolation | 2026-08-11 | §22 | Defect correction: early stopping was selected on the test set |
 | 9 | External Validation of the Treatment-Independent Label | 2026-08-18 | §23 | Adds a full-cohort eICU arm for variant D, outside every corrected family |
+| 10 | Intervals on Three Point-Estimate Claims, and H6's Second Limb | 2026-08-31 | §24 | Adds intervals for the ablation, cross-label calibration and Variant D transport; computes both boundaries of H6's interval null |
 
-Section numbers are cited from the pipeline notebooks and from the thesis, so
-they are stable identifiers rather than presentation choices.
+The pipeline notebooks and the thesis cite these section numbers, so the
+numbering is kept fixed.
 
 ---
 
@@ -188,20 +198,22 @@ Formal calculation per label variant:
 run and inspected. This amendment is *not* pre-specified and must not be
 described as such anywhere in the thesis.
 
-**Scope of the amendment.** It adds nothing to §§1–12: no hypothesis, estimand,
-threshold, direction, subgroup, or model is changed, added, or removed. It only
-(a) attaches uncertainty to contrasts that were already pre-specified, and
-(b) imposes the multiplicity control that the original protocol omitted. Where
-the correction changes a verdict recorded in §7, the corrected verdict is the
-one reported.
+**Scope of the amendment.** With one exception, it changes no hypothesis,
+estimand, threshold, direction, subgroup or model in §§1–12. The exception is
+H5, whose pre-registered estimand cannot be formed. §13.6 records the
+substitute that takes its place. Otherwise the amendment (a) attaches
+uncertainty to contrasts that were already pre-specified, and (b) imposes the
+multiplicity control that the original protocol omitted. Both change how the
+results are read. Where they change the inferential classification
+anticipated in §7, the amended classification is the one reported.
 
 ## 13. Uncertainty Quantification
 
 **13.1 Resampling unit.** Person-hours are nested within ICU stays. All
 intervals come from a **stay-level (cluster) bootstrap**: whole stays are
-resampled with replacement and every person-hour of a drawn stay is carried
-with it. Row-level resampling is prohibited: it would treat ~45 correlated
-hours per stay as independent and produce intervals several times too narrow.
+resampled with replacement, and every person-hour of a drawn stay is included
+in that replicate. Row-level resampling is prohibited. It would treat about 45
+correlated hours per stay as independent and so understate the uncertainty.
 
 **13.2 Interval type and replicates.** Percentile intervals at the 95% level.
 B = 2,000 replicates for internal contrasts and subgroup analyses; B = 1,000
@@ -213,11 +225,15 @@ model classes are scored on the same person-hours. Contrasts within these sets
 (H1, H6) are therefore evaluated **within replicate**, so the interval reflects
 the correlation between the quantities being differenced. Contrasts across
 different evaluation sets (H4 temporal vs. random split; H5 MIMIC-IV vs.
-eICU-CRD) use independent streams and propagate both variances.
+eICU-CRD) use independent streams, so the interval combines both variances but
+models no covariance between the two estimates. For H5 the two sets are
+independent. For H4 the temporal and random test sets share some stays, and
+that covariance is omitted.
 
 **13.4 Stratification for subgroups.** Subgroup analyses resample stays
-*within* subgroup, holding the observed subgroup sizes fixed. The subgroups are
-the estimand, not a random draw.
+*within* subgroup, holding the observed subgroup sizes fixed. The intervals
+therefore describe uncertainty within the recorded subgroups, conditional on
+their observed sizes.
 
 **13.5 P-values.** Obtained by recentring the bootstrap distribution on the
 null boundary and reading off the tail area, with the (1 + count)/(B + 1)
@@ -259,16 +275,20 @@ p-value is invented:
      claim. Metric divergence is not established by it and must not be reported
      as established; the AUROC limb is one of the two quantities the original
      contrast would have compared, not the comparison itself.
-  2. The direction and threshold of the substitute are the ones §4 already
-     fixed for external validation (an expected degradation of ≈ 0.085 from
-     Moor et al.), so no new degree of freedom is taken in choosing them.
-  3. The Utility limb is reported **descriptively and internally**, where it
-     needs no external arm: the swept ceiling under the primary label. That is
-     a finding about the internal cohort, not a test of H5.
+  2. The direction of the substitute, external AUROC below internal, is the
+     one §4 already fixed for external validation. Its null is θ₀ = 0, so the
+     test asks only whether any degradation is detectable. §4's expected
+     degradation of ≈ 0.085 (Moor et al.) is the reference magnitude against
+     which the estimate is read, not the null of the test.
+  3. The Utility limb is reported **descriptively and internally**, as the
+     swept ceiling under the primary label, rather than as part of an external
+     comparison. That is a finding about the internal cohort, not a test of
+     H5.
 
-  The reader should note that the substituted estimand happens to produce the
-  family's smallest raw p-value. It is reported as a non-confirmation on the
-  width of its interval, and nothing in the thesis's conclusions rests on it.
+  The substituted estimand produces the family's smallest raw p-value. It is
+  reported as a non-confirmation, because its interval is too wide to support
+  a conclusion about external AUROC degradation, and nothing in the thesis's
+  conclusions rests on it.
 
 ## 14. Multiplicity Control
 
@@ -276,10 +296,12 @@ p-value is invented:
 form one confirmatory family, corrected by **Holm–Bonferroni at α = 0.05**.
 
 The family size is fixed at **m = 6**, the number of hypotheses pre-registered,
-*not* the number that turned out to be testable. H2 and H3 each reserve a slot
-without contributing a p-value. This is deliberately conservative: a hypothesis
-becoming untestable after unblinding must not make the correction on the
-remaining hypotheses less strict.
+*not* the number that turned out to be testable. H2 and H3 contribute no
+p-value. Holm's step-down is applied to the four available p-values with
+multipliers 6, 5, 4 and 3, which is equivalent to ranking H2 and H3 last with
+p = 1. This convention is conservative. A hypothesis that becomes untestable
+after the outcomes have been constructed and analysed does not make the
+correction on the remaining hypotheses less strict.
 
 **14.2 Exploratory families (FDR).** Subgroup analyses were pre-registered in
 *scope* (§9) but not in specific contrasts: neither the subgroup levels, the
@@ -304,13 +326,14 @@ outcome, and is recorded in the output tables.
 ≥5 sepsis onsets. Subgroups below the event floor are listed as
 non-estimable rather than shown with an uninterpretable point estimate.
 
-**14.5 Why the two procedures differ.** A confirmatory claim must survive
-family-wise control, because a single false confirmation invalidates the claim.
-An exploratory scan exists to generate hypotheses, and only needs its
-false-discovery proportion bounded. Applying FWER to the exploratory families
-would be over-strict; applying FDR to the confirmatory family would be too
-weak. Both are reported so a reader may substitute their own preference:
-Bonferroni-adjusted p-values are also emitted for every exploratory contrast.
+**14.5 Why the two procedures differ.** Family-wise control is used for the
+confirmatory family, because a single false confirmation would undermine a
+confirmatory claim. The exploratory families generate hypotheses rather than
+confirm them, so they control the expected false-discovery rate instead.
+Applying FWER control to the exploratory families would be over-strict, and
+applying FDR control to the confirmatory family would be too weak.
+Bonferroni-adjusted p-values are also emitted for every exploratory contrast,
+as a stricter sensitivity analysis.
 
 ## 15. Confirmatory vs. Exploratory Status
 
@@ -321,12 +344,12 @@ reproduced in the thesis:
 | Tag | Meaning |
 |-----|---------|
 | **Confirmatory** | Estimand, threshold, and direction fixed in §§1–12 before any modelling |
-| **Exploratory** | Pre-registered in scope but not in specific contrasts; generates hypotheses, does not test them |
+| **Exploratory** | Pre-registered in scope but not in specific contrasts; may carry a test, but its results generate hypotheses rather than confirm them |
 | **Descriptive** | No inferential claim attached |
 
-The general statement in §12 ("any analysis not specified here is exploratory")
-is retained but is no longer the only mechanism: the tag now travels with each
-individual result rather than sitting once in the methodology chapter.
+§§1–12 contain no general rule for analyses they do not specify. The register
+supplies one: every result carries its status in the register itself, rather
+than relying on a single statement in the methodology chapter.
 
 **Deliverables:** `12_inference.Rmd` (Phase 9 of `run_pipeline.R`), producing
 `12_confirmatory_tests`, `12_subgroup_auroc_ci`,
@@ -343,33 +366,35 @@ individual result rather than sitting once in the methodology chapter.
 run. Like Amendment 1, it is *not* pre-specified and must not be described as
 such anywhere in the thesis.
 
-**Motivation.** §2 locks three label variants, and all three are Sepsis-3
-readings firing on the same culture-plus-antibiotic anchor. That anchor records
-a clinician's decision to treat. Two things therefore follow from the
-label-variant result, and the original protocol cannot separate them:
+**Motivation.** §2 locks three label variants. All three are Sepsis-3
+operationalisations built on the same culture-plus-antibiotic anchor, and that
+anchor records a clinician's decision to treat. The label-variant result
+therefore mixes two things, which the original protocol cannot separate:
 
-- **Definitional.** Sepsis-3 makes onset a function of treatment timing, so
-  changing the antibiotic–culture windows *must* move the onsets. Part of the
-  H1 label spread is guaranteed by construction and would appear even if the
-  physiology were identical across patients.
-- **Empirical.** Whether a label owing nothing to treatment timing selects
-  different patients, at different hours, with different predictability.
+- **Definitional.** Under these variants, onset is a function of treatment
+  timing, so changing the antibiotic–culture windows changes onset assignment
+  by construction. Part of the H1 label spread arises from the definitions and
+  would appear even if the physiology were identical across patients.
+- **Empirical.** Whether a label that does not use treatment timing selects
+  different stays, at different hours, with different predictability.
 
-Only the second is a claim about the world. It cannot be tested inside a family
+Only the second is an empirical question. It cannot be answered inside a family
 of labels that all share the anchor, so a label outside that family is added.
 
-**Scope.** The amendment adds nothing to §§1–15. No hypothesis, estimand,
-threshold, direction, subgroup, or model is changed, added, or removed. H1–H6,
-the variance decomposition table, and the equity families E1/E2 are computed
-from exactly the same inputs as before. The new variants are held outside
-`LABEL_VARIANTS` in `config.R` for this reason, and their metrics are written
-to separate files (`07_metric_results_altlabel`, `05_coef_alt_variants`) so
-they cannot be pooled with A–C by accident.
+**Scope.** The amendment changes nothing in §§1–15. No pre-registered
+hypothesis, estimand, threshold, direction, subgroup or model is changed or
+removed. H1–H6, the variance decomposition table and the equity families E1/E2
+are computed from exactly the same inputs as before. What it adds are separate
+post-hoc variants and estimands (§§16–17). The new variants are held outside
+`LABEL_VARIANTS` in `config.R` for this reason. Their metrics are written to
+separate files (`07_metric_results_altlabel`, `05_coef_alt_variants`), which
+keeps them from being pooled with A–C by accident.
 
 ## 16. Alternative Label Variants
 
 Sepsis-3 is a conjunction: *suspected infection* **and** *acute organ
-dysfunction*. The conjunction is split and each limb is labelled on its own.
+dysfunction*. Each of the two components, called limbs below, is used as a
+label on its own.
 
 | Variant | Name | Suspicion anchor | Organ dysfunction | Uses treatment timing? |
 |---------|------|------------------|-------------------|------------------------|
@@ -379,9 +404,10 @@ dysfunction*. The conjunction is split and each limb is labelled on its own.
 
 **16.1 Variant E (Anchor-Only).** Onset is the suspicion-of-infection time
 itself, computed with Variant B's windows (ABX→culture 72 h, culture→ABX 24 h),
-with the SOFA criterion removed. The label is purely a record of clinician
-behaviour: predicting it means predicting who gets cultured and started on
-antibiotics. E is *not* a sepsis definition and its AUROC is not a sepsis
+with the SOFA criterion removed. The label records the timing of treatment
+decisions, which reflect the patient's condition as well as clinical workflow.
+Predicting it means predicting which stays receive a qualifying culture and
+antibiotic. E is *not* a sepsis definition, and its AUROC is not a sepsis
 result.
 
 **16.2 Variant D (Deterioration).** Onset is the first hour after hour 1 at
@@ -389,33 +415,42 @@ which a **physiology-only** SOFA score rises ≥ 2 points above the stay's
 admission baseline (component means over hours 0–3, mirroring the "admission"
 baseline of variants A and B). Physiology-only means the vasopressor and
 catecholamine terms are withheld from the SOFA computation, so the
-cardiovascular component is scored from MAP alone. No antibiotic order, culture
-draw, or drug administration enters the definition. Onsets are derived in
-`03_person_hours.Rmd`, where the hourly panel exists.
+cardiovascular component is scored from MAP alone. The score is therefore a
+modified SOFA rather than the standard one. A missing component is scored as
+normal. No antibiotic order, culture draw or drug administration enters the
+definition. The laboratory components can still depend on which tests were
+ordered, so the label is independent of treatment timing but not of care
+processes altogether. Onsets are derived in `03_person_hours.Rmd`, where the
+hourly panel exists.
 
 **16.3 Why not PhysioNet/CinC 2019, SEP-1, or CDC Adult Sepsis Event.** All
 three were considered and rejected for this specific purpose. CinC 2019 sets
 onset to min(t_suspicion, t_SOFA) using the same culture-plus-antibiotic
-trigger; SEP-1 and CDC ASE are defined on antibiotic days. Each is anchored to
-treatment timing by construction, so none of them breaks the circularity that
-motivates this amendment. They remain valid *alternative Sepsis-adjacent*
+trigger. The CDC Adult Sepsis Event requires a blood culture and qualifying
+antimicrobial days, and SEP-1 requires clinician-documented suspicion of
+infection. Each depends on a clinical action or decision, so none removes the
+dependence on treatment that motivates this amendment. They remain valid *alternative Sepsis-adjacent*
 definitions and are discussed as such, but they cannot serve as the
 treatment-independent comparator.
 
-**16.4 Fitting.** D and E are fitted with the identical model specification,
-feature set, temporal split, and seed as A–C, so the label is the only thing
-that differs.
+**16.4 Fitting.** D and E are fitted with the same model specification,
+feature set, temporal split and seed as A–C. The fitting procedure is
+therefore the same, and the differences between fits follow from the label:
+it determines the at-risk person-hours, the onset count and, through the
+training hours, the spline knots.
 
 **16.5 Interpretive limits, stated in advance of reading the results.**
 
 - Variant E's discrimination is discrimination about treatment behaviour, not
   about sepsis.
 - Variant D's label is a threshold function of recorded physiology, and five of
-  its six SOFA components (all but PaO₂/FiO₂) are model inputs. Its AUROC is
-  therefore partly self-fulfilling and its *level* is not comparable with
-  Variant B's. The informative comparison is not the level but whether D
-  selects **different patients at different hours**, reported as onset
-  agreement (Cohen's κ, sensitivity to B) and median onset shift.
+  its six SOFA components (all but PaO₂/FiO₂) are model inputs. The outcome
+  thus overlaps with the predictors by construction, so its AUROC is partly
+  self-fulfilling. Its *level* can be reported but should not be read as
+  performance on the same outcome as Variant B. The informative comparison is
+  whether D selects **different stays or different onset times**. This is
+  reported as onset agreement (Cohen's κ, sensitivity to B) and median onset
+  shift.
 
 ## 17. Estimands and Multiplicity for Amendment 2
 
@@ -425,9 +460,13 @@ discrimination reproduced by the treatment anchor alone:
     φ_anchor = (AUROC_E − 0.5) / (AUROC_B − 0.5)
 
 Bootstrapped end to end on the stay-level cluster bootstrap of §13, reported as
-a point estimate with a 95% percentile interval. It is a ratio with no
-meaningful null at zero, so **no p-value is computed for it** and it sits
-outside the corrected family.
+a point estimate with a 95% percentile interval. Its natural reference value is
+1, at which the anchor alone reproduces all of B's above-chance
+discrimination, and the interval is read against that value. **No p-value is
+computed for it**, and it sits outside the corrected family. The ratio would be
+unstable if Variant B's AUROC were close to 0.5. B and E also have different
+outcome targets, so the ratio compares two labels, not two models of one
+label.
 
 **17.2 Exploratory family E3.** The AUROC differences against Variant B,
 {D, E} × {primary, GBT}, form a new exploratory family corrected by
@@ -452,21 +491,35 @@ stay.
 # Amendment 3: Fit Identification and Data Plausibility
 
 **Date:** 2026-08-03
-**Status:** **POST-HOC.** See `../feedback/v2.md` for the full diagnosis.
+**Status:** **POST-HOC.** A defect correction.
 
-Three defects found while responding to supervisory review, all affecting every
-result: (i) no physiological plausibility filter existed anywhere in the
-pipeline, (ii) the primary multinomial specification is completely separated and
-was fitted unpenalised, so its MLE does not exist and `nnet::multinom`'s
-`convergence = 0` was uninformative, (iii) `heart_rate`/`hr` naming mismatch
-silently dropped heart rate from every fitted model via `intersect()`.
+Three defects were found while responding to supervisory review. Each affected
+the fitted models and every result derived from them:
 
-Fixes: `PLAUSIBLE_RANGES` + `apply_plausibility()` applied in stages 03 and 08
-before forward-fill; `PRIMARY_MODEL_DECAY = 1e-4` with `check_multinom_fit()`
-guards; `require_features()` errors on any declared-but-absent feature. The
-penalty value is **not tuned**: test AUROC moves < 0.02 across a 20-point ridge
-path for every variant, and that insensitivity is the justification. It must
-never be presented as optimised.
+1. No physiological plausibility filter existed anywhere in the pipeline.
+2. The primary multinomial specification was completely separated and was
+   fitted without a penalty. With complete separation, some combination of
+   covariates predicts the outcome categories perfectly, so the likelihood has
+   no finite maximum and the maximum-likelihood estimate does not exist.
+   `nnet::multinom`'s `convergence = 0` was therefore uninformative.
+3. A naming mismatch between `heart_rate` and `hr` caused heart rate to be
+   omitted from every fitted model, through `intersect()`.
+
+The fixes are as follows:
+
+- `PLAUSIBLE_RANGES` and `apply_plausibility()` are applied in stages 03 and 08
+  before forward-filling.
+- A ridge penalty, `PRIMARY_MODEL_DECAY = 1e-4`, makes the penalised likelihood
+  strictly concave, so its maximum is unique. `check_multinom_fit()` warns when
+  any coefficient exceeds 20 in absolute value.
+- `require_features()` raises an error on any declared feature that is absent.
+
+The penalty is a fixed stabilisation value, not a tuned hyperparameter. A
+20-point ridge path, examined after the defect was found, moved test AUROC by
+less than 0.02 for every variant. That post-hoc sensitivity check is the
+justification for the value, and the value should not be presented as
+optimised. Every fitted model and every downstream stage was re-run after the
+fixes.
 
 ---
 
@@ -477,16 +530,17 @@ never be presented as optimised.
 result. Like Amendments 1–3, it is *not* pre-specified and must not be described
 as such anywhere in the thesis.
 
-**Motivation.** §2 assigns onset as `t_susp` for variants A–C whenever the SOFA
-criterion is met somewhere in the evaluation window; the SOFA criterion gates
-*membership* and contributes no timing information. Because `t_susp` is by
-construction the later element of a qualifying antibiotic–culture pair, it
-follows analytically that no onset can precede the first antibiotic or culture.
-**H3's zero is therefore entailed by the implementation, not measured**, and the
-thesis's claim that "no patient develops sepsis before doctors begin treatment"
-was an over-reading of it. External evidence contradicts the absolute claim
-directly (Epic Sepsis Model v2: median lead times 1.4–7.1 h ahead of clinician
-recognition at encounter AUROC 0.80–0.90).
+**Motivation.** The implementation of §2 assigns onset as `t_susp` for variants
+A–C whenever the SOFA criterion is met somewhere in the evaluation window. The
+SOFA criterion determines *membership* and contributes no timing information.
+Because `t_susp` is by construction the later element of a qualifying
+antibiotic–culture pair, no onset under this implementation can precede the
+first antibiotic or culture. **H3's zero is therefore entailed by the
+implementation, not measured**, and the thesis's claim that "no patient
+develops sepsis before doctors begin treatment" was an over-reading of it.
+External evidence contradicts the absolute claim directly. The Epic Sepsis
+Model v2 reports median lead times of 1.4–7.1 h ahead of clinician
+recognition, at encounter-level AUROC 0.80–0.90 (Wong et al., 2026).
 
 The standard operationalisation, Seymour et al. (2016) and the PhysioNet/CinC
 2019 Challenge, assigns `t_onset = min(t_susp, t_SOFA)`, which permits an onset
@@ -495,9 +549,10 @@ considered and rejected that operationalisation as a *treatment-independent*
 comparator, correctly (its membership is still anchored). That was not a reason
 to omit it as a *timing* comparator, and this amendment adds it.
 
-**Scope.** Adds nothing to §§1–17. No hypothesis, estimand, threshold,
-direction, subgroup or model is changed. H1, the variance decomposition and
-families E1/E2 are computed from exactly the same inputs. Variant F is held
+**Scope.** Changes nothing in §§1–17. No pre-registered hypothesis, estimand,
+threshold, direction, subgroup or model is changed. H1, the variance
+decomposition and families E1/E2 are computed from exactly the same inputs.
+The amendment adds Variant F and its estimands (§18). Variant F is held
 outside `LABEL_VARIANTS` in `config.R` and its metrics go to the alternative-label
 files.
 
@@ -517,9 +572,10 @@ because it needs the hourly panel.
 
 **18.1 Two stated limits.** (a) The SOFA score used is the *full* score,
 vasopressor terms included, as Seymour et al. specify. Vasopressor
-administration is a treatment, so an F onset is free of the
-antibiotic-and-culture anchor but not of treatment in general; Variant D remains
-the fully treatment-independent label. (b) `t_SOFA` is searched only inside the
+administration is a treatment. An F onset is therefore not assigned directly
+from the antibiotic–culture time, but it is not independent of treatment in
+general. Variant D is the label that uses neither treatment timing nor
+medication exposure in its definition. (b) `t_SOFA` is searched only inside the
 72 h modelled panel, so a rise occurring earlier in the admission is not
 detected.
 
@@ -527,12 +583,12 @@ detected.
 median and extreme shift, and the count of onsets falling before
 `min(first_abx_hour, first_culture_hour)`, the number the conjunction rule
 fixes at zero. Exploratory: F's AUROC and its ΔAUROC against B join family
-**E3**, which is thereby enlarged, making every Benjamini–Hochberg adjustment in
-that family stricter than before this amendment.
+**E3**. Every Benjamini–Hochberg adjustment in that family is then recomputed
+over the enlarged family.
 
-**18.3 Agreement.** F and B label the same stays septic, so stay-level
-membership is identical and the informative agreement statistic for F is the
-onset *shift*. κ(F, B) is nonetheless < 1 on the modelled horizon: moving an
+**18.3 Agreement.** F and B label the same stays septic over the whole
+admission, so their stay-level membership is identical and the informative
+agreement statistic for F is the onset *shift*. κ(F, B) is nonetheless < 1 on the modelled horizon: moving an
 onset earlier can move it *into* the 72 h window, so F ⊇ B there and the
 difference is the count of stays whose `t_susp` fell past hour 72 but whose
 `t_SOFA` did not. Report that count; it is a property of the onset rule.
@@ -550,65 +606,71 @@ difference is the count of stays whose `t_susp` fell past hour 72 but whose
 run and inspected. Like Amendments 1–4, it is *not* pre-specified and must not
 be described as such anywhere in the thesis.
 
-**Motivation.** The study's central argument is that the Sepsis-3 label is
-constituted by clinician action rather than merely correlated with it. The same
-objection applies to part of the **feature** set, and §§1–18 press it against
-the outcome while leaving the predictors unexamined. Two kinds of covariate in
-the pre-registered feature list record clinician behaviour rather than patient
+**Motivation.** The study argues that the Sepsis-3 label is partly
+operationalised through treatment-related records, not merely correlated with
+them. The same concern applies to part of the **feature** set. §§1–18 examine
+it for the outcome but not for the predictors. Two kinds of covariate in the
+pre-registered feature list record clinical actions rather than patient
 physiology:
 
-- **Vasopressor exposure** (`vaso_any`, `norepi_epi_any`) is a treatment: it is
-  something done to the patient, not something measured in them.
+- **Vasopressor exposure** (`vaso_any`, `norepi_epi_any`) is a treatment
+  exposure, not a physiological measurement.
 - **The per-test order indicators** (`lactate_measured`, `creatinine_measured`,
   `bilirubin_total_measured`, `platelets_measured`, `wbc_measured`,
-  `pf_ratio_measured`) record a decision to look. The value carries physiology;
-  the indicator carries the clinician's attention.
+  `pf_ratio_measured`) record that a test was ordered. The value carries
+  physiology, while the indicator reflects clinical attention.
 
-Without an ablation, "the label is constituted by clinician action" is not
-falsifiable on the feature side: any discrimination the models achieve could be
-a rediscovery of the same clinical suspicion that defines the outcome.
+That makes eight covariates of the 22. Without an ablation, the features cannot
+be examined for this concern: any discrimination the models achieve could
+partly reflect the same clinical suspicion that defines the outcome.
 
-**Scope.** Adds nothing to §§1–18. No hypothesis, estimand, threshold,
-direction, subgroup or model is changed, added or removed. H1–H6, the variance
-decomposition and families E1/E2/E3 are computed from exactly the same inputs
-as before this amendment. The ablated arm is **exploratory**: it enters no
-hypothesis, no confirmatory family and no decomposition row.
+**Scope.** Changes nothing in §§1–18. No pre-registered hypothesis, estimand,
+threshold, direction, subgroup or model is changed or removed. H1–H6, the
+variance decomposition and families E1/E2/E3 are computed from exactly the same
+inputs as before this amendment. What it adds is an exploratory ablated model
+specification, called the ablated arm, with its own estimands (§19). The arm
+enters no hypothesis, no confirmatory family and no decomposition row.
 
 ## 19. The Ablated Fitting Arm
 
 `ACTION_DERIVED_FEATURES` in `config.R` names exactly the 8 of 22 covariates
 listed above. The primary model and the gradient-boosted comparator are
-re-fitted on the same training rows, the same temporal split, the same seed and
+refitted on the same training rows, the same temporal split, the same seed and
 the same hyperparameters, with those 8 removed and every physiological
 measurement retained.
 
-**19.1 The boundary is deliberately conservative, and that is what makes the
-contrast interpretable.** Forward-filled laboratory *values* are **retained**,
+**19.1 Definition of the ablated feature set.** The boundary is deliberately
+conservative, which keeps the contrast interpretable. Forward-filled
+laboratory *values* are **retained**,
 even though a value exists only because somebody ordered the test. Dropping
 them as well would remove most of the laboratory signal and confound the
 ablation with a loss of physiological information. What is removed is the set
 of features that encode *only* clinician behaviour. The ablation therefore
 measures the effect of removing the **explicit** traces of clinical attention,
-not of removing all of them; a predictor set carrying no such trace is not
-constructible from routinely collected ICU data, and that limitation is stated
-in the thesis rather than papered over.
+not of removing all of them. Routinely collected ICU data cannot fully separate
+physiology from measurement and treatment processes, and the thesis states
+this explicitly as a limitation.
 
 **19.2 Nothing is re-tuned.** The gradient-boosted arm keeps the
 hyperparameters of the full fit. Re-tuning would confound the feature set with
-the search budget.
+the search budget. The trade-off is that the ablated model may sit slightly
+below the performance a re-tuned model would reach.
 
-**19.3 Estimands.** Descriptive and exploratory, with no test attached:
-(i) ΔAUROC and ΔUtility between the full and ablated arms, per variant and
-model, both scored by the same metric code on the same test rows; and (ii) the
-cross-label coefficient-instability count (the H2 criterion) recomputed on the
-ablated arm, plus the instability rate split by feature kind (action-derived
-vs. physiological) in the full fit.
+**19.3 Estimands.** These are descriptive and exploratory, with no test
+attached:
+
+1. ΔAUROC and ΔUtility, each defined as ablated minus full, per variant and
+   model. Both arms are scored by the same metric code on the same test rows.
+2. The cross-label coefficient-instability count (the H2 criterion),
+   recomputed on the ablated arm as an exploratory quantity.
+3. The instability rate in the full fit, split by feature kind
+   (action-derived vs. physiological).
 
 **19.4 Execution isolation.** `V2_ARMS=ablated` restricts stages 05 and 06 to
 the ablated arm, so adding or refreshing the ablation cannot re-execute a fit
 that any H1, H4 or H6 input depends on. Ablated output is written to
 `*_ablated_*` files; the main files are never overwritten. This matters because
-gradient-boosted tree fitting is not bit-stable across runs.
+repeated gradient-boosted tree fits do not reproduce identical predictions.
 
 **Deliverables:** `07_ablation_metrics`, `05_h2_stability_ablated`,
 `05_coef_all_variants_ablated`, `12_h2_stability_by_kind`.
@@ -624,12 +686,12 @@ E1 had been run and inspected. Like Amendments 1–5, it is *not* pre-specified.
 **Motivation.** §14.4 sets a single eligibility rule: a subgroup is reported
 only with ≥ 50 person-hours and ≥ 5 sepsis onsets. That floor decides whether
 an AUROC can be *computed*. It does not decide whether the resulting estimate
-can be *read*, and at 5 events it cannot: the stay-level cluster-bootstrap
-interval on such a stratum spans most of the unit interval and reaches the 0.5
-chance line. Family E1 as originally constituted therefore corrected over 30
-contrasts of which the majority carried no information, which both diluted the
-Benjamini–Hochberg procedure and invited interpretation of estimates the design
-cannot support.
+is precise enough for substantive interpretation, and at 5 events it is not.
+The stay-level cluster-bootstrap interval on such a stratum spans most of the
+unit interval and reaches the 0.5 chance line. Family E1 as originally
+constituted therefore corrected over 30 contrasts, most of which offered too
+little precision for subgroup comparison. That diluted the Benjamini–Hochberg
+procedure and invited interpretation of estimates the design cannot support.
 
 ## 20. Two Thresholds, and the Distinction Between Them
 
@@ -637,8 +699,13 @@ cannot support.
 decides whether a subgroup AUROC is **computed**.
 `MIN_SUBGROUP_EVENTS_INTERPRET = 100` decides whether it is **interpreted**.
 The second is defined in `config.R` as `MIN_EXTERNAL_EVENTS`, not as a literal,
-so the internal and external interpretability floors cannot drift apart: they
-answer the same question, which is whether an event count can carry a reading.
+so the internal and external interpretability floors cannot drift apart. The
+100-event value comes from the guidance on external validation (Riley et al.,
+2021; Collins et al., 2024). It is applied here to subgroups on the view that
+the question is similar: whether an event count supports a sufficiently
+precise AUROC. The two settings differ in prevalence and structure, so the
+threshold is a convention adopted for both rather than one derived
+specifically for subgroup contrasts.
 
 **20.2 Below-floor strata are still estimated and still tabulated,** flagged
 `†`. Suppressing them would hide the cohort's composition, which is the thing
@@ -656,35 +723,39 @@ discrimination metric, so the event floor does not apply to it.
 denominator is "the number of contrasts **actually computed**, not the number
 reported in the thesis", and that "selecting a subset for presentation does not
 shrink the family". Reducing E1 from 30 to 6 is on its face the move that rule
-prohibits, and it is recorded here as an amendment precisely so that a reader
-does not have to discover the discrepancy for themselves. Four reasons are
-offered for why the floor is nonetheless admissible, and the reader is free to
-reject them and read the m = 30 correction instead:
+prohibits. It is recorded here as an amendment so that the discrepancy is
+stated rather than left to be found. Four reasons are given below for why the
+floor is nonetheless admissible. The result under the original m = 30 family is
+also reported, so a reader who does not accept these reasons can use it
+instead:
 
 1. **The rule's target is a different manoeuvre.** §14.2 forbids computing many
    contrasts, reporting the favourable ones, and correcting only over what was
    reported. The floor is not a presentation choice: below-floor contrasts are
    still estimated and still shown; they are removed from the *inferential*
    family, and the removal is disclosed with its effect on the result.
-2. **The criterion is outcome-blind.** Eligibility depends on the stratum's
-   event count alone. No p-value, effect size, direction or subgroup identity
-   enters it, and the same constant governs the external analysis, where it was
-   fixed before the eICU event counts were known.
-3. **The direction is exculpatory.** The reduction *removed* the family's only
-   surviving discovery (a language contrast estimated on 12 events) rather
-   than creating one. A family narrowed to manufacture significance narrows
-   around its significant results; this one discarded its own.
-4. **The verdict is invariant to the choice.** Nothing in E1 survives
-   Benjamini–Hochberg under either denominator. At m = 6 the smallest adjusted
-   value is q = 0.066. The amendment changes which contrasts are read, not what
-   is concluded from them.
+2. **The criterion uses no result of the comparison.** Eligibility depends on
+   the stratum's event count alone. The count is an outcome quantity, so the
+   rule is not blind to the outcome, but no p-value, effect size, direction or
+   subgroup identity enters it. The same constant governs the external
+   analysis, where it was fixed before the eICU event counts were known.
+3. **The reduction removed a discovery rather than creating one.** It removed
+   the family's only surviving discovery, a language contrast estimated on 12
+   events. This lessens the concern that the family was narrowed to produce
+   significance, although it does not remove every concern about selection
+   after inspection.
+4. **The retained contrasts do not depend on the choice.** None of the six
+   retained contrasts survives Benjamini–Hochberg under either denominator; at
+   m = 6 the smallest adjusted value is q = 0.066. The two families differ only
+   in the 12-event contrast of point 3, which survives at m = 30 and lies below
+   the interpretation floor at m = 6.
 
 **20.5 What must be reported.** Both floors, the count of strata clearing the
 interpretation floor, and the fact that only two racial strata clear it, one
 of which (`UNKNOWN`) is a missingness category, so the study contains no
-sufficiently powered comparison between two racial strata that both record an
-actual demographic answer. That sentence is the finding; it must not be
-softened.
+sufficiently powered comparison between two racial strata that both record a
+demographic category rather than a missingness category. That sentence is the
+finding, and it must be reported in full.
 
 **Deliverables:** `interpretable` and `min_events_interpret` columns in
 `12_subgroup_auroc_ci`; the reduced `12_subgroup_auroc_contrasts`;
@@ -701,24 +772,24 @@ unresolved cells or silently drop a stratum).
 inspected. Like Amendments 1–6, it is *not* pre-specified.
 
 **Motivation.** §13.6 recorded H2 as untestable on the ground that the fitted
-multinomial carried no variance estimate. That ground has since been removed:
-`sandwich` lacks an `estfun` method for `nnet::multinom`, but the missing piece
-is a single score matrix the fitted object already stores, and supplying it
-yields a cluster-robust covariance clustered on stay. Standard errors for the
-primary model's coefficients now exist.
+multinomial carried no variance estimate. That ground no longer holds. The
+`sandwich` package has no score (`estfun`) method for `nnet::multinom`, but the
+fitted object stores what such a method needs. Supplying it yields a
+covariance clustered on stay, so standard errors for the primary model's
+coefficients now exist.
 
-Their availability exposes a weakness in H2 that was previously unfalsifiable.
-H2's criterion is a **threshold rule on point estimates**: a sign reversal, or
-a magnitude ratio of at least two, across variants A, B and C. Such a rule
-cannot distinguish the two situations it conflates:
+They expose a limitation of H2 that could not previously be examined. H2's
+criterion is a **threshold rule on point estimates**: a sign reversal, or a
+magnitude ratio of at least two, across variants A, B and C. The rule does not
+account for coefficient uncertainty, so it cannot distinguish two situations:
 
-- a coefficient that genuinely takes different values under different labels;
+- a difference that is large relative to its estimation uncertainty;
 - a coefficient estimated so imprecisely that a doubling is within its noise.
 
-For a covariate whose standard error is comparable to its estimate, the second
-is near-certain and carries no information about label sensitivity at all. The
-count of flagged covariates is therefore an **upper bound** on the instability
-present, and its looseness was unmeasured.
+For a covariate whose standard error is comparable to its estimate, a doubling
+is quite likely by chance alone and says little about label sensitivity. The
+count of flagged covariates may therefore overstate the instability that is
+substantively present, by an amount that was not measured.
 
 **Scope.** Adds nothing to §§1–20 and **changes no estimand.** H2's
 pre-registered criterion, its threshold, its family slot and its reported count
@@ -736,43 +807,49 @@ same two estimates:
 
     z = |β_hi − β_lo| / sqrt(SE_hi² + SE_lo²)
 
-Reported per covariate alongside the three coefficients and the pooled standard
-error, with `exceeds_noise` set at the conventional 1.96.
+This ratio is reported per covariate, alongside the three coefficients and the
+pooled standard error. The column `exceeds_noise` marks a ratio of at least
+1.96, used as a descriptive benchmark of about two standard errors rather than
+as a test.
 
 **21.2 It is not a hypothesis test, and no p-value is emitted.** Two reasons,
 both of which would have to be resolved before any inferential reading:
 
 1. **The estimates are correlated.** Variants A, B and C are fitted on
    overlapping stays, so the two coefficients being differenced are not
-   independent. The pooled standard error assumes they are, which makes it
-   conservative, but by an amount this design does not quantify.
+   independent. The pooled standard error assumes they are. Fits that share
+   most of their stays are expected to give positively correlated estimates,
+   and in that case the pooled standard error overstates the true one and the
+   ratio is conservative. The sign and size of the covariance are not
+   estimated in this design, however.
 2. **The covariance is that of the penalised estimator.** `PRIMARY_MODEL_DECAY`
    is a precondition for identification (Amendment 3), not a tuning choice, so
    the sandwich is ridge-regularised and its bread is the inverse *penalised*
    Hessian. The usual asymptotic interpretation of a Wald ratio is therefore
    approximate here.
 
-The quantity answers "is this difference of the order of the estimation noise,
-or an order of magnitude above it". That is the question the count of flagged
-covariates needs answered, and it is reported as a ratio rather than dressed up
-as inference.
+The quantity shows whether a difference is of the order of the estimation
+noise or well above it. The count of flagged covariates needs that question
+answered. The quantity is reported as a ratio and is not interpreted as a
+formal inferential test.
 
 **21.3 What must be reported, and in what order.** The pre-registered count
 first, unmodified and identified as the pre-registered answer; the diagnostic
 second, identified as post-hoc and exploratory. **The count must not be
-restated as the number of covariates surviving the diagnostic.** Replacing a
-pre-registered estimand with a post-hoc one is the manoeuvre this protocol
-criticises elsewhere, and the fact that the substitution would be convenient
-here is not a reason to make it.
+restated as the number of covariates surviving the diagnostic.** That would
+replace a pre-registered estimand with a post-hoc one. The protocol avoids such
+substitutions elsewhere, and the replacement would be no more acceptable here
+merely because it would suit the study's argument.
 
-**21.4 The direction of the result is recorded in advance of interpreting it,**
-because it is favourable to the study's thesis and therefore requires the most
-scepticism. Should the covariates surviving the diagnostic prove to be
-disproportionately action-derived, that is a *convergence* with the Amendment 5
-ablation and not an independent confirmation of it: both quantities are
-computed from the same three fits, and the ablation's instability split by
-feature kind and this diagnostic share the flagged set. They are two readings
-of one body of evidence and must be described as such.
+**21.4 The direction of the result is recorded before it is interpreted.** A
+result consistent with the study's proposed interpretation calls for
+particular care. Should the covariates surviving the diagnostic prove to be
+disproportionately action-derived, that would be a *convergence* with the
+Amendment 5 ablation, not an independent confirmation of it. Both quantities
+are computed from the same three fits, and the ablation's instability split by
+feature kind and this diagnostic share the flagged set. The two analyses are
+statistically dependent and must not be described as independent
+corroboration.
 
 **Deliverables:** `se_cluster` column in `05_coef_table_primary_*` and
 `05_coef_all_variants`; `12_h2_stability_uncertainty`; the generated table
@@ -794,43 +871,46 @@ evals = list(train = dtrain, test = dtest), early_stopping_rounds = 30
 ```
 
 `xgb.train` selects `best_iteration` against the **last** element of `evals`.
-That element was the temporal test set, so the number of boosting rounds, a
-model-selection choice, was made on the rows the model was then scored on. The
-same pattern was present in all three arms: the main fit, the Amendment 5
-ablated arm, and the H4 random-split arm.
+That element was the temporal test set. The number of boosting rounds, a
+model-selection choice, was therefore made on the final temporal test set
+later used to evaluate the model. No other hyperparameter was selected on it.
+The same pattern was present in all three arms: the main fit, the Amendment 5
+ablated arm and the H4 random-split arm.
 
 §8 of this protocol specifies the comparator as "in-house, identical
-conditions" and fixes no hyperparameters, so this is an implementation defect
-rather than a departure from the protocol. It is nonetheless leakage, it is not
-what the thesis described, and it was found by audit rather than by any guard in
-the pipeline.
+conditions" and fixes no hyperparameters, so this was not a departure from the
+protocol. It was an implementation defect that leaked test-set information
+into model selection. It also contradicted what the thesis described, and it
+was found by audit rather than by any check in the pipeline.
 
-**The fix.** `gbt_valid_split()` in `utils.R` carves an early-stopping set out of
-the **training** rows. Three properties are fixed here rather than chosen after
-seeing the result:
+**The fix.** `gbt_valid_split()` in `utils.R` selects an early-stopping subset
+from the **training** stays. Three properties are fixed here rather than chosen
+after seeing the result:
 
 **22.1 The split is on the stay, not the row.** Person-hours are roughly 45
-correlated observations per stay, so a row-level split would leave the same
-patient on both sides and would not break the dependence it exists to break.
-This is the same unit the cluster bootstrap (§13) and Riley's criterion (§10,
-Amendment 6 note) use, and for the same reason.
+correlated observations per stay. A row-level split would put hours from the
+same stay on both sides and would not keep the early-stopping subset separate
+from the fitting data. The stay is also the unit used by the cluster bootstrap
+(§13) and by the sample-size check in `04_sample_size.Rmd`, for the same
+reason.
 
 **22.2 Nothing is tuned.** `GBT_VALID_FRACTION = 0.15` and
 `GBT_VALID_SEED = 42L` are constants in `config.R`. Neither is searched over,
-no hyperparameter is re-tuned alongside the fix, and the fraction is the
-conventional one. The comparator is a reference point, not the object of study;
-tuning it would confound the model-class contrast with a search budget, which is
-the objection §19.2 already records for the ablated arm.
+and no hyperparameter is re-tuned alongside the fix. The fraction is a common
+choice, fixed without reference to any result. The comparator is a reference
+point, not the object of study, and tuning it would confound the model-class
+contrast with a search budget. §19.2 records the same objection for the ablated
+arm. The trade-off is that the comparator may sit below its best attainable
+performance.
 
 **22.3 The same held-out stays serve the full and ablated arms**, since both
 call the helper with the same seed and fraction. The Amendment 5 contrast
 therefore remains a contrast in the feature set alone.
 
-**22.4 Direction of the correction, recorded before the re-run.** Removing an
-optimistic bias from the comparator is expected to lower GBT's discrimination
-slightly. That runs *against* the study's own argument in one place and *with*
-it in another, and both are recorded now so neither can be presented as a
-discovery afterwards:
+**22.4 Expected direction of the correction, recorded before the re-run.**
+Removing an optimistic bias from the comparator is expected to lower GBT's
+discrimination slightly. The expected effects on reported results are recorded
+now, so that none of them can be presented as a discovery afterwards:
 
 - **H6** contrasts GBT against the primary model. A weaker GBT widens the gap
   in the interpretable model's favour, which is the direction this thesis
@@ -838,19 +918,20 @@ discovery afterwards:
   pre-correction fits already supported non-inferiority, so the correction
   strengthens an existing finding rather than creating one.
 - **The utility ceiling** under Variants B and C was held by GBT. If the
-  correction moves the ceiling to the primary model, the *holder* changes while
-  the substantive claim (the ceiling sits a few per cent above the no-alert
-  strategy) does not. The claim predicates in `check_consistency.R` assert the
-  holder, so a change is reported by the pipeline rather than left to a read.
+  correction moves the ceiling to the primary model, the model attaining the
+  highest Utility Score changes while the substantive claim (the ceiling sits a
+  few per cent above the no-alert strategy) does not. The claim predicates in
+  `check_consistency.R` assert which model holds the ceiling, so a change is
+  detected programmatically.
 - **H1's model-class range** is bounded by the primary model above and qSOFA
   below. GBT sits at neither extreme, so the range is expected to be
   essentially unchanged.
 
-**22.5 Guard.** `gbt_valid_split()` `stop()`s if either side of the split
-carries no positive case, rather than falling back to a watchlist that would
-reintroduce the defect silently. This follows the architectural principle the
-`intersect()` and NEWS2 defects established: an interface fails loudly or not
-at all.
+**22.5 Check.** `gbt_valid_split()` raises an error if either side of the
+split carries no positive case. It does not fall back to monitoring another
+set, which could silently reintroduce the defect. This follows the principle
+adopted after the `intersect()` and NEWS2 defects: an interface raises an
+explicit error rather than applying a silent fallback.
 
 **Deliverables:** no new output files. Every `06_*` fit, and every downstream
 quantity that reads a GBT prediction, is re-estimated: `07_*`, `08_*`
@@ -862,9 +943,9 @@ quantity that reads a GBT prediction, is re-estimated: `07_*`, `08_*`
 
 **Date:** 2026-08-18
 **Status:** **POST-HOC.** Like Amendments 1–8, not pre-specified. It was decided
-after the eight-round results were in hand and after the external coverage
-constraint had been measured, so it is exploratory by construction and is
-recorded here before the arm was run.
+after the results of the preceding amendments were in hand and after the
+external coverage constraint had been measured, so it is exploratory by
+construction. It is recorded here before the arm was run.
 
 **23.1 What it adds and why.** Every external estimate in the study so far is
 confined to the microbiology-covered sub-cohort — 2,824 of 181,589 eICU stays,
@@ -874,7 +955,8 @@ first hour at which a physiology-only SOFA score stands ≥ 2 points above the
 stay's admission baseline. It therefore needs no microbiology and can be
 constructed on the entire cohort. This amendment adds one external arm applying
 the frozen Variant D models to the **full** eICU cohort. It is the only
-external estimate in the study whose denominator is the whole of eICU-CRD.
+external estimate in the study whose denominator is the complete eligible
+eICU-CRD cohort.
 
 **23.2 Estimand and status.** The arm reports external AUROC and AUPRC for the
 primary model, the gradient-boosted comparator and NEWS2 under Variant D, with
@@ -885,48 +967,60 @@ confirmatory nor an exploratory test in the sense of §14.
 **23.3 Exclusions, and why they are asserted rather than assumed.** Variant D is
 excluded from H1 and from the variance decomposition by Amendment 2. This arm is
 excluded from **H5** on identical terms, and for the same reason: a post-hoc
-label must not enter a pre-registered family through the external door after
-being kept out of the internal one. The arm writes to
+label kept out of the internal analyses must not enter a pre-registered family
+through the external analysis. The arm writes to
 `08_external_validation_results_altlabel`; H5 and stage 09 read
-`08_external_validation_results`. Stage 08 asserts at run time that neither file
-contains the other's variants, and stops if either does.
+`08_external_validation_results`. Stage 08 checks at run time that neither file
+contains the other's variants, and raises an error if either does.
 
 **23.4 The two cohorts do not score SOFA from the same components.** eICU's
 `vitalPeriodic` carries no Glasgow Coma Scale. The neurological component is
 therefore scored from `score_sofa()`'s assumed-normal substitution in both the
-hourly score and the baseline, where it cancels from the difference. eICU's
-deterioration delta rests on five SOFA components and MIMIC-IV's on six. The
-external label is consequently a slightly coarser construct than the internal
-one, and the comparison is between two labels that are the same in definition
-but not identical in the data available to compute them.
+hourly score and the baseline. It contributes no change to the difference, so
+neurological deterioration is not captured. eICU's deterioration delta rests
+on five SOFA components and MIMIC-IV's on six. The external label is
+consequently a slightly coarser construct than the internal one. The two
+labels share a definition but are computed from different available SOFA
+components.
 
 **23.5 The ceiling on what this arm can establish, recorded before the run.**
 Variant D's onset is a deterministic function of physiological variables that
-are themselves model inputs. A model with access to the panel is therefore
-predicting a transformation of its own covariates, which is why Variant D's
-internal AUROC (primary 0.8498, GBT 0.9360 on the unrestricted temporal window)
-sits so far above every Sepsis-3 variant's. **A high external AUROC in this arm
-is therefore not evidence that sepsis prediction transports well.** It would be
-evidence that a physiological deterioration rule computed from a given set of
-vital signs and laboratory values reproduces itself in a second dataset, which
-is a weaker and different claim. The arm's value lies in the event count and
-the denominator, not in the height of the number, and the thesis must say so
-wherever it quotes it. Two outcomes are anticipated and neither is a finding
-about sepsis: discrimination substantially above the Sepsis-3 arm's (consistent
-with the partial circularity just described), or a fall toward it (which would
-locate the degradation in cross-cohort measurement rather than in the label).
+are themselves model inputs. The outcome thus overlaps with the predictors by
+construction: a model with access to the panel is partly predicting a
+transformation of its own covariates. This is why Variant D's internal AUROC
+(primary 0.8498, GBT 0.9360 on the unrestricted temporal window, at the time
+of writing) sits so far above every Sepsis-3 variant's. **A high external
+AUROC in this arm is therefore not evidence that sepsis prediction transports
+well.** It would be evidence that a physiological deterioration rule, computed
+from a given set of vital signs and laboratory values, reproduces itself in a
+second dataset. That is a weaker and different claim. The arm's value lies in
+its cohort coverage and event count, not in the magnitude of its AUROC, and the
+thesis must say so wherever it quotes the arm. Two outcomes are anticipated,
+neither of which is a finding about sepsis, and other factors could also
+contribute:
 
-**23.6 Timebox.** One implementation pass and one stage-08 run. If the run does
-not produce a scoreable arm on the first clean attempt, or if the canary on
-`08_external_validation_results` and `08_h5_internal_external` fails, the change
-is reverted and the experiment is reported in Future Work as an untested
-question rather than debugged into existence. This is recorded so that a
-negative outcome cannot be re-described afterwards as a decision not to pursue.
+- discrimination substantially above the Sepsis-3 arm's, consistent with the
+  partial overlap just described;
+- a fall toward the Sepsis-3 arm's, which would point to cross-cohort
+  measurement rather than the label as the source of the degradation.
+
+**23.6 Timebox.** One implementation pass and one stage-08 run are allowed. The
+change is reverted, and the experiment reported in Future Work as an untested
+question, in either of two cases:
+
+- the run does not produce a scoreable arm on the first clean attempt;
+- the integrity check on `08_external_validation_results` and
+  `08_h5_internal_external`, which requires both to be unchanged, fails.
+
+The experiment is not to be modified repeatedly until it runs. This is
+recorded so that a negative outcome cannot be re-described afterwards as a
+decision not to pursue.
 
 **Deliverables:** `08_external_validation_results_altlabel` (Parquet and CSV),
 additional `anchor = "deterioration"` rows in `08_eicu_label_summary`. No
-existing output file changes: the primary and sensitivity arms are recomputed
-byte-identically and this is checked rather than asserted. Per-hour external
+existing output file changes in content: the primary and sensitivity arms are
+recomputed with identical values, and this is checked rather than asserted
+(value by value; see §24.5 on why file hashes cannot be used). Per-hour external
 predictions were not persisted for this arm in the original pass, matching the
 antibiotic-only sensitivity arm. **Amendment 10 reverses that decision**: they
 are now written to `08_eicu_predictions_D`, because an arm important enough to
@@ -943,13 +1037,13 @@ to three quantities that were reported without it, and it completes a test that
 was implemented against one boundary of a two-boundary null.
 
 **24.1 Why.** An examiner-style audit of the compiled thesis found four places
-where a claim outran its evidence, all of the same kind: an inferential
-statement resting on a point estimate. The pipeline's inference plan
-(Amendment 1) attaches intervals to every *contrast entering a corrected
-family*, which by construction excludes the post-hoc arms — and the post-hoc
-arms are where three of this study's conclusions now live. The gap is
-structural rather than accidental, which is why it is fixed once, here, rather
-than case by case.
+where an inferential statement rested on a point estimate without an interval.
+The pipeline's inference plan (Amendment 1) attaches intervals to every
+*contrast entering a corrected family*. By construction, that excludes the
+post-hoc arms, and the post-hoc arms are where three of this study's
+conclusions now live. The original inference plan did not cover analyses
+outside the corrected families, so the gap is closed once, here, rather than
+case by case.
 
 **24.2 What is added.**
 
@@ -958,19 +1052,20 @@ than case by case.
    gradient-boosted comparator under each of Variants A, B and C, with a
    stay-level cluster-bootstrap interval. Both arms are fitted on the same
    training stays and scored on the same test stays, so the difference is paired
-   within replicate. This is what licenses or withdraws the thesis's statement
-   that discrimination is "essentially unaffected" by removing the
+   within replicate. This interval supports or fails to support the thesis's
+   statement that discrimination is "essentially unaffected" by removing the
    action-derived features.
 
 2. **Cross-label calibration intervals** (`12_calibration_ci`,
    `12_calibration_contrasts`). The primary model's calibration slope and
    calibration intercept under each variant, and the paired contrast of each
-   against Variant B. This is what licenses or withdraws the statement that the
-   label definition makes no practical difference to calibration. The
-   calibration fits are refit inside each replicate; `utils.R` carries a
-   warm-started IRLS for the two one- and two-parameter models, verified against
-   `glm()` to within its own convergence tolerance, because `glm()` itself is
-   two orders of magnitude too slow at this replicate count.
+   against Variant B. These intervals support or fail to support the statement
+   that the label definition makes no practical difference to calibration. The
+   calibration fits are refitted inside each replicate. `utils.R` carries a
+   warm-started IRLS for the two small models (one and two parameters),
+   verified against `glm()` to within its own convergence tolerance. `glm()`
+   itself was about two orders of magnitude too slow to be practical at this
+   replicate count.
 
 3. **Variant D transport interval** (`12_altlabel_transport_ci`). The
    internal-minus-external AUROC difference for the Amendment 9 arm, drawn as
@@ -987,11 +1082,19 @@ than case by case.
    pre-registered concern and remains the limb the thesis's conclusion is about
    — but with θ̂ on the negative side of zero it is also the limb the data
    cannot speak to, and it returns p ≈ 1 for arithmetic reasons rather than
-   evidential ones. Both limbs are now computed and both are persisted in
+   evidential ones. Both limbs are now computed, and both are persisted in
    `12_confirmatory_tests` as `p_limb_upper` and `p_limb_lower`. The reported
-   `p_raw` is their minimum, which is a valid and conservative p-value for an
-   interval null: under any θ inside the interval at most one limb can be
-   small, because a θ near one boundary is two margins away from the other.
+   `p_raw` is their minimum. Under any θ inside the interval, at most one limb
+   can be small, because a θ near one boundary is two margins (0.04) away from
+   the other. The minimum is therefore approximately valid for the interval
+   null. Its rejection rate under the null exceeds the nominal level only by
+   the probability that the far limb also rejects, which is negligible at this
+   study's precision. It is not strictly conservative; twice the minimum (a
+   Bonferroni bound) would be. Rejecting this null would show that the two
+   models differ by more than the margin. Failing to reject it does not by
+   itself establish that they lie within the margin. Any claim of
+   non-inferiority or equivalence rests on where the confidence interval for θ
+   lies relative to ±0.02.
 
 **24.2a A consequence not anticipated when this amendment was written.** The
 per-variant calibration intervals were added to support the *cross-label*
@@ -999,11 +1102,12 @@ comparison, but they are also the first intervals this study has placed around
 the absolute calibration targets, intercept = 0 and slope = 1. At 548,827
 person-hours they resolve departures the point estimates hide: the slope covers
 one under Variants A and B but not under C, and the intercept covers zero under
-C but not under A or B. Under each variant, therefore, exactly one of the two
-targets is missed at 95 % confidence. This does not change any hypothesis or
-verdict, and the magnitudes remain negligible against the threshold grid (an
-intercept of −0.106 on the logit scale shifts a 0.00189 hourly risk by about a
-tenth of itself). It does mean the thesis can no longer say the primary model
+C but not under A or B. Under each variant, therefore, one of the two 95%
+intervals excludes its ideal value. With more than half a million person-hours,
+such an exclusion does not by itself imply practically important
+miscalibration. This does not change any hypothesis or verdict. As an
+approximate illustration of size, an intercept of −0.106 on the logit scale
+lowers a 0.00189 hourly risk by about a tenth of itself. It does mean the thesis can no longer say the primary model
 is calibrated under every variant without qualification, and §5.3.1 has been
 rewritten to state the measured position instead. Recorded here because it is a
 claim the amendment weakened, not one it was designed to test.
@@ -1014,25 +1118,28 @@ hypothesis is unchanged, and so is every Holm-adjusted p-value. H6's reported
 driven by the *ordering* of the raw p-values, and H6 remains the largest or
 second-largest in the family either way; H5's adjusted value of 0.551 is
 determined by its own raw value of 0.092 and the family size of six, neither of
-which this amendment touches. The claim is stated here in advance so that the
-re-run either confirms it or contradicts it in the open. Nothing in H1–H5 is
+which this amendment touches. This prediction is recorded before the re-run so
+that it can be compared with the regenerated outputs. Nothing in H1–H5 is
 recomputed at all: the ablation, calibration and transport blocks read stored
 predictions and write new files.
 
-**24.4 The direction of the risk.** Three of the four changes can only weaken
-the thesis's own claims, because an interval on a quantity previously reported
-as a point estimate can widen a conclusion but cannot narrow one. The fourth
-replaces an uninformative p-value with an informative one. This is recorded
-because the amendment log's value depends on it being possible to see which
-amendments ran in the study's favour: Amendment 7's did, and is flagged as such
-in the limitations; this one cannot.
+**24.4 The direction of the risk.** Each of the first three changes attaches an
+interval to a claim that was previously stated on a point estimate. The
+interval can leave such a claim standing or weaken it, but it cannot make the
+claim stronger than its original wording. The fourth change replaces an
+uninformative p-value with an informative one. This is recorded so that the
+amendment log shows which amendments worked in the study's favour. Amendment 7
+did, and is flagged as such in the limitations; this one cannot.
 
 **24.5 Timebox.** One stage-08 run to persist the Variant D external
 predictions and one stage-12 run. Stage 08's existing outputs must be
 *value*-identical afterwards, checked field by field rather than by file hash:
 Parquet embeds writer metadata, so a re-run moves every file's bytes while its
 contents are unchanged, and a hash comparison would report a change that is not
-one. Verified on the run of 2026-08-31: all nine of stage 08's result tables
+one.
+
+*Outcome, appended after execution.* Verified on the run of 2026-08-31: all
+nine of stage 08's result tables
 match the frozen run exactly, including the external AUROCs (A 0.6913 /
 B 0.6960 / C 0.7370), the coverage ladder (2,824 of 181,589 = 1.555 %; 232 both
 limbs), the event-rate ratios (0.094 anchored, 0.7458 under Variant D) and the
