@@ -1,5 +1,5 @@
 ---
-title: "04 Sample Size - Riley et al. (2019) Power Calculation"
+title: "04 Sample Size - Minimum Sample Size for Model Development"
 author: "Abdul Ahad. Student ID: G00486649"
 date: "`r format(Sys.Date(), '%d %B %Y')`"
 output:
@@ -34,13 +34,32 @@ knitr::opts_chunk$set(
 
 ## Introduction
 
-Riley et al. (2019) provide minimum sample size criteria for prediction models: (i) shrinkage $\geq 0.9$, (ii) Nagelkerke $R^2$ optimism $\leq 0.05$, and (iii) adequate event-rate precision.
+This notebook checks whether the training data are large enough to develop
+the primary model. It applies the minimum sample-size criteria of Riley et al.
+(2019) for clinical prediction models, as implemented in the `pmsampsize`
+package. These criteria are not a power calculation for a hypothesis test. For a
+binary outcome, they give the smallest sample that meets three conditions: an
+expected global shrinkage factor of at least 0.90; a difference of no more than
+0.05 between the apparent and the optimism-adjusted Nagelkerke $R^2$; and
+estimation of the overall outcome proportion within a margin of error of 0.05.
 
-**The criteria assume independent observations, and person-hours are not independent**: they are nested within ICU stays at roughly 45 correlated rows per stay, one stay per patient. The adequacy assessment is therefore parameterised on the **stay**: the outcome proportion supplied to `pmsampsize` is the fraction of training *stays* labelled septic, and the resulting minimum is compared against the number of training stays.
+The criteria assume independent observations. Person-hours are not
+independent, because each ICU stay contributes many correlated rows. The
+primary assessment therefore treats the ICU stay as the unit of analysis, and
+because the cohort keeps one stay per patient, this is also the patient level.
+For each variant, the outcome proportion passed to `pmsampsize` is the
+proportion of training stays with an onset, and the resulting minimum is
+compared with the number of training stays.
 
-The per-person-hour parameterisation is also computed and retained, because it is the quantity that governs the precision of an hourly hazard estimate conditional on the clustering, and because reporting only one of the two invites the reader to compare a minimum derived at one prevalence against a count at the other. It is **not** an effective sample size and must never be compared against the 2.3M person-hour row count as though it were. The stay-level figure is the one the thesis reports as the adequacy verdict.
+A second calculation uses the person-hour event proportion instead. It shows
+how much larger the nominal minimum becomes at the much lower hourly
+proportion. It does not account for the correlation between rows of the same
+stay, so its result is not an effective sample size and is not comparable with
+the number of person-hour rows. It is not used for the adequacy conclusion.
 
-The calculation is repeated per label variant. Anticipated C-statistic = 0.846 (Moor et al., 2023).
+The calculation is repeated for each pre-registered variant (A--C), because
+their outcome proportions differ. The alternative variants D--F are not
+assessed here.
 
 ```{r load-deps}
 suppressPackageStartupMessages({
@@ -56,7 +75,12 @@ step("=== Sample Size Calculation (Riley et al., 2019) ===")
 
 ## Label-Variance Recap
 
-Cohort and event counts from the label-variance table (produced in 02) are the inputs.
+The label-variance table from `02_cohort_labels.Rmd` lists the variants to be
+assessed, with their cohort-wide counts, and is shown here for context. The
+calculation below does not use these counts directly. It counts training stays
+of the temporal split only, and only onsets that fall inside the
+`r MAX_PANEL_HOURS`-hour panel, so its outcome proportions are lower than the
+cohort-wide percentages in this table.
 
 ```{r load-label-variance}
 lv_path <- file.path(DATA_DIR, "02_label_variance_table.parquet")
@@ -67,9 +91,35 @@ lv <- as.data.table(arrow::read_parquet(lv_path))
 knitr::kable(lv, caption = "Label-variance table (from 02\\_cohort\\_labels.Rmd)")
 ```
 
-## Sample Size per Variant
+## Sample Size by Variant
 
-For each variant, the training-set person-hour table is loaded and `pmsampsize` called with the anticipated C-statistic of 0.846. Events-per-variable (EPV) is reported as a secondary reference.
+For each variant, the training rows of the temporal split, the primary split
+built in `03_person_hours.Rmd`, are taken from the person-hour table. Positive
+training stays are counted from onset rows. Each stay has at most one onset
+row, so this count equals the number of training stays whose onset falls within
+the panel.
+
+Two further inputs are the same for every variant. The anticipated C-statistic
+is `r ANTICIPATED_AUC`, the internal AUROC reported by Moor et al. (2023). The
+number of candidate parameters is `r P_CANDIDATE_PREDICTORS`: the terms the
+primary model estimates for one outcome, namely its covariates
+(`BASE_FEATURES` and `MISSINGNESS_FEATURES` in `config.R`), a natural spline in
+the hour of stay, and the intercept. Because the primary model is multinomial,
+it estimates this set of terms for each of its three non-reference outcomes.
+Using the per-outcome count treats each cause-specific sub-model as the unit; a
+count for the whole fit would be three times larger. The required sample size
+grows roughly in proportion to the parameter count, so any variant whose ratio
+of available to required stays exceeds three would still meet the criterion
+under that larger count.
+
+For each variant, the output gives the training person-hours, training stays,
+positive training stays, the hourly event proportion and the stay-level outcome
+proportion. It then reports the stay-level minimum (primary), the ratio of
+training stays to that minimum (printed as the margin), and the minimum at the
+hourly proportion (reference only). The events per candidate parameter (printed
+as EPV) is the number of positive training stays divided by
+`r P_CANDIDATE_PREDICTORS`. It is reported for reference and is not an adequacy
+criterion.
 
 ```{r sample-size-calc}
 results <- list()
@@ -172,7 +222,20 @@ for (i in seq_len(nrow(lv))) {
 
 ## Summary and Interpretation
 
-The table below reports the adequacy verdict on the independent unit: the minimum number of independent observations required at each variant's stay-level prevalence, against the number of training stays available. The person-hour columns are the size of the design matrix and are reported for completeness only.
+The summary table gives, for each variant, the training stays, positive
+training stays, stay-level outcome proportion, minimum required number of
+stays, whether that minimum is met, the ratio of available to required stays,
+and the events per candidate parameter. A ratio above 1 means the stay-level
+minimum is met. The remaining columns (training person-hours, the hourly event
+proportion and the minimum at that proportion) describe the size of the design
+matrix and are not used in the adequacy conclusion.
+
+Meeting the minimum shows that the sample is large enough under the stated
+assumptions: the anticipated C-statistic, the parameter count, the outcome
+proportion and the shrinkage target. It does not establish that the model will
+be well calibrated or discriminate well, and it does not address performance in
+other settings, which stage 08 examines. The results are saved as
+`04_sample_size.parquet` in `output/processed_data/`.
 
 ```{r summary-table}
 if (length(results) > 0) {
