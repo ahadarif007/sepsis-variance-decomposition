@@ -34,39 +34,59 @@ knitr::opts_chunk$set(
 
 ## Introduction
 
-External validation on a distinct dataset is the minimum standard for generalisability (Collins et al., 2024, TRIPOD+AI). The eICU-CRD (Pollard et al., 2018) provides multi-centre US ICU data with different demographics, protocols, and data infrastructure.
+This notebook applies the models trained on MIMIC-IV, without retraining, to
+an independent database: the eICU Collaborative Research Database (eICU-CRD;
+Pollard et al., 2018). Validation in data from other hospitals is a central
+step in judging whether a prediction model generalises (Collins et al., 2024,
+TRIPOD+AI). MIMIC-IV comes from a single hospital, whereas eICU-CRD holds data
+from many ICUs across the United States, whose patients, clinical practice and
+data recording differ from MIMIC-IV's.
 
-Expected AUC degradation: ~0.085 (Moor et al., 2023). This analysis tests **H5**: Utility Score degrades proportionally more than AUROC on external data.
+The pre-registered reference for the decrease in AUROC from internal to
+external validation is about 0.085, the degradation reported by Moor et al.
+(2023). It is a benchmark for comparison, not a null value or a pass mark. H5
+was pre-registered as a comparison of proportional declines: that the Utility
+Score falls proportionally more than AUROC on external data. That contrast
+cannot be formed, because the internal Utility Score under the primary label is
+close to zero. Under Protocol Amendment 1, the AUROC part of H5 takes its place
+in the confirmatory family. That part is the internal minus the external AUROC
+of the primary model under Variant B. This notebook reports it descriptively,
+and `12_inference.Rmd` computes its interval and adjusted p-value. The
+substitute does not establish the divergence between metrics that H5
+originally described.
 
-### Two anchor arms, and why both are needed
+### Two External Analyses and Their Purposes
 
-Sepsis-3 onset is anchored on the co-occurrence of an antibiotic order and a
-microbiology culture. In eICU-CRD that conjunction is only *recoverable* where
-microbiology exists, and `microLab.csv.gz` covers a small minority of unit
-stays. Applying the conjunction to the full cohort therefore does not measure a
-low sepsis incidence; it measures the coverage of one source table, because the
-overwhelming majority of person-hours sit in stays where the anchor cannot fire
-by construction. The two arms separate those questions:
+Sepsis-3 onset requires suspicion of infection, which the labels define as an
+antibiotic order and a microbiology culture within a set window of each other.
+In eICU-CRD, culture records exist for only a small minority of ICU stays, and
+a stay without one cannot meet the suspicion criterion, whatever the patient's
+condition. Applied to the full cohort, the definition would therefore mostly
+measure how many stays have microbiology records, not how often sepsis occurs.
+Two external analyses, called arms below and in the printed output, keep these
+questions apart:
 
-| Arm | Cohort | Anchor | Role |
+| Arm | Cohort | Suspicion anchor | Role |
 |---|---|---|---|
-| **Sepsis-3 (primary)** | stays with $\geq 1$ culture record | culture $\wedge$ antibiotic, per-variant windows | label matches MIMIC-IV exactly; denominator contains only person-hours in which an onset *could* be observed |
-| **Antibiotic-only (sensitivity)** | full cohort | first systemic antibiotic, no culture requirement | quantifies how much of the event count the culture requirement removes; the target is **not** Sepsis-3 and is never pooled with the primary arm |
+| **Sepsis-3 (primary)** | stays with at least one culture record | an antibiotic and a culture within each variant's windows | Applies the MIMIC-IV label definitions, within the variables eICU-CRD records. Its denominator holds only stays in which an onset could be identified. |
+| **Antibiotic-only (sensitivity)** | full cohort | the first systemic antibiotic, with no culture requirement | Shows how the event count changes when the culture requirement is dropped; the SOFA criterion still applies. Its target is not Sepsis-3, and it is never pooled with the primary arm. |
 
-A third arm is reported in the final section of this notebook, separately from
-both of these. It applies the treatment-independent label (Variant D) to the
-full cohort. It is neither a Sepsis-3 estimate nor a sensitivity check on one:
-it is a different target, it is post-hoc under Protocol Amendment 9, and it is
-excluded from H5.
+A third arm, in the final section, applies the treatment-independent Variant D
+label to the full cohort. Variant D was introduced by Protocol Amendment 2, and
+its external evaluation was added by Protocol Amendment 9. This arm is neither
+a Sepsis-3 estimate nor a sensitivity analysis of one. It has a different
+target, it is post-hoc, and it is excluded from H5.
 
-Steps:
+The steps are:
 
-1. Build the eICU person-hour panel harmonised to MIMIC-IV naming
-2. Derive onsets **per label variant** under each anchor, using the same
-   SOFA-delta criterion as `02_cohort_labels.Rmd`
-3. Load MIMIC-IV trained models (no retraining)
-4. Evaluate with the same metric suite
-5. Reconcile the eICU and MIMIC-IV event rates explicitly
+1. Build an eICU-CRD person-hour panel with the MIMIC-IV variable names and
+   preprocessing.
+2. Derive onsets separately for each label variant and each anchor, with the
+   SOFA-rise criterion of `02_cohort_labels.Rmd`.
+3. Apply the models trained on MIMIC-IV, without retraining.
+4. Compute AUROC and AUPRC for each model. `11_clinical_metrics.Rmd` adds the
+   clinical metrics for the external cohort.
+5. Compare the eICU-CRD and MIMIC-IV event rates.
 
 ```{r load-deps}
 suppressPackageStartupMessages({
@@ -90,7 +110,12 @@ cat(sprintf("Pre-registered expected degradation: %.3f AUC\n",
 
 ## Load eICU Patient Table
 
-Same inclusion filters as MIMIC-IV: age $\geq$ 18, LOS $\geq$ 4 hours.
+The age and length-of-stay criteria are those of MIMIC-IV: age at least
+`r MIN_AGE` years (ages recorded as "> 89" are set to 90) and an ICU stay of at
+least `r MIN_ICU_LOS_HOURS` hours. Each row of the eICU-CRD patient table is
+one ICU unit stay. Unlike the MIMIC-IV cohort, which keeps only each patient's
+first ICU stay, this cohort keeps every eligible stay, so a patient can
+contribute more than one.
 
 ```{r load-eicu-patients}
 step("Loading eICU tables...")
@@ -110,7 +135,11 @@ cat(sprintf("eICU cohort after exclusions: %s\n",
 
 ## Vital Signs (vitalPeriodic)
 
-Loaded via DuckDB with pushdown filters on cohort membership and time window.
+Heart rate, respiratory rate, oxygen saturation, systolic and mean arterial
+pressure, and temperature are read from `vitalPeriodic`. Because the table is
+large, it is read through DuckDB, which keeps only cohort stays and the first
+`r MAX_PANEL_HOURS` hours of each stay as the file is read. Readings are
+averaged within each hour.
 
 ```{r load-vitals}
 step("Loading eICU vitals...")
@@ -156,7 +185,9 @@ if (file.exists(vp_path)) {
 
 ## Lab Values
 
-Lab values are mapped from eICU names to MIMIC-IV conventions. PaO$_2$/FiO$_2$ ratios computed where both components exist.
+Laboratory results are renamed from their eICU-CRD names to the MIMIC-IV
+variable names and averaged within each hour. The PaO$_2$/FiO$_2$ ratio is
+calculated in hours in which both components are recorded.
 
 ```{r load-labs}
 step("Loading eICU labs...")
@@ -201,10 +232,15 @@ if (file.exists(lab_path)) {
 
 ## Drug Exposure: Antibiotics and Vasopressors
 
-eICU records drugs across two tables. `medication.csv.gz` holds physician
-orders and `infusionDrug.csv.gz` holds continuous infusions; vasopressors and a
-large share of the intravenous antibiotics appear only in the latter. Both are
-read, and the antibiotic exposure is the union.
+eICU-CRD records medication in two tables. `medication.csv.gz` holds
+medication orders, and `infusionDrug.csv.gz` holds continuous infusions.
+Antibiotic exposure combines the records of both tables. Almost all antibiotic
+records come from the order table, and the infusion table adds few further
+stays, as the printed counts show. Vasopressor exposure comes from the infusion
+table alone. That table records an infusion rate at a point in time, with no
+stop time, so exposure is marked in each hour that has an infusion record. In
+MIMIC-IV, exposure is marked over the full interval from an infusion's start
+to its end, so the two definitions are close but not identical.
 
 ```{r eicu-drugs}
 step("Loading eICU drug exposure (medication + infusionDrug)...")
@@ -280,11 +316,16 @@ cat(sprintf("Antibiotic exposure (union): %s rows, %s stays\n",
 
 ## Microbiology Coverage
 
-`microLab.csv.gz` is the binding constraint on Sepsis-3 label transport. The
-coverage figure below defines the primary arm's cohort: a stay with no culture
-record cannot satisfy the Sepsis-3 conjunction under any variant, so counting
-its person-hours in the denominator measures table coverage rather than
-incidence.
+Microbiology records, held in `microLab.csv.gz`, limit how far the Sepsis-3
+label can be carried to eICU-CRD. Cultures whose site appears in the
+surveillance list used for MIMIC-IV (`SURVEILLANCE_SPEC_TYPES`) are excluded. A stay with no culture record cannot meet the suspicion criterion
+under any variant. Counting its person-hours in the denominator would
+therefore reflect the coverage of the microbiology records rather than the
+incidence of sepsis. The stays with at least one culture record form the
+cohort of the primary arm. Culture times may fall before ICU admission, and
+the last printed line gives the share that do. Such a culture can still form a
+suspicion pair, but an onset assigned before admission is not counted (see the
+next sections).
 
 ```{r eicu-cultures}
 step("Loading eICU microbiology...")
@@ -320,12 +361,22 @@ cat(sprintf("Culture records drawn before ICU admission (negative offset): %.1f%
 
 ## Build eICU Person-Hour Panel
 
-The panel is built **once**, from physiology alone, and carries no label. Onsets
-are derived from it per variant in the next section, which is what makes the
-three external label sets genuinely distinct. Construction mirrors MIMIC-IV
-(hourly grid, plausibility filter, LOCF, missingness indicators, rolling
-slopes, clinical scores). GCS is unavailable in `vitalPeriodic` and is left as
-`NA` rather than imputed.
+A single person-hour panel is built from the physiological data and carries no
+label. The onsets of each variant are derived from it in the next section, so
+each variant's label is computed separately. Construction follows the
+MIMIC-IV steps of `03_person_hours.Rmd`. These are an hourly grid up to hour
+`r MAX_PANEL_HOURS`, the plausibility filter applied before filling, last
+observation carried forward within the stay, the `*_measured` indicators, the
+six-hour means and the NEWS2 and qSOFA scores.
+
+The Glasgow Coma Scale (GCS) is not recorded in `vitalPeriodic`, so the
+panel's `gcs` column is missing in every hour. Three later steps handle it
+differently:
+
+- NEWS2 scores its consciousness item as 0 throughout.
+- The SOFA calculations score the neurological component as normal.
+- When the models are applied, the missing value is set to zero like any other
+  (see "Apply MIMIC-IV Trained Models").
 
 ```{r build-eicu-panel}
 step("Building eICU person-hour panel...")
@@ -399,23 +450,37 @@ cat(sprintf("eICU panel: %s person-hours over %s stays\n",
 
 ## Per-Variant Onset Derivation
 
-Each label variant is applied to eICU with **its own** antibiotic--culture
-window and **its own** SOFA evaluation window and baseline, exactly as
-`02_cohort_labels.Rmd` applies them to MIMIC-IV. Two points of construction
-matter:
+Each label variant is applied to eICU-CRD with its own antibiotic--culture
+windows, SOFA evaluation window and SOFA baseline, as `02_cohort_labels.Rmd`
+applies them to MIMIC-IV. For each qualifying antibiotic--culture pair, the
+later of the two times is taken, and the suspicion time is the earliest of
+these. The onset is placed at the
+suspicion time if the SOFA score over the evaluation window is at least
+`r SOFA_INCREASE_THRESHOLD` points above the baseline. Each SOFA component is
+averaged over the window before scoring, as in MIMIC-IV. Under the
+antibiotic-only anchor, the suspicion time is the first antibiotic, and the
+same SOFA criterion applies.
 
-* The organ-dysfunction criterion is a SOFA **increase of $\geq 2$ points over
-  a baseline**, not an absolute score. An absolute threshold is a different
-  criterion, and because `score_sofa()` substitutes assumed-normal values for
-  missing components it also rejects on missingness rather than on physiology.
-  The baseline is the admission window (hours 0--`r DETERIORATION_BASELINE_H`)
-  for Variants A and B and the rolling 24 hours preceding the evaluation window
-  for Variant C, matching each variant's `sofa_baseline` setting.
-* Suspicion drawn before ICU admission (a negative offset) makes the stay
-  **non-septic within the panel**; it does not remove the stay. The same holds
-  for suspicion after the stay ends. This mirrors the MIMIC-IV rule that an
-  onset outside `[intime, outtime]` is set to `NA` while the stay remains in
-  the at-risk denominator.
+The organ-dysfunction criterion is a rise over a baseline, not an absolute SOFA
+score. `score_sofa()` scores a missing component as normal, so an absolute
+threshold would be harder to reach in stays with sparse data simply because
+fewer components are measured. The baseline is the admission window (hours
+0--`r DETERIORATION_BASELINE_H`) for Variants A and B. For Variant C, it is the
+24 hours before the start of the evaluation window. This follows each
+variant's baseline definition in `config.R`.
+
+An onset time that falls before ICU admission, after the end of the stay, or
+at or before hour `r MIN_OBS_HOURS` is not counted. The stay then has no
+onset in the panel but remains in the at-risk denominator; it is not removed.
+This follows the MIMIC-IV rule. In the label tables a missing onset hour
+(`NA`) therefore means that no onset was assigned in the panel, not that the
+outcome is unknown.
+
+Table 1 gives, for each variant and anchor, the number of stays in the arm's
+cohort (`n_stays`) and the number with a qualifying suspicion pair
+(`n_suspicion`). It also gives the number assigned an onset (`n_onsets`), that
+number as a percentage of the cohort's stays (`pct_onsets`), and the median
+onset hour.
 
 ```{r eicu-onset-functions}
 EICU_SOFA_COMPONENTS <- c("pf_ratio", "platelets", "bilirubin", "map",
@@ -562,15 +627,17 @@ save_parquet(label_summary_dt, "08_eicu_label_summary", DATA_DIR)
 save_csv(label_summary_dt,     "08_eicu_label_summary", DATA_DIR)
 ```
 
-### Variant-invariance guard
+### Check That the Labels Differ by Variant
 
-The failure mode this guards against is a label built once and reused across
-the variant loop: the external "variants" then differ only in which model is
-applied, every label-dependent quantity is identical across A, B and C, and the
-identity reads as a substantive finding rather than as the absence of a
-computation. A label-invariant comparator such as NEWS2 makes it visible --- its
-AUROC can only be identical across variants if the label sets are identical ---
-so the check is enforced at run time rather than left to inspection.
+This check detects a label set that has been built once and reused for every
+variant. With such reuse, the external variants would differ only in the model
+applied, every label-dependent quantity would agree across A, B and C, and the
+agreement could be mistaken for a finding. NEWS2 does not depend on the
+variant, so identical NEWS2 AUROCs across variants would be one symptom of such
+reuse. The check does not rely on that indirect sign. It compares the onset
+sets directly, as the list of stays with their onset hours, and stops the
+notebook if all three variants produce identical sets under either anchor. It
+runs on every execution, and its result is written to the log.
 
 ```{r variant-invariance-guard}
 onset_signature <- function(key) {
@@ -595,8 +662,41 @@ for (anchor in c("sepsis3", "abx_only")) {
 
 ## Apply MIMIC-IV Trained Models
 
-Trained models are applied without retraining. Missing features are zero-filled
-(same as training). Predictions are generated in chunks for memory.
+The primary model of `05_primary_model.Rmd` and the GBT of
+`06_comparators.Rmd`, trained on MIMIC-IV for the same variant, are applied
+without retraining. NEWS2 is scored as internally. Missing covariate values are
+set to zero, or to false for logical columns, as in training; the
+`*_measured` indicators are built from the eICU-CRD data as in MIMIC-IV. The
+primary model's predictions are computed in batches of rows to limit memory
+use. The GBT's design matrix is built in the covariate order declared in
+`config.R`, and the notebook stops if the stored model records a different
+order.
+
+One consequence of the zero-filling needs stating. GCS is missing in every
+eICU-CRD hour, so every external person-hour enters both models with a GCS of
+zero. In the MIMIC-IV training data, a zero occurs only in the hours before a
+patient's GCS is first recorded. The models' external predictions therefore
+rest on a GCS input that differs systematically from training. This is part of
+the difference between the cohorts that the external estimates measure, and it
+is not separated from the other differences here.
+
+AUROC and AUPRC are computed for each model, variant and arm. Each of these
+evaluations prints one covariate check, so the check appears six times, once
+for each variant in each of the two arms.
+
+Table 2 summarises how much of the cohort each labelling input reaches:
+
+- the cohort's stays;
+- the stays with a culture record, which form the primary arm;
+- the stays with an antibiotic record;
+- the stays with both kinds of record at any time, which is the most the
+  Sepsis-3 suspicion criterion could reach with unlimited windows;
+- the person-hours of the full and of the microbiology-covered panel.
+
+Counts are numbers of stays, and the `pct_` columns are percentages of the
+cohort's stays. The last column repeats the minimum number of external events,
+`r MIN_EXTERNAL_EVENTS`, below which an external AUROC is reported but not
+interpreted.
 
 ```{r apply-models}
 step("Applying trained models to eICU cohort...")
@@ -773,11 +873,21 @@ for (vid in names(LABEL_VARIANTS)) {
 
 ## Results
 
-Two arms are reported and they answer different questions. The primary arm
-applies the Sepsis-3 anchor to the sub-cohort where microbiology is documented.
-The sensitivity arm drops the culture requirement and runs on the full eICU
-cohort, which buys events at the price of no longer targeting Sepsis-3. Its
-rows bound what coverage costs; they are not an external Sepsis-3 result.
+The two arms answer different questions. The primary arm applies the Sepsis-3
+definition to the stays with microbiology records. The sensitivity arm drops
+the culture requirement and covers the full eICU-CRD cohort. This gives many
+more events, but the target is no longer Sepsis-3. Its results show how far
+the limited microbiology coverage constrains the event count, and they are not
+an external Sepsis-3 result.
+
+The results of both arms are written to `08_external_validation_results` and
+`08_external_validation_results_abxonly` in `output/processed_data/`. Each row
+gives a model's AUROC and AUPRC, with three event counts: the stays given an
+onset by the variant's rule, the onset hours actually scored, and the
+difference between the two. An onset that falls after a stay's last observed
+hour is right-censored, under the same horizon rule as in MIMIC-IV, and is not
+scored. This is why a variant's scored external events, printed below, can be fewer
+than its onsets in Table 1, as they are for Variant B.
 
 ```{r results-tables}
 ext_df <- if (length(eval_primary) > 0) do.call(rbind, eval_primary) else NULL
@@ -799,10 +909,17 @@ if (!is.null(sen_df)) {
 
 ### Event-rate reconciliation
 
-An external event rate two or more orders of magnitude below the development
-cohort's is a property of the label extraction, not of the population. The
-table below states the rates side by side so the comparison is made explicitly
-rather than left to the reader.
+This step compares the onset rate per 1,000 person-hours, for each variant,
+across three sources: the MIMIC-IV temporal test set, the eICU-CRD Sepsis-3
+arm and the eICU-CRD antibiotic-only arm. It also gives each eICU-CRD rate as a
+ratio to the MIMIC-IV rate. Under the same label, a much lower external rate
+can reflect how completely the label can be identified in the external data,
+as well as a real difference between the populations. The comparison across
+arms helps to separate the two. If the rate rises substantially once the
+culture requirement is dropped, much of the gap comes from the microbiology
+records, although differences between the populations cannot be excluded. The
+table is written to `08_event_rate_reconciliation` in
+`output/processed_data/`.
 
 ```{r rate-reconciliation}
 recon <- NULL
@@ -895,12 +1012,23 @@ save_csv(cov_dt,     "08_eicu_coverage", DATA_DIR)
 
 ### H5: internal versus external AUROC
 
-The internal-to-external AUROC drop per variant, set against the degradation
-Moor et al. give reason to expect. This is the AUROC limb standing in for H5
-under Protocol Amendment 1, so what appears here is the descriptive contrast;
-the corrected verdict comes from stage 12. Where a variant's external event
-count falls under the interpretability floor the row is printed with a warning
-rather than suppressed, because the count is itself the finding.
+For each variant, the printed lines give the primary model's internal AUROC
+(MIMIC-IV temporal test set), its external AUROC (Sepsis-3 arm) and the
+decrease between them, labelled VA, VB and VC for Variants A--C. Each decrease
+is shown next to the pre-registered reference of 0.085 from Moor et al.
+(2023). That reference is for comparison only and is not a threshold. Under
+Protocol Amendment 1, the Variant B decrease is the contrast tested for H5.
+These results are descriptive, and the interval and adjusted p-value come from
+`12_inference.Rmd`.
+
+The minimum number of external events for interpreting an external AUROC is
+`r MIN_EXTERNAL_EVENTS` (Riley et al., 2021; Collins et al., 2024). A variant
+below this minimum is still printed, with a warning, because its event count is
+itself part of the result. At such counts, the AUROC is too imprecise for any
+firm conclusion, and a decrease smaller than the reference does not by itself
+show that discrimination transports well. The cohort is also restricted to the
+small set of stays with microbiology records, so its patients may differ from
+the eICU-CRD population as a whole.
 
 ```{r results-h5}
 if (!is.null(ext_df) && file.exists(internal_path)) {
@@ -943,48 +1071,53 @@ cat("\nExternal validation complete.\n")
 
 ## Treatment-Independent Label on the Full eICU Cohort (Variant D)
 
-Everything above this point is confined to the microbiology-covered sub-cohort
-or, in the sensitivity arm, targets something other than Sepsis-3. Both limits
-have the same cause: the Sepsis-3 conjunction needs a culture record, and
-`microLab.csv.gz` reaches `r round(100 * length(micro_stays) / max(length(cohort_ids), 1), 2)`%
-of the analysis cohort.
+The analyses above are limited in one of two ways. The primary arm is confined
+to stays with microbiology records, which are
+`r round(100 * length(micro_stays) / max(length(cohort_ids), 1), 2)`% of the
+analysis cohort, and the sensitivity arm targets something other than
+Sepsis-3. Both limits arise because the Sepsis-3 definition requires a culture
+record.
 
-Variant D (Protocol Amendment 2) does not have that dependency. Its onset is
-the first hour at which a **physiology-only** SOFA score stands
-`r SOFA_INCREASE_THRESHOLD` or more points above the stay's admission baseline,
-with no infection criterion and with the vasopressor and catecholamine columns
-withheld from `score_sofa()`. It contains no antibiotic order, no culture draw
-and no drug administration, so it can be constructed on **every** stay in the
-cohort rather than on the `r format(length(micro_stays), big.mark = ",")` where
-microbiology happens to be documented. That is the only reason this arm exists:
-it is the sole external estimate in the study whose denominator is the whole of
-eICU-CRD.
+Variant D, introduced by Protocol Amendment 2, has no such requirement. Its
+onset is the first hour at which a SOFA score computed from physiology alone is
+at least `r SOFA_INCREASE_THRESHOLD` points above the stay's admission
+baseline. It has no infection criterion, and the vasopressor columns are not
+passed to `score_sofa()`, so the cardiovascular component rests on mean
+arterial pressure alone. The definition uses no antibiotic, culture or
+medication record. It can therefore be applied to every stay in the cohort,
+rather than only to the `r format(length(micro_stays), big.mark = ",")` stays
+with microbiology records. Its external evaluation was added by Protocol
+Amendment 9 for this reason. It is the only external analysis in the study
+whose denominator is the whole eICU-CRD cohort.
 
-Three constraints on how the result may be read, enforced below rather than
-left to the reader:
+Three limitations govern how the result is read:
 
-* **Variant D is post-hoc.** It is outside the pre-registered A/B/C family, it
-  is excluded from H1 and from the variance decomposition, and this arm is
-  excluded from **H5** on exactly the same terms. It is written to its own
-  output file, and the guards below assert that neither file has leaked into
-  the other. It is descriptive: no p-value is attached and it joins no
-  corrected family (Protocol Amendment 9).
-* **The target is not Sepsis-3.** D measures acute organ dysfunction, not
-  suspected-infection-with-organ-dysfunction. Its AUROC is never comparable
-  with the primary arm's and the two are never pooled.
-* **The two cohorts do not score SOFA from the same components.** eICU's
-  `vitalPeriodic` carries no GCS, so the neurological component is scored from
-  the assumed-normal substitution in both the hourly score and the baseline,
-  where it cancels from the difference. eICU's deterioration delta therefore
-  rests on five SOFA components and MIMIC-IV's on six. This is a genuine
-  asymmetry between the development and validation cohorts, and it belongs
-  beside the number.
+* **Post-hoc status.** Variant D lies outside the pre-registered A--C family.
+  It is excluded from H1, H5 and the variance decomposition. The analysis is
+  descriptive, with no p-value, and it belongs to no multiplicity-adjusted
+  family (Protocol Amendment 9). Its results go to a separate output file, and
+  the checks at the end of this section confirm that the confirmatory and
+  post-hoc files stay separate.
+* **Different target.** Variant D identifies acute organ dysfunction without
+  requiring suspected infection, so it is not a Sepsis-3 outcome. Its AUROC
+  answers a different question from the primary arm's, and the two are not
+  compared directly or pooled. Because the label is a threshold on physiology
+  that also enters the models as covariates, its AUROC is not a measure of
+  sepsis prediction.
+* **Different SOFA components.** `vitalPeriodic` records no GCS, so the
+  neurological component is scored as normal in both the hourly score and the
+  baseline. It therefore contributes no change to the eICU-CRD rise, and
+  neurological deterioration cannot trigger an external onset. The eICU-CRD
+  rise rests on five SOFA components, against six in MIMIC-IV. This asymmetry
+  between the development and validation cohorts should be reported with the
+  Variant D estimate.
 
-The derivation mirrors `derive_deterioration_onsets()` in
-`03_person_hours.Rmd` — same physiology-only component set, same admission
-baseline window, same minimum observation floor — so that the external label is
-the same construct as the internal one rather than a second definition that
-happens to share a letter.
+The derivation follows `derive_deterioration_onsets()` in
+`03_person_hours.Rmd`: the same physiological components, the same admission
+baseline window and the same minimum observation time. This keeps the external
+definition of Variant D consistent with the internal one, apart from the
+missing GCS. The printed line gives the number and percentage of stays that
+meet the Variant D criterion, and the median onset hour.
 
 ```{r eicu-deterioration-onsets}
 EICU_SOFA_PHYS_COMPONENTS <- c("pf_ratio", "platelets", "bilirubin", "map",
@@ -1100,12 +1233,17 @@ if (length(alt_label_rows) > 0) {
 
 ### Event rate under a treatment-independent label
 
-The Sepsis-3 arm's external event rate is roughly a tenth of the development
-cohort's, and Section~\ref{sec:external_coverage} attributes that to the
-culture limb rather than to the population. Variant D tests the attribution
-directly: it is the same physiology in the same two databases with the
-treatment anchor removed. The rate is written to its own file so that the
-pre-registered reconciliation table is untouched.
+The event-rate reconciliation above compares the Sepsis-3 arm's external
+event rate with the development cohort's, and relates the gap to microbiology
+coverage. Variant D gives a complementary view. Its label needs no treatment or
+microbiology record, so its external rate is not limited by microbiology
+coverage. If its rate ratio between the two databases is much closer to 1 than
+the Sepsis-3 arm's, that supports attributing the Sepsis-3 gap mainly to the
+treatment and culture records rather than to the population. It does not prove
+the attribution. Variant D is a different outcome, and its eICU-CRD score
+omits the neurological component. The rates are written to
+`08_event_rate_altlabel`, a separate file, so the pre-registered reconciliation
+table is unchanged.
 
 ```{r altlabel-rate-reconciliation}
 alt_recon <- NULL
@@ -1151,13 +1289,23 @@ if (!is.null(alt_df) && file.exists(internal_path)) {
 }
 ```
 
-### Containment guards
+### Checks That Keep Variant D Separate
 
-Variant D is kept out of H5 and the variance decomposition the same way it is
-kept out of H1. The separation is structural — the confirmatory consumers read
-`08_external_validation_results`, and this arm writes somewhere else — but a
-structural argument is only as good as the next edit, so it is asserted at run
-time as well.
+Variant D is excluded from H5 and the variance decomposition, as it is from
+H1. The separation rests on file names. The confirmatory stages read
+`08_external_validation_results`, while this arm writes to
+`08_external_validation_results_altlabel`. The notebook also checks the
+separation each time it runs, so that a later change to the code cannot break
+it unnoticed. It stops in three cases:
+
+- the Variant D file contains a pre-registered variant;
+- the primary external file contains Variant D;
+- Variant D was scored on no more stays than the microbiology-covered
+  sub-cohort, which would mean it is not the full-cohort analysis it claims to
+  be.
+
+The final printed line gives the number of Variant D external events and
+states whether it reaches the `r MIN_EXTERNAL_EVENTS`-event minimum.
 
 ```{r altlabel-containment-guards}
 if (!is.null(alt_df)) {
