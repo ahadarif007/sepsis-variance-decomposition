@@ -34,28 +34,45 @@ knitr::opts_chunk$set(
 
 ## Introduction
 
-Central output of V2: a variance decomposition attributing performance variation to each analytical decision. Published sepsis studies vary across multiple factors simultaneously (Cohen et al., 2024); this analysis varies one factor at a time.
+This notebook produces the variance decomposition, the study's summary of how
+far reported performance moves with each analytical decision. Published
+sepsis-prediction studies differ in several such decisions at once (Cohen et
+al., 2024), so a difference in their reported performance cannot be traced to
+any one decision. Here one factor is varied at a time while the others are held
+at reference levels: Variant B, the primary model, the temporal split and the
+unrestricted window. "Variance decomposition" is the pre-registered name of the
+analysis. The quantities it reports are ranges and differences in a metric,
+not variance components, so they do not partition a variance and cannot be
+summed.
 
-Five factors:
+The decomposition considers five factors.
 
-| Factor | Levels |
-|--------|--------|
-| Model class | Discrete-time hazard, Cox PH, GBT, NEWS2 |
-| Label operationalisation | Variant A (Narrow), B (Seymour-Standard), C (Liberal) |
+| Factor | Levels compared |
+|--------|-----------------|
+| Model class | Primary model (multinomial discrete-time competing-risks hazard model), gradient-boosted trees fitted with XGBoost (GBT), Cox model, NEWS2, qSOFA, SIRS |
+| Label operationalisation | Variants A (Narrow), B (Seymour-Standard) and C (Liberal) |
 | Validation split | Temporal, random |
-| Prediction-time anchoring | Treatment-anchored, unrestricted |
-| Evaluation metric | Utility Score, calibration, AUROC, AUPRC |
+| Prediction-time anchoring | Unrestricted window (all test hours), treatment-anchored window (hours before the first antibiotic or culture) |
+| Evaluation metric | Pre-registered as the internal-to-external decline in the Utility Score against the decline in AUROC. The row computed here is the AUROC part only: internal (MIMIC-IV) against external (eICU) AUROC |
 
-Six pre-registered hypotheses structure the interpretation:
+Six pre-registered hypotheses structure the interpretation. Where a hypothesis
+is a difference, the direction of subtraction is stated.
 
-| \# | Claim | Threshold |
+| Hypothesis | Claim | Threshold |
 |----|-------|-----------|
-| H1 | Label-variant spread $\geq$ model-class spread in AUROC | label spread $\geq$ model spread |
-| H2 | Coefficient instability across labels | $\geq$ 1 covariate changes sign |
-| H3 | Treatment-anchored AUROC $<$ unrestricted | $\Delta \geq 0.03$ |
-| H4 | Temporal-split AUROC $<$ random-split | $\Delta \geq 0.02$ |
-| H5 | Utility degradation $>$ AUROC degradation (internal $\to$ external) | ratio comparison |
-| H6 | $|\text{primary} - \text{GBT}| \leq 0.02$ AUROC | $|\Delta| \leq 0.02$ |
+| H1 | The AUROC spread across label variants is at least the AUROC spread across model classes | label spread $\geq$ model spread |
+| H2 | At least one covariate changes sign, or changes in magnitude by a factor of 2 or more, across label variants | none |
+| H3 | Unrestricted AUROC minus treatment-anchored AUROC is at least 0.03 | $\Delta \geq 0.03$ |
+| H4 | Random-split AUROC minus temporal-split AUROC is at least 0.02 | $\Delta \geq 0.02$ |
+| H5 | The proportional internal-to-external decline is substantially larger for the Utility Score than for AUROC | none |
+| H6 | The primary model is not inferior to the GBT by more than 0.02 AUROC | $|\Delta| \leq 0.02$ |
+
+A spread is the maximum minus the minimum of a metric across a factor's
+levels, so it is never negative. H3, H4 and the metric row are signed
+differences, and H6 is an absolute difference. Every number in this notebook is
+a point estimate. The bootstrap intervals and the Holm-corrected confirmatory
+results of Protocol Amendment 1 are produced in `12_inference.Rmd`, and they
+take precedence over everything here.
 
 ```{r load-deps}
 suppressPackageStartupMessages({
@@ -73,7 +90,21 @@ step("=== Phase 6a: Variance Decomposition ===")
 
 ## Load Metric Results
 
-Metric results from 07, external validation from 08, and the coefficient table from 05 are loaded.
+The metric results of `07_metrics_suite.Rmd`, the external-validation results
+of `08_external_validation.Rmd` and the coefficient table of
+`05_primary_model.Rmd` are loaded. The table below lists every temporal-split
+result for Variants A--C as stage 07 wrote it.
+
+Some entries in it need explanation. The Utility Score, alert burden and lead
+time are read at the default threshold of 0.5. The primary model raises no
+alert at that threshold, so its Utility Score is exactly 0, its alert burden is
+infinite (Inf, because there is no true alert to divide by) and its lead time
+is missing (NA). The treatment-anchored rows contain no onsets under Variants
+A--C, for the reason given in the proposition below, so their AUROC and AUPRC
+are also NA. The column `utility_max` is the maximum Utility Score over the
+threshold grid of stage 07. It is chosen on the test set and is therefore an
+optimistic ceiling. A small negative value means that no threshold raising at
+least one alert did better than issuing no alerts.
 
 ```{r load-metrics}
 metric_path <- file.path(DATA_DIR, "07_metric_results.parquet")
@@ -96,7 +127,27 @@ knitr::kable(metrics[, .(variant, model, eval_window, auroc, auprc,
 
 ## Variance by Factor
 
-Each factor's spread is the range of AUROC (or Utility Score) across that factor's levels, with others held at reference values (Variant B, primary model, temporal split, unrestricted).
+Each row of the decomposition is computed as follows, with the factors not
+named held at their reference levels.
+
+- **Model class:** the AUROC spread across the six models under Variant B. The
+  Utility Score spread uses each model's maximum over the threshold grid, not
+  its score at 0.5. At this event rate the 0.5 threshold separates models by
+  how far their probabilities are inflated, so a spread taken there would
+  measure calibration rather than model class.
+- **Label operationalisation (H1):** the spread of the primary model's AUROC
+  across Variants A--C. The Utility Score spread again uses the maxima.
+- **Prediction-time anchoring (H3):** unrestricted minus treatment-anchored
+  AUROC, for the primary model under Variant B.
+- **Validation split (H4):** random-split minus temporal-split AUROC, for the
+  primary model under Variant B. A negative value means the random split gave
+  the lower AUROC.
+- **Evaluation metric (H5):** internal minus external AUROC, for the primary
+  model under Variant B, with the external value taken from the eICU Sepsis-3
+  arm. A positive value means AUROC fell on external data. The Utility Score
+  part of H5 is not computed here.
+- **Model-class null (H6):** the absolute difference between the AUROCs of the
+  primary model and the GBT under Variant B.
 
 ```{r variance-by-factor}
 # Factor 1: MODEL CLASS - label=B, temporal, unrestricted
@@ -155,20 +206,23 @@ if (nrow(model_class_rows) > 0) {
 
 ## The Variance Decomposition Table
 
-The study's primary deliverable. Each row holds four of the five analytical
-factors at a reference level and varies the fifth, so the number in
-`spread_auroc` is what that one decision is worth on its own. The reference
-levels are named in the factor column rather than left implicit, because a
-spread only means something once the reader knows what was held still.
+The table below is the variance decomposition. Each row varies one factor and
+names, in its factor column, the levels at which the other factors are held.
+The column `spread_auroc` holds the quantity defined for that row in the
+previous section. Despite the column name, not every row is a range: the split
+and metric rows are signed differences, and the H6 row is an absolute
+difference. The `hypothesis` and `h_threshold` columns give the pre-registered
+hypothesis each row bears on. The model-class row is marked "-" because it
+tests no hypothesis on its own; it enters H1 as the comparator for the label
+spread. The anchoring row is NA because the treatment-anchored AUROC is
+undefined under Variant B.
 
-Read the rows against each other, not in isolation. The point of the table is
-the ordering: whether the choice of model moves reported performance further
-than the choice of label, the split or the metric. The `hypothesis` and
-`h_threshold` columns record which pre-registered claim each row bears on.
-
-Spreads here are point estimates with nothing attached. The intervals, and the
-multiplicity-corrected verdicts that supersede the descriptive ones below,
-come from stage 12.
+The rows are intended to be compared with one another, to show which decision
+moves reported AUROC the most. On these point estimates, model class moves it
+furthest, about twelve times as far as the label. The model-class spread runs
+from the rule-based scores to the primary model, however. The gap between the
+two fitted flexible models, the primary model and the GBT, is far smaller and
+is given by the H6 row.
 
 ```{r decomp-table}
 decomp_table <- data.frame(
@@ -196,9 +250,38 @@ knitr::kable(decomp_table, caption = "THE VARIANCE DECOMPOSITION TABLE")
 save_parquet(decomp_table, "09_variance_decomposition_table", DATA_DIR)
 ```
 
-## Hypothesis Test Verdicts
+## Point-Estimate Checks Against the Pre-Registered Thresholds
 
-Each hypothesis is evaluated against its threshold. "CONFIRMED" = effect meets/exceeds threshold; "NOT confirmed" = falls short. These are descriptive verdicts, not formal statistical tests.
+Each hypothesis that has a point estimate here is compared with its threshold.
+These are descriptive checks, not statistical tests. In the printed output,
+"CONFIRMED" means that the threshold is met and "NOT confirmed" that it is not.
+For H6, "NOT rejected" means that the absolute difference lies within the 0.02
+margin, which on a point estimate does not establish equivalence. The verdicts
+of record come from `12_inference.Rmd`, which attaches bootstrap intervals and
+applies the Holm correction. No later stage reads the file written here.
+
+Four hypotheses are checked. H3 is omitted because its AUROC difference is
+undefined under Variant B. H5 is omitted because the pre-registration gives it
+no numerical threshold; its contrast is evaluated in
+`08_external_validation.Rmd` and `12_inference.Rmd`.
+
+- **H1:** the label spread is compared with the model-class spread.
+- **H2:** the check covers every coefficient of the sepsis outcome present
+  under all three of Variants A--C, except the intercept and the spline terms
+  in time since admission, and applies the sign criterion only. The
+  pre-registered H2 also counts a change in magnitude by a factor of 2 or more,
+  and the full count is reported in `12_inference.Rmd`. In the output,
+  `bilirubin_total` is total bilirubin and `vaso_anyTRUE` is any vasopressor
+  exposure. A coefficient close to zero can change sign without meaningful
+  instability. Protocol Amendment 7 therefore compares each change with its
+  estimation noise, and both sign reversals found here are smaller than the
+  pooled standard error of the estimates they compare.
+- **H4:** the difference is negative, so the random split gave the lower
+  AUROC, the opposite of the direction H4 predicted. "Split optimism" in the
+  output is the hypothesis's pre-registered name.
+- **H6:** the check uses the absolute difference. `12_inference.Rmd` uses the
+  signed difference, GBT minus primary, and the conclusion drawn there from the
+  interval is one-sided non-inferiority, not equivalence.
 
 ```{r hypothesis-verdicts}
 step("Hypothesis test verdicts...")
@@ -300,7 +383,11 @@ if (length(verdicts) > 0) {
 
 ## Variance Decomposition Plots
 
-Label-variant effect vs. model-class effect on AUROC. If H1 is confirmed, the label-variant spread exceeds the model-class spread.
+The two figures show the AUROC values behind the first two rows of the
+decomposition. The first gives the primary model's AUROC under each label
+variant, with a dashed line at its value under Variant B. The second gives each
+model's AUROC under Variant B. H1 compares the range across the bars of the
+first figure with the range across the bars of the second.
 
 ```{r variance-plots, fig.cap="Variance decomposition: label-variant and model-class effects on AUROC.", fig.width=6, fig.height=4}
 if (nrow(metrics[!is.na(auroc)]) > 0) {
@@ -341,34 +428,47 @@ cat("\nVariance decomposition complete.\n")
 
 ## Label-Anchor Attribution (Protocol Amendment 2)
 
-Everything above varies the label *within* Sepsis-3. Variants A, B and C are
-three readings of one definition and all three fire on the same
-culture-plus-antibiotic trigger, so the label spread entering H1 is partly a
-**definitional** quantity: it measures how much the reading of a definition
-matters, not how much the choice of construct matters. Whether the physiology
-itself carries the signal cannot be settled inside that family.
+The label variants above all lie within Sepsis-3. Variants A, B and C are
+three operationalisations of one definition, and all three require the same
+culture-plus-antibiotic trigger. The label spread in H1 therefore measures
+sensitivity to how one definition is operationalised, not to the choice of
+construct. Within that family it is not possible to separate the part of the
+discrimination that comes from the patient's physiology from the part that
+comes from the treatment decisions the trigger records.
 
-Sepsis-3 is a conjunction --- *suspected infection* **and** *acute organ
-dysfunction*. This section splits it and fits the same model to each limb alone:
+Sepsis-3 requires suspected infection and acute organ dysfunction together.
+Protocol Amendment 2, which is post-hoc, separates the two components. The
+same model specification, with the same covariates and temporal split, is
+refitted under a label built from each component alone:
 
-| Variant | Suspicion anchor | Organ dysfunction | Reads a treatment decision? |
+| Variant | Suspected infection | Organ dysfunction | Uses a treatment timestamp? |
 |---|---|---|---|
 | B (Seymour-Standard) | required | required | yes |
 | E (Anchor-Only) | required | not required | yes |
 | D (Deterioration) | not required | required | **no** |
 
-Variant D is the treatment-independent labelling the decomposition was missing:
-its onsets are derived from recorded physiology alone, so no antibiotic order,
-culture draw or drug administration enters the label.
+Variant D supplies the anchor-independent label that Variants A--C lack. Its
+onset is the first hour at which a SOFA score computed from physiology alone
+rises by at least 2 points above the admission baseline. The vasopressor terms
+are withheld, so no antibiotic, culture or drug-administration timestamp enters
+the label. The label is not independent of clinical care, however, because its
+inputs are measurements that exist because they were ordered.
 
-Two quantities are read off the comparison. The **anchor-attributable
-fraction** is the share of Variant B's above-chance discrimination that is
-reproduced by predicting the treatment anchor on its own,
+The comparison yields two descriptive quantities. The first is the
+**anchor-attributable fraction**, the ratio of Variant E's above-chance AUROC
+to Variant B's:
 
-$$\phi_{\text{anchor}} = \frac{\mathrm{AUROC}_E - 0.5}{\mathrm{AUROC}_B - 0.5},$$
+$$\phi_{\text{anchor}} = \frac{\mathrm{AUROC}_E - 0.5}{\mathrm{AUROC}_B - 0.5}.$$
 
-and the **label agreement** statistics report how far the alternative labels
-move the onsets themselves.
+It compares discrimination on two different outcomes and is not a causal share.
+A value near 1 means that a model predicting the treatment anchor alone
+discriminates about as well as one predicting the full Sepsis-3 label. A value
+above 1 means it discriminates slightly better, not that treatment explains
+more than all of Variant B's performance. The ratio would become unstable if
+Variant B's AUROC approached 0.5, which it does not here, and its bootstrap
+interval is reported in `12_inference.Rmd`. The second quantity is the set of
+**label agreement** statistics in the next section, which measure how far the
+alternative labels move the onsets.
 
 ```{r anchor-attribution}
 step("Label-anchor attribution (Protocol Amendment 2)...")
@@ -417,11 +517,21 @@ if (is.null(alt_res)) {
 
 ## Label Agreement Between Definitions
 
-How far the alternative labels move the onsets, measured on the same stays:
-the share of stays each pair labels identically (Cohen's $\kappa$ for chance
-correction) and, among stays positive under both, the median shift in onset
-hour. A label that disagrees with Sepsis-3 about *which* patients deteriorate
-is a different construct, not a re-reading of the same one.
+Agreement with Variant B is measured on every stay in the cohort. A stay is
+positive under a label if its onset falls within the 72-hour panel horizon,
+because onsets beyond it never become events. For each variant the table gives
+the percentage of stays labelled the same as under Variant B, Cohen's $\kappa$,
+and the share of stays positive under Variant B that are also positive under
+the variant (`sensitivity_to_B`). Among the stays positive under both labels
+(`n_positive_both`), it also gives the median signed onset shift (variant minus
+Variant B), the percentage with the same onset hour, the median absolute shift
+and the interquartile range of the shift.
+
+Cohen's $\kappa$ corrects agreement for chance. When two labels differ greatly
+in prevalence, as Variants D and B do, the largest attainable $\kappa$ is
+limited, so $\kappa$ is read together with the counts of positive stays.
+Substantial disagreement means that the definitions identify different stays
+or different onset hours, and so define different prediction targets.
 
 ```{r label-agreement}
 # Onsets come from the person-hour tables where those exist, and otherwise from
@@ -503,32 +613,46 @@ if (length(ons) < 2 || is.null(load_onsets("B"))) {
 
 ## The Pre-Treatment Window (H3), Analytically and Empirically
 
-H3 asks what happens when evaluation is restricted to the hours before the first
-antibiotic or culture. Under variants A--C the answer is fixed before any data
-are seen, and it is worth stating the argument as a proposition rather than as a
-result.
+H3 concerns evaluation restricted to the hours before the first antibiotic or
+culture. Under Variants A--C the number of onsets in that window follows from
+the onset definition alone, so it is established analytically.
 
-> **Proposition.** Let $t_{\text{anchor}}$ be the first qualifying antibiotic
-> order or culture draw of the admission and let $t_{\text{onset}}$ be the onset
-> assigned by variants A, B, C or E. Then $t_{\text{onset}} \geq t_{\text{anchor}}$
+> **Proposition.** Let $t_{\text{anchor}}$ be the earlier of the admission's
+> first antibiotic and first culture, and let $t_{\text{onset}}$ be the onset
+> assigned by Variant A, B, C or E. Then $t_{\text{onset}} \geq t_{\text{anchor}}$
 > for every labelled stay, so the pre-anchor window contains no onsets.
 >
-> *Proof.* Under E, $t_{\text{onset}} = t_{\text{susp}}$, and $t_{\text{susp}}$
-> is by definition the later of a qualifying antibiotic-culture pair, hence
-> $t_{\text{susp}} \geq t_{\text{anchor}}$. Under A, B and C the SOFA criterion
-> gates *membership* only; the assigned onset is still $t_{\text{susp}}$. The
-> inequality therefore carries over unchanged. $\square$
+> *Proof.* Under Variant E, $t_{\text{onset}} = t_{\text{susp}}$, the later of
+> the two timestamps in a qualifying antibiotic-culture pair. Neither member of
+> the pair can be earlier than the first event of its kind, so
+> $t_{\text{susp}} \geq t_{\text{anchor}}$. Under Variants A, B and C the SOFA
+> criterion decides whether a stay is labelled, but the assigned onset is still
+> $t_{\text{susp}}$, so the inequality holds there too. $\square$
 >
-> The observed zero is a consequence of this implementation of the label, not a
-> statement about MIMIC-IV.
+> The proposition concerns this implementation of the labels, and in
+> particular its timing of onset at the later member of the pair. The absence
+> of pre-anchor onsets is a structural consequence of that onset rule, not a
+> property of the MIMIC-IV population.
 
-The empirical question is what a definition *without* that property records in
-the same window. Two variants supply it. Variant D drops the infection anchor
-entirely. Variant F (Protocol Amendment 4) keeps the Sepsis-3 conjunction exactly
---- identical membership to Variant B --- and restores only the standard
-$\min(t_{\text{susp}}, t_{\text{SOFA}})$ timing of Seymour et al. (2016) and the
-PhysioNet/CinC 2019 Challenge, under which an onset may precede the anchor
-whenever the organ-dysfunction rise is detected first.
+H3 therefore cannot be tested as pre-registered under Variants A--C. The
+pre-treatment window is instead examined under definitions that allow an onset
+before the anchor. Variant D drops the infection anchor. Variant F (Protocol
+Amendment 4, post-hoc) labels the same stays as Variant B cohort-wide and
+changes only the onset time, to $\min(t_{\text{susp}}, t_{\text{SOFA}})$, the
+rule used by Seymour et al. (2016) and the PhysioNet/CinC 2019 Challenge. Under
+that rule an onset precedes the anchor whenever the rise in organ dysfunction
+is detected first. Variant F is an exploratory counterpart to H3, not a
+redefinition of it.
+
+The table gives, for the primary model and the GBT, the person-hours and onsets
+in the pre-treatment window and the AUROC there. The column `structural_zero`
+marks the variants whose zero follows from the proposition. The pre-treatment
+person-hours differ slightly between Variants B and F because the panel holds
+each stay's at-risk hours only, up to and including onset. When Variant F moves
+an onset earlier, that stay's at-risk hours end earlier. Variant F's AUROC in
+this window rests on few onsets and carries no interval here, so it is
+descriptive. The lines printed below the table summarise the pre-treatment
+onsets and Variant F's onset shift from `03_person_hours.Rmd`.
 
 ```{r pretreatment-onsets}
 step("Pre-treatment (treatment-anchored) window across all label variants...")
@@ -613,24 +737,35 @@ if (!is.null(attrib) && nrow(attrib) > 0) {
 
 ## Reading the Attribution
 
-Three things follow, and only the third is empirical rather than definitional.
+The comparison supports three observations. The first two follow from how the
+labels are defined, and only the third depends on the data.
 
-1. **Variant E is not a sepsis model.** Its label is the moment a clinician
-   sent a culture and started antibiotics. Whatever discrimination it achieves
-   is discrimination about treatment behaviour, and $\phi_{\text{anchor}}$
-   states how much of Variant B's apparent skill that behaviour already
-   accounts for.
-2. **Variant D is not directly comparable to B on AUROC.** Its label is a
-   threshold function of recorded physiology, and five of the six SOFA
-   components (all but PaO$_2$/FiO$_2$) are model inputs, so a high AUROC would
-   be partly self-fulfilling. The comparison that carries information is not
-   the level but whether the label changes *which* patients are flagged, which
-   the agreement table answers.
-3. **The label-sensitivity finding survives only to the extent that D and B
-   disagree.** If a treatment-independent label picks out substantially
-   different patients at substantially different hours, then label choice is a
-   real constraint on what a sepsis model can be trained to do, not an artefact
-   of how one definition is read.
+1. **Variant E's label is not a sepsis label.** Its onset is the
+   suspected-infection time derived from the culture and antibiotic records.
+   Discrimination under Variant E is discrimination of that treatment-related
+   anchor, which reflects both the patient's condition and clinical practice.
+   $\phi_{\text{anchor}}$ therefore compares how well the anchor and the full
+   Sepsis-3 label can be predicted. It is not the share of Variant B's
+   discrimination that treatment decisions explain.
+2. **Variant D's AUROC does not estimate performance on Variant B's target.**
+   Its label is a threshold on recorded physiology, and five of the six SOFA
+   components (all but PaO$_2$/FiO$_2$) are also model inputs, so its AUROC is
+   partly circular. The informative comparison is whether the label changes
+   which stays are flagged and when, which the agreement table shows.
+3. **The importance of label choice depends on how far Variants D and B
+   disagree.** If a label without a treatment timestamp identifies
+   substantially different stays at substantially different hours, then the
+   choice of label changes the prediction target itself, not only the way one
+   definition is operationalised.
+
+The output below prints the primary model's AUROC under Variants B, E and D,
+and the agreement between Variants D and B. In that line, "B's septic stays"
+means the stays positive under Variant B. Cohen's $\kappa$ is computed over all
+stays, whereas the onset shift is computed only over the stays positive under
+both labels. A median signed shift of 0 hours is therefore compatible with a
+low $\kappa$. The agreement table shows that the two labels assign the same
+onset hour to few of those stays, and that the shifts spread in both
+directions.
 
 ```{r attribution-summary}
 if (!is.null(attrib)) {
