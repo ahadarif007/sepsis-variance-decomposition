@@ -27,10 +27,9 @@ $\infty$: no alert was optimal. Benchmark burden: 1.4~\cite{moor2023review}.\par
         \pcHSixAbsEst{} AUROC (H6). Both had higher AUROC than Cox, NEWS2, SIRS
         and qSOFA.
   \item Primary-model calibration slope: \pcCalibSlopePrimaryB{} (ideal = 1).
-  \item AUROC in the mid-to-high 0.7s did not translate into a plausible
-        alert burden: the best utility of the primary model and GBT required
+  \item At their best utility, the primary model and GBT required
         \pcUtilityOptBurdenPrimaryB{} and \pcUtilityOptBurdenGbtB{} false alerts
-        per true alert.
+        per true alert, against a benchmark of 1.4.
 \end{itemize}
 \end{frame}
 
@@ -88,23 +87,30 @@ H6 & GBT $-$ primary AUROC          & \pcHSixEst & [\pcHSixCiLo, \pcHSixCiHi] & 
 \bottomrule
 \end{tabular}
 \end{center}
-{\tiny $^{\dagger}$Post-hoc substitute: internal utility was too close to zero
-for a proportional decline to be defined, so an AUROC contrast takes its
-place.
-$^{\ddagger}$Tests the pre-registered interval null $|\theta| \leq 0.02$;
-non-inferiority is read from the confidence interval, not from this p-value.\par}
+{\tiny $^{\dagger}$Post-hoc substitute estimand.
+$^{\ddagger}$H6 places $|\theta| \leq 0.02$ in the null, so this p-value tests
+H6 itself; non-inferiority is read from the CI.\par}
 
-\vspace{2pt}
-\begin{itemize}\itemsep0pt\footnotesize
-  \item \textbf{H1 not confirmed:} model spread \pcSpreadModelClass{} vs label
-        spread \pcSpreadLabel; opposite direction, interval excludes zero.
-  \item \textbf{H4 not confirmed:} random-split AUROC was \pcHFourAbsEst{}
+\vspace{4pt}
+\begin{alertblock}{}
+  \footnotesize \textbf{H1}: model spread \pcSpreadModelClass{} exceeds
+  label spread \pcSpreadLabel.\quad \textbf{H6}: upper limit \pcHSixCiHi{}
+  $< +0.02$.
+\end{alertblock}
+
+\note{\small
+\begin{itemize}
+  \item H5: internal utility was too close to zero for a proportional decline
+        to be defined, so an AUROC contrast takes its place.
+  \item H6 tests the pre-registered interval null; non-inferiority is read
+        from the confidence interval, not from this p-value.
+  \item H1 not confirmed: opposite direction, interval excludes zero.
+  \item H4 not confirmed: random-split AUROC was \pcHFourAbsEst{}
         \emph{lower} than temporal (\pcAurocRandomPrimaryB{} vs
         \pcAurocPrimaryB); the interval includes zero.
-  \item \textbf{H6:} GBT $-$ primary $= \pcHSixEst$; the upper limit
-        (\pcHSixCiHi) lies below the $+0.02$ margin, supporting one-sided
-        \textbf{non-inferiority}, not two-sided equivalence.
-\end{itemize}
+  \item H6: the upper limit lies below the $+0.02$ margin, supporting
+        one-sided non-inferiority, not two-sided equivalence.
+\end{itemize}}
 \end{frame}
 
 
@@ -113,42 +119,50 @@ non-inferiority is read from the confidence interval, not from this p-value.\par
 % =============================================================================
 \begin{frame}{VI. Results: Why H3 Was Not Evaluable}
 \vspace*{0pt}%
-{\footnotesize Status: \notevaluable. The pre-registered onset rule produced no
-pre-treatment onsets, so the contrast could not be formed.\par}
+{\footnotesize Status: \notevaluable\par}
 \begin{block}{Structural reason}
-  \footnotesize In Variants A, B, C and E, onset is assigned to the
-  \emph{later} event of the antibiotic--culture pair, so onset cannot precede
-  the treatment anchor. The window is empty \textbf{by definition}, not
-  because no events were observed.
+  \footnotesize Onset is the \emph{later} event of the antibiotic--culture
+  pair, so it cannot precede treatment: the window is empty \textbf{by
+  definition}.
 \end{block}
 
 \vspace{2pt}
 \begin{center}\tablestyle\footnotesize
 \begin{tabular}{llrrl}
 \toprule
-\textbf{Var} & \textbf{Label} & \textbf{Pre-treatment person-h}
+\textbf{Var} & \textbf{Label} & \textbf{Pre-treatment person-hours}
   & \textbf{Onsets} & \textbf{AUROC (primary / GBT)} \\
 \midrule
-B & Seymour-Std   & \pcPreTreatPersonHoursVarB & \textbf{\pcPreTreatOnsetsVarB} & undefined \\
+B & Seymour-Std   & \pcPreTreatPersonHoursVarB & \textbf{\pcPreTreatOnsetsVarB} & not estimable \\
 F & Sepsis-3 Early-Onset & \pcPreTreatPersonHoursVarF & \textbf{\pcPreTreatOnsetsVarF}
   & \pcPreTreatAurocPrimaryF{} / \pcPreTreatAurocGbtF \\
-D & Deterioration & \pcPreTreatPersonHoursVarD & \textbf{\pcPreTreatOnsetsVarD}
+D & Deterioration$^{*}$ & \pcPreTreatPersonHoursVarD & \textbf{\pcPreTreatOnsetsVarD}
   & \pcPreTreatAurocPrimaryD{} / \pcPreTreatAurocGbtD \\
 \bottomrule
 \end{tabular}
 \end{center}
 
 \begin{itemize}\itemsep1pt\footnotesize
-  \item \textbf{Variant F} (post-hoc) keeps B's cases but uses the standard
-        earlier onset, $\min(t_{\text{susp}}, t_{\text{SOFA}})$. It moves
-        \pcFNMovedEarlier{} of \pcFNOnsets{} onsets earlier (median shift
-        \pcFMedianShiftH\,h), \pcFNBeforeAnchorTest{} of them into the
-        test-set pre-treatment window.
-  \item The concern about treatment-dependent case
-        membership~\cite{kamran2024evaluation} remains relevant; its effect on
-        onset timing depends on the onset rule. These AUROCs assess detection
-        at the assigned onset, not advance prediction.
+  \item \textbf{F} (post-hoc): standard onset $\min(t_{\text{susp}},
+        t_{\text{SOFA}})$ moves \pcFNMovedEarlier{} of \pcFNOnsets{} onsets
+        earlier, \pcFNBeforeAnchorTest{} into the test window.
 \end{itemize}
+{\tiny $^{*}$D's SOFA components overlap the model inputs, so its AUROC is not
+an independent result.\par}
+
+\note{\small
+\begin{itemize}
+  \item The pre-registered onset rule produced no pre-treatment onsets, so
+        the contrast could not be formed.
+  \item This holds in Variants A, B, C and E: onset is assigned to the later
+        event of the pair, so the window is empty by definition, not because
+        no events were observed.
+  \item Variant F keeps B's cases; median onset shift \pcFMedianShiftH\,h.
+  \item The concern about treatment-dependent case membership remains
+        relevant; its effect on onset timing depends on the onset rule.
+  \item These AUROCs assess detection at the assigned onset, not advance
+        prediction.
+\end{itemize}}
 \end{frame}
 
 
@@ -174,8 +188,8 @@ D & Deterioration & \pcPreTreatPersonHoursVarD & \textbf{\pcPreTreatOnsetsVarD}
         \pcPhiAnchorCiHiGbt].
   \item \textbf{D (Deterioration)} removes treatment timestamps; agreement
         with B is low ($\kappa = \pcKappaVsBD$). Five of its six SOFA
-        components are model inputs, so its AUROC is partly
-        self-fulfilling.
+        components are model inputs, so its AUROC is not an
+        independent result.
   \item \textbf{F (standard onset timing):} primary AUROC
         \pcAurocPrimaryB{} $\rightarrow$ \pcAltAurocFullPrimaryF; the GBT
         change was small and not statistically detectable
@@ -197,17 +211,18 @@ D & Deterioration & \pcPreTreatPersonHoursVarD & \textbf{\pcPreTreatOnsetsVarD}
 % =============================================================================
 \begin{frame}{VI. Results: Clinical Utility Across Alert Thresholds}
 \begin{center}
-  \includegraphics[width=\textwidth,height=0.53\textheight,
+  \includegraphics[width=\textwidth,height=0.54\textheight,
                    keepaspectratio]{images/07_utility_threshold_sweep.png}
 \end{center}
 \vspace{-4pt}
 \begin{itemize}\itemsep1pt\footnotesize
-  \item At the 0.5 threshold the primary model issued no alerts, so its
-        utility was \pcUtilityPrimaryB.
-  \item Across all models and thresholds, the highest Variant B utility was
-        \textbf{\pcUtilityMaxGbtB{} (GBT)}, at \textbf{\pcUtilityOptBurdenGbtB{}
-        false alerts per true alert} (benchmark: 1.4~\cite{moor2023review});
-        under any pre-registered variant, \pcUtilityMaxGbtC{} (GBT, C).
+  \item At the 0.5 threshold, the primary model issued no alerts: utility
+        \pcUtilityPrimaryB.
+  \item Highest Variant B utility: \textbf{\pcUtilityMaxGbtB{} (GBT)}, at
+        \textbf{\pcUtilityOptBurdenGbtB{} false alerts per true alert}
+        (benchmark: 1.4~\cite{moor2023review}).
+  \item Highest under any pre-registered variant: \pcUtilityMaxGbtC{} (GBT,
+        C).
   \item Thresholds were selected on the test set, so these maxima are
         optimistic.
 \end{itemize}
@@ -221,8 +236,10 @@ D & Deterioration & \pcPreTreatPersonHoursVarD & \textbf{\pcPreTreatOnsetsVarD}
 \begin{center}\tablestyle\footnotesize
 \begin{tabular}{lrrrrr}
 \toprule
-\textbf{Var} & \textbf{Internal (primary)} & \textbf{eICU primary}
-  & \textbf{eICU GBT} & \textbf{eICU NEWS2} & \textbf{eICU events} \\
+ & \textbf{MIMIC-IV} & \multicolumn{4}{c}{\textbf{eICU-CRD}} \\
+\cmidrule(lr){2-2}\cmidrule(lr){3-6}
+\textbf{Var} & \textbf{Primary model} & \textbf{Primary model}
+  & \textbf{GBT} & \textbf{NEWS2} & \textbf{Events} \\
 \midrule
 A & \pcAurocPrimaryA & \pcExtAurocPrimaryA & \pcExtAurocGbtA & \pcExtAurocNewsA & \pcExtNEventsA \\
 B & \pcAurocPrimaryB & \pcExtAurocPrimaryB & \pcExtAurocGbtB & \pcExtAurocNewsB & \pcExtNEventsB \\
@@ -240,10 +257,10 @@ retraining.\par}
         \pcExtMinEvents-event interpretability floor.
   \item H5 substitute, internal $-$ external AUROC $= \pcHFiveEst$
         [\pcHFiveCiLo, \pcHFiveCiHi]: the point estimate is lower externally,
-        but the interval includes zero, so the contrast is inconclusive. The
-        source of the difference was not identified.
+        but the interval includes zero, so the contrast is inconclusive. Its
+        sources were not decomposed.
   \item Antibiotic-only (\pcExtAbxNEventsB{} events) and Variant D
-        (\pcExtAltNEvents{} events) analyses had more events but measure
+        (\pcExtAltNEvents{} events) analyses had more events but measured
         different targets; both showed lower external discrimination.
 \end{itemize}
 \end{frame}
@@ -253,44 +270,49 @@ retraining.\par}
 %  VI. RESULTS: H2, ABLATION AND EQUITY      
 % =============================================================================
 \begin{frame}{VI. Results: Coefficient Instability and Subgroup Analysis}
-\begin{atucols}[t]
-\begin{column}{0.49\textwidth}
-\begin{block}{H2: coefficient instability (descriptive)}
-\begin{itemize}\itemsep1pt\scriptsize
-  \item \pcHTwoEst{} of \pcHTwoNTerms{} covariates met the instability rule:
-        \pcHTwoNSign{} by sign, \pcHTwoNMag{} by $\geq 2$-fold magnitude
-        (categories overlap).
-  \item \textbf{After accounting for estimation uncertainty, \pcHTwoNRobust{}
-        remained unstable, all test-order
-        indicators}~\cite{lauritsen2021framing}. The raw count is an upper
-        bound on the instability present.
-  \item \textbf{Ablation} (post-hoc): removing the \pcAblNDropped{}
-        action-derived covariates reduced instability from \pcHTwoEst/\pcHTwoNTerms{}
-        to \pcAblHTwoNUnstable/\pcAblHTwoNTerms{} and changed AUROC by
-        \pcAblDeltaAurocPrimaryB{} \pcAblDeltaCiPrimaryB{} (primary, B):
-        small, but not absent.
-\end{itemize}
-\end{block}
-\end{column}
-\begin{column}{0.49\textwidth}
-\begin{block}{Label sensitivity by recorded subgroup (exploratory)}
-\begin{itemize}\itemsep1pt\scriptsize
-  \item Subgroup AUROC: \pcEquityNContrastsEOne{} contrasts met the
-        100-event requirement; \textbf{none remained significant} after BH
-        correction.
-  \item Only two race categories met it, one of them \emph{Unknown}, so no
-        adequately powered comparison between two recorded categories was
-        available.
-  \item Label sensitivity: the only racial strata above the White reference
-        are \emph{Unknown} ($+\pcLabelSensUnknownPp$\,pp,
-        $q = \pcLabelSensUnknownQ$) and \emph{Unable to obtain}
-        ($+\pcLabelSensUnablePp$\,pp, $q = \pcLabelSensUnableQ$), both
-        \textbf{missingness categories}.
-  \item This may reflect record completeness, a mechanism not
-        tested~\cite{wang2022equity}; no stratum recording an actual answer
-        differs from the reference.
-\end{itemize}
-\end{block}
-\end{column}
-\end{atucols}
+\begin{center}\renewcommand{\arraystretch}{1.2}\small
+\begin{tabular}{p{7.8cm}l}
+\toprule
+\multicolumn{2}{l}{\textbf{H2: coefficient instability} (descriptive)} \\
+\midrule
+Covariates meeting the rule
+  & \pcHTwoEst{} of \pcHTwoNTerms{} (\pcHTwoNSign{} sign, \pcHTwoNMag{} magnitude; overlap) \\
+Still unstable after estimation uncertainty
+  & \textbf{\pcHTwoNRobust{}, all test-order indicators} \\
+Ablation: drop \pcAblNDropped{} action covariates (post-hoc)
+  & \pcAblHTwoNUnstable{} of \pcAblHTwoNTerms{} unstable;
+    $\Delta$AUROC \pcAblDeltaAurocPrimaryB \\
+\midrule
+\multicolumn{2}{l}{\textbf{Subgroup analysis} (exploratory)} \\
+\midrule
+Subgroup AUROC contrasts with $\geq 100$ events
+  & \pcEquityNContrastsEOne{}; \textbf{none significant} (BH) \\
+Label sensitivity above the White reference
+  & \emph{Unknown}, \emph{Unable to obtain} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\vspace{4pt}
+\begin{alertblock}{}
+  \small After accounting for uncertainty, instability remained only in
+  test-order indicators~\cite{lauritsen2021framing}; label-sensitivity
+  differences were limited to missingness categories~\cite{wang2022equity}.
+\end{alertblock}
+
+\note{\small
+\begin{itemize}
+  \item H2 categories overlap. The raw count is an upper bound on the
+        instability present.
+  \item Ablation changed AUROC by \pcAblDeltaAurocPrimaryB{}
+        \pcAblDeltaCiPrimaryB{} (primary, B): small, but not absent.
+  \item Only two race categories met the 100-event requirement, one of them
+        \emph{Unknown}, so no adequately powered comparison between two
+        recorded categories was available.
+  \item Unknown $+\pcLabelSensUnknownPp$\,pp ($q = \pcLabelSensUnknownQ$);
+        Unable to obtain $+\pcLabelSensUnablePp$\,pp
+        ($q = \pcLabelSensUnableQ$).
+  \item This may reflect record completeness, a mechanism not tested; no
+        stratum recording an actual answer differs from the reference.
+\end{itemize}}
 \end{frame}

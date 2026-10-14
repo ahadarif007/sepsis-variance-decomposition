@@ -46,24 +46,21 @@ C & Liberal     & 72\,h & 72\,h & 48\,h & 24\,h & Rolling 24\,h & \pcNOnsetsC{} 
 \bottomrule
 \end{tabular}
 \end{center}
-{\tiny ABX: antibiotic; cx: culture; SOFA$-$/SOFA$+$: permitted hours
-before/after suspected infection for a $\geq 2$-point SOFA increase.\par}
+{\tiny ABX: antibiotic; cx: culture; SOFA$-$/SOFA$+$: hours before/after
+suspected infection.\par}
 
 \vspace{2pt}
 \begin{atucols}[c]
 \begin{column}{0.62\textwidth}
 \begin{itemize}\itemsep2pt\footnotesize
-  \item All definitions require \textbf{suspected infection} (antibiotic
-        paired with a culture) \textbf{plus} a $\geq 2$-point SOFA
-        increase~\cite{singer2016sepsis3,cohen2024subtle}.
-  \item \textbf{B is primary}; A and C are pre-specified alternatives.
-  \item Onset is assigned at suspected infection, $t_{\text{susp}}$. SOFA
-        determines case membership, not onset time.
+  \item All three: suspected infection $+$ $\geq 2$-point SOFA
+        rise~\cite{singer2016sepsis3}.
+  \item \textbf{Variant B is primary.}
+  \item Onset $= t_{\text{susp}}$; SOFA sets membership, not timing.
 \end{itemize}
 \vspace{2pt}
 \begin{alertblock}{}
-  \footnotesize A and B have similar prevalence but low case agreement:
-  $\kappa = \pcKappaVsBA$.
+  \footnotesize Similar prevalence, low agreement: $\kappa_{A,B} = \pcKappaVsBA$.
 \end{alertblock}
 \end{column}
 \begin{column}{0.36\textwidth}
@@ -72,4 +69,15 @@ before/after suspected infection for a $\geq 2$-point SOFA increase.\par}
                    keepaspectratio]{images/fig2.2_label_variance_concept.pdf}
 \end{column}
 \end{atucols}
+
+\note{\small
+\begin{itemize}
+  \item Suspected infection is an antibiotic paired with a culture; SOFA$-$
+        and SOFA$+$ are the hours before and after suspected infection in
+        which a $\geq 2$-point SOFA increase is accepted.
+  \item A and C are pre-specified alternatives to the primary definition B.
+  \item Onset is assigned at suspected infection, $t_{\text{susp}}$. SOFA
+        determines case membership, not onset time.
+  \item A and B have similar prevalence but low case agreement.
+\end{itemize}}
 \end{frame}

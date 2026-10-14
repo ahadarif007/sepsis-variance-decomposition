@@ -6,13 +6,13 @@
   \footnotesize Multinomial pooled logistic regression over person-hours
   (sepsis / discharge / death), with a natural-spline baseline in elapsed
   hours~\cite{dagostino1990pooled,heyard2019dynamic}. A small ridge penalty
-  addresses complete separation.
+  was used because the unpenalised model was completely separated.
 \end{block}
 
 \vspace{2pt}
-{\footnotesize\textbf{Comparators:} GBT (XGBoost), Cox regression, NEWS2,
-qSOFA and SIRS~\cite{evans2021ssc}. GBT uses fixed hyperparameters and early
-stopping on a 15\% stay-level training holdout.\par}
+{\footnotesize\textbf{Comparators:} gradient-boosted trees (GBT, XGBoost), Cox
+regression, NEWS2, qSOFA and SIRS~\cite{evans2021ssc}. GBT used fixed
+hyperparameters and early stopping on a 15\% stay-level training holdout.\par}
 
 \vspace{4pt}
 \begin{center}\renewcommand{\arraystretch}{1.12}\scriptsize
@@ -27,7 +27,7 @@ External             & eICU-CRD v2.0, no retraining~\cite{pollard2018eicu}      
 \bottomrule
 \end{tabular}
 \end{center}
-{\scriptsize All splits are patient-level, with no train--test overlap.\par}
+{\scriptsize All splits were patient-level, with no train--test overlap.\par}
 \end{frame}
 
 
@@ -50,7 +50,7 @@ score}~\cite{reyna2020utility}
         false alerts.
   \item Reported at the 0.5 threshold \textbf{and} at the best point on a
         60-point alert-rate grid.
-  \item Alert burden: false alerts per true alert; published benchmark =
+  \item Alert burden: false alerts per true alert; published benchmark:
         1.4~\cite{moor2023review}.
   \item AUROC, AUPRC and calibration are reported alongside.
 \end{itemize}
@@ -63,8 +63,9 @@ score}~\cite{reyna2020utility}
   \item Confirmatory family: Holm correction across H1--H6 (FWER 0.05).
         Exploratory analyses: Benjamini--Hochberg.
   \item Post-hoc amendments labelled explicitly, including the inference
-        plan itself (Amendment 1); TRIPOD+AI and PROBAST+AI
-        reporting~\cite{collins2024tripodai,moons2025probastai}.
+        plan itself (Amendment 1).
+  \item TRIPOD+AI reporting~\cite{collins2024tripodai}; PROBAST+AI risk of
+        bias~\cite{moons2025probastai}.
 \end{itemize}
 \end{exampleblock}
 \end{frame}

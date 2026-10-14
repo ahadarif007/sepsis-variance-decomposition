@@ -4,30 +4,35 @@
 \begin{frame}{III. Research Question and Pre-Registered Hypotheses}
 \begin{block}{Research Question}
   \small How much of the variation in reported performance comes from the
-  model, and how much from how sepsis is defined, how data are split, when
-  prediction is made relative to treatment, and which metric is reported?\\[2pt]
-  {\footnotesize\color{MidGrey} Setting: real-time sepsis detection in
-  MIMIC-IV~\cite{johnson2023mimiciv}.}
+  model, and how much from label, split, timing and metric?
 \end{block}
 
-\begin{itemize}\itemsep1pt\footnotesize
-  \item \textbf{H1 Label dominance:} label variation $\geq$ model variation in
-        AUROC.
-  \item \textbf{H2 Coefficient instability:} $\geq 1$ coefficient changes sign
-        or by $\geq 2$-fold across labels.
-  \item \textbf{H3 Treatment leakage:} pre-treatment restriction reduces AUROC
-        by $\geq 0.03$.
-  \item \textbf{H4 Split optimism:} temporal AUROC is $\geq 0.02$ below
-        random-split AUROC.
-  \item \textbf{H5 Metric divergence:} utility declines proportionally more
-        than AUROC from internal to external validation.
-  \item \textbf{H6 Model-class null:} GBT improves AUROC over the primary model
-        by no more than 0.02.
-\end{itemize}
-
 \vspace{2pt}
-{\scriptsize\textbf{Multiplicity:} Holm correction across H1--H6.
-\textbf{Protocol note:} H2 and H3 yield no p-value; the reported H5 analysis
-uses a post-hoc substitute estimand.
-\textbf{Estimand:} current-hour onset detection, not advance prediction.\par}
+\begin{center}\renewcommand{\arraystretch}{1.12}\small
+\begin{tabular}{lll}
+\toprule
+\textbf{H} & \textbf{Name} & \textbf{Pre-registered claim} \\
+\midrule
+H1 & Label dominance         & label spread $\geq$ model spread (AUROC) \\
+H2 & Coefficient instability & $\geq 1$ sign flip or $\geq 2$-fold change \\
+H3 & Treatment leakage       & pre-treatment AUROC lower by $\geq 0.03$ \\
+H4 & Split optimism          & temporal AUROC $\geq 0.02$ below random \\
+H5 & Metric divergence       & utility falls more than AUROC externally \\
+H6 & Model-class null        & GBT $-$ primary AUROC $\leq 0.02$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+{\scriptsize Holm correction across H1--H6.\quad Estimand: current-hour onset
+detection, not advance prediction.\par}
+
+\note{\small
+\begin{itemize}
+  \item Setting: real-time sepsis detection in MIMIC-IV.
+  \item Full question: how much variation comes from the model, and how much
+        from how sepsis is defined, how data are split, when prediction is
+        made relative to treatment, and which metric is reported.
+  \item H2 and H3 yield no p-value. The reported H5 analysis uses a post-hoc
+        substitute estimand.
+\end{itemize}}
 \end{frame}
