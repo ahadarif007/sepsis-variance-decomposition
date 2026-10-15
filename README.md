@@ -47,8 +47,10 @@ separately from A–C.
 ```
 sepsis-variance-decomposition/
 ├── sepsis/
-│   ├── project/        ← analysis pipeline (R, plus one Python script)
-│   └── thesis/         ← thesis source (LaTeX)
+│   ├── project/          ← analysis pipeline (R, plus one Python script)
+│   ├── thesis/           ← thesis source (LaTeX)
+│   ├── presentation/     ← presentation source (LaTeX)
+│   └── screencasts/      ← screencast source (Video and Markdown)
 └── data/               ← not tracked; populate after obtaining access (see below)
 ```
 
