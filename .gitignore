@@ -111,3 +111,8 @@ sepsis/feedback/
 sepsis/lr-rp/
 
 
+
+# ---- Signature ----
+# The declaration's signature image is needed to build the PDF but is kept
+# out of the public repository.
+sepsis/thesis/images/signature.png
