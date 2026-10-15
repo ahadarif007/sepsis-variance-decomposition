@@ -36,9 +36,40 @@ definitional from empirical variation in the label. They are analysed
 separately from A–C.
 
 > [!IMPORTANT]
-> This repository contains code only. No MIMIC-IV or eICU-CRD records, derived
-> tables or fitted models are included, and the underlying data cannot be
-> redistributed under the PhysioNet data use agreement.
+> This repository contains no patient data. No MIMIC-IV or eICU-CRD records,
+> derived tables or fitted models are included, and the underlying data cannot
+> be redistributed under the PhysioNet data use agreement.
+
+---
+
+## Features
+
+- **Staged R pipeline.** Twelve numbered R Markdown stages, each of which can be
+  run on its own and renders its own report.
+- **Configuration-driven execution.** Label parameters, predictors, seeds and
+  bootstrap settings are set in `config.R`. The environment variables
+  `V2_VARIANTS` and `V2_ARMS` restrict a run to chosen label variants or fitting
+  arms without editing code.
+- **Automated dependency checking.** `install_requirements.R --check` reports
+  any installed R package whose version differs from the recorded manifest.
+- **Reusable functions.** `utils.R` provides data loading, Parquet storage,
+  metrics, the bootstrap and model checks. `clinical_scores.R` provides SOFA,
+  NEWS2, qSOFA and SIRS.
+- **Shell-based orchestration.** `run_pipeline.sh` runs all stages, or a named
+  subset, in order. It ends with a separate exit code for each kind of failure.
+- **Parquet intermediate storage.** Each stage writes its intermediate data as
+  Parquet for the next stage to read.
+- **Cross-language metric validation.** `utility_score.py` reimplements the
+  PhysioNet Utility Score in Python and is checked against the R version in
+  stage 07.
+- **Logging and consistency checks.** Each stage writes its own log, the full run
+  writes a combined log, and three checker scripts test the results and the
+  thesis.
+- **Automated transfer of results into LaTeX.** `thesis_constants.R` writes the
+  estimated results into the thesis as LaTeX macros and generates the larger
+  tables whole.
+- **Guarded thesis build.** `build.sh` refuses to compile the thesis if a chapter
+  uses a value the pipeline did not produce.
 
 ---
 
@@ -48,9 +79,9 @@ separately from A–C.
 sepsis-variance-decomposition/
 ├── sepsis/
 │   ├── project/          ← analysis pipeline (R, plus one Python script)
-│   ├── thesis/           ← thesis source (LaTeX)
+│   ├── thesis/           ← thesis source (LaTeX) and compiled PDF
 │   ├── presentation/     ← presentation source (LaTeX)
-│   └── screencasts/      ← screencast source (Video and Markdown)
+│   └── Screencast/       ← screencast script and video
 └── data/               ← not tracked; populate after obtaining access (see below)
 ```
 
@@ -66,7 +97,10 @@ Internal development notes and review records are not included.
 | `clinical_scores.R` | SOFA, NEWS2, qSOFA and SIRS |
 | `01_setup.Rmd` … `12_inference.Rmd` | The twelve pipeline stages, in execution order |
 | `run_pipeline.sh` / `run_pipeline.R` | Runs all stages or a named subset |
-| `thesis_constants.R` | Writes every reported result into the thesis as a LaTeX macro |
+| `install_requirements.R` / `requirements.txt` | Installs or checks R packages against the recorded version manifest |
+| `requirements-python.txt` | Python dependency for `utility_score.py` |
+| `thesis_constants.R` | Writes the estimated results into the thesis as LaTeX macros and copies the figures |
+| `freeze.sh` | Runs the final pipeline from a clean, committed tree and stamps that commit into the thesis. It does not commit or tag |
 | `utility_score.py` | Independent Python implementation of the PhysioNet Utility Score, cross-checked against the R implementation in stage 07 |
 | `check_consistency.R` | Cross-checks the generated result tables against each other |
 | `check_thesis_numbers.R` | Checks the provenance of numbers written in the thesis source |
@@ -86,6 +120,18 @@ Internal development notes and review records are not included.
 | 10 | Equity analysis | 7 |
 | 11 | Clinical metrics: calibration, decision-curve analysis, operating points, lead time | 8 |
 | 12 | Inference: cluster bootstrap, Holm and Benjamini–Hochberg correction, and the analysis register (one row per reported test with its family and adjusted p-value) | 9 |
+
+### Pipeline outputs: `sepsis/project/output/`
+
+| Folder | Contents | In this repository |
+|---|---|---|
+| `processed_data/` | Intermediate data and result tables, mostly Parquet | No: derived from credentialed data |
+| `figures/` | Figures used in the thesis | Yes |
+| `pdf/` | One rendered report per stage, `01_setup.pdf` … `12_inference.pdf` | Yes |
+| `logs/` | One log per stage, plus `pipeline_run.log` for the full run | Yes |
+
+The stage reports and logs from the run that produced the reported results can
+be read without data access.
 
 ---
 
@@ -276,8 +322,8 @@ throughout, including its prohibitions on redistribution and on attempted
 re-identification. The thesis (Section 3, Ethical Considerations) gives the
 details.
 
-`.gitignore` excludes `data/` and the pipeline's output directory from version
-control. Anyone running the pipeline is responsible for storing the source data
+`.gitignore` excludes `data/` and the pipeline's `processed_data/` directory
+from version control. Anyone running the pipeline is responsible for storing the source data
 as their own data use agreement requires.
 
 ---
