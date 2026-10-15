@@ -11,7 +11,7 @@ data/
 processed_data/
 
 # Project-specific outputs
-sepsis/project/output/
+sepsis/project/output/processed_data
 
 # ---- R ----
 .Rhistory
