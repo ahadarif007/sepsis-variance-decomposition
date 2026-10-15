@@ -71,8 +71,7 @@ coverage.xml
 htmlcov/
 
 # ---- Logs and runtime files ----
-*.log
-logs/
+#*.log (keeping log file intentionally)
 *.out
 
 # ---- OS-specific files ----

@@ -1,0 +1,99 @@
+
+
+processing file: 05_primary_model.Rmd
+1/16                         
+2/16 [setup]                 
+3/16                         
+4/16 [load-deps]             
+[04:56:06] [STEP] === Phase 3a: Primary discrete-time competing-risks model ===
+5/16                         
+6/16 [feature-set]           
+7/16                         
+8/16 [fit-primary-model]     
+9/16                         
+10/16 [run-all-variants]      
+[04:56:06] [INFO] Arms in this run: full, ablated
+[04:56:06] [STEP] --- Fitting primary model: Variant A (Narrow), arm = full ---
+[04:56:08] [INFO]   Fitting multinomial logistic regression (ridge decay = 0.0001)...
+[05:04:04] [INFO]   Computing cluster-robust SEs (clustered on stay_id)...
+[05:04:13] [INFO]   Cluster-robust SEs computed for 87 parameters (median SE 0.0105)
+[05:04:13] [INFO]   Predicting on test set (548,854 rows)...
+[05:04:14] [INFO] Saved 05_predictions_primary_A.parquet (548,854 rows, 11 cols, 5.6 MB)
+[05:04:14] [INFO] Saved 05_coef_table_primary_A.parquet (87 rows, 7 cols, 0.0 MB)
+[05:04:53] [STEP] --- Fitting primary model: Variant B (Seymour-Standard), arm = full ---
+[05:04:54] [INFO]   Fitting multinomial logistic regression (ridge decay = 0.0001)...
+[05:12:53] [INFO]   Computing cluster-robust SEs (clustered on stay_id)...
+[05:13:01] [INFO]   Cluster-robust SEs computed for 87 parameters (median SE 0.0105)
+[05:13:01] [INFO]   Predicting on test set (548,827 rows)...
+[05:13:02] [INFO] Saved 05_predictions_primary_B.parquet (548,827 rows, 11 cols, 5.6 MB)
+[05:13:02] [INFO] Saved 05_coef_table_primary_B.parquet (87 rows, 7 cols, 0.0 MB)
+[05:13:42] [STEP] --- Fitting primary model: Variant C (Liberal), arm = full ---
+[05:13:43] [INFO]   Fitting multinomial logistic regression (ridge decay = 0.0001)...
+[05:21:43] [INFO]   Computing cluster-robust SEs (clustered on stay_id)...
+[05:21:51] [INFO]   Cluster-robust SEs computed for 87 parameters (median SE 0.0111)
+[05:21:51] [INFO]   Predicting on test set (504,828 rows)...
+[05:21:52] [INFO] Saved 05_predictions_primary_C.parquet (504,828 rows, 11 cols, 5.2 MB)
+[05:21:52] [INFO] Saved 05_coef_table_primary_C.parquet (87 rows, 7 cols, 0.0 MB)
+[05:22:28] [STEP] --- Fitting primary model: Variant D (Deterioration), arm = full ---
+[05:22:29] [INFO]   Fitting multinomial logistic regression (ridge decay = 0.0001)...
+[05:28:00] [INFO]   Computing cluster-robust SEs (clustered on stay_id)...
+[05:28:05] [INFO]   Cluster-robust SEs computed for 87 parameters (median SE 0.0140)
+[05:28:05] [INFO]   Predicting on test set (397,603 rows)...
+[05:28:06] [INFO] Saved 05_predictions_primary_D.parquet (397,603 rows, 11 cols, 4.2 MB)
+[05:28:06] [INFO] Saved 05_coef_table_primary_D.parquet (87 rows, 7 cols, 0.0 MB)
+[05:28:34] [STEP] --- Fitting primary model: Variant E (Anchor-Only), arm = full ---
+[05:28:34] [INFO]   Fitting multinomial logistic regression (ridge decay = 0.0001)...
+[05:35:14] [INFO]   Computing cluster-robust SEs (clustered on stay_id)...
+[05:35:20] [INFO]   Cluster-robust SEs computed for 87 parameters (median SE 0.0118)
+[05:35:20] [INFO]   Predicting on test set (465,409 rows)...
+[05:35:21] [INFO] Saved 05_predictions_primary_E.parquet (465,409 rows, 11 cols, 4.8 MB)
+[05:35:21] [INFO] Saved 05_coef_table_primary_E.parquet (87 rows, 7 cols, 0.0 MB)
+[05:35:54] [STEP] --- Fitting primary model: Variant F (Sepsis-3 Early-Onset), arm = full ---
+[05:35:55] [INFO]   Fitting multinomial logistic regression (ridge decay = 0.0001)...
+[05:43:43] [INFO]   Computing cluster-robust SEs (clustered on stay_id)...
+[05:43:51] [INFO]   Cluster-robust SEs computed for 87 parameters (median SE 0.0105)
+[05:43:52] [INFO]   Predicting on test set (543,773 rows)...
+[05:43:52] [INFO] Saved 05_predictions_primary_F.parquet (543,773 rows, 11 cols, 5.5 MB)
+[05:43:52] [INFO] Saved 05_coef_table_primary_F.parquet (87 rows, 7 cols, 0.0 MB)
+[05:44:32] [STEP] --- Fitting primary model: Variant A (Narrow), arm = ablated ---
+[05:44:33] [INFO]   Fitting multinomial logistic regression (ridge decay = 0.0001)...
+[05:48:59] [INFO]   Computing cluster-robust SEs (clustered on stay_id)...
+[05:49:05] [INFO]   Cluster-robust SEs computed for 63 parameters (median SE 0.0034)
+[05:49:05] [INFO]   Predicting on test set (548,854 rows)...
+[05:49:06] [INFO] Saved 05_predictions_primary_ablated_A.parquet (548,854 rows, 11 cols, 5.6 MB)
+[05:49:06] [INFO] Saved 05_coef_table_primary_ablated_A.parquet (63 rows, 7 cols, 0.0 MB)
+[05:49:46] [STEP] --- Fitting primary model: Variant B (Seymour-Standard), arm = ablated ---
+[05:49:47] [INFO]   Fitting multinomial logistic regression (ridge decay = 0.0001)...
+[05:54:09] [INFO]   Computing cluster-robust SEs (clustered on stay_id)...
+[05:54:16] [INFO]   Cluster-robust SEs computed for 63 parameters (median SE 0.0035)
+[05:54:16] [INFO]   Predicting on test set (548,827 rows)...
+[05:54:16] [INFO] Saved 05_predictions_primary_ablated_B.parquet (548,827 rows, 11 cols, 5.6 MB)
+[05:54:16] [INFO] Saved 05_coef_table_primary_ablated_B.parquet (63 rows, 7 cols, 0.0 MB)
+[05:54:55] [STEP] --- Fitting primary model: Variant C (Liberal), arm = ablated ---
+[05:54:56] [INFO]   Fitting multinomial logistic regression (ridge decay = 0.0001)...
+[05:58:59] [INFO]   Computing cluster-robust SEs (clustered on stay_id)...
+[05:59:05] [INFO]   Cluster-robust SEs computed for 63 parameters (median SE 0.0034)
+[05:59:05] [INFO]   Predicting on test set (504,828 rows)...
+[05:59:06] [INFO] Saved 05_predictions_primary_ablated_C.parquet (504,828 rows, 11 cols, 5.2 MB)
+[05:59:06] [INFO] Saved 05_coef_table_primary_ablated_C.parquet (63 rows, 7 cols, 0.0 MB)
+11/16                         
+12/16 [fit-random-split]      
+[05:59:41] [STEP] --- Re-fitting primary model on random split (H4) ---
+[06:05:08] [INFO]   Predicting on random-split test set (710,173 rows)...
+[06:05:09] [INFO] Saved 05_predictions_primary_random_B.parquet (710,173 rows, 10 cols, 7.2 MB)
+13/16                         
+14/16 [cross-label-coefs]     
+[06:05:48] [STEP] Computing cross-label coefficient stability (<U+2192> H2)...
+[06:05:48] [INFO] Saved 05_coef_all_variants.parquet (261 rows, 7 cols, 0.0 MB)
+[06:05:48] [INFO] Saved 05_coef_alt_variants.parquet (261 rows, 7 cols, 0.0 MB)
+15/16                         
+16/16 [ablated-coef-stability]
+[06:05:48] [INFO] Saved 05_coef_all_variants_ablated.parquet (189 rows, 7 cols, 0.0 MB)
+[06:05:48] [INFO] Saved 05_h2_stability_ablated.parquet (14 rows, 3 cols, 0.0 MB)
+[06:05:48] [INFO] Saved 05_h2_stability_ablated.csv (14 rows)
+output file: 05_primary_model.knit.md
+
+/opt/homebrew/bin/pandoc +RTS -K512m -RTS 05_primary_model.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/arif/Desktop/RESEARCH/sepsis/project/output/pdf/05_primary_model.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine xelatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//RtmppHDMmP/rmarkdown-str30c2d123e25.html --variable tables=yes --standalone -Mhas-frontmatter=false 
+[WARNING] Deprecated: --highlight-style. Use --syntax-highlighting instead.
+
+Output created: output/pdf/05_primary_model.pdf

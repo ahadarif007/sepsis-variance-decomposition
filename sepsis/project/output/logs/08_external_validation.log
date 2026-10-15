@@ -1,0 +1,108 @@
+
+
+processing file: 08_external_validation.Rmd
+1/38                               
+2/38 [setup]                       
+3/38                               
+4/38 [load-deps]                   
+[06:16:10] [STEP] === Phase 5: External Validation on eICU-CRD ===
+5/38                               
+6/38 [load-eicu-patients]          
+[06:16:10] [STEP] Loading eICU tables...
+7/38                               
+8/38 [load-vitals]                 
+[06:16:11] [STEP] Loading eICU vitals...
+[06:16:11] [INFO] DuckDB: loading vitalPeriodic filtered to cohort + 72h window...
+9/38                               
+10/38 [load-labs]                   
+[06:16:36] [STEP] Loading eICU labs...
+11/38                               
+12/38 [eicu-drugs]                  
+[06:16:51] [STEP] Loading eICU drug exposure (medication + infusionDrug)...
+13/38                               
+14/38 [eicu-cultures]               
+[06:17:55] [STEP] Loading eICU microbiology...
+15/38                               
+16/38 [build-eicu-panel]            
+[06:17:55] [STEP] Building eICU person-hour panel...
+17/38                               
+18/38 [eicu-onset-functions]        
+19/38                               
+20/38 [derive-eicu-labels]          
+[06:19:07] [STEP] Deriving eICU onsets per label variant...
+[06:19:09] [INFO] Saved 08_eicu_label_summary.parquet (6 rows, 8 cols, 0.0 MB)
+[06:19:09] [INFO] Saved 08_eicu_label_summary.csv (6 rows)
+21/38                               
+22/38 [variant-invariance-guard]    
+[06:19:09] [INFO] Variant-invariance guard passed for anchor 'sepsis3' (3 distinct onset sets)
+[06:19:09] [INFO] Variant-invariance guard passed for anchor 'abx_only' (3 distinct onset sets)
+23/38                               
+24/38 [apply-models]                
+[06:19:09] [STEP] Applying trained models to eICU cohort...
+[06:19:16] [WARN]   [gbt/A/sepsis3] stored model carries no feature names; falling back to the config.R vector (22 features). This is safe only while that vector is unchanged since the fit.
+[06:19:16] [INFO] Saved 08_eicu_predictions_A.parquet (162,070 rows, 9 cols, 2.9 MB)
+[06:19:33] [WARN]   [gbt/A/abx_only] stored model carries no feature names; falling back to the config.R vector (22 features). This is safe only while that vector is unchanged since the fit.
+[06:19:42] [INFO]   [A/abx_only/pred_sepsis] 5882 onsets labelled, 5589 scored; 293 fall beyond the stay's observed panel and are right-censored
+[06:19:44] [INFO]   [A/abx_only/pred_gbt] 5882 onsets labelled, 5589 scored; 293 fall beyond the stay's observed panel and are right-censored
+[06:19:47] [INFO]   [A/abx_only/pred_news2] 5882 onsets labelled, 5589 scored; 293 fall beyond the stay's observed panel and are right-censored
+[06:19:54] [WARN]   [gbt/B/sepsis3] stored model carries no feature names; falling back to the config.R vector (22 features). This is safe only while that vector is unchanged since the fit.
+[06:19:54] [INFO]   [B/sepsis3/pred_sepsis] 31 onsets labelled, 29 scored; 2 fall beyond the stay's observed panel and are right-censored
+[06:19:54] [INFO]   [B/sepsis3/pred_gbt] 31 onsets labelled, 29 scored; 2 fall beyond the stay's observed panel and are right-censored
+[06:19:54] [INFO]   [B/sepsis3/pred_news2] 31 onsets labelled, 29 scored; 2 fall beyond the stay's observed panel and are right-censored
+[06:19:54] [INFO] Saved 08_eicu_predictions_B.parquet (161,992 rows, 9 cols, 2.9 MB)
+[06:20:10] [WARN]   [gbt/B/abx_only] stored model carries no feature names; falling back to the config.R vector (22 features). This is safe only while that vector is unchanged since the fit.
+[06:20:18] [INFO]   [B/abx_only/pred_sepsis] 6608 onsets labelled, 6140 scored; 468 fall beyond the stay's observed panel and are right-censored
+[06:20:20] [INFO]   [B/abx_only/pred_gbt] 6608 onsets labelled, 6140 scored; 468 fall beyond the stay's observed panel and are right-censored
+[06:20:22] [INFO]   [B/abx_only/pred_news2] 6608 onsets labelled, 6140 scored; 468 fall beyond the stay's observed panel and are right-censored
+[06:20:29] [WARN]   [gbt/C/sepsis3] stored model carries no feature names; falling back to the config.R vector (22 features). This is safe only while that vector is unchanged since the fit.
+[06:20:29] [INFO] Saved 08_eicu_predictions_C.parquet (159,580 rows, 9 cols, 2.8 MB)
+[06:20:44] [WARN]   [gbt/C/abx_only] stored model carries no feature names; falling back to the config.R vector (22 features). This is safe only while that vector is unchanged since the fit.
+[06:20:52] [INFO]   [C/abx_only/pred_sepsis] 9985 onsets labelled, 9886 scored; 99 fall beyond the stay's observed panel and are right-censored
+[06:20:54] [INFO]   [C/abx_only/pred_gbt] 9985 onsets labelled, 9886 scored; 99 fall beyond the stay's observed panel and are right-censored
+[06:20:56] [INFO]   [C/abx_only/pred_news2] 9985 onsets labelled, 9886 scored; 99 fall beyond the stay's observed panel and are right-censored
+25/38                               
+26/38 [results-tables]              
+[06:20:57] [INFO] Saved 08_external_validation_results.parquet (9 rows, 12 cols, 0.0 MB)
+[06:20:57] [INFO] Saved 08_external_validation_results.csv (9 rows)
+[06:20:57] [INFO] Saved 08_external_validation_results_abxonly.parquet (9 rows, 12 cols, 0.0 MB)
+[06:20:57] [INFO] Saved 08_external_validation_results_abxonly.csv (9 rows)
+27/38                               
+28/38 [rate-reconciliation]         
+[06:20:57] [INFO] Saved 08_event_rate_reconciliation.parquet (9 rows, 7 cols, 0.0 MB)
+[06:20:57] [INFO] Saved 08_event_rate_reconciliation.csv (9 rows)
+[06:20:57] [INFO] Saved 08_eicu_coverage.parquet (1 rows, 10 cols, 0.0 MB)
+[06:20:57] [INFO] Saved 08_eicu_coverage.csv (1 rows)
+29/38                               
+30/38 [results-h5]                  
+[06:20:57] [INFO] Saved 08_h5_internal_external.parquet (3 rows, 7 cols, 0.0 MB)
+[06:20:57] [INFO] Saved 08_h5_internal_external.csv (3 rows)
+31/38                               
+32/38 [eicu-deterioration-onsets]   
+33/38                               
+34/38 [altlabel-external-eval]      
+[06:20:57] [STEP] Evaluating the treatment-independent label (D) on the full eICU cohort...
+[06:21:11] [WARN]   [gbt/D/deterioration] stored model carries no feature names; falling back to the config.R vector (22 features). This is safe only while that vector is unchanged since the fit.
+[06:21:28] [INFO] Saved 08_eicu_predictions_D.parquet (5,866,697 rows, 7 cols, 89.8 MB)
+[06:21:28] [INFO] Saved 08_external_validation_results_altlabel.parquet (3 rows, 12 cols, 0.0 MB)
+[06:21:28] [INFO] Saved 08_external_validation_results_altlabel.csv (3 rows)
+[06:21:28] [INFO] Saved 08_eicu_label_summary.parquet (7 rows, 8 cols, 0.0 MB)
+[06:21:28] [INFO] Saved 08_eicu_label_summary.csv (7 rows)
+35/38                               
+36/38 [altlabel-rate-reconciliation]
+[06:21:28] [INFO] Saved 08_event_rate_altlabel.parquet (2 rows, 7 cols, 0.0 MB)
+[06:21:28] [INFO] Saved 08_event_rate_altlabel.csv (2 rows)
+37/38                               
+38/38 [altlabel-containment-guards] 
+[06:21:28] [INFO] Containment guards passed: alt-label arm carries D only, scored on 181,589 stays (64.3x the micro sub-cohort).
+output file: 08_external_validation.knit.md
+
+/opt/homebrew/bin/pandoc +RTS -K512m -RTS 08_external_validation.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/arif/Desktop/RESEARCH/sepsis/project/output/pdf/08_external_validation.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine xelatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//Rtmpl6Fg5z/rmarkdown-str36a0313d31d1.html --variable tables=yes --standalone -Mhas-frontmatter=false 
+[WARNING] Deprecated: --highlight-style. Use --syntax-highlighting instead.
+Warning: LaTeX Warning: Reference `sec:external_coverage' on page 6 undefined on input l
+Warning: ine 465.
+Warning: LaTeX Warning: There were undefined references.
+Warning: LaTeX Warning: Reference `sec:external_coverage' on page 6 undefined on input l
+Warning: ine 465.
+Warning: LaTeX Warning: There were undefined references.
+
+Output created: output/pdf/08_external_validation.pdf

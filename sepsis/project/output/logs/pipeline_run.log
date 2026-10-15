@@ -1,0 +1,1160 @@
+======================================================
+  V2 Pipeline: 2026-08-31 04:40:00
+  Scripts: 01_setup.Rmd 02_cohort_labels.Rmd 03_person_hours.Rmd 04_sample_size.Rmd 05_primary_model.Rmd 06_comparators.Rmd 07_metrics_suite.Rmd 08_external_validation.Rmd 09_variance_decomposition.Rmd 10_equity_analysis.Rmd 11_clinical_metrics.Rmd 12_inference.Rmd
+  Output:  /Users/arif/Desktop/RESEARCH/sepsis/project/output/
+======================================================
+
+── 04:40:00  Rendering: 01_setup.Rmd ──
+  OK  /Users/arif/Desktop/RESEARCH/sepsis/project/output/pdf/01_setup.pdf  (6s)
+
+---- R log: 01_setup.Rmd ----
+
+
+processing file: 01_setup.Rmd
+1/18                    
+2/18 [setup]            
+3/18                    
+4/18 [load-config]      
+[04:40:01] [STEP] === Phase 1: Environment Setup ===
+5/18                    
+6/18 [check-packages]   
+[04:40:01] [STEP] Checking required packages...
+7/18                    
+8/18 [check-dirs]       
+[04:40:02] [STEP] Verifying data directories...
+[04:40:02] [INFO]   MIMIC-IV root                  [OK]  (/Users/arif/Desktop/RESEARCH/data/mimic-iv-3.1)
+[04:40:02] [INFO]   MIMIC-IV/hosp                  [OK]  (/Users/arif/Desktop/RESEARCH/data/mimic-iv-3.1/hosp)
+[04:40:02] [INFO]   MIMIC-IV/icu                   [OK]  (/Users/arif/Desktop/RESEARCH/data/mimic-iv-3.1/icu)
+[04:40:02] [INFO]   eICU root                      [OK]  (/Users/arif/Desktop/RESEARCH/data/eicu-collaborative-research-database-2.0)
+9/18                    
+10/18 [check-mimic-files]
+[04:40:02] [STEP] Spot-checking key MIMIC-IV files...
+[04:40:02] [INFO]   admissions                [OK]  (19.9 MB)
+[04:40:02] [INFO]   patients                  [OK]  (2.8 MB)
+[04:40:02] [INFO]   icustays                  [OK]  (3.3 MB)
+[04:40:02] [INFO]   chartevents               [OK]  (3502.6 MB)
+[04:40:02] [INFO]   labevents                 [OK]  (2593.0 MB)
+[04:40:02] [INFO]   prescriptions             [OK]  (606.7 MB)
+[04:40:02] [INFO]   microbiologyevents        [OK]  (117.2 MB)
+[04:40:02] [INFO]   inputevents               [OK]  (401.3 MB)
+11/18                    
+12/18 [check-eicu-files] 
+[04:40:02] [STEP] Spot-checking eICU files...
+[04:40:02] [INFO]   patient                   [OK]  (10.4 MB)
+[04:40:02] [INFO]   lab                       [OK]  (516.8 MB)
+[04:40:02] [INFO]   medication                [OK]  (134.3 MB)
+[04:40:02] [INFO]   vitalPeriodic             [OK]  (1784.2 MB)
+[04:40:02] [INFO]   microLab                  [OK]  (0.1 MB)
+[04:40:02] [INFO]   diagnosis                 [OK]  (35.2 MB)
+13/18                    
+14/18 [check-schema]     
+[04:40:02] [STEP] Peeking at icustays to verify schema...
+[04:40:02] [INFO] anchor_year_group present:  TRUE
+15/18                    
+16/18 [check-output-dir] 
+[04:40:02] [STEP] Checking output directory...
+17/18                    
+18/18 [summary]          
+[04:40:02] [STEP] === Setup Summary ===
+[04:40:02] [INFO] Saved 01_setup_file_report.parquet (8 rows, 3 cols, 0.0 MB)
+output file: 01_setup.knit.md
+
+/opt/homebrew/bin/pandoc +RTS -K512m -RTS 01_setup.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/arif/Desktop/RESEARCH/sepsis/project/output/pdf/01_setup.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine xelatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//RtmpaW4uIL/rmarkdown-str2ed61e117b23.html --variable tables=yes --standalone -Mhas-frontmatter=false 
+[WARNING] Deprecated: --highlight-style. Use --syntax-highlighting instead.
+
+Output created: output/pdf/01_setup.pdf
+
+── 04:40:06  Rendering: 02_cohort_labels.Rmd ──
+  OK  /Users/arif/Desktop/RESEARCH/sepsis/project/output/pdf/02_cohort_labels.pdf  (184s)
+
+---- R log: 02_cohort_labels.Rmd ----
+
+
+processing file: 02_cohort_labels.Rmd
+1/20                           
+2/20 [setup]                   
+3/20                           
+4/20 [load-deps]               
+[04:40:07] [STEP] === Phase 2a: Cohort extraction under 6 label variants ===
+5/20                           
+6/20 [load-base-tables]        
+[04:40:07] [STEP] Loading base tables...
+[04:40:07] [INFO] Reading:  patients.csv.gz
+[04:40:07] [INFO]   -> 364,627 rows, 5 cols
+[04:40:07] [INFO] Reading:  admissions.csv.gz
+[04:40:07] [INFO]   -> 546,028 rows, 8 cols
+[04:40:07] [INFO] Reading:  icustays.csv.gz
+[04:40:07] [INFO]   -> 94,458 rows, 6 cols
+7/20                           
+8/20 [build-base-cohort]       
+[04:40:07] [STEP] Building base cohort (adult, first ICU stay, min LOS)...
+[04:40:07] [INFO] Saved 02_cohort_flow.parquet (4 rows, 5 cols, 0.0 MB)
+[04:40:07] [INFO] Saved 02_cohort_flow.csv (4 rows)
+9/20                           
+10/20 [suspected-infection]     
+[04:40:07] [STEP] Identifying suspected infection episodes...
+[04:40:07] [INFO] Reading:  prescriptions.csv.gz
+[04:40:13] [INFO]   -> 20,292,611 rows, 5 cols
+[04:41:40] [INFO] Reading:  microbiologyevents.csv.gz
+[04:41:40] [INFO]   -> 3,988,224 rows, 4 cols
+11/20                           
+12/20 [sofa-components]         
+[04:41:41] [STEP] Computing SOFA components for all stays...
+[04:41:41] [INFO] Loading labevents for SOFA components via DuckDB...
+[04:41:41] [INFO] DuckDB query:  SELECT t.hadm_id, t.itemid, t.charttime, t.valuenum FROM read_csv('/Users/arif/Desktop/RESEARCH/data/mimic-iv-3.1/hosp/l
+[04:42:05] [INFO]   -> 2,329,876 rows, 4 cols
+[04:42:05] [INFO] Loading chartevents for SOFA components (MAP, GCS) via DuckDB...
+[04:42:05] [INFO] DuckDB query:  SELECT t.stay_id, t.hadm_id, t.itemid, t.charttime, t.valuenum FROM read_csv('/Users/arif/Desktop/RESEARCH/data/mimic-iv
+[04:42:48] [INFO]   -> 11,634,502 rows, 5 cols
+[04:42:49] [INFO] Loading inputevents for vasopressors...
+[04:42:49] [INFO] Reading:  inputevents.csv.gz
+[04:42:54] [INFO]   -> 10,953,713 rows, 9 cols
+13/20                           
+14/20 [sofa-delta]              
+15/20                           
+16/20 [build-cohorts]           
+[04:42:55] [STEP] Building cohort for Variant A (Narrow)...
+[04:42:55] [INFO]   Stays with suspected infection: 30,705 / 65,078
+[04:42:55] [INFO]   Computing SOFA delta (vectorized) for 30705 stays...
+[04:42:57] [STEP] Building cohort for Variant B (Seymour-Standard)...
+[04:42:57] [INFO]   Stays with suspected infection: 32,436 / 65,078
+[04:42:57] [INFO]   Computing SOFA delta (vectorized) for 32436 stays...
+[04:43:00] [STEP] Building cohort for Variant C (Liberal)...
+[04:43:00] [INFO]   Stays with suspected infection: 34,334 / 65,078
+[04:43:00] [INFO]   Computing SOFA delta (vectorized) for 34334 stays...
+[04:43:02] [STEP] Building cohort for Variant D (Deterioration)...
+[04:43:02] [STEP] Building cohort for Variant E (Anchor-Only)...
+[04:43:03] [INFO]   Stays with suspected infection: 32,436 / 65,078
+[04:43:03] [STEP] Building cohort for Variant F (Sepsis-3 Early-Onset)...
+[04:43:03] [INFO]   Stays with suspected infection: 32,436 / 65,078
+[04:43:03] [INFO]   Computing SOFA delta (vectorized) for 32436 stays...
+[04:43:05] [INFO] Saved 02_cohort_A.parquet (65,078 rows, 27 cols, 4.8 MB)
+[04:43:05] [INFO] Saved 02_cohort_B.parquet (65,078 rows, 27 cols, 4.9 MB)
+[04:43:05] [INFO] Saved 02_cohort_C.parquet (65,078 rows, 27 cols, 5.0 MB)
+[04:43:06] [INFO] Saved 02_cohort_D.parquet (65,078 rows, 22 cols, 3.7 MB)
+[04:43:06] [INFO] Saved 02_cohort_E.parquet (65,078 rows, 22 cols, 4.3 MB)
+[04:43:06] [INFO] Saved 02_cohort_F.parquet (65,078 rows, 27 cols, 4.9 MB)
+17/20                           
+18/20 [label-variance-table]    
+[04:43:06] [STEP] Building M1 label-variance table...
+[04:43:06] [INFO] Saved 02_label_variance_table.parquet (3 rows, 10 cols, 0.0 MB)
+19/20                           
+20/20 [alt-label-variance-table]
+[04:43:06] [INFO] Saved 02_alt_label_variance_table.parquet (3 rows, 11 cols, 0.0 MB)
+output file: 02_cohort_labels.knit.md
+
+/opt/homebrew/bin/pandoc +RTS -K512m -RTS 02_cohort_labels.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/arif/Desktop/RESEARCH/sepsis/project/output/pdf/02_cohort_labels.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine xelatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//Rtmpru84tQ/rmarkdown-str2f2233d76f2e.html --variable tables=yes --standalone -Mhas-frontmatter=false 
+[WARNING] Deprecated: --highlight-style. Use --syntax-highlighting instead.
+
+Output created: output/pdf/02_cohort_labels.pdf
+
+── 04:43:10  Rendering: 03_person_hours.Rmd ──
+  OK  /Users/arif/Desktop/RESEARCH/sepsis/project/output/pdf/03_person_hours.pdf  (765s)
+
+---- R log: 03_person_hours.Rmd ----
+
+
+processing file: 03_person_hours.Rmd
+1/22                         
+2/22 [setup]                 
+3/22                         
+4/22 [load-deps]             
+[04:43:11] [STEP] === Phase 2b: Person-hour table construction ===
+5/22                         
+6/22 [load-cohort-ids]       
+[04:43:11] [STEP] Loading cohort IDs for pre-filtering...
+7/22                         
+8/22 [load-chartevents]      
+[04:43:11] [STEP] Loading chartevents (vitals) via DuckDB...
+[04:43:11] [INFO] DuckDB query:  SELECT t.stay_id, t.hadm_id, t.itemid, t.charttime, t.valuenum FROM read_csv('/Users/arif/Desktop/RESEARCH/data/mimic-iv
+[04:43:55] [INFO]   -> 42,088,540 rows, 5 cols
+9/22                         
+10/22 [load-labevents]        
+[04:43:56] [STEP] Loading labevents via DuckDB...
+[04:43:56] [INFO] DuckDB query:  SELECT t.hadm_id, t.itemid, t.charttime, t.valuenum FROM read_csv('/Users/arif/Desktop/RESEARCH/data/mimic-iv-3.1/hosp/l
+[04:44:21] [INFO]   -> 5,094,881 rows, 4 cols
+11/22                         
+12/22 [load-vasopressors]     
+[04:44:21] [STEP] Loading inputevents (vasopressors)...
+[04:44:21] [INFO] Reading:  inputevents.csv.gz
+[04:44:25] [INFO]   -> 10,953,713 rows, 6 cols
+13/22                         
+14/22 [load-treatment-anchors]
+[04:44:25] [STEP] Loading treatment anchor timestamps...
+[04:44:25] [INFO] Reading:  prescriptions.csv.gz
+[04:44:31] [INFO]   -> 20,292,611 rows, 3 cols
+[04:45:59] [INFO] Reading:  microbiologyevents.csv.gz
+[04:46:00] [INFO]   -> 3,988,224 rows, 3 cols
+15/22                         
+16/22 [hourly-covariates-fn]  
+17/22                         
+18/22 [deterioration-onset-fn]
+19/22                         
+20/22 [early-onset-fn]        
+21/22                         
+22/22 [build-person-hours]    
+[04:46:00] [STEP] === Person-hours for Variant A (Narrow) ===
+[04:46:00] [INFO] Loaded 02_cohort_A.parquet (65,078 rows, 27 cols)
+[04:46:00] [STEP]   Building hourly grid for 65078 stays...
+[04:47:37] [INFO] Saved 03_person_hours_A.parquet (2,853,777 rows, 72 cols, 87.3 MB)
+[04:47:37] [INFO] Saved 03_onsets_A.parquet (65,078 rows, 3 cols, 0.4 MB)
+[04:47:37] [STEP] === Person-hours for Variant B (Seymour-Standard) ===
+[04:47:37] [INFO] Loaded 02_cohort_B.parquet (65,078 rows, 27 cols)
+[04:47:37] [STEP]   Building hourly grid for 65078 stays...
+[04:49:15] [INFO] Saved 03_person_hours_B.parquet (2,850,669 rows, 72 cols, 87.3 MB)
+[04:49:15] [INFO] Saved 03_onsets_B.parquet (65,078 rows, 3 cols, 0.4 MB)
+[04:49:15] [STEP] === Person-hours for Variant C (Liberal) ===
+[04:49:15] [INFO] Loaded 02_cohort_C.parquet (65,078 rows, 27 cols)
+[04:49:15] [STEP]   Building hourly grid for 65078 stays...
+[04:50:53] [INFO] Saved 03_person_hours_C.parquet (2,625,204 rows, 72 cols, 81.1 MB)
+[04:50:53] [INFO] Saved 03_onsets_C.parquet (65,078 rows, 3 cols, 0.4 MB)
+[04:50:53] [STEP] === Person-hours for Variant D (Deterioration) ===
+[04:50:53] [INFO] Loaded 02_cohort_D.parquet (65,078 rows, 22 cols)
+[04:50:53] [STEP]   Building hourly grid for 65078 stays...
+[04:52:26] [STEP]   Deriving treatment-independent deterioration onsets (Variant D)...
+[04:52:32] [INFO] Saved 03_person_hours_D.parquet (1,998,748 rows, 72 cols, 63.3 MB)
+[04:52:32] [INFO] Saved 03_onsets_D.parquet (65,078 rows, 3 cols, 0.4 MB)
+[04:52:32] [STEP] === Person-hours for Variant E (Anchor-Only) ===
+[04:52:32] [INFO] Loaded 02_cohort_E.parquet (65,078 rows, 22 cols)
+[04:52:32] [STEP]   Building hourly grid for 65078 stays...
+[04:54:09] [INFO] Saved 03_person_hours_E.parquet (2,392,855 rows, 72 cols, 74.8 MB)
+[04:54:09] [INFO] Saved 03_onsets_E.parquet (65,078 rows, 3 cols, 0.4 MB)
+[04:54:09] [STEP] === Person-hours for Variant F (Sepsis-3 Early-Onset) ===
+[04:54:09] [INFO] Loaded 02_cohort_F.parquet (65,078 rows, 27 cols)
+[04:54:09] [STEP]   Building hourly grid for 65078 stays...
+[04:55:42] [STEP]   Deriving standard Sepsis-3 onset timing min(t_susp, t_SOFA) (Variant F)...
+[04:55:47] [INFO] Saved 03_early_onset_shift.parquet (1 rows, 11 cols, 0.0 MB)
+[04:55:47] [INFO] Saved 03_early_onset_shift.csv (1 rows)
+[04:55:50] [INFO] Saved 03_person_hours_F.parquet (2,819,734 rows, 74 cols, 86.5 MB)
+[04:55:50] [INFO] Saved 03_onsets_F.parquet (65,078 rows, 3 cols, 0.4 MB)
+output file: 03_person_hours.knit.md
+
+/opt/homebrew/bin/pandoc +RTS -K512m -RTS 03_person_hours.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/arif/Desktop/RESEARCH/sepsis/project/output/pdf/03_person_hours.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine xelatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//RtmpjhevN2/rmarkdown-str2f8370500d0c.html --variable tables=yes --standalone -Mhas-frontmatter=false 
+[WARNING] Deprecated: --highlight-style. Use --syntax-highlighting instead.
+
+Output created: output/pdf/03_person_hours.pdf
+
+── 04:55:55  Rendering: 04_sample_size.Rmd ──
+  OK  /Users/arif/Desktop/RESEARCH/sepsis/project/output/pdf/04_sample_size.pdf  (10s)
+
+---- R log: 04_sample_size.Rmd ----
+
+
+processing file: 04_sample_size.Rmd
+1/10                      
+2/10 [setup]              
+3/10                      
+4/10 [load-deps]          
+[04:55:55] [STEP] === Sample Size Calculation (Riley et al., 2019) ===
+5/10                      
+6/10 [load-label-variance]
+7/10                      
+8/10 [sample-size-calc]   
+9/10                      
+10/10 [summary-table]      
+[04:56:01] [INFO] Saved 04_sample_size.parquet (3 rows, 14 cols, 0.0 MB)
+output file: 04_sample_size.knit.md
+
+/opt/homebrew/bin/pandoc +RTS -K512m -RTS 04_sample_size.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/arif/Desktop/RESEARCH/sepsis/project/output/pdf/04_sample_size.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine xelatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//RtmpMhy8oC/rmarkdown-str307d974b1ba.html --variable tables=yes --standalone -Mhas-frontmatter=false 
+[WARNING] Deprecated: --highlight-style. Use --syntax-highlighting instead.
+
+Output created: output/pdf/04_sample_size.pdf
+
+── 04:56:05  Rendering: 05_primary_model.Rmd ──
+  OK  /Users/arif/Desktop/RESEARCH/sepsis/project/output/pdf/05_primary_model.pdf  (4187s)
+
+---- R log: 05_primary_model.Rmd ----
+
+
+processing file: 05_primary_model.Rmd
+1/16                         
+2/16 [setup]                 
+3/16                         
+4/16 [load-deps]             
+[04:56:06] [STEP] === Phase 3a: Primary discrete-time competing-risks model ===
+5/16                         
+6/16 [feature-set]           
+7/16                         
+8/16 [fit-primary-model]     
+9/16                         
+10/16 [run-all-variants]      
+[04:56:06] [INFO] Arms in this run: full, ablated
+[04:56:06] [STEP] --- Fitting primary model: Variant A (Narrow), arm = full ---
+[04:56:08] [INFO]   Fitting multinomial logistic regression (ridge decay = 0.0001)...
+[05:04:04] [INFO]   Computing cluster-robust SEs (clustered on stay_id)...
+[05:04:13] [INFO]   Cluster-robust SEs computed for 87 parameters (median SE 0.0105)
+[05:04:13] [INFO]   Predicting on test set (548,854 rows)...
+[05:04:14] [INFO] Saved 05_predictions_primary_A.parquet (548,854 rows, 11 cols, 5.6 MB)
+[05:04:14] [INFO] Saved 05_coef_table_primary_A.parquet (87 rows, 7 cols, 0.0 MB)
+[05:04:53] [STEP] --- Fitting primary model: Variant B (Seymour-Standard), arm = full ---
+[05:04:54] [INFO]   Fitting multinomial logistic regression (ridge decay = 0.0001)...
+[05:12:53] [INFO]   Computing cluster-robust SEs (clustered on stay_id)...
+[05:13:01] [INFO]   Cluster-robust SEs computed for 87 parameters (median SE 0.0105)
+[05:13:01] [INFO]   Predicting on test set (548,827 rows)...
+[05:13:02] [INFO] Saved 05_predictions_primary_B.parquet (548,827 rows, 11 cols, 5.6 MB)
+[05:13:02] [INFO] Saved 05_coef_table_primary_B.parquet (87 rows, 7 cols, 0.0 MB)
+[05:13:42] [STEP] --- Fitting primary model: Variant C (Liberal), arm = full ---
+[05:13:43] [INFO]   Fitting multinomial logistic regression (ridge decay = 0.0001)...
+[05:21:43] [INFO]   Computing cluster-robust SEs (clustered on stay_id)...
+[05:21:51] [INFO]   Cluster-robust SEs computed for 87 parameters (median SE 0.0111)
+[05:21:51] [INFO]   Predicting on test set (504,828 rows)...
+[05:21:52] [INFO] Saved 05_predictions_primary_C.parquet (504,828 rows, 11 cols, 5.2 MB)
+[05:21:52] [INFO] Saved 05_coef_table_primary_C.parquet (87 rows, 7 cols, 0.0 MB)
+[05:22:28] [STEP] --- Fitting primary model: Variant D (Deterioration), arm = full ---
+[05:22:29] [INFO]   Fitting multinomial logistic regression (ridge decay = 0.0001)...
+[05:28:00] [INFO]   Computing cluster-robust SEs (clustered on stay_id)...
+[05:28:05] [INFO]   Cluster-robust SEs computed for 87 parameters (median SE 0.0140)
+[05:28:05] [INFO]   Predicting on test set (397,603 rows)...
+[05:28:06] [INFO] Saved 05_predictions_primary_D.parquet (397,603 rows, 11 cols, 4.2 MB)
+[05:28:06] [INFO] Saved 05_coef_table_primary_D.parquet (87 rows, 7 cols, 0.0 MB)
+[05:28:34] [STEP] --- Fitting primary model: Variant E (Anchor-Only), arm = full ---
+[05:28:34] [INFO]   Fitting multinomial logistic regression (ridge decay = 0.0001)...
+[05:35:14] [INFO]   Computing cluster-robust SEs (clustered on stay_id)...
+[05:35:20] [INFO]   Cluster-robust SEs computed for 87 parameters (median SE 0.0118)
+[05:35:20] [INFO]   Predicting on test set (465,409 rows)...
+[05:35:21] [INFO] Saved 05_predictions_primary_E.parquet (465,409 rows, 11 cols, 4.8 MB)
+[05:35:21] [INFO] Saved 05_coef_table_primary_E.parquet (87 rows, 7 cols, 0.0 MB)
+[05:35:54] [STEP] --- Fitting primary model: Variant F (Sepsis-3 Early-Onset), arm = full ---
+[05:35:55] [INFO]   Fitting multinomial logistic regression (ridge decay = 0.0001)...
+[05:43:43] [INFO]   Computing cluster-robust SEs (clustered on stay_id)...
+[05:43:51] [INFO]   Cluster-robust SEs computed for 87 parameters (median SE 0.0105)
+[05:43:52] [INFO]   Predicting on test set (543,773 rows)...
+[05:43:52] [INFO] Saved 05_predictions_primary_F.parquet (543,773 rows, 11 cols, 5.5 MB)
+[05:43:52] [INFO] Saved 05_coef_table_primary_F.parquet (87 rows, 7 cols, 0.0 MB)
+[05:44:32] [STEP] --- Fitting primary model: Variant A (Narrow), arm = ablated ---
+[05:44:33] [INFO]   Fitting multinomial logistic regression (ridge decay = 0.0001)...
+[05:48:59] [INFO]   Computing cluster-robust SEs (clustered on stay_id)...
+[05:49:05] [INFO]   Cluster-robust SEs computed for 63 parameters (median SE 0.0034)
+[05:49:05] [INFO]   Predicting on test set (548,854 rows)...
+[05:49:06] [INFO] Saved 05_predictions_primary_ablated_A.parquet (548,854 rows, 11 cols, 5.6 MB)
+[05:49:06] [INFO] Saved 05_coef_table_primary_ablated_A.parquet (63 rows, 7 cols, 0.0 MB)
+[05:49:46] [STEP] --- Fitting primary model: Variant B (Seymour-Standard), arm = ablated ---
+[05:49:47] [INFO]   Fitting multinomial logistic regression (ridge decay = 0.0001)...
+[05:54:09] [INFO]   Computing cluster-robust SEs (clustered on stay_id)...
+[05:54:16] [INFO]   Cluster-robust SEs computed for 63 parameters (median SE 0.0035)
+[05:54:16] [INFO]   Predicting on test set (548,827 rows)...
+[05:54:16] [INFO] Saved 05_predictions_primary_ablated_B.parquet (548,827 rows, 11 cols, 5.6 MB)
+[05:54:16] [INFO] Saved 05_coef_table_primary_ablated_B.parquet (63 rows, 7 cols, 0.0 MB)
+[05:54:55] [STEP] --- Fitting primary model: Variant C (Liberal), arm = ablated ---
+[05:54:56] [INFO]   Fitting multinomial logistic regression (ridge decay = 0.0001)...
+[05:58:59] [INFO]   Computing cluster-robust SEs (clustered on stay_id)...
+[05:59:05] [INFO]   Cluster-robust SEs computed for 63 parameters (median SE 0.0034)
+[05:59:05] [INFO]   Predicting on test set (504,828 rows)...
+[05:59:06] [INFO] Saved 05_predictions_primary_ablated_C.parquet (504,828 rows, 11 cols, 5.2 MB)
+[05:59:06] [INFO] Saved 05_coef_table_primary_ablated_C.parquet (63 rows, 7 cols, 0.0 MB)
+11/16                         
+12/16 [fit-random-split]      
+[05:59:41] [STEP] --- Re-fitting primary model on random split (H4) ---
+[06:05:08] [INFO]   Predicting on random-split test set (710,173 rows)...
+[06:05:09] [INFO] Saved 05_predictions_primary_random_B.parquet (710,173 rows, 10 cols, 7.2 MB)
+13/16                         
+14/16 [cross-label-coefs]     
+[06:05:48] [STEP] Computing cross-label coefficient stability (<U+2192> H2)...
+[06:05:48] [INFO] Saved 05_coef_all_variants.parquet (261 rows, 7 cols, 0.0 MB)
+[06:05:48] [INFO] Saved 05_coef_alt_variants.parquet (261 rows, 7 cols, 0.0 MB)
+15/16                         
+16/16 [ablated-coef-stability]
+[06:05:48] [INFO] Saved 05_coef_all_variants_ablated.parquet (189 rows, 7 cols, 0.0 MB)
+[06:05:48] [INFO] Saved 05_h2_stability_ablated.parquet (14 rows, 3 cols, 0.0 MB)
+[06:05:48] [INFO] Saved 05_h2_stability_ablated.csv (14 rows)
+output file: 05_primary_model.knit.md
+
+/opt/homebrew/bin/pandoc +RTS -K512m -RTS 05_primary_model.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/arif/Desktop/RESEARCH/sepsis/project/output/pdf/05_primary_model.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine xelatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//RtmppHDMmP/rmarkdown-str30c2d123e25.html --variable tables=yes --standalone -Mhas-frontmatter=false 
+[WARNING] Deprecated: --highlight-style. Use --syntax-highlighting instead.
+
+Output created: output/pdf/05_primary_model.pdf
+
+── 06:05:52  Rendering: 06_comparators.Rmd ──
+  OK  /Users/arif/Desktop/RESEARCH/sepsis/project/output/pdf/06_comparators.pdf  (495s)
+
+---- R log: 06_comparators.Rmd ----
+
+
+processing file: 06_comparators.Rmd
+1/16                         
+2/16 [setup]                 
+3/16                         
+4/16 [load-deps]             
+[06:05:53] [STEP] === Phase 3b: Comparator models ===
+5/16                         
+6/16 [feature-set]           
+7/16                         
+8/16 [fit-comparators-fn]    
+9/16                         
+10/16 [run-comparators]       
+[06:05:53] [INFO] Arms in this run: full, ablated
+[06:05:53] [STEP] --- Comparators for Variant A ---
+[06:05:56] [STEP]   Comparator: NEWS2
+[06:05:56] [STEP]   Comparator: Static Cox PH
+[06:06:09] [INFO] Saved 06_cox_schoenfeld_A.parquet (13 rows, 5 cols, 0.0 MB)
+[06:06:47] [INFO] Saved 06_coef_cox_A.parquet (12 rows, 8 cols, 0.0 MB)
+[06:06:47] [STEP]   Comparator: Gradient-Boosted Trees (XGBoost)
+[06:07:11] [INFO] Saved 06_gbt_feature_importance_A.parquet (22 rows, 5 cols, 0.0 MB)
+[06:07:11] [INFO] Saved 06_predictions_comparators_A.parquet (548,854 rows, 15 cols, 8.9 MB)
+[06:07:11] [STEP] --- Comparators for Variant B ---
+[06:07:13] [STEP]   Comparator: NEWS2
+[06:07:13] [STEP]   Comparator: Static Cox PH
+[06:07:26] [INFO] Saved 06_cox_schoenfeld_B.parquet (13 rows, 5 cols, 0.0 MB)
+[06:08:04] [INFO] Saved 06_coef_cox_B.parquet (12 rows, 8 cols, 0.0 MB)
+[06:08:04] [STEP]   Comparator: Gradient-Boosted Trees (XGBoost)
+[06:08:23] [INFO] Saved 06_gbt_feature_importance_B.parquet (22 rows, 5 cols, 0.0 MB)
+[06:08:23] [INFO] Saved 06_predictions_comparators_B.parquet (548,827 rows, 15 cols, 8.9 MB)
+[06:08:23] [STEP] --- Comparators for Variant C ---
+[06:08:25] [STEP]   Comparator: NEWS2
+[06:08:25] [STEP]   Comparator: Static Cox PH
+[06:08:37] [INFO] Saved 06_cox_schoenfeld_C.parquet (13 rows, 5 cols, 0.0 MB)
+[06:09:12] [INFO] Saved 06_coef_cox_C.parquet (12 rows, 8 cols, 0.0 MB)
+[06:09:12] [STEP]   Comparator: Gradient-Boosted Trees (XGBoost)
+[06:09:31] [INFO] Saved 06_gbt_feature_importance_C.parquet (22 rows, 5 cols, 0.0 MB)
+[06:09:31] [INFO] Saved 06_predictions_comparators_C.parquet (504,828 rows, 15 cols, 8.2 MB)
+[06:09:31] [STEP] --- Comparators for Variant D ---
+[06:09:32] [STEP]   Comparator: NEWS2
+[06:09:32] [STEP]   Comparator: Static Cox PH
+[06:09:41] [INFO] Saved 06_cox_schoenfeld_D.parquet (13 rows, 5 cols, 0.0 MB)
+[06:10:07] [INFO] Saved 06_coef_cox_D.parquet (12 rows, 8 cols, 0.0 MB)
+[06:10:07] [STEP]   Comparator: Gradient-Boosted Trees (XGBoost)
+[06:10:51] [INFO] Saved 06_gbt_feature_importance_D.parquet (22 rows, 5 cols, 0.0 MB)
+[06:10:51] [INFO] Saved 06_predictions_comparators_D.parquet (397,603 rows, 15 cols, 6.9 MB)
+[06:10:51] [STEP] --- Comparators for Variant E ---
+[06:10:52] [STEP]   Comparator: NEWS2
+[06:10:52] [STEP]   Comparator: Static Cox PH
+[06:11:03] [INFO] Saved 06_cox_schoenfeld_E.parquet (13 rows, 5 cols, 0.0 MB)
+[06:11:35] [INFO] Saved 06_coef_cox_E.parquet (12 rows, 8 cols, 0.0 MB)
+[06:11:35] [STEP]   Comparator: Gradient-Boosted Trees (XGBoost)
+[06:11:55] [INFO] Saved 06_gbt_feature_importance_E.parquet (22 rows, 5 cols, 0.0 MB)
+[06:11:55] [INFO] Saved 06_predictions_comparators_E.parquet (465,409 rows, 15 cols, 7.7 MB)
+[06:11:55] [STEP] --- Comparators for Variant F ---
+[06:11:57] [STEP]   Comparator: NEWS2
+[06:11:57] [STEP]   Comparator: Static Cox PH
+[06:12:11] [INFO] Saved 06_cox_schoenfeld_F.parquet (13 rows, 5 cols, 0.0 MB)
+[06:12:49] [INFO] Saved 06_coef_cox_F.parquet (12 rows, 8 cols, 0.0 MB)
+[06:12:49] [STEP]   Comparator: Gradient-Boosted Trees (XGBoost)
+[06:12:58] [INFO] Saved 06_gbt_feature_importance_F.parquet (22 rows, 5 cols, 0.0 MB)
+[06:12:58] [INFO] Saved 06_predictions_comparators_F.parquet (543,773 rows, 15 cols, 6.3 MB)
+11/16                         
+12/16 [fit-gbt-ablated]       
+[06:12:58] [STEP] --- Ablated GBT: Variant A ---
+[06:13:17] [INFO] Saved 06_predictions_gbt_ablated_A.parquet (548,854 rows, 9 cols, 3.4 MB)
+[06:13:17] [STEP] --- Ablated GBT: Variant B ---
+[06:13:28] [INFO] Saved 06_predictions_gbt_ablated_B.parquet (548,827 rows, 9 cols, 1.6 MB)
+[06:13:28] [STEP] --- Ablated GBT: Variant C ---
+[06:13:39] [INFO] Saved 06_predictions_gbt_ablated_C.parquet (504,828 rows, 9 cols, 2.4 MB)
+13/16                         
+14/16 [fit-random-comparators]
+[06:13:39] [STEP] --- Random-split comparators for Variant B (H4) ---
+[06:14:02] [INFO] Saved 06_predictions_comparators_random_B.parquet (710,173 rows, 13 cols, 9.2 MB)
+15/16                         
+16/16 [gbt-importance]        
+output file: 06_comparators.knit.md
+
+/opt/homebrew/bin/pandoc +RTS -K512m -RTS 06_comparators.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/arif/Desktop/RESEARCH/sepsis/project/output/pdf/06_comparators.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine xelatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//RtmpX9IIcF/rmarkdown-str34c67c41fc82.html --variable tables=yes --standalone -Mhas-frontmatter=false 
+[WARNING] Deprecated: --highlight-style. Use --syntax-highlighting instead.
+
+Output created: output/pdf/06_comparators.pdf
+
+── 06:14:07  Rendering: 07_metrics_suite.Rmd ──
+  OK  /Users/arif/Desktop/RESEARCH/sepsis/project/output/pdf/07_metrics_suite.pdf  (123s)
+
+---- R log: 07_metrics_suite.Rmd ----
+
+
+processing file: 07_metrics_suite.Rmd
+1/20                        
+2/20 [setup]                
+3/20                        
+4/20 [load-deps]            
+[06:14:08] [STEP] === Full Evaluation Metric Suite ===
+5/20                        
+6/20 [metric-fns]           
+7/20                        
+8/20 [evaluate-all]         
+[06:14:08] [STEP] --- Evaluating Variant A (Narrow) ---
+[06:14:26] [INFO] Saved 07_dca_A.parquet (80 rows, 10 cols, 0.0 MB)
+[06:14:26] [STEP] --- Evaluating Variant B (Seymour-Standard) ---
+[06:14:41] [INFO] Saved 07_dca_B.parquet (80 rows, 10 cols, 0.0 MB)
+[06:14:41] [STEP] --- Evaluating Variant C (Liberal) ---
+[06:14:58] [INFO] Saved 07_dca_C.parquet (80 rows, 10 cols, 0.0 MB)
+[06:14:58] [STEP] --- Evaluating Variant D (Deterioration) ---
+[06:15:13] [INFO] Saved 07_dca_D.parquet (80 rows, 10 cols, 0.0 MB)
+[06:15:13] [STEP] --- Evaluating Variant E (Anchor-Only) ---
+[06:15:31] [INFO] Saved 07_dca_E.parquet (80 rows, 10 cols, 0.0 MB)
+[06:15:31] [STEP] --- Evaluating Variant F (Sepsis-3 Early-Onset) ---
+[06:15:44] [INFO] Saved 07_dca_F.parquet (80 rows, 10 cols, 0.0 MB)
+9/20                        
+10/20 [show-results]         
+[06:15:44] [INFO] Saved 07_metric_results.parquet (36 rows, 19 cols, 0.0 MB)
+11/20                        
+12/20 [utility-sweep]        
+[06:15:44] [INFO] Saved 07_utility_sweep.csv (2407 rows)
+[06:15:44] [INFO] Saved 07_utility_max.csv (72 rows)
+13/20                        
+14/20 [utility-sweep-figure] 
+15/20                        
+16/20 [show-alt-results]     
+[06:15:45] [INFO] Saved 07_metric_results_altlabel.parquet (36 rows, 20 cols, 0.0 MB)
+[06:15:45] [INFO] Saved 07_metric_results_altlabel.csv (36 rows)
+17/20                        
+18/20 [evaluate-ablation]    
+[06:15:45] [STEP] --- Evaluating the ablated arm (Protocol Amendment 5) ---
+[06:15:53] [INFO] Saved 07_ablation_metrics.parquet (6 rows, 21 cols, 0.0 MB)
+[06:15:53] [INFO] Saved 07_ablation_metrics.csv (6 rows)
+19/20                        
+20/20 [evaluate-random-split]
+[06:15:53] [STEP] --- Random-split evaluation for H4 ---
+[06:16:05] [INFO] Saved 07_metric_results_random.parquet (8 rows, 19 cols, 0.0 MB)
+output file: 07_metrics_suite.knit.md
+
+/opt/homebrew/bin/pandoc +RTS -K512m -RTS 07_metrics_suite.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/arif/Desktop/RESEARCH/sepsis/project/output/pdf/07_metrics_suite.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine xelatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//Rtmp5Vrz32/rmarkdown-str36044df57841.html --variable tables=yes --standalone -Mhas-frontmatter=false 
+[WARNING] Deprecated: --highlight-style. Use --syntax-highlighting instead.
+
+Output created: output/pdf/07_metrics_suite.pdf
+
+── 06:16:10  Rendering: 08_external_validation.Rmd ──
+  OK  /Users/arif/Desktop/RESEARCH/sepsis/project/output/pdf/08_external_validation.pdf  (323s)
+
+---- R log: 08_external_validation.Rmd ----
+
+
+processing file: 08_external_validation.Rmd
+1/38                               
+2/38 [setup]                       
+3/38                               
+4/38 [load-deps]                   
+[06:16:10] [STEP] === Phase 5: External Validation on eICU-CRD ===
+5/38                               
+6/38 [load-eicu-patients]          
+[06:16:10] [STEP] Loading eICU tables...
+7/38                               
+8/38 [load-vitals]                 
+[06:16:11] [STEP] Loading eICU vitals...
+[06:16:11] [INFO] DuckDB: loading vitalPeriodic filtered to cohort + 72h window...
+9/38                               
+10/38 [load-labs]                   
+[06:16:36] [STEP] Loading eICU labs...
+11/38                               
+12/38 [eicu-drugs]                  
+[06:16:51] [STEP] Loading eICU drug exposure (medication + infusionDrug)...
+13/38                               
+14/38 [eicu-cultures]               
+[06:17:55] [STEP] Loading eICU microbiology...
+15/38                               
+16/38 [build-eicu-panel]            
+[06:17:55] [STEP] Building eICU person-hour panel...
+17/38                               
+18/38 [eicu-onset-functions]        
+19/38                               
+20/38 [derive-eicu-labels]          
+[06:19:07] [STEP] Deriving eICU onsets per label variant...
+[06:19:09] [INFO] Saved 08_eicu_label_summary.parquet (6 rows, 8 cols, 0.0 MB)
+[06:19:09] [INFO] Saved 08_eicu_label_summary.csv (6 rows)
+21/38                               
+22/38 [variant-invariance-guard]    
+[06:19:09] [INFO] Variant-invariance guard passed for anchor 'sepsis3' (3 distinct onset sets)
+[06:19:09] [INFO] Variant-invariance guard passed for anchor 'abx_only' (3 distinct onset sets)
+23/38                               
+24/38 [apply-models]                
+[06:19:09] [STEP] Applying trained models to eICU cohort...
+[06:19:16] [WARN]   [gbt/A/sepsis3] stored model carries no feature names; falling back to the config.R vector (22 features). This is safe only while that vector is unchanged since the fit.
+[06:19:16] [INFO] Saved 08_eicu_predictions_A.parquet (162,070 rows, 9 cols, 2.9 MB)
+[06:19:33] [WARN]   [gbt/A/abx_only] stored model carries no feature names; falling back to the config.R vector (22 features). This is safe only while that vector is unchanged since the fit.
+[06:19:42] [INFO]   [A/abx_only/pred_sepsis] 5882 onsets labelled, 5589 scored; 293 fall beyond the stay's observed panel and are right-censored
+[06:19:44] [INFO]   [A/abx_only/pred_gbt] 5882 onsets labelled, 5589 scored; 293 fall beyond the stay's observed panel and are right-censored
+[06:19:47] [INFO]   [A/abx_only/pred_news2] 5882 onsets labelled, 5589 scored; 293 fall beyond the stay's observed panel and are right-censored
+[06:19:54] [WARN]   [gbt/B/sepsis3] stored model carries no feature names; falling back to the config.R vector (22 features). This is safe only while that vector is unchanged since the fit.
+[06:19:54] [INFO]   [B/sepsis3/pred_sepsis] 31 onsets labelled, 29 scored; 2 fall beyond the stay's observed panel and are right-censored
+[06:19:54] [INFO]   [B/sepsis3/pred_gbt] 31 onsets labelled, 29 scored; 2 fall beyond the stay's observed panel and are right-censored
+[06:19:54] [INFO]   [B/sepsis3/pred_news2] 31 onsets labelled, 29 scored; 2 fall beyond the stay's observed panel and are right-censored
+[06:19:54] [INFO] Saved 08_eicu_predictions_B.parquet (161,992 rows, 9 cols, 2.9 MB)
+[06:20:10] [WARN]   [gbt/B/abx_only] stored model carries no feature names; falling back to the config.R vector (22 features). This is safe only while that vector is unchanged since the fit.
+[06:20:18] [INFO]   [B/abx_only/pred_sepsis] 6608 onsets labelled, 6140 scored; 468 fall beyond the stay's observed panel and are right-censored
+[06:20:20] [INFO]   [B/abx_only/pred_gbt] 6608 onsets labelled, 6140 scored; 468 fall beyond the stay's observed panel and are right-censored
+[06:20:22] [INFO]   [B/abx_only/pred_news2] 6608 onsets labelled, 6140 scored; 468 fall beyond the stay's observed panel and are right-censored
+[06:20:29] [WARN]   [gbt/C/sepsis3] stored model carries no feature names; falling back to the config.R vector (22 features). This is safe only while that vector is unchanged since the fit.
+[06:20:29] [INFO] Saved 08_eicu_predictions_C.parquet (159,580 rows, 9 cols, 2.8 MB)
+[06:20:44] [WARN]   [gbt/C/abx_only] stored model carries no feature names; falling back to the config.R vector (22 features). This is safe only while that vector is unchanged since the fit.
+[06:20:52] [INFO]   [C/abx_only/pred_sepsis] 9985 onsets labelled, 9886 scored; 99 fall beyond the stay's observed panel and are right-censored
+[06:20:54] [INFO]   [C/abx_only/pred_gbt] 9985 onsets labelled, 9886 scored; 99 fall beyond the stay's observed panel and are right-censored
+[06:20:56] [INFO]   [C/abx_only/pred_news2] 9985 onsets labelled, 9886 scored; 99 fall beyond the stay's observed panel and are right-censored
+25/38                               
+26/38 [results-tables]              
+[06:20:57] [INFO] Saved 08_external_validation_results.parquet (9 rows, 12 cols, 0.0 MB)
+[06:20:57] [INFO] Saved 08_external_validation_results.csv (9 rows)
+[06:20:57] [INFO] Saved 08_external_validation_results_abxonly.parquet (9 rows, 12 cols, 0.0 MB)
+[06:20:57] [INFO] Saved 08_external_validation_results_abxonly.csv (9 rows)
+27/38                               
+28/38 [rate-reconciliation]         
+[06:20:57] [INFO] Saved 08_event_rate_reconciliation.parquet (9 rows, 7 cols, 0.0 MB)
+[06:20:57] [INFO] Saved 08_event_rate_reconciliation.csv (9 rows)
+[06:20:57] [INFO] Saved 08_eicu_coverage.parquet (1 rows, 10 cols, 0.0 MB)
+[06:20:57] [INFO] Saved 08_eicu_coverage.csv (1 rows)
+29/38                               
+30/38 [results-h5]                  
+[06:20:57] [INFO] Saved 08_h5_internal_external.parquet (3 rows, 7 cols, 0.0 MB)
+[06:20:57] [INFO] Saved 08_h5_internal_external.csv (3 rows)
+31/38                               
+32/38 [eicu-deterioration-onsets]   
+33/38                               
+34/38 [altlabel-external-eval]      
+[06:20:57] [STEP] Evaluating the treatment-independent label (D) on the full eICU cohort...
+[06:21:11] [WARN]   [gbt/D/deterioration] stored model carries no feature names; falling back to the config.R vector (22 features). This is safe only while that vector is unchanged since the fit.
+[06:21:28] [INFO] Saved 08_eicu_predictions_D.parquet (5,866,697 rows, 7 cols, 89.8 MB)
+[06:21:28] [INFO] Saved 08_external_validation_results_altlabel.parquet (3 rows, 12 cols, 0.0 MB)
+[06:21:28] [INFO] Saved 08_external_validation_results_altlabel.csv (3 rows)
+[06:21:28] [INFO] Saved 08_eicu_label_summary.parquet (7 rows, 8 cols, 0.0 MB)
+[06:21:28] [INFO] Saved 08_eicu_label_summary.csv (7 rows)
+35/38                               
+36/38 [altlabel-rate-reconciliation]
+[06:21:28] [INFO] Saved 08_event_rate_altlabel.parquet (2 rows, 7 cols, 0.0 MB)
+[06:21:28] [INFO] Saved 08_event_rate_altlabel.csv (2 rows)
+37/38                               
+38/38 [altlabel-containment-guards] 
+[06:21:28] [INFO] Containment guards passed: alt-label arm carries D only, scored on 181,589 stays (64.3x the micro sub-cohort).
+output file: 08_external_validation.knit.md
+
+/opt/homebrew/bin/pandoc +RTS -K512m -RTS 08_external_validation.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/arif/Desktop/RESEARCH/sepsis/project/output/pdf/08_external_validation.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine xelatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//Rtmpl6Fg5z/rmarkdown-str36a0313d31d1.html --variable tables=yes --standalone -Mhas-frontmatter=false 
+[WARNING] Deprecated: --highlight-style. Use --syntax-highlighting instead.
+Warning: LaTeX Warning: Reference `sec:external_coverage' on page 6 undefined on input l
+Warning: ine 465.
+Warning: LaTeX Warning: There were undefined references.
+Warning: LaTeX Warning: Reference `sec:external_coverage' on page 6 undefined on input l
+Warning: ine 465.
+Warning: LaTeX Warning: There were undefined references.
+
+Output created: output/pdf/08_external_validation.pdf
+
+── 06:21:33  Rendering: 09_variance_decomposition.Rmd ──
+  OK  /Users/arif/Desktop/RESEARCH/sepsis/project/output/pdf/09_variance_decomposition.pdf  (6s)
+
+---- R log: 09_variance_decomposition.Rmd ----
+
+
+processing file: 09_variance_decomposition.Rmd
+1/24                          
+2/24 [setup]                  
+3/24                          
+4/24 [load-deps]              
+[06:21:34] [STEP] === Phase 6a: Variance Decomposition ===
+5/24                          
+6/24 [load-metrics]           
+7/24                          
+8/24 [variance-by-factor]     
+9/24                          
+10/24 [decomp-table]           
+[06:21:34] [INFO] Saved 09_variance_decomposition_table.parquet (6 rows, 5 cols, 0.0 MB)
+11/24                          
+12/24 [hypothesis-verdicts]    
+[06:21:34] [STEP] Hypothesis test verdicts...
+[06:21:34] [INFO] Saved 09_hypothesis_verdicts.parquet (4 rows, 6 cols, 0.0 MB)
+13/24                          
+14/24 [variance-plots]         
+15/24                          
+16/24 [anchor-attribution]     
+[06:21:35] [STEP] Label-anchor attribution (Protocol Amendment 2)...
+[06:21:35] [INFO] Saved 09_label_anchor_attribution.parquet (18 rows, 16 cols, 0.0 MB)
+[06:21:35] [INFO] Saved 09_label_anchor_attribution.csv (18 rows)
+17/24                          
+18/24 [label-agreement]        
+[06:21:35] [INFO] Saved 09_label_agreement.parquet (5 rows, 15 cols, 0.0 MB)
+[06:21:35] [INFO] Saved 09_label_agreement.csv (5 rows)
+19/24                          
+20/24 [pretreatment-onsets]    
+[06:21:35] [STEP] Pre-treatment (treatment-anchored) window across all label variants...
+[06:21:35] [INFO] Saved 09_pretreatment_onsets.parquet (36 rows, 8 cols, 0.0 MB)
+[06:21:35] [INFO] Saved 09_pretreatment_onsets.csv (36 rows)
+21/24                          
+22/24 [anchor-attribution-plot]
+23/24                          
+24/24 [attribution-summary]    
+output file: 09_variance_decomposition.knit.md
+
+/opt/homebrew/bin/pandoc +RTS -K512m -RTS 09_variance_decomposition.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/arif/Desktop/RESEARCH/sepsis/project/output/pdf/09_variance_decomposition.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine xelatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//Rtmp0qWgjR/rmarkdown-str373a60b3ce77.html --variable tables=yes --standalone -Mhas-frontmatter=false 
+[WARNING] Deprecated: --highlight-style. Use --syntax-highlighting instead.
+
+Output created: output/pdf/09_variance_decomposition.pdf
+
+── 06:21:39  Rendering: 10_equity_analysis.Rmd ──
+  OK  /Users/arif/Desktop/RESEARCH/sepsis/project/output/pdf/10_equity_analysis.pdf  (9s)
+
+---- R log: 10_equity_analysis.Rmd ----
+
+
+processing file: 10_equity_analysis.Rmd
+1/15                       
+2/15 [setup]               
+3/15                       
+4/15 [load-deps]           
+[06:21:40] [STEP] === Phase 6b: Equity Analysis ===
+5/15                       
+6/15 [subgroup-helper]     
+7/15                       
+8/15 [subgroup-performance]
+[06:21:40] [STEP] Subgroup performance analysis...
+[06:21:43] [INFO] Saved 10_subgroup_performance.parquet (63 rows, 10 cols, 0.0 MB)
+9/15                       
+10/15 [auroc-by-race]       
+11/15                       
+12/15 [label-sensitivity]   
+[06:21:43] [STEP] Subgroup label-sensitivity analysis...
+[06:21:43] [INFO] Saved 10_subgroup_label_sensitivity.parquet (22 rows, 6 cols, 0.0 MB)
+13/15                       
+14/15 [label-sens-vs-auroc] 
+15/15                       
+output file: 10_equity_analysis.knit.md
+
+/opt/homebrew/bin/pandoc +RTS -K512m -RTS 10_equity_analysis.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/arif/Desktop/RESEARCH/sepsis/project/output/pdf/10_equity_analysis.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine xelatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//RtmpsIGIEx/rmarkdown-str378b7846e9f0.html --variable tables=yes --standalone -Mhas-frontmatter=false 
+[WARNING] Deprecated: --highlight-style. Use --syntax-highlighting instead.
+
+Output created: output/pdf/10_equity_analysis.pdf
+
+── 06:21:48  Rendering: 11_clinical_metrics.Rmd ──
+  OK  /Users/arif/Desktop/RESEARCH/sepsis/project/output/pdf/11_clinical_metrics.pdf  (31s)
+
+---- R log: 11_clinical_metrics.Rmd ----
+
+
+processing file: 11_clinical_metrics.Rmd
+1/34                    
+2/34 [setup]            
+3/34                    
+4/34 [load-deps]        
+[06:21:49] [STEP] === Clinical Utility Metric Suite (11) ===
+5/34                    
+6/34 [metric-fns]       
+7/34                    
+8/34 [assemble]         
+[06:21:50] [INFO] Variant A: 548,854 test hours, 1,015 event hours, 12,132 stays
+[06:21:50] [INFO] Variant B: 548,827 test hours, 1,040 event hours, 12,132 stays
+[06:21:50] [INFO] Variant C: 504,828 test hours, 2,128 event hours, 12,132 stays
+9/34                    
+10/34 [calibration]      
+[06:22:08] [INFO] Saved 11_calibration_summary.parquet (12 rows, 13 cols, 0.0 MB)
+[06:22:08] [INFO] Saved 11_calibration_summary.csv (12 rows)
+11/34                    
+12/34 [calibration-table]
+13/34                    
+14/34 [dca]              
+[06:22:09] [INFO] Saved 11_net_benefit.parquet (1,458 rows, 8 cols, 0.0 MB)
+15/34                    
+16/34 [dca-table]        
+[06:22:10] [INFO] Saved 11_net_benefit_at_prevalence.parquet (18 rows, 9 cols, 0.0 MB)
+[06:22:10] [INFO] Saved 11_net_benefit_at_prevalence.csv (18 rows)
+17/34                    
+18/34 [operating-points] 
+[06:22:10] [INFO] Saved 11_operating_points.parquet (54 rows, 18 cols, 0.0 MB)
+[06:22:10] [INFO] Saved 11_operating_points.csv (54 rows)
+19/34                    
+20/34 [sens-tradeoff]    
+21/34                    
+22/34 [patient-level]    
+[06:22:14] [INFO] Saved 11_patient_level_metrics.parquet (54 rows, 23 cols, 0.0 MB)
+[06:22:14] [INFO] Saved 11_patient_level_metrics.csv (54 rows)
+23/34                    
+24/34 [hour-vs-patient]  
+[06:22:14] [INFO] Saved 11_hour_vs_patient.parquet (18 rows, 10 cols, 0.0 MB)
+[06:22:14] [INFO] Saved 11_hour_vs_patient.csv (18 rows)
+25/34                    
+26/34 [lead-time]        
+[06:22:14] [INFO] Saved 11_lead_time_summary.parquet (18 rows, 9 cols, 0.0 MB)
+[06:22:14] [INFO] Saved 11_lead_time_summary.csv (18 rows)
+27/34                    
+28/34 [external]         
+[06:22:15] [INFO] Saved 11_external_operating_points.parquet (9 rows, 19 cols, 0.0 MB)
+[06:22:15] [INFO] Saved 11_external_operating_points.csv (9 rows)
+29/34                    
+30/34 [external-patient] 
+[06:22:15] [INFO] Saved 11_external_patient_level.parquet (9 rows, 24 cols, 0.0 MB)
+[06:22:15] [INFO] Saved 11_external_patient_level.csv (9 rows)
+31/34                    
+32/34 [crosscheck]       
+33/34                    
+34/34 [summary-out]      
+output file: 11_clinical_metrics.knit.md
+
+/opt/homebrew/bin/pandoc +RTS -K512m -RTS 11_clinical_metrics.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/arif/Desktop/RESEARCH/sepsis/project/output/pdf/11_clinical_metrics.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine xelatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//Rtmp4zNf72/rmarkdown-str37d726869a3a.html --variable tables=yes --standalone -Mhas-frontmatter=false 
+[WARNING] Deprecated: --highlight-style. Use --syntax-highlighting instead.
+
+Output created: output/pdf/11_clinical_metrics.pdf
+
+── 06:22:19  Rendering: 12_inference.Rmd ──
+  OK  /Users/arif/Desktop/RESEARCH/sepsis/project/output/pdf/12_inference.pdf  (1556s)
+
+---- R log: 12_inference.Rmd ----
+
+
+processing file: 12_inference.Rmd
+1/46                           
+2/46 [setup]                   
+3/46                           
+4/46 [load-deps]               
+[06:22:20] [STEP] === Phase 9: Inference, uncertainty, and multiplicity ===
+[06:22:20] [INFO] Bootstrap replicates: main=2000, subgroup=2000, external=1000 (seed 42)
+5/46                           
+6/46 [assemble]                
+7/46                           
+8/46 [main-ci]                 
+[06:23:21] [INFO]   bootstrap 500/2000
+[06:24:20] [INFO]   bootstrap 1000/2000
+[06:25:19] [INFO]   bootstrap 1500/2000
+[06:26:18] [INFO]   bootstrap 2000/2000
+[06:26:18] [INFO] Main bootstrap: 235.9 s
+[06:26:18] [INFO] Saved 12_internal_ci.parquet (6 rows, 11 cols, 0.0 MB)
+[06:26:18] [INFO] Saved 12_internal_ci.csv (6 rows)
+9/46                           
+10/46 [confirmatory-boot]       
+[06:26:59] [INFO]   bootstrap 500/2000
+[06:27:40] [INFO]   bootstrap 1000/2000
+[06:28:21] [INFO]   bootstrap 1500/2000
+[06:29:02] [INFO]   bootstrap 2000/2000
+[06:29:02] [INFO] H1/H6 bootstrap: 164.7 s
+11/46                           
+12/46 [confirmatory-h4]         
+[06:29:19] [INFO]   bootstrap 1000/2000
+[06:29:36] [INFO]   bootstrap 2000/2000
+[06:29:49] [INFO]   bootstrap 1000/2000
+[06:30:02] [INFO]   bootstrap 2000/2000
+13/46                           
+14/46 [confirmatory-h5]         
+[06:30:02] [WARN] H5: external cohort has 29 events, below the 100-event floor; the AUROC estimate is not interpretable
+[06:30:03] [INFO]   bootstrap 250/1000
+[06:30:03] [INFO]   bootstrap 500/1000
+[06:30:04] [INFO]   bootstrap 750/1000
+[06:30:05] [INFO]   bootstrap 1000/1000
+[06:30:05] [INFO] External bootstrap: 3.7 s
+[06:30:12] [INFO]   bootstrap 500/1000
+[06:30:18] [INFO]   bootstrap 1000/1000
+15/46                           
+16/46 [confirmatory-h2h3]       
+[06:30:18] [INFO] Saved 12_h2_stability_by_kind.parquet (2 rows, 6 cols, 0.0 MB)
+[06:30:18] [INFO] Saved 12_h2_stability_by_kind.csv (2 rows)
+[06:30:18] [INFO] Saved 12_h2_coefficient_stability.parquet (22 rows, 3 cols, 0.0 MB)
+[06:30:18] [INFO] Saved 12_h2_coefficient_stability.csv (22 rows)
+[06:30:18] [INFO] Saved 12_h2_stability_uncertainty.parquet (6 rows, 14 cols, 0.0 MB)
+[06:30:18] [INFO] Saved 12_h2_stability_uncertainty.csv (6 rows)
+17/46                           
+18/46 [confirmatory-table]      
+[06:30:18] [INFO] Saved 12_spread_ci.parquet (2 rows, 4 cols, 0.0 MB)
+[06:30:18] [INFO] Saved 12_spread_ci.csv (2 rows)
+[06:30:18] [INFO] Saved 12_confirmatory_tests.parquet (6 rows, 16 cols, 0.0 MB)
+[06:30:18] [INFO] Saved 12_confirmatory_tests.csv (6 rows)
+19/46                           
+20/46 [confirmatory-notes]      
+21/46                           
+22/46 [subgroup-auroc]          
+[06:30:18] [INFO]   race: 8 levels estimated, 2 above the 100-event interpretability floor
+[06:30:18] [INFO] Subgroup bootstrap: race (8 levels, 16 estimands)
+[06:30:40] [INFO]   bootstrap 1000/2000
+[06:31:01] [INFO]   bootstrap 2000/2000
+[06:31:02] [INFO]   language: 6 levels estimated, 1 above the 100-event interpretability floor
+[06:31:02] [INFO] Subgroup bootstrap: language (6 levels, 12 estimands)
+[06:31:24] [INFO]   bootstrap 1000/2000
+[06:31:47] [INFO]   bootstrap 2000/2000
+[06:31:47] [INFO]   insurance: 4 levels estimated, 3 above the 100-event interpretability floor
+[06:31:47] [INFO] Subgroup bootstrap: insurance (4 levels, 8 estimands)
+[06:32:09] [INFO]   bootstrap 1000/2000
+[06:32:32] [INFO]   bootstrap 2000/2000
+23/46                           
+24/46 [subgroup-fdr]            
+[06:32:32] [INFO] Saved 12_subgroup_auroc_ci.parquet (36 rows, 14 cols, 0.0 MB)
+[06:32:32] [INFO] Saved 12_subgroup_auroc_ci.csv (36 rows)
+[06:32:32] [INFO] Saved 12_subgroup_auroc_contrasts.parquet (6 rows, 13 cols, 0.0 MB)
+[06:32:32] [INFO] Saved 12_subgroup_auroc_contrasts.csv (6 rows)
+25/46                           
+26/46 [subgroup-fdr-contrasts]  
+27/46                           
+28/46 [label-sens-ci]           
+[06:32:32] [INFO] Label-sensitivity bootstrap: race (8 levels)
+[06:32:34] [INFO]   bootstrap 1000/2000
+[06:32:37] [INFO]   bootstrap 2000/2000
+[06:32:37] [INFO] Label-sensitivity bootstrap: language (8 levels)
+[06:32:39] [INFO]   bootstrap 1000/2000
+[06:32:41] [INFO]   bootstrap 2000/2000
+[06:32:41] [INFO] Label-sensitivity bootstrap: insurance (5 levels)
+[06:32:44] [INFO]   bootstrap 1000/2000
+[06:32:48] [INFO]   bootstrap 2000/2000
+[06:32:48] [INFO] Saved 12_subgroup_labelsens_ci.parquet (21 rows, 17 cols, 0.0 MB)
+[06:32:48] [INFO] Saved 12_subgroup_labelsens_ci.csv (21 rows)
+[06:32:48] [INFO] Saved 12_subgroup_labelsens_contrasts.parquet (18 rows, 12 cols, 0.0 MB)
+[06:32:48] [INFO] Saved 12_subgroup_labelsens_contrasts.csv (18 rows)
+29/46                           
+30/46 [label-sens-contrasts]    
+31/46                           
+32/46 [alt-label-ci]            
+[06:33:26] [INFO]   bootstrap 500/2000
+[06:34:03] [INFO]   bootstrap 1000/2000
+[06:34:41] [INFO]   bootstrap 1500/2000
+[06:35:18] [INFO]   bootstrap 2000/2000
+[06:35:18] [INFO] Alternative-label bootstrap: 149.2 s
+[06:35:18] [INFO] Saved 12_altlabel_auroc_ci.parquet (8 rows, 11 cols, 0.0 MB)
+[06:35:18] [INFO] Saved 12_altlabel_auroc_ci.csv (8 rows)
+[06:35:18] [INFO] Saved 12_altlabel_contrasts.parquet (6 rows, 11 cols, 0.0 MB)
+[06:35:18] [INFO] Saved 12_altlabel_contrasts.csv (6 rows)
+[06:35:18] [INFO] Saved 12_anchor_attribution_ci.parquet (2 rows, 6 cols, 0.0 MB)
+[06:35:18] [INFO] Saved 12_anchor_attribution_ci.csv (2 rows)
+33/46                           
+34/46 [alt-label-contrast-table]
+35/46                           
+36/46 [ablation-ci]             
+[06:36:18] [INFO]   bootstrap 500/2000
+[06:37:18] [INFO]   bootstrap 1000/2000
+[06:38:18] [INFO]   bootstrap 1500/2000
+[06:39:18] [INFO]   bootstrap 2000/2000
+[06:39:18] [INFO] Ablation bootstrap: 239.3 s
+[06:39:18] [INFO] Saved 12_ablation_ci.parquet (6 rows, 10 cols, 0.0 MB)
+[06:39:18] [INFO] Saved 12_ablation_ci.csv (6 rows)
+37/46                           
+38/46 [calibration-ci]          
+[06:39:46] [INFO]   bootstrap 250/2000
+[06:40:13] [INFO]   bootstrap 500/2000
+[06:40:41] [INFO]   bootstrap 750/2000
+[06:41:08] [INFO]   bootstrap 1000/2000
+[06:41:36] [INFO]   bootstrap 1250/2000
+[06:42:03] [INFO]   bootstrap 1500/2000
+[06:42:31] [INFO]   bootstrap 1750/2000
+[06:42:58] [INFO]   bootstrap 2000/2000
+[06:42:58] [INFO] Calibration bootstrap: 219.8 s
+[06:42:58] [INFO] Saved 12_calibration_ci.parquet (3 rows, 11 cols, 0.0 MB)
+[06:42:58] [INFO] Saved 12_calibration_ci.csv (3 rows)
+[06:42:58] [INFO] Saved 12_calibration_contrasts.parquet (2 rows, 13 cols, 0.0 MB)
+[06:42:58] [INFO] Saved 12_calibration_contrasts.csv (2 rows)
+39/46                           
+40/46 [altlabel-transport-ci]   
+[06:43:39] [INFO]   bootstrap 250/1000
+[06:44:19] [INFO]   bootstrap 500/1000
+[06:44:59] [INFO]   bootstrap 750/1000
+[06:45:39] [INFO]   bootstrap 1000/1000
+[06:45:41] [INFO]   bootstrap 250/1000
+[06:45:43] [INFO]   bootstrap 500/1000
+[06:45:46] [INFO]   bootstrap 750/1000
+[06:45:48] [INFO]   bootstrap 1000/1000
+[06:46:21] [INFO]   bootstrap 250/1000
+[06:46:55] [INFO]   bootstrap 500/1000
+[06:47:27] [INFO]   bootstrap 750/1000
+[06:48:01] [INFO]   bootstrap 1000/1000
+[06:48:03] [INFO]   bootstrap 250/1000
+[06:48:05] [INFO]   bootstrap 500/1000
+[06:48:07] [INFO]   bootstrap 750/1000
+[06:48:09] [INFO]   bootstrap 1000/1000
+[06:48:10] [INFO] Saved 12_altlabel_transport_ci.parquet (2 rows, 13 cols, 0.0 MB)
+[06:48:10] [INFO] Saved 12_altlabel_transport_ci.csv (2 rows)
+41/46                           
+42/46 [subgroup-ci-plot]        
+43/46                           
+44/46 [register]                
+[06:48:10] [INFO] Saved 12_analysis_register.parquet (32 rows, 5 cols, 0.0 MB)
+[06:48:10] [INFO] Saved 12_analysis_register.csv (32 rows)
+45/46                           
+46/46 [summary]                 
+output file: 12_inference.knit.md
+
+/opt/homebrew/bin/pandoc +RTS -K512m -RTS 12_inference.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/arif/Desktop/RESEARCH/sepsis/project/output/pdf/12_inference.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine xelatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//RtmpRmD5w6/rmarkdown-str38403056e458.html --variable tables=yes --standalone -Mhas-frontmatter=false 
+[WARNING] Deprecated: --highlight-style. Use --syntax-highlighting instead.
+
+Output created: output/pdf/12_inference.pdf
+
+Regenerating thesis constants...
+Reading results from /Users/arif/Desktop/RESEARCH/sepsis/project/output/processed_data 
+
+Wrote /Users/arif/Desktop/RESEARCH/sepsis/thesis/generated/pipeline_constants.tex
+  1474 macros (1474 resolved, 0 missing)
+  5 generated table bodies: htwouncertainty, equitylabel, equitylabelcontrasts, equityperformance, equitycontrasts
+
+Synced 11/11 figures -> /Users/arif/Desktop/RESEARCH/sepsis/thesis/images
+
+Checking cross-file consistency...
+
+Cross-file consistency checks
+-----------------------------
+  ok    decomposition split row == H4 estimate
+  ok    decomposition transport row == H5 estimate
+  ok    H1 estimate == label spread - model spread
+  ok    every event rate == 1000 * events / person-hours
+  ok    eICU A: labelled == scored + beyond-panel
+  ok    eICU B: labelled == scored + beyond-panel
+  ok    eICU C: labelled == scored + beyond-panel
+  ok    no eICU onset hour is dropped for a missing prediction
+  ok    H2 by-kind unstable total == flagged count
+  ok    H2 by-kind term total == covariate count
+  ok    H2 uncertainty diagnostic covers every flagged covariate
+  ok    cohort ladder is monotone non-increasing
+  ok    each cohort rung == previous minus its exclusions
+  ok    label-variance table uses the final cohort size
+  ok    onsets inside the 72 h panel <= cohort-wide onsets
+  ok    family size declared in 12_subgroup_auroc_contrasts == nrow
+  ok    family size declared in 12_subgroup_labelsens_contrasts == nrow
+  ok    family size declared in 12_altlabel_contrasts == nrow
+  ok    no analysis name appears twice in the register
+  ok    no two register rows report into the same table
+  ok    every register row carries a status
+  ok    H2: sign + magnitude - overlap == unstable total
+  ok    H2: exactly one covariate meets both criteria
+  ok    H2: the two smallest noise ratios are the two sign reversals
+  ok    H2: no sign reversal exceeds its own pooled SE
+  ok    model-class spread is at least tenfold the label spread
+  ok    utility ceiling over pre-registered variants is GBT under Variant C
+  ok    utility ceiling under the primary label is GBT under Variant B
+  ok    burden range endpoints are primary/C and GBT/B
+  ok    burden range is twenty to thirty-seven times the benchmark
+  ok    largest ablation |delta AUROC| is primary under Variant C
+  ok    every ablation |delta AUROC| is below 0.01
+  ok    at least one ablation contrast excludes zero
+  ok    no ablation |delta AUROC| interval reaches 0.01 in magnitude
+  ok    calibration slope covers 1 under A and B but not C
+  ok    calibration intercept covers 0 under C but not A and B
+  ok    exactly one absolute calibration target is missed under each variant
+  ok    no cross-label calibration SLOPE contrast excludes zero
+  ok    the Liberal calibration INTERCEPT contrast excludes zero
+  ok    both Variant D transport drops are within a factor of two of 0.085
+  ok    Variant D transport delta equals internal minus external AUROC
+  ok    H6's lower limb is the smaller of the two
+  ok    neither H6 limb clears its boundary at 0.05
+  ok    abx-only arm: NEWS2 is not below GBT under any label
+  ok    abx-only arm: the primary model leads NEWS2 under every label
+  ok    smallest adjusted p in family E1 is an insurance contrast
+  ok    no contrast in family E1 survives BH
+  ok    kappa(A,B) is the lower of the two Sepsis-3 pairings
+  ok    alt-label metrics hold D, E and F
+  ok    cross-label coefficients hold A, B and C
+-----------------------------
+  50 passed, 0 failed, 0 skipped
+
+
+Checking thesis literal provenance...
+
+Literal-number lint
+-------------------
+
+ALLOWED (18) -- design constants and source-data facts: 
+  chapters/05.Review.tex:210   74,000     IV): a freely available, de-identified database of approximately 74,000 ICU
+                    MIMIC-IV's approximate stay count as published by PhysioNet
+  chapters/05.Review.tex:511   -0.085     External AUC \textbf{0.761} ($-0.085$); 0.807 with 10\% fine-tuning \\
+                    external AUROC penalty anticipated from Moor et al., fixed in the pre-registration
+  chapters/05.Review.tex:548   0.085      \paragraph{The external penalty for a well-built model is roughly 0.085 AUROC.}
+                    external AUROC penalty anticipated from Moor et al., fixed in the pre-registration
+  chapters/05.Review.tex:558   0.085      0.085 bounds only the AUROC limb of that comparison. A study observing a
+                    external AUROC penalty anticipated from Moor et al., fixed in the pre-registration
+  chapters/06.Methodology.tex:58    3,502      chartevents        & yes             & 3,502.6            \\
+                    chartevents file size in MB, from 01_setup_file_report
+  chapters/06.Methodology.tex:59    2,593      labevents          & yes             & 2,593.0            \\
+                    labevents file size in MB, from 01_setup_file_report
+  chapters/06.Methodology.tex:161   46.104     Common Rule (45 CFR 46.104(d)(4)) and PhysioNet's data access policies.
+                    45 CFR 46.104(d)(4), a regulation number
+  chapters/07.Design.tex:393   2,000      pre-sorted data so that 2,000 replicates over half a million person-hours
+                    bootstrap replicate count B, fixed in config.R
+  chapters/07.Design.tex:406   1,000      (compressed, columnar). Small result tables ($<$1,000 rows) are also
+                    row threshold for the CSV mirror of a result table
+  chapters/08.Evaluation.tex:495   0.001      probabilities to $[0.001, 0.999]$. That guard is standard for models whose
+                    the conventional calibration clamp being argued against
+  chapters/08.Evaluation.tex:495   0.999      probabilities to $[0.001, 0.999]$. That guard is standard for models whose
+                    the conventional calibration clamp being argued against
+  chapters/08.Evaluation.tex:1046  0.085      drop of \pcHFiveEst{} is about three-quarters of the 0.085 that Moor et al.\
+                    external AUROC penalty anticipated from Moor et al., fixed in the pre-registration
+  chapters/08.Evaluation.tex:1138  0.085      rather than \pcExtNEventsB. Both drops are of the order of the 0.085
+                    external AUROC penalty anticipated from Moor et al., fixed in the pre-registration
+  chapters/08.Evaluation.tex:2810  0.085      roughly three-quarters of the 0.085 anticipated from Moor et al.\
+                    external AUROC penalty anticipated from Moor et al., fixed in the pre-registration
+  chapters/09.Discussion.tex:186   0.085      \cite{moor2023review} report an external penalty of 0.085 AUROC across four
+                    external AUROC penalty anticipated from Moor et al., fixed in the pre-registration
+  chapters/10.Conclusion.tex:88    0.085      predicted direction, and roughly three-quarters of the 0.085 anticipated from
+                    external AUROC penalty anticipated from Moor et al., fixed in the pre-registration
+  chapters/11.Appendix.tex:73    0.039      0.039 to its present \pcUtilityMaxGbtB{} and the model-class gap from 0.0129 to
+                    GBT utility ceiling BEFORE Amendment 8 corrected the comparator's test-set early stopping; quoted in Appendix A.2 to show what that correction moved. Its current counterpart in the same sentence is a macro
+  chapters/11.Appendix.tex:73    0.0129     0.039 to its present \pcUtilityMaxGbtB{} and the model-class gap from 0.0129 to
+                    H6 model-class gap BEFORE Amendment 8, quoted in Appendix A.2 for the same reason; its current counterpart is a macro 
+
+CITED (49) -- quoting prior work, citation within two lines: 
+  chapters/04.Introduction.tex:17    0.811      prediction models and found a median internal AUROC of 0.811, suggesting
+  chapters/04.Introduction.tex:19    0.381      collapsed from $+0.381$ internally to $-0.164$ externally. A negative score
+  chapters/04.Introduction.tex:19    -0.164     collapsed from $+0.381$ internally to $-0.164$ externally. A negative score
+  chapters/04.Introduction.tex:25    227,091    Model v2 prospectively across 227,091 encounters at four US health systems and
+  chapters/04.Introduction.tex:37    2,178      the Sepsis-3 definition changed the identified cohort from 867 to 2,178
+  chapters/04.Introduction.tex:62    -2,178     the same database can create very different patient groups (867--2,178 cases).
+  chapters/05.Review.tex:201   -0.164     $-0.164$, indicating net harm. For models reporting only AUROC, clinical
+  chapters/05.Review.tex:354   11,791     11,791 qualifying ICU admissions drawn from 23,620, and found agreement across
+  chapters/05.Review.tex:354   23,620     11,791 qualifying ICU admissions drawn from 23,620, and found agreement across
+  chapters/05.Review.tex:366   2,178      867 to 2,178, a factor of 2.5, purely as a function of that reading. They
+  chapters/05.Review.tex:378   198,494    evaluated on 198,494 encounters against three electronically computable
+  chapters/05.Review.tex:441   77,582     would not otherwise exist. Re-evaluating the Epic Sepsis Model on 77,582
+  chapters/05.Review.tex:506   0.949      $\rho = 0.949$ between seen systems &
+  chapters/05.Review.tex:507   -0.033     $\rho = -0.033$ and $0.013$ to the unseen system \\
+  chapters/05.Review.tex:507   0.013      $\rho = -0.033$ and $0.013$ to the unseen system \\
+  chapters/05.Review.tex:510   136,478    Four international ICU databases, 136,478 admissions; internal AUC 0.846 &
+  chapters/05.Review.tex:510   0.846      Four international ICU databases, 136,478 admissions; internal AUC 0.846 &
+  chapters/05.Review.tex:511   0.761      External AUC \textbf{0.761} ($-0.085$); 0.807 with 10\% fine-tuning \\
+  chapters/05.Review.tex:511   0.807      External AUC \textbf{0.761} ($-0.085$); 0.807 with 10\% fine-tuning \\
+  chapters/05.Review.tex:515   0.811      AUROC $0.811 \rightarrow 0.783$ (n.s.); \textbf{Utility
+  chapters/05.Review.tex:515   0.783      AUROC $0.811 \rightarrow 0.783$ (n.s.); \textbf{Utility
+  chapters/05.Review.tex:516   0.381      $0.381 \rightarrow -0.164$} \\
+  chapters/05.Review.tex:516   -0.164     $0.381 \rightarrow -0.164$} \\
+  chapters/05.Review.tex:519   38,455     Proprietary $\rightarrow$ Michigan Medicine, 38,455 hospitalisations &
+  chapters/05.Review.tex:527   227,091    Prospective, four US health systems, 227,091 encounters &
+  chapters/05.Review.tex:549   0.846      This is Moor et al.'s 0.846 $\rightarrow$ 0.761 across four databases spanning
+  chapters/05.Review.tex:549   0.761      This is Moor et al.'s 0.846 $\rightarrow$ 0.761 across four databases spanning
+  chapters/05.Review.tex:551   0.811      direction, if not in significance, with Wang et al.'s meta-level 0.811
+  chapters/05.Review.tex:552   0.783      $\rightarrow$ 0.783. It is a reference estimate drawn from one multi-database
+  chapters/05.Review.tex:565   0.949      participants had trained on ($\rho = 0.949$) but essentially uncorrelated with
+  chapters/05.Review.tex:566   -0.033     performance on the third, unseen system ($\rho = -0.033$ and $0.013$). The
+  chapters/05.Review.tex:566   0.013      performance on the third, unseen system ($\rho = -0.033$ and $0.013$). The
+  chapters/05.Review.tex:582   -0.003     minimisation (AUROC differences $-0.003$ to $0.050$), so there is at present no
+  chapters/05.Review.tex:582   0.050      minimisation (AUROC differences $-0.003$ to $0.050$), so there is at present no
+  chapters/05.Review.tex:603   0.811      the median AUROC moved from 0.811 internally to 0.783 externally, a
+  chapters/05.Review.tex:603   0.783      the median AUROC moved from 0.811 internally to 0.783 externally, a
+  chapters/05.Review.tex:605   0.381      Utility Score moved from $+0.381$ to $-0.164$. The same models, the same
+  chapters/05.Review.tex:605   -0.164     Utility Score moved from $+0.381$ to $-0.164$. The same models, the same
+  chapters/05.Review.tex:623   227,091    across 227,091 encounters at four health systems, report encounter-level AUROC
+  chapters/05.Review.tex:638   0.761      penalty ($0.761 \rightarrow 0.807$). Model class and localisation are therefore
+  chapters/05.Review.tex:638   0.807      penalty ($0.761 \rightarrow 0.807$). Model class and localisation are therefore
+  chapters/05.Review.tex:650   49,331     49,331 patients at 149 New York hospitals, estimate an odds ratio of 1.04 per
+  chapters/05.Review.tex:790   11,791     The study \cite{wang2022equity} analysed 11,791 MIMIC-III critical-care
+  chapters/05.Review.tex:791   5,783      patients, of whom 5,783 met Sepsis-3 criteria, and reports two findings. First, six competin
+  chapters/06.Methodology.tex:786   0.846      parameters and an anticipated $C$-statistic of 0.846 from Moor et al.\
+  chapters/08.Evaluation.tex:2845  0.381      margin whose collapse Wang et al.\ \cite{wang2025srpm} documented, a median internal Utility
+  chapters/08.Evaluation.tex:2845  -0.164     margin whose collapse Wang et al.\ \cite{wang2025srpm} documented, a median internal Utility
+  chapters/08.Evaluation.tex:2864  0.811      (0.811 to 0.783) is not reproduced as stability here either.
+  chapters/08.Evaluation.tex:2864  0.783      (0.811 to 0.783) is not reproduced as stability here either. 
+
+COMPARATIVE, ADVISORY (30 unbacked, 26 backed by a macro in context) -- claims whose truth depends on values they do not print: 
+  chapters/05.Review.tex:399   thirty times         of this thesis are constructed to settle it on a cohort thirty times larger
+  chapters/05.Review.tex:637    half of             already shown that local fine-tuning recovers roughly half of the external
+  chapters/06.Methodology.tex:721   twice                twice: at the 0.5 cut-off, for comparability with the literature, and at its
+  chapters/06.Methodology.tex:746   ten times            from one tenth to ten times the observed event prevalence rather than on the
+  chapters/06.Methodology.tex:769   order of magnitude   PPV by more than an order of magnitude.
+  chapters/08.Evaluation.tex:64    twice                about twice as many sepsis cases as the Narrow or Seymour-Standard variants,
+  chapters/08.Evaluation.tex:253   orders of magnitude  two orders of magnitude away from the 0.5 probability cut-off. The vertical
+  chapters/08.Evaluation.tex:443   orders of magnitude  miscalibrated by roughly three orders of magnitude. Both carry intercepts near
+  chapters/08.Evaluation.tex:452   orders of magnitude  two orders of magnitude cannot be operated at a threshold chosen from clinical
+  chapters/08.Evaluation.tex:485   orders of magnitude  because the predicted-risk ranges differ by orders of magnitude. The
+  chapters/08.Evaluation.tex:545   hundred times        and one hundred times the prevalence: at $t=0.01$ the analyst is asserting a
+  chapters/08.Evaluation.tex:549   ten times            ten times the prevalence, following Vickers and Elkin \cite{vickers2006dca}.
+  chapters/08.Evaluation.tex:733   five times           five-hour alert run counts once rather than five times.
+  chapters/08.Evaluation.tex:815   twentyfold           twentyfold in PPV and by roughly tenfold in alarm count. A study reporting
+  chapters/08.Evaluation.tex:815   tenfold              twentyfold in PPV and by roughly tenfold in alarm count. A study reporting
+  chapters/08.Evaluation.tex:918   order of magnitude   order of magnitude. Requiring \emph{both} limbs to be documented at all, at
+  chapters/08.Evaluation.tex:1001  orders of magnitude  right denominator. A gap of two or more orders of magnitude would not be a
+  chapters/08.Evaluation.tex:1056  orders of magnitude  reproduces it on two orders of magnitude more events
+  chapters/08.Evaluation.tex:1074  three times          single label applied three times. Second, NEWS2's AUROC differs across
+  chapters/08.Evaluation.tex:1144  a hundredth of       location. Both intervals here exclude zero and are narrower than a hundredth of
+  chapters/08.Evaluation.tex:1315  A quarter of         in just \pcPctExactMatchF\% of them. \textbf{A quarter of Sepsis-3 onsets are
+  chapters/08.Evaluation.tex:1779  orders of magnitude  over the covariate set by many orders of magnitude. The assumption the static
+  chapters/08.Evaluation.tex:1871  order of magnitude   roughly an order of magnitude from the largest stratum to the smallest.
+  chapters/08.Evaluation.tex:2244   half of             to the others. Either way, the negative half of that result could not have been
+  chapters/08.Evaluation.tex:2414  order of magnitude   is the larger by roughly an order of magnitude, which is the reverse of the
+  chapters/08.Evaluation.tex:2836  orders of magnitude  labels. Two arms differing by two orders of magnitude in event count agree on
+  chapters/09.Discussion.tex:110   order of magnitude   an order of magnitude less than the model class, while moving the cohort, the
+  chapters/09.Discussion.tex:297   twice                its scope is narrow in a way worth stating twice: it is demonstrated for a
+  chapters/09.Discussion.tex:650   orders of magnitude  chartevents contains values several orders of magnitude outside the
+  chapters/11.Appendix.tex:85    twice                print the present values twice and destroy the comparison the sentence exists to 
+
+-------------------
+  0 review, 18 allowed, 49 cited, over 12 files
+  30 comparative claims unbacked by a macro (advisory only)
+
+
+Checking frozen figure assets...
+ok   fig3.1_consort.drawio matches the pipeline constants (11 values checked)
+  OK  Figure 3.1 still matches the pipeline constants.
+
+======================================================
+  Done: 12 succeeded, 0 failed  [2026-08-31 06:48:17]
+  PDF reports: /Users/arif/Desktop/RESEARCH/sepsis/project/output/pdf/
+  Full log:     /Users/arif/Desktop/RESEARCH/sepsis/project/output/logs/pipeline_run.log
+======================================================

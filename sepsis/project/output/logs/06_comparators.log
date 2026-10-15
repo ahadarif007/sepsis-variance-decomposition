@@ -1,0 +1,83 @@
+
+
+processing file: 06_comparators.Rmd
+1/16                         
+2/16 [setup]                 
+3/16                         
+4/16 [load-deps]             
+[06:05:53] [STEP] === Phase 3b: Comparator models ===
+5/16                         
+6/16 [feature-set]           
+7/16                         
+8/16 [fit-comparators-fn]    
+9/16                         
+10/16 [run-comparators]       
+[06:05:53] [INFO] Arms in this run: full, ablated
+[06:05:53] [STEP] --- Comparators for Variant A ---
+[06:05:56] [STEP]   Comparator: NEWS2
+[06:05:56] [STEP]   Comparator: Static Cox PH
+[06:06:09] [INFO] Saved 06_cox_schoenfeld_A.parquet (13 rows, 5 cols, 0.0 MB)
+[06:06:47] [INFO] Saved 06_coef_cox_A.parquet (12 rows, 8 cols, 0.0 MB)
+[06:06:47] [STEP]   Comparator: Gradient-Boosted Trees (XGBoost)
+[06:07:11] [INFO] Saved 06_gbt_feature_importance_A.parquet (22 rows, 5 cols, 0.0 MB)
+[06:07:11] [INFO] Saved 06_predictions_comparators_A.parquet (548,854 rows, 15 cols, 8.9 MB)
+[06:07:11] [STEP] --- Comparators for Variant B ---
+[06:07:13] [STEP]   Comparator: NEWS2
+[06:07:13] [STEP]   Comparator: Static Cox PH
+[06:07:26] [INFO] Saved 06_cox_schoenfeld_B.parquet (13 rows, 5 cols, 0.0 MB)
+[06:08:04] [INFO] Saved 06_coef_cox_B.parquet (12 rows, 8 cols, 0.0 MB)
+[06:08:04] [STEP]   Comparator: Gradient-Boosted Trees (XGBoost)
+[06:08:23] [INFO] Saved 06_gbt_feature_importance_B.parquet (22 rows, 5 cols, 0.0 MB)
+[06:08:23] [INFO] Saved 06_predictions_comparators_B.parquet (548,827 rows, 15 cols, 8.9 MB)
+[06:08:23] [STEP] --- Comparators for Variant C ---
+[06:08:25] [STEP]   Comparator: NEWS2
+[06:08:25] [STEP]   Comparator: Static Cox PH
+[06:08:37] [INFO] Saved 06_cox_schoenfeld_C.parquet (13 rows, 5 cols, 0.0 MB)
+[06:09:12] [INFO] Saved 06_coef_cox_C.parquet (12 rows, 8 cols, 0.0 MB)
+[06:09:12] [STEP]   Comparator: Gradient-Boosted Trees (XGBoost)
+[06:09:31] [INFO] Saved 06_gbt_feature_importance_C.parquet (22 rows, 5 cols, 0.0 MB)
+[06:09:31] [INFO] Saved 06_predictions_comparators_C.parquet (504,828 rows, 15 cols, 8.2 MB)
+[06:09:31] [STEP] --- Comparators for Variant D ---
+[06:09:32] [STEP]   Comparator: NEWS2
+[06:09:32] [STEP]   Comparator: Static Cox PH
+[06:09:41] [INFO] Saved 06_cox_schoenfeld_D.parquet (13 rows, 5 cols, 0.0 MB)
+[06:10:07] [INFO] Saved 06_coef_cox_D.parquet (12 rows, 8 cols, 0.0 MB)
+[06:10:07] [STEP]   Comparator: Gradient-Boosted Trees (XGBoost)
+[06:10:51] [INFO] Saved 06_gbt_feature_importance_D.parquet (22 rows, 5 cols, 0.0 MB)
+[06:10:51] [INFO] Saved 06_predictions_comparators_D.parquet (397,603 rows, 15 cols, 6.9 MB)
+[06:10:51] [STEP] --- Comparators for Variant E ---
+[06:10:52] [STEP]   Comparator: NEWS2
+[06:10:52] [STEP]   Comparator: Static Cox PH
+[06:11:03] [INFO] Saved 06_cox_schoenfeld_E.parquet (13 rows, 5 cols, 0.0 MB)
+[06:11:35] [INFO] Saved 06_coef_cox_E.parquet (12 rows, 8 cols, 0.0 MB)
+[06:11:35] [STEP]   Comparator: Gradient-Boosted Trees (XGBoost)
+[06:11:55] [INFO] Saved 06_gbt_feature_importance_E.parquet (22 rows, 5 cols, 0.0 MB)
+[06:11:55] [INFO] Saved 06_predictions_comparators_E.parquet (465,409 rows, 15 cols, 7.7 MB)
+[06:11:55] [STEP] --- Comparators for Variant F ---
+[06:11:57] [STEP]   Comparator: NEWS2
+[06:11:57] [STEP]   Comparator: Static Cox PH
+[06:12:11] [INFO] Saved 06_cox_schoenfeld_F.parquet (13 rows, 5 cols, 0.0 MB)
+[06:12:49] [INFO] Saved 06_coef_cox_F.parquet (12 rows, 8 cols, 0.0 MB)
+[06:12:49] [STEP]   Comparator: Gradient-Boosted Trees (XGBoost)
+[06:12:58] [INFO] Saved 06_gbt_feature_importance_F.parquet (22 rows, 5 cols, 0.0 MB)
+[06:12:58] [INFO] Saved 06_predictions_comparators_F.parquet (543,773 rows, 15 cols, 6.3 MB)
+11/16                         
+12/16 [fit-gbt-ablated]       
+[06:12:58] [STEP] --- Ablated GBT: Variant A ---
+[06:13:17] [INFO] Saved 06_predictions_gbt_ablated_A.parquet (548,854 rows, 9 cols, 3.4 MB)
+[06:13:17] [STEP] --- Ablated GBT: Variant B ---
+[06:13:28] [INFO] Saved 06_predictions_gbt_ablated_B.parquet (548,827 rows, 9 cols, 1.6 MB)
+[06:13:28] [STEP] --- Ablated GBT: Variant C ---
+[06:13:39] [INFO] Saved 06_predictions_gbt_ablated_C.parquet (504,828 rows, 9 cols, 2.4 MB)
+13/16                         
+14/16 [fit-random-comparators]
+[06:13:39] [STEP] --- Random-split comparators for Variant B (H4) ---
+[06:14:02] [INFO] Saved 06_predictions_comparators_random_B.parquet (710,173 rows, 13 cols, 9.2 MB)
+15/16                         
+16/16 [gbt-importance]        
+output file: 06_comparators.knit.md
+
+/opt/homebrew/bin/pandoc +RTS -K512m -RTS 06_comparators.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/arif/Desktop/RESEARCH/sepsis/project/output/pdf/06_comparators.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine xelatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//RtmpX9IIcF/rmarkdown-str34c67c41fc82.html --variable tables=yes --standalone -Mhas-frontmatter=false 
+[WARNING] Deprecated: --highlight-style. Use --syntax-highlighting instead.
+
+Output created: output/pdf/06_comparators.pdf

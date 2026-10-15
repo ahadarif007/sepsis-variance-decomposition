@@ -1,0 +1,45 @@
+
+
+processing file: 09_variance_decomposition.Rmd
+1/24                          
+2/24 [setup]                  
+3/24                          
+4/24 [load-deps]              
+[06:21:34] [STEP] === Phase 6a: Variance Decomposition ===
+5/24                          
+6/24 [load-metrics]           
+7/24                          
+8/24 [variance-by-factor]     
+9/24                          
+10/24 [decomp-table]           
+[06:21:34] [INFO] Saved 09_variance_decomposition_table.parquet (6 rows, 5 cols, 0.0 MB)
+11/24                          
+12/24 [hypothesis-verdicts]    
+[06:21:34] [STEP] Hypothesis test verdicts...
+[06:21:34] [INFO] Saved 09_hypothesis_verdicts.parquet (4 rows, 6 cols, 0.0 MB)
+13/24                          
+14/24 [variance-plots]         
+15/24                          
+16/24 [anchor-attribution]     
+[06:21:35] [STEP] Label-anchor attribution (Protocol Amendment 2)...
+[06:21:35] [INFO] Saved 09_label_anchor_attribution.parquet (18 rows, 16 cols, 0.0 MB)
+[06:21:35] [INFO] Saved 09_label_anchor_attribution.csv (18 rows)
+17/24                          
+18/24 [label-agreement]        
+[06:21:35] [INFO] Saved 09_label_agreement.parquet (5 rows, 15 cols, 0.0 MB)
+[06:21:35] [INFO] Saved 09_label_agreement.csv (5 rows)
+19/24                          
+20/24 [pretreatment-onsets]    
+[06:21:35] [STEP] Pre-treatment (treatment-anchored) window across all label variants...
+[06:21:35] [INFO] Saved 09_pretreatment_onsets.parquet (36 rows, 8 cols, 0.0 MB)
+[06:21:35] [INFO] Saved 09_pretreatment_onsets.csv (36 rows)
+21/24                          
+22/24 [anchor-attribution-plot]
+23/24                          
+24/24 [attribution-summary]    
+output file: 09_variance_decomposition.knit.md
+
+/opt/homebrew/bin/pandoc +RTS -K512m -RTS 09_variance_decomposition.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/arif/Desktop/RESEARCH/sepsis/project/output/pdf/09_variance_decomposition.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine xelatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//Rtmp0qWgjR/rmarkdown-str373a60b3ce77.html --variable tables=yes --standalone -Mhas-frontmatter=false 
+[WARNING] Deprecated: --highlight-style. Use --syntax-highlighting instead.
+
+Output created: output/pdf/09_variance_decomposition.pdf

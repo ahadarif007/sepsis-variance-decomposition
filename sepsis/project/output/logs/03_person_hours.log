@@ -1,0 +1,81 @@
+
+
+processing file: 03_person_hours.Rmd
+1/22                         
+2/22 [setup]                 
+3/22                         
+4/22 [load-deps]             
+[04:43:11] [STEP] === Phase 2b: Person-hour table construction ===
+5/22                         
+6/22 [load-cohort-ids]       
+[04:43:11] [STEP] Loading cohort IDs for pre-filtering...
+7/22                         
+8/22 [load-chartevents]      
+[04:43:11] [STEP] Loading chartevents (vitals) via DuckDB...
+[04:43:11] [INFO] DuckDB query:  SELECT t.stay_id, t.hadm_id, t.itemid, t.charttime, t.valuenum FROM read_csv('/Users/arif/Desktop/RESEARCH/data/mimic-iv
+[04:43:55] [INFO]   -> 42,088,540 rows, 5 cols
+9/22                         
+10/22 [load-labevents]        
+[04:43:56] [STEP] Loading labevents via DuckDB...
+[04:43:56] [INFO] DuckDB query:  SELECT t.hadm_id, t.itemid, t.charttime, t.valuenum FROM read_csv('/Users/arif/Desktop/RESEARCH/data/mimic-iv-3.1/hosp/l
+[04:44:21] [INFO]   -> 5,094,881 rows, 4 cols
+11/22                         
+12/22 [load-vasopressors]     
+[04:44:21] [STEP] Loading inputevents (vasopressors)...
+[04:44:21] [INFO] Reading:  inputevents.csv.gz
+[04:44:25] [INFO]   -> 10,953,713 rows, 6 cols
+13/22                         
+14/22 [load-treatment-anchors]
+[04:44:25] [STEP] Loading treatment anchor timestamps...
+[04:44:25] [INFO] Reading:  prescriptions.csv.gz
+[04:44:31] [INFO]   -> 20,292,611 rows, 3 cols
+[04:45:59] [INFO] Reading:  microbiologyevents.csv.gz
+[04:46:00] [INFO]   -> 3,988,224 rows, 3 cols
+15/22                         
+16/22 [hourly-covariates-fn]  
+17/22                         
+18/22 [deterioration-onset-fn]
+19/22                         
+20/22 [early-onset-fn]        
+21/22                         
+22/22 [build-person-hours]    
+[04:46:00] [STEP] === Person-hours for Variant A (Narrow) ===
+[04:46:00] [INFO] Loaded 02_cohort_A.parquet (65,078 rows, 27 cols)
+[04:46:00] [STEP]   Building hourly grid for 65078 stays...
+[04:47:37] [INFO] Saved 03_person_hours_A.parquet (2,853,777 rows, 72 cols, 87.3 MB)
+[04:47:37] [INFO] Saved 03_onsets_A.parquet (65,078 rows, 3 cols, 0.4 MB)
+[04:47:37] [STEP] === Person-hours for Variant B (Seymour-Standard) ===
+[04:47:37] [INFO] Loaded 02_cohort_B.parquet (65,078 rows, 27 cols)
+[04:47:37] [STEP]   Building hourly grid for 65078 stays...
+[04:49:15] [INFO] Saved 03_person_hours_B.parquet (2,850,669 rows, 72 cols, 87.3 MB)
+[04:49:15] [INFO] Saved 03_onsets_B.parquet (65,078 rows, 3 cols, 0.4 MB)
+[04:49:15] [STEP] === Person-hours for Variant C (Liberal) ===
+[04:49:15] [INFO] Loaded 02_cohort_C.parquet (65,078 rows, 27 cols)
+[04:49:15] [STEP]   Building hourly grid for 65078 stays...
+[04:50:53] [INFO] Saved 03_person_hours_C.parquet (2,625,204 rows, 72 cols, 81.1 MB)
+[04:50:53] [INFO] Saved 03_onsets_C.parquet (65,078 rows, 3 cols, 0.4 MB)
+[04:50:53] [STEP] === Person-hours for Variant D (Deterioration) ===
+[04:50:53] [INFO] Loaded 02_cohort_D.parquet (65,078 rows, 22 cols)
+[04:50:53] [STEP]   Building hourly grid for 65078 stays...
+[04:52:26] [STEP]   Deriving treatment-independent deterioration onsets (Variant D)...
+[04:52:32] [INFO] Saved 03_person_hours_D.parquet (1,998,748 rows, 72 cols, 63.3 MB)
+[04:52:32] [INFO] Saved 03_onsets_D.parquet (65,078 rows, 3 cols, 0.4 MB)
+[04:52:32] [STEP] === Person-hours for Variant E (Anchor-Only) ===
+[04:52:32] [INFO] Loaded 02_cohort_E.parquet (65,078 rows, 22 cols)
+[04:52:32] [STEP]   Building hourly grid for 65078 stays...
+[04:54:09] [INFO] Saved 03_person_hours_E.parquet (2,392,855 rows, 72 cols, 74.8 MB)
+[04:54:09] [INFO] Saved 03_onsets_E.parquet (65,078 rows, 3 cols, 0.4 MB)
+[04:54:09] [STEP] === Person-hours for Variant F (Sepsis-3 Early-Onset) ===
+[04:54:09] [INFO] Loaded 02_cohort_F.parquet (65,078 rows, 27 cols)
+[04:54:09] [STEP]   Building hourly grid for 65078 stays...
+[04:55:42] [STEP]   Deriving standard Sepsis-3 onset timing min(t_susp, t_SOFA) (Variant F)...
+[04:55:47] [INFO] Saved 03_early_onset_shift.parquet (1 rows, 11 cols, 0.0 MB)
+[04:55:47] [INFO] Saved 03_early_onset_shift.csv (1 rows)
+[04:55:50] [INFO] Saved 03_person_hours_F.parquet (2,819,734 rows, 74 cols, 86.5 MB)
+[04:55:50] [INFO] Saved 03_onsets_F.parquet (65,078 rows, 3 cols, 0.4 MB)
+output file: 03_person_hours.knit.md
+
+/opt/homebrew/bin/pandoc +RTS -K512m -RTS 03_person_hours.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/arif/Desktop/RESEARCH/sepsis/project/output/pdf/03_person_hours.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine xelatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//RtmpjhevN2/rmarkdown-str2f8370500d0c.html --variable tables=yes --standalone -Mhas-frontmatter=false 
+[WARNING] Deprecated: --highlight-style. Use --syntax-highlighting instead.
+
+Output created: output/pdf/03_person_hours.pdf

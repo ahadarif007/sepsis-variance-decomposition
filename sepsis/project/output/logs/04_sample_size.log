@@ -1,0 +1,21 @@
+
+
+processing file: 04_sample_size.Rmd
+1/10                      
+2/10 [setup]              
+3/10                      
+4/10 [load-deps]          
+[04:55:55] [STEP] === Sample Size Calculation (Riley et al., 2019) ===
+5/10                      
+6/10 [load-label-variance]
+7/10                      
+8/10 [sample-size-calc]   
+9/10                      
+10/10 [summary-table]      
+[04:56:01] [INFO] Saved 04_sample_size.parquet (3 rows, 14 cols, 0.0 MB)
+output file: 04_sample_size.knit.md
+
+/opt/homebrew/bin/pandoc +RTS -K512m -RTS 04_sample_size.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/arif/Desktop/RESEARCH/sepsis/project/output/pdf/04_sample_size.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine xelatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//RtmpMhy8oC/rmarkdown-str307d974b1ba.html --variable tables=yes --standalone -Mhas-frontmatter=false 
+[WARNING] Deprecated: --highlight-style. Use --syntax-highlighting instead.
+
+Output created: output/pdf/04_sample_size.pdf

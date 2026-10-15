@@ -1,0 +1,29 @@
+
+
+processing file: 10_equity_analysis.Rmd
+1/15                       
+2/15 [setup]               
+3/15                       
+4/15 [load-deps]           
+[06:21:40] [STEP] === Phase 6b: Equity Analysis ===
+5/15                       
+6/15 [subgroup-helper]     
+7/15                       
+8/15 [subgroup-performance]
+[06:21:40] [STEP] Subgroup performance analysis...
+[06:21:43] [INFO] Saved 10_subgroup_performance.parquet (63 rows, 10 cols, 0.0 MB)
+9/15                       
+10/15 [auroc-by-race]       
+11/15                       
+12/15 [label-sensitivity]   
+[06:21:43] [STEP] Subgroup label-sensitivity analysis...
+[06:21:43] [INFO] Saved 10_subgroup_label_sensitivity.parquet (22 rows, 6 cols, 0.0 MB)
+13/15                       
+14/15 [label-sens-vs-auroc] 
+15/15                       
+output file: 10_equity_analysis.knit.md
+
+/opt/homebrew/bin/pandoc +RTS -K512m -RTS 10_equity_analysis.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/arif/Desktop/RESEARCH/sepsis/project/output/pdf/10_equity_analysis.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine xelatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//RtmpsIGIEx/rmarkdown-str378b7846e9f0.html --variable tables=yes --standalone -Mhas-frontmatter=false 
+[WARNING] Deprecated: --highlight-style. Use --syntax-highlighting instead.
+
+Output created: output/pdf/10_equity_analysis.pdf

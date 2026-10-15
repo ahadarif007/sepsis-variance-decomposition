@@ -1,0 +1,55 @@
+
+
+processing file: 01_setup.Rmd
+1/18                    
+2/18 [setup]            
+3/18                    
+4/18 [load-config]      
+[04:40:01] [STEP] === Phase 1: Environment Setup ===
+5/18                    
+6/18 [check-packages]   
+[04:40:01] [STEP] Checking required packages...
+7/18                    
+8/18 [check-dirs]       
+[04:40:02] [STEP] Verifying data directories...
+[04:40:02] [INFO]   MIMIC-IV root                  [OK]  (/Users/arif/Desktop/RESEARCH/data/mimic-iv-3.1)
+[04:40:02] [INFO]   MIMIC-IV/hosp                  [OK]  (/Users/arif/Desktop/RESEARCH/data/mimic-iv-3.1/hosp)
+[04:40:02] [INFO]   MIMIC-IV/icu                   [OK]  (/Users/arif/Desktop/RESEARCH/data/mimic-iv-3.1/icu)
+[04:40:02] [INFO]   eICU root                      [OK]  (/Users/arif/Desktop/RESEARCH/data/eicu-collaborative-research-database-2.0)
+9/18                    
+10/18 [check-mimic-files]
+[04:40:02] [STEP] Spot-checking key MIMIC-IV files...
+[04:40:02] [INFO]   admissions                [OK]  (19.9 MB)
+[04:40:02] [INFO]   patients                  [OK]  (2.8 MB)
+[04:40:02] [INFO]   icustays                  [OK]  (3.3 MB)
+[04:40:02] [INFO]   chartevents               [OK]  (3502.6 MB)
+[04:40:02] [INFO]   labevents                 [OK]  (2593.0 MB)
+[04:40:02] [INFO]   prescriptions             [OK]  (606.7 MB)
+[04:40:02] [INFO]   microbiologyevents        [OK]  (117.2 MB)
+[04:40:02] [INFO]   inputevents               [OK]  (401.3 MB)
+11/18                    
+12/18 [check-eicu-files] 
+[04:40:02] [STEP] Spot-checking eICU files...
+[04:40:02] [INFO]   patient                   [OK]  (10.4 MB)
+[04:40:02] [INFO]   lab                       [OK]  (516.8 MB)
+[04:40:02] [INFO]   medication                [OK]  (134.3 MB)
+[04:40:02] [INFO]   vitalPeriodic             [OK]  (1784.2 MB)
+[04:40:02] [INFO]   microLab                  [OK]  (0.1 MB)
+[04:40:02] [INFO]   diagnosis                 [OK]  (35.2 MB)
+13/18                    
+14/18 [check-schema]     
+[04:40:02] [STEP] Peeking at icustays to verify schema...
+[04:40:02] [INFO] anchor_year_group present:  TRUE
+15/18                    
+16/18 [check-output-dir] 
+[04:40:02] [STEP] Checking output directory...
+17/18                    
+18/18 [summary]          
+[04:40:02] [STEP] === Setup Summary ===
+[04:40:02] [INFO] Saved 01_setup_file_report.parquet (8 rows, 3 cols, 0.0 MB)
+output file: 01_setup.knit.md
+
+/opt/homebrew/bin/pandoc +RTS -K512m -RTS 01_setup.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/arif/Desktop/RESEARCH/sepsis/project/output/pdf/01_setup.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine xelatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//RtmpaW4uIL/rmarkdown-str2ed61e117b23.html --variable tables=yes --standalone -Mhas-frontmatter=false 
+[WARNING] Deprecated: --highlight-style. Use --syntax-highlighting instead.
+
+Output created: output/pdf/01_setup.pdf

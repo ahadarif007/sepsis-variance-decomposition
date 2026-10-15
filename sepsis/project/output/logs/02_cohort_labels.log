@@ -1,0 +1,79 @@
+
+
+processing file: 02_cohort_labels.Rmd
+1/20                           
+2/20 [setup]                   
+3/20                           
+4/20 [load-deps]               
+[04:40:07] [STEP] === Phase 2a: Cohort extraction under 6 label variants ===
+5/20                           
+6/20 [load-base-tables]        
+[04:40:07] [STEP] Loading base tables...
+[04:40:07] [INFO] Reading:  patients.csv.gz
+[04:40:07] [INFO]   -> 364,627 rows, 5 cols
+[04:40:07] [INFO] Reading:  admissions.csv.gz
+[04:40:07] [INFO]   -> 546,028 rows, 8 cols
+[04:40:07] [INFO] Reading:  icustays.csv.gz
+[04:40:07] [INFO]   -> 94,458 rows, 6 cols
+7/20                           
+8/20 [build-base-cohort]       
+[04:40:07] [STEP] Building base cohort (adult, first ICU stay, min LOS)...
+[04:40:07] [INFO] Saved 02_cohort_flow.parquet (4 rows, 5 cols, 0.0 MB)
+[04:40:07] [INFO] Saved 02_cohort_flow.csv (4 rows)
+9/20                           
+10/20 [suspected-infection]     
+[04:40:07] [STEP] Identifying suspected infection episodes...
+[04:40:07] [INFO] Reading:  prescriptions.csv.gz
+[04:40:13] [INFO]   -> 20,292,611 rows, 5 cols
+[04:41:40] [INFO] Reading:  microbiologyevents.csv.gz
+[04:41:40] [INFO]   -> 3,988,224 rows, 4 cols
+11/20                           
+12/20 [sofa-components]         
+[04:41:41] [STEP] Computing SOFA components for all stays...
+[04:41:41] [INFO] Loading labevents for SOFA components via DuckDB...
+[04:41:41] [INFO] DuckDB query:  SELECT t.hadm_id, t.itemid, t.charttime, t.valuenum FROM read_csv('/Users/arif/Desktop/RESEARCH/data/mimic-iv-3.1/hosp/l
+[04:42:05] [INFO]   -> 2,329,876 rows, 4 cols
+[04:42:05] [INFO] Loading chartevents for SOFA components (MAP, GCS) via DuckDB...
+[04:42:05] [INFO] DuckDB query:  SELECT t.stay_id, t.hadm_id, t.itemid, t.charttime, t.valuenum FROM read_csv('/Users/arif/Desktop/RESEARCH/data/mimic-iv
+[04:42:48] [INFO]   -> 11,634,502 rows, 5 cols
+[04:42:49] [INFO] Loading inputevents for vasopressors...
+[04:42:49] [INFO] Reading:  inputevents.csv.gz
+[04:42:54] [INFO]   -> 10,953,713 rows, 9 cols
+13/20                           
+14/20 [sofa-delta]              
+15/20                           
+16/20 [build-cohorts]           
+[04:42:55] [STEP] Building cohort for Variant A (Narrow)...
+[04:42:55] [INFO]   Stays with suspected infection: 30,705 / 65,078
+[04:42:55] [INFO]   Computing SOFA delta (vectorized) for 30705 stays...
+[04:42:57] [STEP] Building cohort for Variant B (Seymour-Standard)...
+[04:42:57] [INFO]   Stays with suspected infection: 32,436 / 65,078
+[04:42:57] [INFO]   Computing SOFA delta (vectorized) for 32436 stays...
+[04:43:00] [STEP] Building cohort for Variant C (Liberal)...
+[04:43:00] [INFO]   Stays with suspected infection: 34,334 / 65,078
+[04:43:00] [INFO]   Computing SOFA delta (vectorized) for 34334 stays...
+[04:43:02] [STEP] Building cohort for Variant D (Deterioration)...
+[04:43:02] [STEP] Building cohort for Variant E (Anchor-Only)...
+[04:43:03] [INFO]   Stays with suspected infection: 32,436 / 65,078
+[04:43:03] [STEP] Building cohort for Variant F (Sepsis-3 Early-Onset)...
+[04:43:03] [INFO]   Stays with suspected infection: 32,436 / 65,078
+[04:43:03] [INFO]   Computing SOFA delta (vectorized) for 32436 stays...
+[04:43:05] [INFO] Saved 02_cohort_A.parquet (65,078 rows, 27 cols, 4.8 MB)
+[04:43:05] [INFO] Saved 02_cohort_B.parquet (65,078 rows, 27 cols, 4.9 MB)
+[04:43:05] [INFO] Saved 02_cohort_C.parquet (65,078 rows, 27 cols, 5.0 MB)
+[04:43:06] [INFO] Saved 02_cohort_D.parquet (65,078 rows, 22 cols, 3.7 MB)
+[04:43:06] [INFO] Saved 02_cohort_E.parquet (65,078 rows, 22 cols, 4.3 MB)
+[04:43:06] [INFO] Saved 02_cohort_F.parquet (65,078 rows, 27 cols, 4.9 MB)
+17/20                           
+18/20 [label-variance-table]    
+[04:43:06] [STEP] Building M1 label-variance table...
+[04:43:06] [INFO] Saved 02_label_variance_table.parquet (3 rows, 10 cols, 0.0 MB)
+19/20                           
+20/20 [alt-label-variance-table]
+[04:43:06] [INFO] Saved 02_alt_label_variance_table.parquet (3 rows, 11 cols, 0.0 MB)
+output file: 02_cohort_labels.knit.md
+
+/opt/homebrew/bin/pandoc +RTS -K512m -RTS 02_cohort_labels.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/arif/Desktop/RESEARCH/sepsis/project/output/pdf/02_cohort_labels.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine xelatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//Rtmpru84tQ/rmarkdown-str2f2233d76f2e.html --variable tables=yes --standalone -Mhas-frontmatter=false 
+[WARNING] Deprecated: --highlight-style. Use --syntax-highlighting instead.
+
+Output created: output/pdf/02_cohort_labels.pdf

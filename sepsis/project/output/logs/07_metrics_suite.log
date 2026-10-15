@@ -1,0 +1,52 @@
+
+
+processing file: 07_metrics_suite.Rmd
+1/20                        
+2/20 [setup]                
+3/20                        
+4/20 [load-deps]            
+[06:14:08] [STEP] === Full Evaluation Metric Suite ===
+5/20                        
+6/20 [metric-fns]           
+7/20                        
+8/20 [evaluate-all]         
+[06:14:08] [STEP] --- Evaluating Variant A (Narrow) ---
+[06:14:26] [INFO] Saved 07_dca_A.parquet (80 rows, 10 cols, 0.0 MB)
+[06:14:26] [STEP] --- Evaluating Variant B (Seymour-Standard) ---
+[06:14:41] [INFO] Saved 07_dca_B.parquet (80 rows, 10 cols, 0.0 MB)
+[06:14:41] [STEP] --- Evaluating Variant C (Liberal) ---
+[06:14:58] [INFO] Saved 07_dca_C.parquet (80 rows, 10 cols, 0.0 MB)
+[06:14:58] [STEP] --- Evaluating Variant D (Deterioration) ---
+[06:15:13] [INFO] Saved 07_dca_D.parquet (80 rows, 10 cols, 0.0 MB)
+[06:15:13] [STEP] --- Evaluating Variant E (Anchor-Only) ---
+[06:15:31] [INFO] Saved 07_dca_E.parquet (80 rows, 10 cols, 0.0 MB)
+[06:15:31] [STEP] --- Evaluating Variant F (Sepsis-3 Early-Onset) ---
+[06:15:44] [INFO] Saved 07_dca_F.parquet (80 rows, 10 cols, 0.0 MB)
+9/20                        
+10/20 [show-results]         
+[06:15:44] [INFO] Saved 07_metric_results.parquet (36 rows, 19 cols, 0.0 MB)
+11/20                        
+12/20 [utility-sweep]        
+[06:15:44] [INFO] Saved 07_utility_sweep.csv (2407 rows)
+[06:15:44] [INFO] Saved 07_utility_max.csv (72 rows)
+13/20                        
+14/20 [utility-sweep-figure] 
+15/20                        
+16/20 [show-alt-results]     
+[06:15:45] [INFO] Saved 07_metric_results_altlabel.parquet (36 rows, 20 cols, 0.0 MB)
+[06:15:45] [INFO] Saved 07_metric_results_altlabel.csv (36 rows)
+17/20                        
+18/20 [evaluate-ablation]    
+[06:15:45] [STEP] --- Evaluating the ablated arm (Protocol Amendment 5) ---
+[06:15:53] [INFO] Saved 07_ablation_metrics.parquet (6 rows, 21 cols, 0.0 MB)
+[06:15:53] [INFO] Saved 07_ablation_metrics.csv (6 rows)
+19/20                        
+20/20 [evaluate-random-split]
+[06:15:53] [STEP] --- Random-split evaluation for H4 ---
+[06:16:05] [INFO] Saved 07_metric_results_random.parquet (8 rows, 19 cols, 0.0 MB)
+output file: 07_metrics_suite.knit.md
+
+/opt/homebrew/bin/pandoc +RTS -K512m -RTS 07_metrics_suite.knit.md --to latex --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/arif/Desktop/RESEARCH/sepsis/project/output/pdf/07_metrics_suite.tex --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --embed-resources --standalone --table-of-contents --toc-depth 3 --number-sections --highlight-style tango --pdf-engine xelatex --variable graphics --wrap preserve --include-in-header /var/folders/hw/5c3y265s6vn1mwfmmwv2d7w80000gn/T//Rtmp5Vrz32/rmarkdown-str36044df57841.html --variable tables=yes --standalone -Mhas-frontmatter=false 
+[WARNING] Deprecated: --highlight-style. Use --syntax-highlighting instead.
+
+Output created: output/pdf/07_metrics_suite.pdf
