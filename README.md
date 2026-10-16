@@ -3,10 +3,27 @@
 Analysis pipeline and thesis source for a pre-registered variance-decomposition
 study of real-time sepsis onset prediction.
 
-**Abdul Ahad** · M.Sc. in Computing · Atlantic Technological University (ATU), Galway
+**Abdul Ahad** · M.Sc. in Computing · Atlantic Technological University (ATU), Galway\
 Student ID: G00486649
 
+**Supervisor:** Dr Douglas Mota Dias, Lecturer, Department of Computing and
+Information Systems, Atlantic Technological University (ATU)
+
 This repository holds the final analysis reported in the submitted M.Sc. thesis.
+
+| Document | Link |
+|---|---|
+| Thesis | [`sepsis/thesis/index.pdf`](sepsis/thesis/index.pdf) |
+| Presentation slides | [`sepsis/presentation/index.pdf`](sepsis/presentation/index.pdf) |
+| Screencast | Video link to be added |
+
+<!--
+todo: replace "Video link to be added" in the table above with 
+[Watch on YouTube](https://www.youtube.com/watch?v=VIDEO_ID) 
+and clickable thumbnail,
+  [![Screencast](https://img.youtube.com/vi/VIDEO_ID/maxresdefault.jpg)](https://www.youtube.com/watch?v=VIDEO_ID)
+-->
+
 
 ---
 
@@ -307,7 +324,9 @@ intervals and multiplicity-adjusted results.
 
 - **Thesis:** [`sepsis/thesis/index.pdf`](sepsis/thesis/index.pdf), built from
   `sepsis/thesis/` by `build.sh`.
-- **Screencast:** [`sepsis/Screencast/`](sepsis/Screencast/).
+- **Presentation slides:** [`sepsis/presentation/index.pdf`](sepsis/presentation/index.pdf),
+  built from `sepsis/presentation/` by `build.sh`.
+- **Screencast:** video link to be added.
 
 ---
 
@@ -364,6 +383,8 @@ repository listed in [`NOTICE`](NOTICE), which sets out the full boundary:
   decision-curve analysis) were implemented for this project from their
   published descriptions. The methods are credited to their authors in
   `NOTICE` and in the thesis.
+
+---
 
 ## Clinical use
 
