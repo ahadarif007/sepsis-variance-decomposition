@@ -122,6 +122,7 @@ Internal development notes and review records are not included.
 | `check_consistency.R` | Cross-checks the generated result tables against each other |
 | `check_thesis_numbers.R` | Checks the provenance of numbers written in the thesis source |
 | `check_thesis_margins.R` | Checks the built PDF for content extending past the text area |
+| `check_frozen_code.R` | Confirms that no code producing a reported quantity changed between two repository states, e.g. `frozen-2026-08-31` and `submission-2026-10-16` (thesis Appendix A.2) |
 
 | # | Stage | Phase |
 |---|---|---|

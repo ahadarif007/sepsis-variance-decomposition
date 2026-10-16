@@ -34,13 +34,15 @@ definition, and the method is attributed to its authors both in \texttt{NOTICE}
 and at the point of use in this thesis. No implementation was copied or adapted
 from a third party's source.
 
-The repository contains \textbf{code only}. No MIMIC-IV or eICU-CRD record,
-derived person-hour table, or fitted model object is included: the
-\texttt{data/}, \texttt{processed\_data/} and \texttt{output/} directories are
+The repository contains \textbf{code and aggregate outputs only}. No MIMIC-IV
+or eICU-CRD record, derived person-hour table, or fitted model object is
+included: the \texttt{data/} and \texttt{processed\_data/} directories are
 excluded from version control by design, because the PhysioNet Credentialed
 Data Use Agreement (Section~\ref{sec:ethics}) prohibits redistribution of the
 underlying data. Exclusion is enforced by \texttt{.gitignore} and was verified
-against the tracked file list before release.
+against the tracked file list before release. The \texttt{output/} directory
+is tracked only for the frozen run's rendered stage reports, run logs and
+figures, which report aggregate results and no patient-level record.
 
 \section{The Frozen Run}
 \label{app:frozen_run}
@@ -111,35 +113,57 @@ tag \texttt{\pcFrozenTag} \quad$\cdot$\quad commit \texttt{\pcFrozenCommit}\\[2p
 Two repository states are involved and they answer different questions, so the
 distinction is drawn here rather than left to be discovered. The commit named
 above is the \textbf{analysis provenance}: it is the state of the pipeline
-source that produced every quantity this document reports, and it is what to
-re-run to reproduce them. The \textbf{document provenance} is a later commit on
-the same branch. Prose was corrected after the analysis commit without
-re-running the pipeline, so the submitted sources and this PDF are carried by
-that later commit, and the release tag is placed on it. What makes the pairing
-safe is that nothing regenerated a number in between: every edit after the
-analysis commit was to prose, captions or document configuration, and none
-touched a pipeline stage, a configuration value or a result table. That is a
-checkable claim rather than an assurance, and two commands check it. A
+source that produced every quantity this document reports, recorded by the
+pipeline itself in the generated constants file, and it is what to re-run to
+reproduce them. The repository's history was rewritten once before
+publication, which changes commit identifiers but not file contents, so the
+published history carries this state as commit \texttt{34863fcbd248}, with the
+identical source tree \texttt{5919f2b139c7}. The tag \texttt{\pcFrozenTag} is
+placed on that published commit. The constants file the run generated was
+committed immediately after it, with the PDF built from it, at
+\texttt{3678120abfa9}.
+
+The \textbf{document provenance} is a later commit on the same branch, tagged
+\texttt{submission-2026-10-16}. Text was revised after the analysis commit
+without re-running the pipeline, so the submitted sources and this PDF are
+carried by that commit. The revisions were to the thesis; to the narrative text
+of the twelve pipeline notebooks, including their report titles and inline
+expressions that print configuration values into that text; to the wording of
+the pre-registration document, without change to its hypotheses or decision
+rules; and to the tools that check the thesis or draw its diagrams. The
+rendered stage reports, run logs and figures of the frozen run were also
+committed. No code that computes or writes a reported quantity changed. That
+is a checkable
+claim rather than an assurance, and the commands below check it. A
 \texttt{-dirty} suffix on the commit would indicate that the constants were
 generated from an uncommitted working tree, and must not appear in a submitted
 document.
 
 \begin{verbatim}
-git show <tag>:sepsis/thesis/generated/pipeline_constants.tex \
-    | grep pcFrozenCommit
-git diff --stat <analysis-commit> <tag> -- sepsis/project/
+git grep pcFrozenCommit submission-2026-10-16 \
+    -- sepsis/thesis/generated/pipeline_constants.tex
+git log -1 --format=%T frozen-2026-08-31
+Rscript sepsis/project/check_frozen_code.R \
+    frozen-2026-08-31 submission-2026-10-16
 \end{verbatim}
 
-\noindent where \texttt{<analysis-commit>} is the commit printed above and
-\texttt{<tag>} the release tag. The first must print that same commit: every
-number in this thesis is expanded from that one generated file, and the file
-records which run wrote it. The second must print nothing, which is what
-establishes that no pipeline source changed between the run and the submitted
-document. Checking out the tag then yields the submitted sources and this PDF
-alongside the code that produced its numbers. Re-deriving the file from the databases additionally
-requires credentialed PhysioNet access, since no derived table is redistributed
-here (Section~\ref{app:repo}); the reported quantities themselves are aggregate
-results and are disclosed in this document rather than as data.
+\noindent Run from the repository root, the first prints the line of the
+generated constants file that records the analysis commit named above: every
+number in this thesis is expanded from that one generated
+file, and the file records which run wrote it. The second prints the source
+tree of the tagged analysis state, which begins \texttt{5919f2b139c7}. The
+third compares the two tagged states: every R code chunk of the twelve pipeline
+notebooks as text, and every other file that computes or writes a reported
+quantity, or fixes the software environment, byte for byte. It prints \texttt{OK} only if all are identical, which is what establishes that no
+code producing a reported quantity changed between the run and the submitted
+document; narrative
+text outside the code chunks is outside its scope by design. Checking out
+\texttt{submission-2026-10-16} then yields the submitted sources and this PDF
+alongside the code that produced its numbers. Re-deriving the file from the
+databases additionally requires credentialed PhysioNet access, since no derived
+table is redistributed here (Section~\ref{app:repo}); the reported quantities
+themselves are aggregate results and are disclosed in this document rather
+than as data.
 
 Everything produced after the freeze (the presentation, the screencast and
 the viva preparation) reads from the frozen constants rather than from a
@@ -208,9 +232,15 @@ page.
         Measures the built PDF for content passing the text block, which
         \LaTeX{} does not report for a table \\
         \addlinespace
+        \texttt{check\_frozen\_code.R} &
+        Confirms that no code producing a reported quantity changed between two
+        repository states
+        (Section~\ref{app:frozen_run}) \\
+        \addlinespace
         \texttt{output/} &
         Created at run time: \texttt{processed\_data/}, \texttt{figures/},
-        \texttt{logs/}. Not tracked \\
+        \texttt{logs/}, \texttt{pdf/}. Only \texttt{processed\_data/} is
+        untracked \\
 \end{longtable}
 }
 
