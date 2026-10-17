@@ -24,8 +24,8 @@ Each `>` line is a screen cue and is not spoken. Each bullet is said in one go, 
 - My thesis is about predicting sepsis onset in real time.
 - When papers in this area compare models, they usually read any difference in performance as a difference between
   the models.
-- But that number also depends on decisions made along the way. How you define sepsis, how you split the data, which
-  metric you choose to report.
+- But that number also depends on decisions made along the way. How sepsis is defined, how the data is split, which
+  metric gets reported.
 - So my main question was this: how much of the variation in reported performance really comes from the model, and how
   much comes from those choices?
 - I built everything on MIMIC-IV and used eICU for external validation. And I pre-registered six hypotheses before
@@ -50,12 +50,11 @@ Each `>` line is a screen cue and is not spoken. Each bullet is said in one go, 
 - Before going further, I should be clear that there's no patient data in this repository.
 - MIMIC-IV and eICU are credentialed PhysioNet datasets, so I can't share patient records, anything derived from them,
   or the fitted models.
-- If you want to run this yourself, you'll need your own PhysioNet access. The README tells you where to put the data
-  once you have it.
+- Running it requires separate PhysioNet access. The README says where to put the data once access is granted.
 
 ### Folder structure
 
-> **Screen:** the `sepsis` folder on your machine
+> **Screen:** the `sepsis` folder on the local machine
 
 - Let me switch over to my local copy. Everything lives in the `sepsis` folder.
 - It has two main parts. `project` is the analysis pipeline, and `thesis` has the LaTeX source along with the compiled
@@ -66,8 +65,8 @@ Each `>` line is a screen cue and is not spoken. Each bullet is said in one go, 
 > **Screen:** `project/00_preregistration.md`
 
 - The first file in `project` is `00_preregistration.md`, the pre-registration.
-- It lists the six hypotheses, and every protocol amendment I made later is added there with its date. So you can
-  always tell what I planned at the start apart from what changed afterwards.
+- It lists the six hypotheses, and every protocol amendment I made later is added there with its date. That keeps the
+  original plan clearly separate from what changed afterwards.
 
 ### Pipeline stages
 
@@ -84,7 +83,7 @@ Each `>` line is a screen cue and is not spoken. Each bullet is said in one go, 
 - Stage 06 fits everything I compare it against: gradient boosting, a Cox model, and the clinical scores NEWS2, qSOFA
   and SIRS.
 - Stage 08 takes the frozen models and applies them to eICU. Nothing gets retrained.
-- Stage 09 compares how far AUROC moves when you change the model class, the label definition or the split method, or
+- Stage 09 compares how far AUROC moves when changing the model class, the label definition or the split method, or
   move to external data. These are ranges. They aren't variance shares.
 - And Stage 12 does the formal inference, using a stay-level cluster bootstrap with a correction for multiple
   comparisons.
@@ -104,7 +103,7 @@ Each `>` line is a screen cue and is not spoken. Each bullet is said in one go, 
 
 - The pipeline is driven by configuration. Shared settings sit in one place, `config.R`: the label parameters, the
   predictors, the random seeds and the bootstrap settings.
-- You can also set environment variables to limit a run to particular label variants or fitting arms, without touching
+- Environment variables can also limit a run to particular label variants or fitting arms, without touching
   the code.
 - Functions that get reused are kept out of the stages. `utils.R` handles data loading, Parquet storage, metrics, the
   bootstrap and the model checks, and `clinical_scores.R` computes SOFA, NEWS2, qSOFA and SIRS.
@@ -116,29 +115,30 @@ Each `>` line is a screen cue and is not spoken. Each bullet is said in one go, 
 > **Screen:** `install_requirements.R` and `requirements.txt`
 
 - Setting up the environment is automated too. `install_requirements.R` installs whatever packages are missing, and
-  tells you if any version differs from what's recorded in `requirements.txt`.
-- Run it with `--check` and it only reports. It won't change anything.
+  flags any version that differs from what's recorded in `requirements.txt`.
+- With `--check`, it only reports. It won't change anything.
 
 ### Running the pipeline
 
 > **Screen:** `run_pipeline.sh`
 
 - Running everything comes down to one shell script, `run_pipeline.sh`. A single command runs all twelve stages in
-  order, or you can pass stage numbers to run just some of them.
+  order, or stage numbers can be passed to run just some of them.
 - If every stage succeeds, the same script writes the results into the thesis as LaTeX macros and runs the consistency
-  checks. If something fails, it records it, and the exit code tells you which kind of failure it was.
+  checks. If something fails, it records it, and the exit code shows which kind of failure it was.
 - A full run takes about two and a half hours, mostly model fitting and the bootstrap.
-- So I won't run it live. I'll show you the outputs from the final run instead.
+- So I won't run it live. Here are the outputs from the final run instead.
 
 ### Outputs
 
-> **Screen:** the `output` folder on your machine. Show file names only; do not open processed data files.
+> **Screen:** the `output` folder on the local machine. Show file names only; do not open processed data files.
 
-- A run fills up the local `output` folder. You get the processed data, the figures, a rendered report for each stage,
+- Pipeline execution fills up the local `output` folder. 
+- It contains the processed data, figures, one rendered pdf report for each stage,
   and the run logs.
-- Intermediate data is saved as Parquet, a compact columnar format, and the next stage reads it back in.
-- There's one log per stage plus one for the full run, and you can see each stage finishing with how long it took.
-- The processed data stays on my machine and isn't on GitHub. The figures, stage reports and logs are.
+- Intermediate data is saved as Parquet, which is a compact columnar format, and the next stage reads it back in.
+- There's one log per stage plus one for the full run, showing each stage finishing with how long it took.
+- The intermediate processed data is git-ignored, so it never reaches the staging area. The figures, stage reports and logs are committed.
 
 ### Checker scripts
 
