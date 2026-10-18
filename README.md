@@ -12,18 +12,10 @@ Information Systems, Atlantic Technological University (ATU)
 This repository holds the final analysis reported in the submitted M.Sc. thesis.
 
 | Document | Link |
-|---|---|
+|---|--|
 | Thesis | [`sepsis/thesis/index.pdf`](sepsis/thesis/index.pdf) |
 | Presentation slides | [`sepsis/presentation/index.pdf`](sepsis/presentation/index.pdf) |
-| Screencast | Video link to be added |
-
-<!--
-todo: replace "Video link to be added" in the table above with 
-[Watch on YouTube](https://www.youtube.com/watch?v=VIDEO_ID) 
-and clickable thumbnail,
-  [![Screencast](https://img.youtube.com/vi/VIDEO_ID/maxresdefault.jpg)](https://www.youtube.com/watch?v=VIDEO_ID)
--->
-
+| Screencast | [Watch on YouTube](https://youtu.be/sAzRsFPcQ6A)  |
 
 ---
 
