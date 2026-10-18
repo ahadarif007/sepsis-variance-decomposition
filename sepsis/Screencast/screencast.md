@@ -165,23 +165,32 @@ Each `>` line is a screen cue and is not spoken. Each bullet is said in one go, 
 
 ## 3. Results (3:15)
 
-> **Screen:** Results chapter, section "Variance Decomposition and Hypothesis Verdicts", the hypothesis table. Let the
-> table speak; don't read it out.
+All screens are in `thesis/index.pdf`. Each cue gives the printed page number first and the PDF viewer page in
+brackets.
+
+### Overview (0:10)
+
+> **Screen:** Section 5.10.2, Table 5.29 "The confirmatory family", p. 85 [PDF 106]. Zoom until the six rows and the
+> Verdict column fill the screen. Do not read the table aloud.
+
+Speaker reference only. This block is not shown.
 
 ```
- H   Question                                        Result                     Verdict
- --  ----------------------------------------------  -------------------------  ----------------
- H1  Label changes AUROC more than model?            model 0.15 vs label 0.01   Not confirmed
- H2  Coefficients change across labels?              6 of 22 (3 beyond noise)   Descriptive
- H3  AUROC falls before treatment?                   no onsets in that window   Structural
- H4  Random split more optimistic than temporal?     about -0.02, CI spans 0    Not confirmed
- H5  AUROC falls on external data? (substitute)      about 0.06, 29 events      Inconclusive
- H6  GBT beats primary by more than 0.02?            0.742 vs 0.759             Not rejected
+ H   Question                                        Result                       Verdict
+ --  ----------------------------------------------  ---------------------------  ----------------
+ H1  Label moves AUROC more than model?              model 0.150 vs label 0.012   Not confirmed
+ H2  Coefficients change across labels?              6 of 22 (3 beyond noise)     Descriptive
+ H3  AUROC falls before treatment?                   0 onsets in that window      Not evaluable
+ H4  Random split more optimistic than temporal?     -0.017, CI includes 0        Not confirmed
+ H5  AUROC falls on external data? (substitute)      0.063, 29 events, CI incl 0  Inconclusive
+ H6  GBT beats primary by more than 0.02?            0.742 vs 0.759               Not rejected
 ```
 
-- The cohort is 65,078 ICU stays, and this table summarises the six hypotheses.
+- The analysis cohort contains 65,078 ICU stays.
+- This table lists the six pre-registered hypotheses and their verdicts.
+- I will take them in order.
 
-### H1: label vs model (main question)
+### H1: label definition versus model class (0:30)
 
 > **Screen:** figures `09_model_class_auroc.png` and `09_label_variance_auroc.png`
 
@@ -189,21 +198,20 @@ Each `>` line is a screen cue and is not spoken. Each bullet is said in one go, 
 - Changing the model moved AUROC by about 0.15. Changing the definition moved it by only about 0.01.
 - The definitions still pick out quite different patients. They just matter less for AUROC.
 
-### H2: coefficient stability (brief)
+### H2: coefficient stability (0:20)
 
-> **Screen:** section "H2: Coefficient Instability (Met, Descriptive)", table "Features with sign reversal or
-> magnitude instability across label variants"
+> **Screen:** Section 5.10.4, Table 5.30 "Features with sign reversal or magnitude instability across label
+> variants", p. 87 [PDF 108]. Then scroll down to Table 5.31 on the same page. Highlight the three rows with a ratio
+> above 2.
 
 - H2 looked at whether coefficients changed across definitions. Six of 22 predictors met my pre-registered instability
   rule, but that's a descriptive count with no formal test.
 > **Screen:** scroll to the next table, "H2 instability against estimation noise"
 
-- After allowing for estimation uncertainty, three stayed unstable. All three indicate whether a test had been ordered.
+### H3: performance before treatment (0:30)
 
-### H3: before treatment
-
-> **Screen:** section "The Empty Pre-Treatment Window Is a Property of the Onset Rule", table "Events in the
-> treatment-anchored (pre-treatment) evaluation window". Point at row B, where onsets are zero.
+> **Screen:** Section 5.6.3, Table 5.18 "Events in the treatment-anchored (pre-treatment) evaluation window",
+> p. 73 [PDF 94]. Highlight row B in the Onsets column, which shows 0. Then highlight row F, which shows 71.
 
 - H3 asked whether performance dropped in the hours before treatment. It couldn't be tested.
 - My pre-registered rule put onset at the later of the antibiotic and culture times, so no onset could fall before
@@ -211,17 +219,18 @@ Each `>` line is a screen cue and is not spoken. Each bullet is said in one go, 
 - *[Pause.]*
 - That's down to the label rule. It says nothing about the patients.
 
-### H4: random vs temporal split (brief)
+### H4: random versus temporal split (0:15)
 
-> **Screen:** section "H4: Split Optimism (Not Confirmed)", table "Temporal vs. random split comparison"
+> **Screen:** Section 5.10.6, Table 5.33 "Temporal vs. random split comparison", p. 90 [PDF 111]. Highlight the
+> Primary row. Then run down the last column, where all four values are negative.
 
 - H4 asked whether a random split looked more optimistic than a temporal split. The difference was small and the
   interval included zero, so it wasn't confirmed.
 
-### H5: external validation
+### H5: external validation (0:30)
 
-> **Screen:** section "Discrimination Under Transport", table "External validation on eICU-CRD". Point at
-> row B, Primary: the event count and both AUROC columns.
+> **Screen:** Section 5.5.2, Table 5.13 "External validation on eICU-CRD", p. 67 [PDF 88]. Highlight row B, Primary:
+> N events (29), AUROC (eICU) 0.6960 and AUROC (MIMIC) 0.7590.
 
 - H5 was meant to compare the drop in utility and AUROC on external data. Utility couldn't be estimated, so as a
   substitute I tested AUROC alone.
@@ -229,22 +238,26 @@ Each `>` line is a screen cue and is not spoken. Each bullet is said in one go, 
 - But eICU had only 29 sepsis events, below my 100-event interpretability floor, and the interval included zero. So
   H5 remains inconclusive.
 
-### H6: primary model vs gradient boosting (brief)
+### H6: primary model versus gradient boosting (0:20)
 
-> **Screen:** section "H6: Model-Class Null", figure `09_model_class_auroc.png`
+> **Screen:** Section 5.10.8, Figure 5.10 "AUROC by model class", p. 92 [PDF 113]. Point at the primary-model and GBT
+> bars. Then point at the four lower bars.
 
 - H6 asked whether gradient boosting would beat the primary model by more than 0.02 AUROC. It didn't: 0.742 against 0.759.
 - That doesn't make them equivalent. Gradient boosting just didn't clear the margin I set in advance.
 
-### Overall result
+### Overall pattern (0:20)
 
-> **Screen:** "The Decomposition Table" in the same section
+> **Screen:** Section 5.10.1, Table 5.28 "Variance decomposition", p. 83 [PDF 104]. Run down the ΔAUROC column from
+> top to bottom. Then point at the interval for External transport.
+
+Speaker reference only. This block is not shown.
 
 ```
  AUROC range by factor (others held fixed)
 
  Model class          0.1499   ###############
- External transport   0.0630   ######            widest interval, covers zero
+ External transport   0.0630   ######            widest interval, includes zero
  Label definition     0.0123   #
  Split method        -0.0165   ~0
 
@@ -255,15 +268,20 @@ Each `>` line is a screen cue and is not spoken. Each bullet is said in one go, 
   uncertain to confirm a difference.
 - Label and split moved AUROC less, though the label did change who counted as septic.
 
-### Alert burden
+### Alert burden (0:20)
 
-> **Screen:** section "Utility and Alert Burden Across Thresholds", figure `07_utility_threshold_sweep.png`
+> **Screen:** Section 5.3.1, Figure 5.1 "Normalised Utility Score against alert rate", p. 53 [PDF 74], for a few
+> seconds. Then Table 5.5 "Maximum achievable Utility Score", p. 54 [PDF 75]. Highlight the Variant B rows for Primary
+> and GBT in the Alert burden column (47.3 and 51.8).
+
+Speaker reference only. This block is not shown.
 
 ```
- False alerts for every true alert
+ False alerts per true alert (Variant B, best threshold)
 
- Best result, primary label   51.8   ####################################################
- Published benchmark           1.4   #
+ Primary model         47.3   ###############################################
+ Gradient boosting     51.8   ####################################################
+ Published benchmark    1.4   #
 ```
 
 - AUROC isn't the whole story, though. On the primary label, even the best utility score came with about 52 false
