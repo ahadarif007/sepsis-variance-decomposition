@@ -15,7 +15,7 @@ This repository holds the final analysis reported in the submitted M.Sc. thesis.
 |---|--|
 | Thesis | [`sepsis/thesis/index.pdf`](sepsis/thesis/index.pdf) |
 | Presentation slides | [`sepsis/presentation/index.pdf`](sepsis/presentation/index.pdf) |
-| Screencast | [Watch on YouTube](https://youtu.be/sAzRsFPcQ6A)  |
+| Screencast | [Watch on YouTube](https://youtu.be/UqAmZQWRdcg)  |
 
 ---
 
